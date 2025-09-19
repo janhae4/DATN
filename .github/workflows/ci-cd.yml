@@ -1,0 +1,104 @@
+name: CI/CD for DATN Project
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ---------- Frontend Job ----------
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Cache Node modules frontend
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-frontend-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-frontend-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Lint code
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Format check
+        working-directory: ./frontend
+        run: npm run format -- --check
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Test frontend
+        working-directory: ./frontend
+        run: npm test --if-present
+
+      # - name: Deploy frontend to Vercel
+      #   if: github.ref == 'refs/heads/main'
+      #   working-directory: ./frontend
+      #   run: npx vercel --prod
+      #   env:
+      #     VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+  # ---------- Backend Job ----------
+  backend:
+    name: Backend (Nest.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Cache Node modules backend
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-backend-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-backend-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: Lint code
+        working-directory: ./backend
+        run: npm run lint
+
+      - name: Format check
+        working-directory: ./backend
+        run: npm run format -- --check
+
+      - name: Build backend
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Test backend
+        working-directory: ./backend
+        run: npm run test --if-present
+
+      # - name: Deploy backend to Heroku
+      #   if: github.ref == 'refs/heads/main'
+      #   working-directory: ./backend
+      #   run: git push https://heroku:$HEROKU_API_KEY@git.heroku.com/<HEROKU_APP_NAME>.git main
+      #   env:
+      #     HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
