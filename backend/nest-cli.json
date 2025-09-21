@@ -46,6 +46,24 @@
         "tsConfigPath": "libs/contracts/tsconfig.lib.json"
       }
     },
+    "redis": {
+      "type": "application",
+      "root": "apps/redis",
+      "entryFile": "main",
+      "sourceRoot": "apps/redis/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/redis/tsconfig.app.json"
+      }
+    },
+    "session": {
+      "type": "application",
+      "root": "apps/session",
+      "entryFile": "main",
+      "sourceRoot": "apps/session/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/session/tsconfig.app.json"
+      }
+    },
     "user": {
       "type": "application",
       "root": "apps/user",

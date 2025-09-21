@@ -2,63 +2,82 @@ import { Injectable } from '@nestjs/common';
 
 import bcrypt from 'bcrypt';
 import { LoginDto } from '@app/contracts/auth/login.dto';
-import { UserDto } from '@app/contracts/user/user.dto';
 import { CreateUserDto } from '@app/contracts/user/create-user.dto';
 import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
-import { Role } from 'apps/api-gateway/enums/role.enum';
+import { PrismaService } from './prisma.service';
+import { Prisma, User } from '../generated/prisma';
 
 @Injectable()
 export class UserService {
-  private users: UserDto[] = [{
-    id: 1,
-    username: 'admin',
-    password: 'admin',
-    role: [Role.Admin]
-  }, {
-    id: 2,
-    username: 'user',
-    password: 'user',
-    role: [Role.User]
-  }, {
-    id: 3,
-    username: 'guest',
-    password: 'guest',
-    role: [Role.User]
-  }];
+  constructor(private prisma: PrismaService) { }
+  async create(createUserDto: CreateUserDto): Promise<any> {
 
-  async create(createUserDto: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    const user = {
-      id: this.users.length + 1,
-      password: hashedPassword,
-      username: createUserDto.username,
-      role: [Role.User]
-    };
-    this.users.push(user);
-    return user;
+    try {
+      return await this.prisma.user.create({
+        data: {
+          username: createUserDto.username,
+          email: createUserDto.email,
+          password: bcrypt.hashSync(createUserDto.password, 10),
+          name: createUserDto.name,
+          phone: createUserDto.phone,
+          role: "User"
+        }
+      })
+    } catch (error) {
+      return error
+    }
   }
 
-  findAll() {
-    return this.users;
+  async findAll(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.UserWhereUniqueInput;
+    where?: Prisma.UserWhereInput;
+    orderBy?: Prisma.UserOrderByWithRelationInput;
+  }): Promise<User[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.user.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+    });
   }
 
-  findOne(id: number) {
-    return this.users.find(user => user.id === id);
+  async findOne(id: Prisma.UserWhereUniqueInput): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: id,
+    });
   }
 
   async validate(loginDto: LoginDto) {
-    const user = this.users.find(u => u.username === loginDto.username);
-    if (!user) throw new Error("Invalid Credentials", { cause: 401 });
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
-    // if (!isPasswordValid) throw new Error("Invalid Credentials");
-    return user;
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: loginDto.username },
+          { email: loginDto.username }
+        ]
+      }
+    });
+    if (user && await bcrypt.compare(loginDto.password, user.password)) {
+      const { password, ...result } = user;
+      return result;
+    }
+    return null;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return this.users.map(user => user.id === id ? { ...user, ...updateUserDto } : user);
+  async update(where: Prisma.UserWhereUniqueInput, data: UpdateUserDto) {
+    return this.prisma.user.update({
+      where,
+      data,
+    });
   }
 
-  remove(id: number) {
-    return this.users.map(user => user.id !== id);
+
+  async remove(where: Prisma.UserWhereUniqueInput) {
+    return this.prisma.user.delete({
+      where,
+    });
   }
 }

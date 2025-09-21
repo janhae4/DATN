@@ -6,9 +6,10 @@ import { AuthModule } from './auth/auth.module';
 import { ClientConfigModule } from './client-config/client-config.module';
 import { APP_GUARD } from '@nestjs/core';
 import { RoleGuard } from './role.guard';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
-  imports: [UserModule, AuthModule, ClientConfigModule],
+  imports: [UserModule, AuthModule, ClientConfigModule, RedisModule],
   controllers: [ApiGatewayController],
   providers: [ApiGatewayService, {
     provide: APP_GUARD,

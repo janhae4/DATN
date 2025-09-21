@@ -8,7 +8,8 @@ import * as joi from 'joi';
       isGlobal: false,
       validationSchema: joi.object({
         USER_CLIENT_PORT: joi.number().default(3001),
-        AUTH_CLIENT_PORT: joi.number().default(3002)
+        AUTH_CLIENT_PORT: joi.number().default(3002),
+        REDIS_CLIENT_PORT: joi.number().default(6379),
       })
     })
   ],

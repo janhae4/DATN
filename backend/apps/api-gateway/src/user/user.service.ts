@@ -10,27 +10,27 @@ import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
 @Injectable()
 export class UserService {
   constructor(@Inject(USER_CLIENT) private readonly userClient: ClientProxy) { }
-  create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto) {
     return this.userClient.send(USER_PATTERNS.CREATE, createUserDto);
   }
 
-  findAll() {
+  async findAll() {
     return this.userClient.send(USER_PATTERNS.FIND_ALL, {});
   }
 
-  findOne(id: number) {
+  async findOne(id: number) {
     return this.userClient.send(USER_PATTERNS.FIND_ONE, id);
   }
 
-  validate(loginDto: LoginDto) {
+  async validate(loginDto: LoginDto) {
     return this.userClient.send(USER_PATTERNS.VALIDATE, loginDto);
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return this.userClient.send(USER_PATTERNS.UPDATE, { ...updateUserDto, id });
+  async update(id: number, updateUserDto: UpdateUserDto) {
+    return this.userClient.send(USER_PATTERNS.UPDATE, { updateUserDto, id });
   }
 
-  remove(id: number) {
+  async remove(id: number) {
     return this.userClient.send(USER_PATTERNS.REMOVE, id);
   }
 }

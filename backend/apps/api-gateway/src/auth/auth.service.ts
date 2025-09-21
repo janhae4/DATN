@@ -1,10 +1,31 @@
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
+import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
+import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
 import { LoginDto } from '@app/contracts/auth/login.dto';
 import { AUTH_CLIENT, USER_CLIENT } from '@app/contracts/constants';
-import { Inject, Injectable, Res } from '@nestjs/common';
+import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
+import { Inject, Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { firstValueFrom } from 'rxjs';
+
+const setCookie = (accessToken: string, refreshToken: string, response: Response) => {
+  response.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: true,
+    maxAge: ACCESS_TTL
+  });
+  response.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: true,
+    maxAge: REFRESH_TTL
+  });
+};
+
+const clearCookie = (response: Response) => {
+  response.clearCookie('accessToken');
+  response.clearCookie('refreshToken');
+};
 
 @Injectable()
 export class AuthService {
@@ -12,15 +33,44 @@ export class AuthService {
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     @Inject(USER_CLIENT) private readonly userClient: ClientProxy
   ) { }
+
+  async findAllUser() {
+    return await firstValueFrom(this.userClient.send(USER_PATTERNS.FIND_ALL, {}));
+  }
+
+  async register(createAuthDto: CreateAuthDto) {
+    return await firstValueFrom(this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto));
+  }
+
   async login(loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
     const user = await firstValueFrom(this.authClient.send(AUTH_PATTERN.LOGIN, { ...loginDto }));
-    console.log(user)
-    response.cookie('accessToken', user.accessToken, {
-      httpOnly: true,
-      secure: true,
-      maxAge: 60 * 1000 * 15
-    });
-    return user;
+    const { accessToken, refreshToken, u } = user;
+    setCookie(accessToken, refreshToken, response);
+    return { accessToken, refreshToken, u };
+  }
+
+  async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    const refreshToken = request.cookies?.refreshToken;
+    if (!refreshToken) throw new UnauthorizedException('Invalid refresh token');
+    try {
+      const token = await firstValueFrom(
+        this.authClient.send(AUTH_PATTERN.REFRESH, refreshToken)
+      );
+      setCookie(token.accessToken, token.refreshToken, response);
+    } catch (e) {
+      clearCookie(response);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async logout(@Req() request: Request) {
+    const refreshToken = request.cookies.refreshToken;
+    return this.authClient.send(AUTH_PATTERN.LOGOUT, refreshToken);
+  }
+
+  async logoutAll(@Res() request: Request) {
+    const refreshToken = request.cookies.refreshToken;
+    return this.authClient.send(AUTH_PATTERN.LOGOUT_ALL, refreshToken);
   }
 
   async validateToken(token: string) {

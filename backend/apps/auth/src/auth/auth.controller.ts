@@ -1,34 +1,42 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Res } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
 import { LoginDto } from '@app/contracts/auth/login.dto';
+import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
+import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
+import e from 'express';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
-  // @MessagePattern('auth.signup')
-  // create(@Payload() createAuthDto: CreateAuthDto) {
-  //   return this.authService.create(createAuthDto);
-  // }
-
-  @MessagePattern('auth.login')
-  login(@Payload() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  @MessagePattern(AUTH_PATTERN.REGISTER)
+  async create(@Payload() createAuthDto: CreateAuthDto) {
+    return await this.authService.register(createAuthDto);
   }
 
-  @MessagePattern('auth.validateToken')
-  validateToken(@Payload() token: string) {
-    return this.authService.validateToken(token);
+  @MessagePattern(AUTH_PATTERN.LOGIN)
+  async login(@Payload() loginDto: LoginDto) {
+    return await this.authService.login(loginDto);
   }
 
-  // @MessagePattern('auth.getRefreshToken')
-  // getRefreshToken(@Payload() id: number) {
-  //   return this.authService.getRefreshToken(id);
-  // }
+  @MessagePattern(AUTH_PATTERN.VALIDATE_TOKEN)
+  async validateToken(@Payload() token: string) {
+    return await this.authService.validateToken(token);
+  }
 
-  // @MessagePattern('auth.validate')
-  // validate(@Payload() id: number) {
-  //   return this.authService.validate(id);
-  // }
+  @MessagePattern(AUTH_PATTERN.REFRESH)
+  async getRefreshToken(@Payload() token: string) {
+    return await this.authService.refresh(token);
+  }
+
+  @MessagePattern(AUTH_PATTERN.LOGOUT)
+  async logout(@Payload() refreshToken: string) {
+    return await this.authService.logout(refreshToken);
+  }
+
+  @MessagePattern(AUTH_PATTERN.LOGOUT_ALL)
+  async logoutAll(@Payload() refreshToken: string) {
+    return await this.authService.logoutAll(refreshToken);
+  }
 }

@@ -7,21 +7,22 @@ import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
 
 @Controller()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @MessagePattern('user.create')
   create(@Payload() createUserDto: CreateUserDto) {
+    console.log(createUserDto);
     return this.userService.create(createUserDto);
   }
 
   @MessagePattern('user.findAll')
   findAll() {
-    return this.userService.findAll();
+    return this.userService.findAll({});
   }
 
   @MessagePattern('user.findOne')
-  findOne(@Payload() id: number) {
-    return this.userService.findOne(id);
+  findOne(@Payload() id: string) {
+    return this.userService.findOne({ id });
   }
 
   @MessagePattern('user.validate')
@@ -33,12 +34,12 @@ export class UserController {
   }
 
   @MessagePattern('user.update')
-  update(@Payload() updateUserDto: UpdateUserDto) {
-    return this.userService.update(updateUserDto.id, updateUserDto);
+  update(@Payload() id: string, @Payload() updateUserDto: UpdateUserDto) {
+    return this.userService.update({ id }, updateUserDto);
   }
 
   @MessagePattern('user.remove')
-  remove(@Payload() id: number) {
-    return this.userService.remove(id);
+  remove(@Payload() id: string) {
+    return this.userService.remove({ id });
   }
 }

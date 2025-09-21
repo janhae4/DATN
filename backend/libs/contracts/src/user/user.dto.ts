@@ -1,8 +1,18 @@
-import { Role } from "apps/api-gateway/enums/role.enum"
-
+export enum Role {
+    User = 'User',
+    Admin = 'Admin',
+}
 export class UserDto {
-    id: number
+    id: string
     username: string
+    phone: string
     password: string
-    role: Role[]
+    name : string
+    role: Role
+    isActive: boolean
+    image?: string
+    bio?: string
+    lastLogin?: Date
+    createdAt: Date
+    updatedAt: Date
 }

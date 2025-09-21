@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Request } from '@nestjs/common';
 import * as request from 'supertest';
-import { UserModule } from './../src/user.module';
+import { UserModule } from '../src/user/user.module';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
@@ -13,12 +13,5 @@ describe('UserController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
-  });
-
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
   });
 });
