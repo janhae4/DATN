@@ -87,10 +87,3 @@ jobs:
       - name: Test backend
         working-directory: ./backend
         run: npm run test --if-present
-
-      # - name: Deploy backend to Heroku
-      #   if: github.ref == 'refs/heads/main'
-      #   working-directory: ./backend
-      #   run: git push https://heroku:$HEROKU_API_KEY@git.heroku.com/<HEROKU_APP_NAME>.git main
-      #   env:
-      #     HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
