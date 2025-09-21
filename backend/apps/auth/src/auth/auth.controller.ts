@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
+import { LoginDto } from '@app/contracts/auth/login.dto';
 
 @Controller()
 export class AuthController {
@@ -11,10 +12,14 @@ export class AuthController {
   //   return this.authService.create(createAuthDto);
   // }
 
-  @MessagePattern('auth.createAccessToken')
-  createAccessToken(@Payload() payload: any) {
-    console.log(payload);
-    return this.authService.createAccessToken(payload);
+  @MessagePattern('auth.login')
+  login(@Payload() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
+  }
+
+  @MessagePattern('auth.validateToken')
+  validateToken(@Payload() token: string) {
+    return this.authService.validateToken(token);
   }
 
   // @MessagePattern('auth.getRefreshToken')

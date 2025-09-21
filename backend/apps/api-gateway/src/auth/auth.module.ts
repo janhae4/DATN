@@ -18,5 +18,6 @@ import { ClientConfigService } from '../client-config/client-config.service';
       useFactory: (configService: ClientConfigService) => ClientProxyFactory.create(configService.userClientOptions),
       inject: [ClientConfigService]
     }],
+  exports: [AuthService]
 })
 export class AuthModule { }

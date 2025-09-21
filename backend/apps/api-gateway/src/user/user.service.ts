@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+
 import { ClientProxy } from '@nestjs/microservices';
 import { LoginDto } from '@app/contracts/auth/login.dto';
 import { USER_CLIENT } from '@app/contracts/constants';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
+import { CreateUserDto } from '@app/contracts/user/create-user.dto';
+import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -26,7 +27,7 @@ export class UserService {
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
-    return this.userClient.send(USER_PATTERNS.UPDATE, { id, ...updateUserDto });
+    return this.userClient.send(USER_PATTERNS.UPDATE, { ...updateUserDto, id });
   }
 
   remove(id: number) {

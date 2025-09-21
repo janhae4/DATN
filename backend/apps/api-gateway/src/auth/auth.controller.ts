@@ -1,17 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller,Post, Body, Res} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
-import { Payload } from '@nestjs/microservices';
-import { UserDto } from '../user/dto/user.dto';
-import { LoginDto } from './dto/login.dto';
+import type { Response } from 'express';
+import { LoginDto } from '@app/contracts/auth/login.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
+    return this.authService.login(loginDto, response);
   }
 }
