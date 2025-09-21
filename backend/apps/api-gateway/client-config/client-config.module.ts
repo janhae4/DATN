@@ -10,10 +10,10 @@ import * as joi from 'joi';
         USER_CLIENT_PORT: joi.number().default(3001),
         AUTH_CLIENT_PORT: joi.number().default(3002),
         REDIS_CLIENT_PORT: joi.number().default(6379),
-      })
-    })
+      }),
+    }),
   ],
   providers: [ClientConfigService],
-  exports: [ClientConfigService]
+  exports: [ClientConfigService],
 })
 export class ClientConfigModule {}

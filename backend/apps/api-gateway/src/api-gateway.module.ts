@@ -3,7 +3,7 @@ import { ApiGatewayController } from './api-gateway.controller';
 import { ApiGatewayService } from './api-gateway.service';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
-import { ClientConfigModule } from './client-config/client-config.module';
+import { ClientConfigModule } from '../client-config/client-config.module';
 import { APP_GUARD } from '@nestjs/core';
 import { RoleGuard } from './role.guard';
 import { RedisModule } from './redis/redis.module';
@@ -11,9 +11,12 @@ import { RedisModule } from './redis/redis.module';
 @Module({
   imports: [UserModule, AuthModule, ClientConfigModule, RedisModule],
   controllers: [ApiGatewayController],
-  providers: [ApiGatewayService, {
-    provide: APP_GUARD,
-    useClass: RoleGuard
-  }],
+  providers: [
+    ApiGatewayService,
+    {
+      provide: APP_GUARD,
+      useClass: RoleGuard,
+    },
+  ],
 })
-export class ApiGatewayModule { }
+export class ApiGatewayModule {}

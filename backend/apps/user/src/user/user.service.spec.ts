@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
-import { Role } from "@app/contracts/user/user.dto";
+import { Role, UserDto } from '@app/contracts/user/user.dto';
 import bcrypt from 'bcrypt';
 import { PrismaService } from './prisma.service';
 
@@ -19,7 +19,6 @@ describe('UserService', () => {
     expect(service).toBeDefined();
   });
 
-
   describe('create', () => {
     it('should create a new user with hashed password', async () => {
       const createDto = {
@@ -29,7 +28,7 @@ describe('UserService', () => {
         email: '001@example.com',
         phone: '0000000001',
       };
-      const newUser = await service.create(createDto);
+      const newUser: UserDto = await service.create(createDto);
       expect(newUser.id).toBeDefined();
       expect(newUser.username).toBe('newuser');
       expect(newUser.role).toEqual(Role.User);
@@ -48,13 +47,13 @@ describe('UserService', () => {
 
   describe('findOne', () => {
     it('should return the correct user by username', async () => {
-      const user = await service.findOne({username: 'newuser'});
+      const user = await service.findOne({ username: 'newuser' });
       expect(user).toBeDefined();
       expect(user?.username).toBe('newuser');
     });
 
     it('should return undefined for non-existing user', async () => {
-      const user = await service.findOne({id: "123"});
+      const user = await service.findOne({ id: '123' });
       expect(user).toBeNull();
     });
   });
@@ -63,7 +62,7 @@ describe('UserService', () => {
     it('should return user if credentials are correct', async () => {
       const loginDto = { username: 'newuser', password: '1234' };
       const user = await service.validate(loginDto);
-      console.log(user)
+      console.log(user);
       expect(user).toBeDefined();
       expect(user?.username).toBe('newuser');
     });
@@ -75,14 +74,14 @@ describe('UserService', () => {
 
     it('should throw error if password is wrong', async () => {
       const loginDto = { username: 'newuser', password: 'wrongpass' };
-      await expect(await service.validate(loginDto)).toBeNull();
+      expect(await service.validate(loginDto)).toBeNull();
     });
   });
 
   describe('update', () => {
     it('should update user properties', async () => {
-      await service.update({username: "newuser"}, { username: 'admin2' });
-      const user = await service.findOne({username: 'admin2'});
+      await service.update({ username: 'newuser' }, { username: 'admin2' });
+      const user = await service.findOne({ username: 'admin2' });
       expect(user?.username).toBe('admin2');
     });
   });
@@ -90,7 +89,7 @@ describe('UserService', () => {
   describe('remove', () => {
     it('should remove user by id', async () => {
       await service.remove({ username: 'admin2' });
-      const user = await service.findOne({username: 'admin2'});
+      const user = await service.findOne({ username: 'admin2' });
       expect(user).toBeNull();
     });
   });

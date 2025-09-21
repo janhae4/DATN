@@ -1,17 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 
 import bcrypt from 'bcrypt';
-import { LoginDto } from '@app/contracts/auth/login.dto';
+import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateUserDto } from '@app/contracts/user/create-user.dto';
 import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
 import { PrismaService } from './prisma.service';
 import { Prisma, User } from '../generated/prisma';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
   async create(createUserDto: CreateUserDto): Promise<any> {
-
     try {
       return await this.prisma.user.create({
         data: {
@@ -20,11 +20,28 @@ export class UserService {
           password: bcrypt.hashSync(createUserDto.password, 10),
           name: createUserDto.name,
           phone: createUserDto.phone,
-          role: "User"
-        }
-      })
-    } catch (error) {
-      return error
+          role: 'User',
+        },
+      });
+    } catch (error: any) {
+      const prismaError = error as {
+        code?: string;
+        meta?: { target?: string[] };
+      };
+      if (prismaError?.code === 'P2002') {
+        const field = (prismaError?.meta?.target?.[0] as string) || 'field';
+        throw new RpcException({
+          message: `${field} already exists`,
+          error: 'Conflict',
+          status: HttpStatus.CONFLICT,
+        });
+      }
+
+      throw new RpcException({
+        message: 'Internal server error',
+        error: 'DatabaseError',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
     }
   }
 
@@ -54,14 +71,12 @@ export class UserService {
   async validate(loginDto: LoginDto) {
     const user = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          { username: loginDto.username },
-          { email: loginDto.username }
-        ]
-      }
+        OR: [{ username: loginDto.username }, { email: loginDto.username }],
+      },
     });
-    if (user && await bcrypt.compare(loginDto.password, user.password)) {
-      const { password, ...result } = user;
+    if (user && (await bcrypt.compare(loginDto.password, user.password))) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _password, ...result } = user;
       return result;
     }
     return null;
@@ -73,7 +88,6 @@ export class UserService {
       data,
     });
   }
-
 
   async remove(where: Prisma.UserWhereUniqueInput) {
     return this.prisma.user.delete({

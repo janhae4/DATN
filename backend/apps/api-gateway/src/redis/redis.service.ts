@@ -4,21 +4,35 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 @Injectable()
 export class RedisService {
-  constructor(@Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy) { }
+  constructor(
+    @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
+  ) {}
 
-  async storeRefreshToken(userId: string, sessionId: string, refreshToken: string) {
-    return this.redisClient.send(REDIS_PATTERN.STORE_REFRESH_TOKEN, { userId, sessionId, refreshToken });
+  storeRefreshToken(userId: string, sessionId: string, refreshToken: string) {
+    return this.redisClient.send(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
+      userId,
+      sessionId,
+      refreshToken,
+    });
   }
 
-  async deleteRefreshToken(userId: string, sessionId: string) {
-    return this.redisClient.send(REDIS_PATTERN.DELETE_REFRESH_TOKEN, { userId, sessionId });
+  deleteRefreshToken(userId: string, sessionId: string) {
+    return this.redisClient.send(REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
+      userId,
+      sessionId,
+    });
   }
 
-  async clearRefreshTokens(userId: string) {
-    return this.redisClient.send(REDIS_PATTERN.CLEAR_REFRESH_TOKENS, { userId });
+  clearRefreshTokens(userId: string) {
+    return this.redisClient.send(REDIS_PATTERN.CLEAR_REFRESH_TOKENS, {
+      userId,
+    });
   }
 
-  async getStoredRefreshToken(userId: string, sessionId: string) {
-    return this.redisClient.send(REDIS_PATTERN.GET_STORED_REFRESH_TOKEN, { userId, sessionId });
+  getStoredRefreshToken(userId: string, sessionId: string) {
+    return this.redisClient.send(REDIS_PATTERN.GET_STORED_REFRESH_TOKEN, {
+      userId,
+      sessionId,
+    });
   }
 }
