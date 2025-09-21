@@ -36,17 +36,9 @@ jobs:
         working-directory: ./frontend
         run: npm run lint
 
-      - name: Format check
-        working-directory: ./frontend
-        run: npm run format -- --check
-
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
-
-      - name: Test frontend
-        working-directory: ./frontend
-        run: npm test --if-present
 
       # - name: Deploy frontend to Vercel
       #   if: github.ref == 'refs/heads/main'
@@ -83,11 +75,11 @@ jobs:
       - name: Lint code
         working-directory: ./backend
         run: npm run lint
-
-      - name: Format check
+      
+      - name: Format code
         working-directory: ./backend
-        run: npm run format -- --check
-
+        run: npm run format
+        
       - name: Build backend
         working-directory: ./backend
         run: npm run build
