@@ -21,6 +21,10 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "paths": {}
+    "paths": {
+      "@app/contracts/*": ["libs/contracts/src/*"],
+      "@app/prisma": ["generated/prisma"],
+      "@app/prisma/*": ["generated/prisma/*"]
+    }
   }
 }

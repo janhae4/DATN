@@ -1,0 +1,206 @@
+### Task Service API Tests
+### Base URL: http://localhost:3001
+### Make sure the services are running: docker-compose up
+
+### Variables
+@baseUrl = http://localhost:3001
+@contentType = application/json
+
+### 1. Create a new task
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Complete project",
+  "description": "Write comprehensive documentation for the task management system",
+  "deadline": "2024-12-31T23:59:59.000Z",
+  "priority": 1,
+  "status": "PENDING"
+}
+
+### 2. Create another task with minimal data
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Review code changes",
+  "priority": 2
+}
+
+### 3. Create a high priority task
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Fix critical bug in authentication",
+  "description": "Users cannot login due to JWT token validation issue",
+  "deadline": "2024-01-15T18:00:00.000Z",
+  "priority": 3,
+  "status": "IN_PROGRESS"
+}
+
+### 4. Get all tasks
+GET {{baseUrl}}/tasks
+
+### 5. Get a specific task by ID (replace {id} with actual task ID from previous responses)
+GET {{baseUrl}}/tasks/3
+
+### 6. Update task status to IN_PROGRESS
+PATCH {{baseUrl}}/tasks/3
+Content-Type: {{contentType}}
+
+{
+  "status": "PENDING"
+}
+
+### 7. Update task with multiple fields
+PATCH {{baseUrl}}/tasks/3
+Content-Type: {{contentType}}
+
+{
+  "title": "Complete project documentation - Updated",
+  "description": "Write comprehensive documentation for the task management system with examples",
+  "priority": 2,
+  "status": "IN_PROGRESS"
+}
+
+### 8. Update task deadline
+PATCH {{baseUrl}}/tasks/2
+Content-Type: {{contentType}}
+
+{
+  "deadline": "2027-02-15T17:00:00.000Z",
+  "status": "PENDING"
+}
+
+### 9. Mark task as completed
+PATCH {{baseUrl}}/tasks/3
+Content-Type: {{contentType}}
+
+{
+  "status": "DONE"
+}
+
+### 10. Get all tasks again to see updates
+GET {{baseUrl}}/tasks
+
+### 11. Delete a task (replace {id} with actual task ID)
+DELETE {{baseUrl}}/tasks/3
+
+### 12. Verify task was deleted
+GET {{baseUrl}}/tasks
+
+### Error Testing
+
+### 13. Try to get non-existent task
+GET {{baseUrl}}/tasks/999
+
+### 14. Try to update non-existent task
+PATCH {{baseUrl}}/tasks/999
+Content-Type: {{contentType}}
+
+{
+  "title": "This should fail"
+}
+
+### 15. Try to delete non-existent task
+DELETE {{baseUrl}}/tasks/999
+
+### 16. Create task with invalid status
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Invalid status test",
+  "status": "INVALID_STATUS"
+}
+
+### 17. Create task with invalid date format
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Invalid date test",
+  "deadline": "invalid-date"
+}
+
+### 18. Create task without required title
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "description": "Missing title should fail"
+}
+
+### Performance Testing
+
+### 19. Create multiple tasks for bulk testing
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Task 1",
+  "priority": 1
+}
+
+###
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Task 2",
+  "priority": 2
+}
+
+###
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Task 3",
+  "priority": 3
+}
+
+### 20. Get all tasks to see bulk created tasks
+GET {{baseUrl}}/tasks
+
+### Advanced Testing
+
+### 21. Update task with null deadline (should clear deadline)
+PATCH {{baseUrl}}/tasks/1
+Content-Type: {{contentType}}
+
+{
+  "deadline": null
+}
+
+### 22. Create task with all fields
+POST {{baseUrl}}/tasks
+Content-Type: {{contentType}}
+
+{
+  "title": "Comprehensive Task",
+  "description": "This task has all possible fields filled",
+  "deadline": "2025-10-30T12:00:00.000Z",
+  "priority": 3,
+  "status": "PENDING"
+}
+
+### 23. Update task priority only
+PATCH {{baseUrl}}/tasks/1
+Content-Type: {{contentType}}
+
+{
+  "priority": 1
+}
+
+### 24. Update task description only
+PATCH {{baseUrl}}/tasks/1
+Content-Type: {{contentType}}
+
+{
+  "description": "Updated description only"
+}
+
+### 25. Final check - get all tasks
+GET {{baseUrl}}/tasks

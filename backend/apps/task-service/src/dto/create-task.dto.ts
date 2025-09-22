@@ -1,4 +1,4 @@
-import { TaskStatus } from '../../../../generated/prisma';
+import { TaskStatus } from '@app/prisma';
 
 export class CreateTaskDto {
   title: string;

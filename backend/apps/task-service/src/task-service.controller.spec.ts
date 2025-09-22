@@ -4,7 +4,7 @@ import { TaskServiceService } from './task-service.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskPayloadDto } from './dto/update-task-payload.dto';
 import { FindTaskDto } from './dto/find-task.dto';
-import { Task } from '../../../generated/prisma';
+import { Task } from '@app/prisma';
 
 describe('TaskServiceController', () => {
   let controller: TaskServiceController;
