@@ -17,7 +17,7 @@ export class TaskServiceController {
   }
 
   @MessagePattern(TASK_PATTERNS.FIND_ONE)
-  async findOne(@Payload() data: FindTaskDto): Promise<Task | null> {
+  async findOne(@Payload() data: FindTaskDto): Promise<Task> {
     return this.taskServiceService.findOne(data.id);
   }
 

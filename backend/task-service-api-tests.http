@@ -11,7 +11,7 @@ POST {{baseUrl}}/tasks
 Content-Type: {{contentType}}
 
 {
-  "title": "Complete project",
+  "title": "Test task",
   "description": "Write comprehensive documentation for the task management system",
   "deadline": "2024-12-31T23:59:59.000Z",
   "priority": 1,
@@ -46,7 +46,7 @@ GET {{baseUrl}}/tasks
 GET {{baseUrl}}/tasks/3
 
 ### 6. Update task status to IN_PROGRESS
-PATCH {{baseUrl}}/tasks/3
+PATCH {{baseUrl}}/tasks/10
 Content-Type: {{contentType}}
 
 {
@@ -187,7 +187,7 @@ Content-Type: {{contentType}}
 }
 
 ### 23. Update task priority only
-PATCH {{baseUrl}}/tasks/1
+PATCH {{baseUrl}}/tasks/13
 Content-Type: {{contentType}}
 
 {
@@ -195,7 +195,7 @@ Content-Type: {{contentType}}
 }
 
 ### 24. Update task description only
-PATCH {{baseUrl}}/tasks/1
+PATCH {{baseUrl}}/tasks/13
 Content-Type: {{contentType}}
 
 {
