@@ -10,7 +10,7 @@ import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
   async create(createUserDto: CreateUserDto): Promise<any> {
     try {
       return await this.prisma.user.create({
@@ -20,28 +20,18 @@ export class UserService {
           password: bcrypt.hashSync(createUserDto.password, 10),
           name: createUserDto.name,
           phone: createUserDto.phone,
-          role: 'User',
         },
       });
-    } catch (error: any) {
-      const prismaError = error as {
-        code?: string;
-        meta?: { target?: string[] };
-      };
-      if (prismaError?.code === 'P2002') {
-        const field = (prismaError?.meta?.target?.[0] as string) || 'field';
-        throw new RpcException({
-          message: `${field} already exists`,
-          error: 'Conflict',
-          status: HttpStatus.CONFLICT,
-        });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new RpcException({
+            error: `${error.meta?.target?.[0] || 'Account'} already exists`,
+            status: HttpStatus.BAD_REQUEST,
+          });
+        }
       }
-
-      throw new RpcException({
-        message: 'Internal server error',
-        error: 'DatabaseError',
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      });
+      throw new RpcException(error);
     }
   }
 

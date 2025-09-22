@@ -8,10 +8,11 @@ async function bootstrap() {
     {
       transport: Transport.TCP,
       options: {
-        port: 3002,
+        port: Number(process.env.AUTH_CLIENT_PORT || 3001),
       },
     },
   );
+  console.log(`Microservice Auth running on http://localhost:${process.env.AUTH_CLIENT_PORT}`);
   await app.listen();
 }
 bootstrap();

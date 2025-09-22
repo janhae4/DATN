@@ -32,9 +32,7 @@ export class RoleGuard implements CanActivate {
         this.authService.validateToken(cookies.accessToken),
       );
       if (!user) return false;
-      return requiredRoles.some((roleRequired) =>
-        user?.role?.includes(roleRequired),
-      );
+      return requiredRoles.some((roleRequired) => user.role === roleRequired);
     } catch {
       return false;
     }

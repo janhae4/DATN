@@ -1,12 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientOptions, Transport } from '@nestjs/microservices';
-import {
-  AUTH_CLIENT_PORT,
-  REDIS_CLIENT_PORT,
-  USER_CLIENT_PORT,
-} from '@app/contracts/constants';
-
 @Injectable()
 export class ClientConfigService {
   constructor(private config: ConfigService) {}
@@ -16,7 +10,7 @@ export class ClientConfigService {
   -------------------------
   */
   getUserClientPort(): number {
-    return this.config.get<number>('USER_CLIENT_PORT', USER_CLIENT_PORT);
+    return this.config.get<number>('USER_CLIENT_PORT', 3001);
   }
   get userClientOptions(): ClientOptions {
     return {
@@ -33,7 +27,7 @@ export class ClientConfigService {
   -------------------------
   */
   getAuthClientPort(): number {
-    return this.config.get<number>('AUTH_CLIENT_PORT', AUTH_CLIENT_PORT);
+    return this.config.get<number>('AUTH_CLIENT_PORT', 3002);
   }
   get authClientOptions(): ClientOptions {
     return {
@@ -50,7 +44,7 @@ export class ClientConfigService {
   -------------------------
   */
   getRedisClientPort(): number {
-    return this.config.get<number>('REDIS_CLIENT_PORT', REDIS_CLIENT_PORT);
+    return this.config.get<number>('REDIS_CLIENT_PORT', 6379);
   }
   get redisClientOptions(): ClientOptions {
     return {

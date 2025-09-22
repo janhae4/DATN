@@ -8,10 +8,11 @@ async function bootstrap() {
     {
       transport: Transport.REDIS,
       options: {
-        port: 6379,
+        port: Number(process.env.REDIS_CLIENT_PORT) || 6379,
       },
     },
   );
+  console.log(`Microservice Redis running on http://localhost:${process.env.REDIS_CLIENT_PORT}`);
   await app.listen();
 }
 bootstrap();

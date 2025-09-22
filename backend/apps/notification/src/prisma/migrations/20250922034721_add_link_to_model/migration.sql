@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "public"."Notification" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "isRead" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "link" TEXT,
+ADD COLUMN     "readAt" TIMESTAMP(3);

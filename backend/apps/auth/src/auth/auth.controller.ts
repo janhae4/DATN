@@ -10,8 +10,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @MessagePattern(AUTH_PATTERN.REGISTER)
-  create(@Payload() createAuthDto: CreateAuthDto) {
-    return this.authService.register(createAuthDto);
+  async register(@Payload() createAuthDto: CreateAuthDto) {
+    return await this.authService.register(createAuthDto);
   }
 
   @MessagePattern(AUTH_PATTERN.LOGIN)

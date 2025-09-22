@@ -5,7 +5,7 @@ import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { AUTH_CLIENT, USER_CLIENT } from '@app/contracts/constants';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
 import { firstValueFrom } from 'rxjs';
@@ -37,14 +37,18 @@ export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
-  ) {}
+  ) { }
 
   findAllUser() {
     this.userClient.send(USER_PATTERNS.FIND_ALL, {});
   }
 
-  register(createAuthDto: CreateAuthDto) {
-    this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto);
+  async register(createAuthDto: CreateAuthDto) {
+    try {
+      await firstValueFrom(this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto));
+    } catch (error) {
+      throw new HttpException(error, error.status);
+    }
   }
 
   async login(loginDto: LoginDto, response: Response) {

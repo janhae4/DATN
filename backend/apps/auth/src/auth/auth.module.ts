@@ -4,8 +4,10 @@ import { AuthController } from './auth.controller';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { REDIS_CLIENT, USER_CLIENT } from '@app/contracts/constants';
+import { NOTIFICATION_CLIENT, REDIS_CLIENT, USER_CLIENT } from '@app/contracts/constants';
+import { ConfigModule } from '@nestjs/config';
 
+ConfigModule.forRoot();
 @Module({
   imports: [
     PassportModule,
@@ -17,15 +19,18 @@ import { REDIS_CLIENT, USER_CLIENT } from '@app/contracts/constants';
       {
         name: USER_CLIENT,
         transport: Transport.TCP,
-        options: { port: 3001 },
+        options: { port: Number(process.env.USER_CLIENT_PORT) || 3003 },
       },
-    ]),
-    ClientsModule.register([
       {
         name: REDIS_CLIENT,
         transport: Transport.REDIS,
-        options: { port: 6379 },
+        options: { port: Number(process.env.REDIS_CLIENT_PORT) || 6379 },
       },
+      {
+        name: NOTIFICATION_CLIENT,
+        transport: Transport.REDIS,
+        options: { port: 6379 },
+      }
     ]),
   ],
   controllers: [AuthController],

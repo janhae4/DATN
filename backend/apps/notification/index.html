@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Socket.IO Notification Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    <h1>📩 Notification Test</h1>
+
+    <p>Open console (F12) để xem log.</p>
+
+    <script>
+        // Giả sử userId của bạn
+        const userId = "31a29b47-7c9e-40cd-a020-3b2be0b58953";
+
+        // Kết nối tới backend NestJS (chạy ở cổng 3000)
+        const socket = io("http://localhost:4001", {
+            query: { userId },
+            transports: ["websocket"],
+        });
+
+        socket.on("connect", () => {
+            console.log("✅ Connected to server:", socket.id);
+        });
+
+        socket.on("disconnect", () => {
+            console.log("❌ Disconnected from server");
+        });
+
+        socket.on("notification", (data) => {
+            console.log("🔔 Received notification:", data);
+            alert("🔔 New notification: " + data.message);
+        });
+    </script>
+</body>
+
+</html>

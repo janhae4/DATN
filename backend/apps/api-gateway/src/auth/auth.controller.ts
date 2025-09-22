@@ -13,12 +13,13 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
+    console.log(loginDto)
     return this.authService.login(loginDto, response);
   }
 
   @Post('/register')
-  register(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.register(createAuthDto);
+  async register(@Body() createAuthDto: CreateAuthDto) {
+    return await this.authService.register(createAuthDto);
   }
 
   @Post('/refresh')
