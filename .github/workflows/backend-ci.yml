@@ -49,6 +49,13 @@ jobs:
         working-directory: ./backend
         run: npm run build
 
+      - name: Start Database Services (Docker Compose)
+        working-directory: ./database
+        run: docker compose up -d
+
+      - name: Wait for Database to be Ready
+        run: sleep 10
+
       - name: Test backend
         working-directory: ./backend
         run: npm run test --if-present
