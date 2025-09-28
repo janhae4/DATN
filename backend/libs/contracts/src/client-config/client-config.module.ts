@@ -13,7 +13,6 @@ import * as joi from 'joi';
         NOTIFICATION_CLIENT_PORT: joi.number().default(4001),
         RMQ_URL: joi.string().required(),
         REDIS_QUEUE: joi.string().required(),
-        NOTIFICATION_QUEUE: joi.string().required(),
       }),
     }),
   ],
