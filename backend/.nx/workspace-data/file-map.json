@@ -1,0 +1,780 @@
+{
+  "version": "6.0",
+  "nxVersion": "21.5.3",
+  "pathMappings": {
+    "@app/contracts": [
+      "libs/contracts/src"
+    ],
+    "@app/contracts/*": [
+      "libs/contracts/src/*"
+    ]
+  },
+  "nxJsonPlugins": [
+    {
+      "name": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    }
+  ],
+  "fileMap": {
+    "projectFileMap": {
+      "backend": [
+        {
+          "file": ".gitignore",
+          "hash": "982037741268477851"
+        },
+        {
+          "file": ".prettierrc",
+          "hash": "5008776440579340246"
+        },
+        {
+          "file": "README.md",
+          "hash": "13123434361241207768"
+        },
+        {
+          "file": "__test__/raceConditionRefreshToken.js",
+          "hash": "8386896793683953093"
+        },
+        {
+          "file": "api/notification.http",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "api/user.http",
+          "hash": "8777016374623719388"
+        },
+        {
+          "file": "apps/api-gateway/src/api-gateway.controller.spec.ts",
+          "hash": "14279982999950780545"
+        },
+        {
+          "file": "apps/api-gateway/src/api-gateway.controller.ts",
+          "hash": "13969748362854998033"
+        },
+        {
+          "file": "apps/api-gateway/src/api-gateway.module.ts",
+          "hash": "10623589091686381730"
+        },
+        {
+          "file": "apps/api-gateway/src/api-gateway.service.ts",
+          "hash": "4579853351109386346"
+        },
+        {
+          "file": "apps/api-gateway/src/auth/auth.controller.spec.ts",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/api-gateway/src/auth/auth.controller.ts",
+          "hash": "8959761260128437816"
+        },
+        {
+          "file": "apps/api-gateway/src/auth/auth.module.ts",
+          "hash": "5106660398834849596"
+        },
+        {
+          "file": "apps/api-gateway/src/auth/auth.service.spec.ts",
+          "hash": "5442871165268080463"
+        },
+        {
+          "file": "apps/api-gateway/src/auth/auth.service.ts",
+          "hash": "3563973488766914755"
+        },
+        {
+          "file": "apps/api-gateway/src/main.ts",
+          "hash": "12612866771647997175"
+        },
+        {
+          "file": "apps/api-gateway/src/redis/redis.controller.spec.ts",
+          "hash": "16033827549112070303"
+        },
+        {
+          "file": "apps/api-gateway/src/redis/redis.controller.ts",
+          "hash": "9871488446768268738"
+        },
+        {
+          "file": "apps/api-gateway/src/redis/redis.module.ts",
+          "hash": "3004050369583822761"
+        },
+        {
+          "file": "apps/api-gateway/src/redis/redis.service.spec.ts",
+          "hash": "1954870633512399665"
+        },
+        {
+          "file": "apps/api-gateway/src/redis/redis.service.ts",
+          "hash": "14425425495191460604"
+        },
+        {
+          "file": "apps/api-gateway/src/role.decorator.ts",
+          "hash": "6382978141083969851"
+        },
+        {
+          "file": "apps/api-gateway/src/role.guard.ts",
+          "hash": "5090189701116868668"
+        },
+        {
+          "file": "apps/api-gateway/src/user/constants.ts",
+          "hash": "1510786898289087199"
+        },
+        {
+          "file": "apps/api-gateway/src/user/user.controller.spec.ts",
+          "hash": "8544731166474321108"
+        },
+        {
+          "file": "apps/api-gateway/src/user/user.controller.ts",
+          "hash": "2389723960260161006"
+        },
+        {
+          "file": "apps/api-gateway/src/user/user.module.ts",
+          "hash": "15155856693742497652"
+        },
+        {
+          "file": "apps/api-gateway/src/user/user.service.spec.ts",
+          "hash": "4841831373564007228"
+        },
+        {
+          "file": "apps/api-gateway/src/user/user.service.ts",
+          "hash": "11824947618219694426"
+        },
+        {
+          "file": "apps/api-gateway/test/app.e2e-spec.ts",
+          "hash": "14650290602853967527"
+        },
+        {
+          "file": "apps/api-gateway/test/jest-e2e.json",
+          "hash": "10645908491471703423"
+        },
+        {
+          "file": "apps/api-gateway/tsconfig.app.json",
+          "hash": "10977764163998490377"
+        },
+        {
+          "file": "apps/auth/src/auth/auth.controller.spec.ts",
+          "hash": "11331237801356277848"
+        },
+        {
+          "file": "apps/auth/src/auth/auth.controller.ts",
+          "hash": "6421505304235534773"
+        },
+        {
+          "file": "apps/auth/src/auth/auth.module.ts",
+          "hash": "15418555273075153117"
+        },
+        {
+          "file": "apps/auth/src/auth/auth.service.spec.ts",
+          "hash": "5442871165268080463"
+        },
+        {
+          "file": "apps/auth/src/auth/auth.service.ts",
+          "hash": "6783017849571343220"
+        },
+        {
+          "file": "apps/auth/src/auth/dto/user-validate.dto.ts",
+          "hash": "6250740224494483651"
+        },
+        {
+          "file": "apps/auth/src/auth/jwt-auth.guard.ts",
+          "hash": "490308030298999117"
+        },
+        {
+          "file": "apps/auth/src/auth/jwt.strategy.ts",
+          "hash": "7040225371147264028"
+        },
+        {
+          "file": "apps/auth/src/main.ts",
+          "hash": "6875177925792445826"
+        },
+        {
+          "file": "apps/auth/test/app.e2e-spec.ts",
+          "hash": "9451234393469542824"
+        },
+        {
+          "file": "apps/auth/test/jest-e2e.json",
+          "hash": "10645908491471703423"
+        },
+        {
+          "file": "apps/auth/tsconfig.app.json",
+          "hash": "17393497571802307624"
+        },
+        {
+          "file": "apps/notification/index.html",
+          "hash": "10457177121290595590"
+        },
+        {
+          "file": "apps/notification/src/adapter/redis-io.adapter.ts",
+          "hash": "13468890880523415834"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/client.d.ts",
+          "hash": "6801102947810818358"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/client.js",
+          "hash": "10400671776495891936"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/default.d.ts",
+          "hash": "6801102947810818358"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/default.js",
+          "hash": "6000848800246251414"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/edge.d.ts",
+          "hash": "11303388507078878756"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/edge.js",
+          "hash": "2294835136300650402"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/index-browser.js",
+          "hash": "12726875597793904092"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/index.d.ts",
+          "hash": "8963472078680120530"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/index.js",
+          "hash": "4085301083405953191"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/package.json",
+          "hash": "10559518111834108785"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/query_engine-windows.dll.node",
+          "hash": "4206580478387508148"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/query_engine_bg.js",
+          "hash": "5578298088787173498"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/query_engine_bg.wasm",
+          "hash": "4855165616400727377"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/edge-esm.js",
+          "hash": "2046298304353654718"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/edge.js",
+          "hash": "13902811713723185394"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/index-browser.d.ts",
+          "hash": "4654535025334731519"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/index-browser.js",
+          "hash": "17568067715518458519"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/library.d.ts",
+          "hash": "7343917298122178086"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/library.js",
+          "hash": "16967954633099124560"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/react-native.js",
+          "hash": "13010509690274226280"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/wasm-compiler-edge.js",
+          "hash": "1490073719446443211"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/runtime/wasm-engine-edge.js",
+          "hash": "8817018877712874583"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/schema.prisma",
+          "hash": "9101630929153953824"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/wasm-edge-light-loader.mjs",
+          "hash": "3932339460120700138"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/wasm-worker-loader.mjs",
+          "hash": "4591685620909226447"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/wasm.d.ts",
+          "hash": "11303388507078878756"
+        },
+        {
+          "file": "apps/notification/src/generated/prisma/wasm.js",
+          "hash": "2833255416349010947"
+        },
+        {
+          "file": "apps/notification/src/main.ts",
+          "hash": "18353523676563152411"
+        },
+        {
+          "file": "apps/notification/src/notification/dto/notification-update.dto.ts",
+          "hash": "2320091052386586475"
+        },
+        {
+          "file": "apps/notification/src/notification/dto/notification.event.ts",
+          "hash": "18417176934623383234"
+        },
+        {
+          "file": "apps/notification/src/notification/notification.controller.ts",
+          "hash": "18218639591830358218"
+        },
+        {
+          "file": "apps/notification/src/notification/notification.gateway.spec.ts",
+          "hash": "18075034561181324776"
+        },
+        {
+          "file": "apps/notification/src/notification/notification.gateway.ts",
+          "hash": "5331691407277022064"
+        },
+        {
+          "file": "apps/notification/src/notification/notification.module.ts",
+          "hash": "17649342566208307967"
+        },
+        {
+          "file": "apps/notification/src/notification/notification.service.spec.ts",
+          "hash": "105999784569160512"
+        },
+        {
+          "file": "apps/notification/src/notification/notification.service.ts",
+          "hash": "5629171751286748091"
+        },
+        {
+          "file": "apps/notification/src/notification/prisma.service.ts",
+          "hash": "11264145517330704528"
+        },
+        {
+          "file": "apps/notification/src/prisma/migrations/20250922033248_/migration.sql",
+          "hash": "19621484808491015"
+        },
+        {
+          "file": "apps/notification/src/prisma/migrations/20250922034721_add_link_to_model/migration.sql",
+          "hash": "6276750060089070275"
+        },
+        {
+          "file": "apps/notification/src/prisma/migrations/20250922035102_add_type/migration.sql",
+          "hash": "9159665549294083966"
+        },
+        {
+          "file": "apps/notification/src/prisma/migrations/migration_lock.toml",
+          "hash": "872437952673290735"
+        },
+        {
+          "file": "apps/notification/src/prisma/schema.prisma",
+          "hash": "9101630929153953824"
+        },
+        {
+          "file": "apps/notification/test/app.e2e-spec.ts",
+          "hash": "12952755033211209330"
+        },
+        {
+          "file": "apps/notification/test/jest-e2e.json",
+          "hash": "10645908491471703423"
+        },
+        {
+          "file": "apps/notification/tsconfig.app.json",
+          "hash": "788499277427053032"
+        },
+        {
+          "file": "apps/redis/src/main.ts",
+          "hash": "16843507745802363625"
+        },
+        {
+          "file": "apps/redis/src/redis/redis.controller.spec.ts",
+          "hash": "16033827549112070303"
+        },
+        {
+          "file": "apps/redis/src/redis/redis.controller.ts",
+          "hash": "7744897462488538686"
+        },
+        {
+          "file": "apps/redis/src/redis/redis.module.ts",
+          "hash": "10500484486847825126"
+        },
+        {
+          "file": "apps/redis/src/redis/redis.service.spec.ts",
+          "hash": "1954870633512399665"
+        },
+        {
+          "file": "apps/redis/src/redis/redis.service.ts",
+          "hash": "17236992662325838787"
+        },
+        {
+          "file": "apps/redis/test/app.e2e-spec.ts",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/redis/test/jest-e2e.json",
+          "hash": "10645908491471703423"
+        },
+        {
+          "file": "apps/redis/tsconfig.app.json",
+          "hash": "6398559311843914910"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/client.d.ts",
+          "hash": "6801102947810818358"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/client.js",
+          "hash": "10400671776495891936"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/default.d.ts",
+          "hash": "6801102947810818358"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/default.js",
+          "hash": "6000848800246251414"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/edge.d.ts",
+          "hash": "11303388507078878756"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/edge.js",
+          "hash": "8789608285338363793"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/index-browser.js",
+          "hash": "11350083183537911836"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/index.d.ts",
+          "hash": "10835506982841834784"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/index.js",
+          "hash": "2701562813996369509"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/package.json",
+          "hash": "807329405494812303"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/query_engine-windows.dll.node",
+          "hash": "4206580478387508148"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/query_engine-windows.dll.node.tmp20176",
+          "hash": "4206580478387508148"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/query_engine-windows.dll.node.tmp21344",
+          "hash": "4206580478387508148"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/query_engine_bg.js",
+          "hash": "5578298088787173498"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/query_engine_bg.wasm",
+          "hash": "4855165616400727377"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/edge-esm.js",
+          "hash": "2046298304353654718"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/edge.js",
+          "hash": "13902811713723185394"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/index-browser.d.ts",
+          "hash": "4654535025334731519"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/index-browser.js",
+          "hash": "17568067715518458519"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/library.d.ts",
+          "hash": "7343917298122178086"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/library.js",
+          "hash": "16967954633099124560"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/react-native.js",
+          "hash": "13010509690274226280"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/wasm-compiler-edge.js",
+          "hash": "1490073719446443211"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/runtime/wasm-engine-edge.js",
+          "hash": "8817018877712874583"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/schema.prisma",
+          "hash": "11131229646620480935"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/wasm-edge-light-loader.mjs",
+          "hash": "3932339460120700138"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/wasm-worker-loader.mjs",
+          "hash": "4591685620909226447"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/wasm.d.ts",
+          "hash": "11303388507078878756"
+        },
+        {
+          "file": "apps/user/src/generated/prisma/wasm.js",
+          "hash": "7785304333360856999"
+        },
+        {
+          "file": "apps/user/src/main.ts",
+          "hash": "10265469682646751265"
+        },
+        {
+          "file": "apps/user/src/prisma/migrations/20250922075009_/migration.sql",
+          "hash": "9776370319935263201"
+        },
+        {
+          "file": "apps/user/src/prisma/migrations/migration_lock.toml",
+          "hash": "872437952673290735"
+        },
+        {
+          "file": "apps/user/src/prisma/schema.prisma",
+          "hash": "8456297351414092225"
+        },
+        {
+          "file": "apps/user/src/user/prisma.service.ts",
+          "hash": "10245817956729945118"
+        },
+        {
+          "file": "apps/user/src/user/user.controller.spec.ts",
+          "hash": "8544731166474321108"
+        },
+        {
+          "file": "apps/user/src/user/user.controller.ts",
+          "hash": "4856927666979993208"
+        },
+        {
+          "file": "apps/user/src/user/user.module.ts",
+          "hash": "15866019409663016823"
+        },
+        {
+          "file": "apps/user/src/user/user.service.spec.ts",
+          "hash": "13950011068057876742"
+        },
+        {
+          "file": "apps/user/src/user/user.service.ts",
+          "hash": "12967443167028418710"
+        },
+        {
+          "file": "apps/user/test/app.e2e-spec.ts",
+          "hash": "6097512009776195722"
+        },
+        {
+          "file": "apps/user/test/jest-e2e.json",
+          "hash": "10645908491471703423"
+        },
+        {
+          "file": "apps/user/tsconfig.app.json",
+          "hash": "10887984538497520208"
+        },
+        {
+          "file": "dockerfile",
+          "hash": "15917267360207851729"
+        },
+        {
+          "file": "eslint.config.mjs",
+          "hash": "12237851887740035176"
+        },
+        {
+          "file": "libs/contracts/src/auth/auth.patterns.ts",
+          "hash": "12853682858835782927"
+        },
+        {
+          "file": "libs/contracts/src/auth/create-auth.dto.ts",
+          "hash": "10767158311972687348"
+        },
+        {
+          "file": "libs/contracts/src/auth/jwt.constant.ts",
+          "hash": "10012908904270983192"
+        },
+        {
+          "file": "libs/contracts/src/auth/jwt.dto.ts",
+          "hash": "1521524425023454365"
+        },
+        {
+          "file": "libs/contracts/src/auth/login-reponse.dto.ts",
+          "hash": "13118861568553378319"
+        },
+        {
+          "file": "libs/contracts/src/auth/login-request.dto.ts",
+          "hash": "15724725402820396043"
+        },
+        {
+          "file": "libs/contracts/src/auth/oauth-login.dto.ts",
+          "hash": "620774638415852819"
+        },
+        {
+          "file": "libs/contracts/src/auth/update-auth.dto.ts",
+          "hash": "4078327507894178495"
+        },
+        {
+          "file": "libs/contracts/src/client-config/client-config.module.ts",
+          "hash": "3221838083027312558"
+        },
+        {
+          "file": "libs/contracts/src/client-config/client-config.provider.ts",
+          "hash": "3606229178161676224"
+        },
+        {
+          "file": "libs/contracts/src/client-config/client-config.service.ts",
+          "hash": "7902298575759688410"
+        },
+        {
+          "file": "libs/contracts/src/constants.ts",
+          "hash": "14219806140752938929"
+        },
+        {
+          "file": "libs/contracts/src/errror.ts",
+          "hash": "16203810548705012845"
+        },
+        {
+          "file": "libs/contracts/src/notification/notification.enum.ts",
+          "hash": "7064666469504098296"
+        },
+        {
+          "file": "libs/contracts/src/notification/notification.pattern.ts",
+          "hash": "4072131521963558427"
+        },
+        {
+          "file": "libs/contracts/src/rabbitmq/rmq.pattern.ts",
+          "hash": "3817973391704712983"
+        },
+        {
+          "file": "libs/contracts/src/redis/redis.pattern.ts",
+          "hash": "17011023447240225533"
+        },
+        {
+          "file": "libs/contracts/src/redis/store-refreshtoken.dto.ts",
+          "hash": "14676056773422815"
+        },
+        {
+          "file": "libs/contracts/src/user/create-user.dto.ts",
+          "hash": "17974134429872446674"
+        },
+        {
+          "file": "libs/contracts/src/user/update-user.dto.ts",
+          "hash": "3072118038373682147"
+        },
+        {
+          "file": "libs/contracts/src/user/user.dto.ts",
+          "hash": "5927937149072124459"
+        },
+        {
+          "file": "libs/contracts/src/user/user.patterns.ts",
+          "hash": "2546115920594664664"
+        },
+        {
+          "file": "libs/contracts/tsconfig.lib.json",
+          "hash": "219359421355429250"
+        },
+        {
+          "file": "nest-cli.json",
+          "hash": "10668325208509967913"
+        },
+        {
+          "file": "nx.json",
+          "hash": "16621669590227149048"
+        },
+        {
+          "file": "package-lock.json",
+          "hash": "10566950712126897392"
+        },
+        {
+          "file": "package.json",
+          "hash": "14089337863569213931",
+          "deps": [
+            "npm:@eslint/eslintrc",
+            "npm:@eslint/js",
+            "npm:@nestjs/cli",
+            "npm:@nestjs/schematics",
+            "npm:@nestjs/testing",
+            "npm:@types/bcrypt",
+            "npm:@types/cookie-parser",
+            "npm:@types/express",
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:@types/passport-jwt",
+            "npm:@types/passport-local",
+            "npm:@types/supertest",
+            "npm:eslint",
+            "npm:eslint-config-prettier",
+            "npm:eslint-plugin-prettier",
+            "npm:globals",
+            "npm:jest",
+            "npm:prettier",
+            "npm:prisma",
+            "npm:source-map-support",
+            "npm:supertest",
+            "npm:ts-jest",
+            "npm:ts-loader",
+            "npm:ts-node",
+            "npm:tsconfig-paths",
+            "npm:typescript",
+            "npm:typescript-eslint",
+            "npm:nx",
+            "npm:@nx/eslint",
+            "npm:@nx/jest",
+            "npm:@nestjs/common",
+            "npm:@nestjs/config",
+            "npm:@nestjs/core",
+            "npm:@nestjs/jwt",
+            "npm:@nestjs/mapped-types",
+            "npm:@nestjs/microservices",
+            "npm:@nestjs/passport",
+            "npm:@nestjs/platform-express",
+            "npm:@nestjs/platform-socket.io",
+            "npm:@nestjs/swagger",
+            "npm:@nestjs/websockets",
+            "npm:@prisma/client",
+            "npm:@socket.io/redis-adapter",
+            "npm:amqp-connection-manager",
+            "npm:amqplib",
+            "npm:axios",
+            "npm:bcrypt",
+            "npm:cookie-parser",
+            "npm:ioredis",
+            "npm:joi",
+            "npm:passport",
+            "npm:passport-jwt",
+            "npm:passport-local",
+            "npm:redis",
+            "npm:reflect-metadata",
+            "npm:rxjs",
+            "npm:socket.io"
+          ]
+        },
+        {
+          "file": "tsconfig.build.json",
+          "hash": "9666801268768259513"
+        },
+        {
+          "file": "tsconfig.json",
+          "hash": "4003050330696138155"
+        }
+      ]
+    },
+    "nonProjectFiles": []
+  },
+  "externalNodesHash": "1344779306948659694"
+}
