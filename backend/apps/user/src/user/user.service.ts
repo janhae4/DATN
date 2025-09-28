@@ -10,7 +10,7 @@ import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
   async create(createUserDto: CreateUserDto): Promise<any> {
     try {
       return await this.prisma.user.create({

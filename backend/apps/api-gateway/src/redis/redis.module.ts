@@ -7,9 +7,6 @@ import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-confi
 @Module({
   imports: [ClientConfigModule],
   controllers: [RedisController],
-  providers: [
-    RedisService,
-    CLIENT_PROXY_PROVIDER.REDIS_CLIENT
-  ],
+  providers: [RedisService, CLIENT_PROXY_PROVIDER.REDIS_CLIENT],
 })
 export class RedisModule {}
