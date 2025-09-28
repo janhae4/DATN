@@ -53,7 +53,7 @@ export class UserService {
   }
 
   async findOne(id: Prisma.UserWhereUniqueInput): Promise<User | null> {
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: id,
     });
   }
