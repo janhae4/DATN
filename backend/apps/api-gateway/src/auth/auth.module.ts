@@ -7,10 +7,7 @@ import { UserModule } from '../user/user.module';
 @Module({
   imports: [ClientConfigModule, UserModule],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    CLIENT_PROXY_PROVIDER.AUTH_CLIENT,
-  ],
+  providers: [AuthService, CLIENT_PROXY_PROVIDER.AUTH_CLIENT],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

@@ -7,10 +7,7 @@ import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-confi
 @Module({
   imports: [ClientConfigModule],
   controllers: [UserController],
-  providers: [
-    UserService,
-    CLIENT_PROXY_PROVIDER.USER_CLIENT
-  ],
-  exports: [UserService]
+  providers: [UserService, CLIENT_PROXY_PROVIDER.USER_CLIENT],
+  exports: [UserService],
 })
 export class UserModule {}

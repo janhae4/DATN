@@ -5,7 +5,7 @@ import { PrismaService } from './prisma.service';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 
 @Module({
-  imports:[ClientConfigModule],
+  imports: [ClientConfigModule],
   controllers: [UserController],
   providers: [UserService, PrismaService],
 })

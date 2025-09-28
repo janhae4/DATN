@@ -29,7 +29,7 @@ export class RoleGuard implements CanActivate {
     if (!cookies.accessToken) return false;
     try {
       const user = await firstValueFrom<RefreshTokenDto>(
-        this.authService.validateToken(cookies.accessToken),
+        this.authService.validateToken(cookies.accessToken as string),
       );
       if (!user) return false;
       return requiredRoles.some((roleRequired) => user.role === roleRequired);

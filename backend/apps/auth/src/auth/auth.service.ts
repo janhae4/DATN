@@ -2,7 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, map } from 'rxjs';
-import { NOTIFICATION_CLIENT, REDIS_CLIENT, USER_CLIENT } from '@app/contracts/constants';
+import {
+  NOTIFICATION_CLIENT,
+  REDIS_CLIENT,
+  USER_CLIENT,
+} from '@app/contracts/constants';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
@@ -24,9 +28,10 @@ export class AuthService {
   constructor(
     @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
-    @Inject(NOTIFICATION_CLIENT) private readonly notificationClient: ClientProxy,
+    @Inject(NOTIFICATION_CLIENT)
+    private readonly notificationClient: ClientProxy,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   mapper(user: UserDto) {
     return {
@@ -37,12 +42,12 @@ export class AuthService {
 
   async register(createAuthDto: CreateAuthDto) {
     try {
-      return await firstValueFrom(
-        this.userClient.send(USER_PATTERNS.CREATE, createAuthDto)
+      return await firstValueFrom<UserDto>(
+        this.userClient.send(USER_PATTERNS.CREATE, createAuthDto),
       );
     } catch (error) {
       console.log(error);
-      throw new RpcException(error)
+      throw new RpcException(error);
     }
   }
 
@@ -53,7 +58,7 @@ export class AuthService {
         .send(USER_PATTERNS.VALIDATE, loginDto)
         .pipe(map((u) => this.mapper(u))),
     );
-    console.log(user)
+    console.log(user);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const sessionId = randomUUID();
@@ -69,24 +74,21 @@ export class AuthService {
       ),
     ]);
 
-    const hashedRefreshPromise = bcrypt.hash(refreshToken, 10);
+    const hashedRefresh = await bcrypt.hash(refreshToken, 10);
 
-    await Promise.all([
-      hashedRefreshPromise.then((hashedRefresh) =>
-        this.redisClient.emit(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
-          userId: user.id,
-          sessionId,
-          hashedRefresh,
-          exp: REFRESH_TTL,
-        }),
-      ),
-      this.notificationClient.emit(NOTIFICATION_PATTERN.SEND, {
-        userId: user.id,
-        title: 'Login Notification',
-        message: 'You have logged in successfully',
-        type: NotificationType.SYSTEM,
-      }),
-    ]);
+    this.redisClient.emit(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
+      userId: user.id,
+      sessionId,
+      hashedRefresh,
+      exp: REFRESH_TTL,
+    });
+
+    this.notificationClient.emit(NOTIFICATION_PATTERN.SEND, {
+      userId: user.id,
+      title: 'Login Notification',
+      message: 'You have logged in successfully',
+      type: NotificationType.SYSTEM,
+    });
 
     return {
       ...user,

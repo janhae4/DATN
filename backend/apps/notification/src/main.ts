@@ -8,11 +8,11 @@ async function bootstrap() {
   const [appCtx, app] = await Promise.all([
     NestFactory.createApplicationContext(NotificationModule),
     NestFactory.create(NotificationModule),
-  ])
-  
+  ]);
+
   const cfg = appCtx.get(ClientConfigService);
   app.connectMicroservice<MicroserviceOptions>(cfg.notificationClientOptions);
-  
+
   const redisIoAdapter = new RedisIoAdapter(app);
   await redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);

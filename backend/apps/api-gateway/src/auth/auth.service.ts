@@ -3,9 +3,14 @@ import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
 import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { AUTH_CLIENT, USER_CLIENT } from '@app/contracts/constants';
-import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
-import { HttpException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { AUTH_CLIENT } from '@app/contracts/constants';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
 import { firstValueFrom } from 'rxjs';
@@ -37,8 +42,8 @@ const clearCookie = (response: Response) => {
 export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
-    private readonly userService: UserService
-  ) { }
+    private readonly userService: UserService,
+  ) {}
 
   findAllUser() {
     this.userService.findAll();
@@ -46,9 +51,17 @@ export class AuthService {
 
   async register(createAuthDto: CreateAuthDto) {
     try {
-      await firstValueFrom(this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto));
+      await firstValueFrom(
+        this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto),
+      );
     } catch (error) {
-      throw new HttpException(error, error.status);
+      const status =
+        (error as { status?: number }).status ??
+        HttpStatus.INTERNAL_SERVER_ERROR;
+      const message =
+        (error as { message?: string }).message ?? 'Unknown error';
+
+      throw new HttpException(message, status);
     }
   }
 

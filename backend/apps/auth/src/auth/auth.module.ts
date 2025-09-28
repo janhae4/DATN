@@ -1,11 +1,10 @@
-import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
-import { JwtModule } from "@nestjs/jwt";
-import { PassportModule } from "@nestjs/passport";
-import { AuthController } from "./auth.controller";
-import { AuthService } from "./auth.service";
-import { CLIENT_PROXY_PROVIDER } from "@app/contracts/client-config/client-config.provider";
-import { ClientConfigModule } from "@app/contracts/client-config/client-config.module";
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
+import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 
 @Module({
   imports: [
@@ -14,7 +13,7 @@ import { ClientConfigModule } from "@app/contracts/client-config/client-config.m
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '60s' },
     }),
-    ClientConfigModule
+    ClientConfigModule,
   ],
   controllers: [AuthController],
   providers: [
