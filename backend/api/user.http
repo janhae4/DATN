@@ -1,0 +1,38 @@
+### Tạo user mới
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+  "username": "newuser",
+  "password": "1234",
+  "name": "New User",
+  "email": "001@example.com",
+  "phone": "0000000001",
+}
+
+### Lấy danh sách user
+GET http://localhost:3000/user
+
+### Lấy user theo id
+GET http://localhost:3000/user/4
+
+### Cập nhật user
+PATCH http://localhost:3000/user/4
+Content-Type: application/json
+
+{
+  "username": "Alice Updated"
+}
+
+### Xoá user
+DELETE http://localhost:3000/user/4
+
+
+### Login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "admin"
+}
