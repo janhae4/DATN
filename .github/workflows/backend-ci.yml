@@ -1,0 +1,54 @@
+name: ⚙️ Backend CI/CD (Microservices)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+
+jobs:
+  # ----------------------------------------------------
+  # TÌM KIẾM  CÁC SERVICE
+  # ----------------------------------------------------
+  get-services:
+    runs-on: ubuntu-latest
+        
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Cache Node modules backend
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-backend-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-backend-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: Lint code
+        working-directory: ./backend
+        run: npm run lint
+
+      - name: Format check
+        working-directory: ./backend
+        run: npm run format -- --check
+
+      - name: Build backend
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Test backend
+        working-directory: ./backend
+        run: npm run test --if-present
