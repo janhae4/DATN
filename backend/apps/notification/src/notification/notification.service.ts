@@ -19,9 +19,9 @@ export class NotificationService {
     client.join(userId);
   }
 
-  sendNotification(event: NotificationEvent) {
+  async sendNotification(event: NotificationEvent) {
     if (!this.server) return;
-    this.addNotification(event);
+    await this.addNotification(event);
     this.server.to(event.userId).emit('notification', {
       title: event.title,
       message: event.message,
@@ -29,8 +29,8 @@ export class NotificationService {
     });
   }
 
-  addNotification(notification: NotificationEvent) {
-    this.prisma.notification.create({
+  async addNotification(notification: NotificationEvent) {
+    await this.prisma.notification.create({
       data: {
         userId: notification.userId,
         title: notification.title,
@@ -40,24 +40,24 @@ export class NotificationService {
     });
   }
 
-  updateNotification(
+  async updateNotification(
     where: Prisma.NotificationWhereUniqueInput,
     data: NotificationUpdateDto,
   ) {
-    this.prisma.notification.update({
+    await this.prisma.notification.update({
       where,
       data,
     });
   }
 
-  deleteNotification(where: Prisma.NotificationWhereUniqueInput) {
-    this.prisma.notification.delete({
+  async deleteNotification(where: Prisma.NotificationWhereUniqueInput) {
+    await this.prisma.notification.delete({
       where,
     });
   }
 
-  markNotificationAsRead(where: Prisma.NotificationWhereUniqueInput) {
-    this.prisma.notification.update({
+  async markNotificationAsRead(where: Prisma.NotificationWhereUniqueInput) {
+    await this.prisma.notification.update({
       where,
       data: {
         isRead: true,
@@ -65,8 +65,8 @@ export class NotificationService {
     });
   }
 
-  markNotificationAsUnread(where: Prisma.NotificationWhereUniqueInput) {
-    this.prisma.notification.update({
+  async markNotificationAsUnread(where: Prisma.NotificationWhereUniqueInput) {
+    await this.prisma.notification.update({
       where,
       data: {
         isRead: false,
@@ -74,8 +74,8 @@ export class NotificationService {
     });
   }
 
-  markAllNotificationsAsRead(userId: string) {
-    this.prisma.notification.updateMany({
+  async markAllNotificationsAsRead(userId: string) {
+    await this.prisma.notification.updateMany({
       where: {
         userId,
       },
@@ -85,8 +85,8 @@ export class NotificationService {
     });
   }
 
-  markAllNotificationsAsUnread(userId: string) {
-    this.prisma.notification.updateMany({
+  async markAllNotificationsAsUnread(userId: string) {
+    await this.prisma.notification.updateMany({
       where: {
         userId,
       },
@@ -96,8 +96,8 @@ export class NotificationService {
     });
   }
 
-  getNotifications(userId: string) {
-    return this.prisma.notification.findMany({
+  async getNotifications(userId: string) {
+    return await this.prisma.notification.findMany({
       where: {
         userId,
       },
