@@ -72,6 +72,10 @@ jobs:
         working-directory: ./backend
         run: npm install
 
+      - name: Print ESLint version
+        working-directory: ./backend
+        run: npx eslint --version
+
       - name: Lint code
         working-directory: ./backend
         run: npm run lint
