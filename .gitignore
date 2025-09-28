@@ -1,7 +1,4 @@
 # Ignore node_modules for both frontend and backend
-frontend/node_modules
-backend/node_modules
-
 node_modules/
 
 # Logs
