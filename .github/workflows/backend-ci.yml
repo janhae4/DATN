@@ -16,32 +16,32 @@ jobs:
     runs-on: ubuntu-latest
         
     steps:
-      # - name: Checkout repo
-      #   uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      # - name: Cache Node modules backend
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: backend/node_modules
-      #     key: ${{ runner.os }}-node-backend-${{ hashFiles('backend/package-lock.json') }}
-      #     restore-keys: ${{ runner.os }}-node-backend-
+      - name: Cache Node modules backend
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-backend-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-backend-
 
-      # - name: Setup Node.js
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: 20
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
 
-      # - name: Install dependencies
-      #   working-directory: ./backend
-      #   run: npm install
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm install
 
-      # - name: Lint code
-      #   working-directory: ./backend
-      #   run: npm run lint
+      - name: Lint code
+        working-directory: ./backend
+        run: npm run lint
 
-      # - name: Format check
-      #   working-directory: ./backend
-      #   run: npm run format -- --check
+      - name: Format check
+        working-directory: ./backend
+        run: npm run format -- --check
 
       - name: Load environment variables
         run: |
@@ -49,65 +49,54 @@ jobs:
           for key in $(jq -r 'keys[]' services.json); do
             value=$(jq -r --arg k "$key" '.[$k]' services.json)
             echo "$key=$value" >> $GITHUB_ENV
+          done  
+      
+      - name: Generate Prisma Client for each service
+        working-directory: ./backend
+        run: |
+          echo "🔍 Looking for prisma schemas..."
+          find apps -type f -path "*/prisma/schema.prisma" | while read schema; do
+            service=$(echo "$schema" | cut -d'/' -f2)
+            echo "🚀 Generating Prisma Client for $service using $schema"
+            npx prisma generate --schema="$schema"
           done
-        
-      - name: Debug environment variables
+
+      - name: Build backend
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Start Database Services (Docker Compose)
+        working-directory: ./database
+        run: docker compose up -d
+
+      - name: Wait for Database to be Ready
+        run: sleep 10
+
+      - name: Test NestJS Services Startup
+        working-directory: ./backend
         run: |
-          echo "Database user: ${{ env.DATABASE_USER_URL }}"
-          echo "Database notification: ${{ env.DATABASE_NOTIFICATION_URL }}"
-          echo "Database task: ${{ env.DATABASE_TASK_URL }}"
-          echo "Test"
-      
-      - name: Debug secrets
-        run: |
-          cat services.json
-      
-      # - name: Generate Prisma Client for each service
-      #   working-directory: ./backend
-      #   run: |
-      #     echo "🔍 Looking for prisma schemas..."
-      #     find apps -type f -path "*/prisma/schema.prisma" | while read schema; do
-      #       service=$(echo "$schema" | cut -d'/' -f2)
-      #       echo "🚀 Generating Prisma Client for $service using $schema"
-      #       npx prisma generate --schema="$schema"
-      #     done
-
-      # - name: Build backend
-      #   working-directory: ./backend
-      #   run: npm run build
-
-      # - name: Start Database Services (Docker Compose)
-      #   working-directory: ./database
-      #   run: docker compose up -d
-
-      # - name: Wait for Database to be Ready
-      #   run: sleep 10
-
-      # - name: Test NestJS Services Startup
-      #   working-directory: ./backend
-      #   run: |
-      #     for service in apps/*; do
-      #       service_name=$(basename "$service")
-      #       if [ "$service_name" != "api-gateway" ]; then
-      #         echo "🚀 Testing service: $service_name"
-      #         # Start the service in background
-      #         npm run start:dev $service_name &
-      #         PID=$!
+          for service in apps/*; do
+            service_name=$(basename "$service")
+            if [ "$service_name" != "api-gateway" ]; then
+              echo "🚀 Testing service: $service_name"
+              # Start the service in background
+              npm run start:dev $service_name &
+              PID=$!
               
-      #         # Wait a few seconds to see if it crashes
-      #         sleep 5
+              # Wait a few seconds to see if it crashes
+              sleep 5
 
-      #         if ps -p $PID > /dev/null; then
-      #           echo "✅ Service $service_name started successfully!"
-      #           kill $PID
-      #         else
-      #           echo "❌ Service $service_name failed to start!"
-      #           exit 1
-      #         fi
-      #       fi
-      #     done
+              if ps -p $PID > /dev/null; then
+                echo "✅ Service $service_name started successfully!"
+                kill $PID
+              else
+                echo "❌ Service $service_name failed to start!"
+                exit 1
+              fi
+            fi
+          done
 
 
-      # - name: Test backend
-      #   working-directory: ./backend
-      #   run: npm run test --if-present
+      - name: Test backend
+        working-directory: ./backend
+        run: npm run test --if-present
