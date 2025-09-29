@@ -1,4 +1,3 @@
-import { TaskStatus } from 'apps/task-service/src/generated/prisma';
 import {
   IsString,
   IsNotEmpty,
@@ -9,6 +8,12 @@ import {
   Max,
   IsEnum,
 } from 'class-validator';
+
+enum TaskStatus {
+  TODO = 'TODO',
+  IN_PROGRESS = 'IN_PROGRESS',
+  DONE = 'DONE',
+}
 
 export class CreateTaskDto {
   @IsString()

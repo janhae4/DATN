@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';

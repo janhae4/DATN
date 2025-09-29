@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
-import { Task, TaskStatus } from '@app/prisma';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { RpcException } from '@nestjs/microservices';
 import { TASK_ERRORS } from '@app/contracts/task/task.errors';
+import { Task, TaskStatus } from './generated/prisma';
 
 @Injectable()
 export class TaskServiceService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(): Promise<Task[]> {
-    return this.prisma.task.findMany();
+    return await this.prisma.task.findMany();
   }
 
   async findOne(id: number): Promise<Task> {

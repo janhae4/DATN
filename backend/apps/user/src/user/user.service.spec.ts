@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
-import { Role, UserDto } from '@app/contracts/user/user.dto';
 import bcrypt from 'bcrypt';
 import { PrismaService } from './prisma.service';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
+import { UserDto } from '@app/contracts/user/user.dto';
+import { Role } from '../generated/prisma';
 
 describe('UserService', () => {
   let service: UserService;

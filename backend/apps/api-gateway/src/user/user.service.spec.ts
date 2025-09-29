@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 import { UserController } from './user.controller';
+import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
 
 describe('UserService', () => {
@@ -9,7 +9,7 @@ describe('UserService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ClientConfigModule],
+      imports: [ClientConfigModule, ],
       controllers: [UserController],
       providers: [UserService, CLIENT_PROXY_PROVIDER.USER_CLIENT],
       exports: [UserService],

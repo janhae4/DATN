@@ -6,10 +6,10 @@ import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('/login')
-  async login(
+  login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
@@ -18,16 +18,16 @@ export class AuthController {
   }
 
   @Post('/register')
-  async register(@Body() createAuthDto: CreateAuthDto) {
-    return await this.authService.register(createAuthDto);
+  register(@Body() createAuthDto: CreateAuthDto) {
+    return this.authService.register(createAuthDto);
   }
 
   @Post('/refresh')
-  async refresh(
+  refresh(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    return await this.authService.refresh(request, response);
+    return this.authService.refresh(request, response);
   }
 
   @Post('/logout')
