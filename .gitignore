@@ -3,6 +3,6 @@ node_modules/
 # Logs
 *.log
 
-*/venv/
+venv/
 ml/ner
 ml/__pycache__
