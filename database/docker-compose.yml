@@ -18,6 +18,15 @@ services:
     volumes:
       - redis-data:/data
   
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+    restart: always
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+  
 volumes:
   postgres-data:
   redis-data:
+  rabbitmq-data:
