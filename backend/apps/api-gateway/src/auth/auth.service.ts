@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
-import { catchError, firstValueFrom, tap, throwError } from 'rxjs';
+import { catchError, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
 
 const setCookie = (
@@ -43,27 +43,26 @@ export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
   findAllUser() {
     this.userService.findAll();
   }
 
   register(createAuthDto: CreateAuthDto) {
-  return this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto).pipe(
-    catchError((error) => {
-      const status =
-        (error as { status?: number }).status ??
-        HttpStatus.INTERNAL_SERVER_ERROR;
-      const message =
-        (error as { error?: string }).error ?? 'Unknown error';
+    return this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto).pipe(
+      catchError((error) => {
+        const status =
+          (error as { status?: number }).status ??
+          HttpStatus.INTERNAL_SERVER_ERROR;
+        const message = (error as { error?: string }).error ?? 'Unknown error';
 
-      return throwError(() => new HttpException(message, status));
-    }),
-  );
-}
+        return throwError(() => new HttpException(message, status));
+      }),
+    );
+  }
 
-  async login(loginDto: LoginDto, response: Response) {
+  login(loginDto: LoginDto, response: Response) {
     this.authClient.send(AUTH_PATTERN.LOGIN, { ...loginDto }).pipe(
       tap((token: LoginResponseDto) => {
         const { accessToken, refreshToken } = token;
@@ -71,9 +70,11 @@ export class AuthService {
         return { accessToken, refreshToken };
       }),
       catchError(() => {
-        return throwError(() => new UnauthorizedException('Invalid credentials'));
+        return throwError(
+          () => new UnauthorizedException('Invalid credentials'),
+        );
       }),
-    )
+    );
   }
 
   refresh(request: Request, response: Response) {
@@ -85,7 +86,9 @@ export class AuthService {
       }),
       catchError(() => {
         clearCookie(response);
-        return throwError(() => new UnauthorizedException('Invalid refresh token'));
+        return throwError(
+          () => new UnauthorizedException('Invalid refresh token'),
+        );
       }),
     );
   }
