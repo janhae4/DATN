@@ -58,8 +58,7 @@ export class AuthService {
       const status =
         (error as { status?: number }).status ??
         HttpStatus.INTERNAL_SERVER_ERROR;
-      const message =
-        (error as { message?: string }).message ?? 'Unknown error';
+      const message = (error as { error?: string }).error ?? 'Unknown error';
 
       throw new HttpException(message, status);
     }

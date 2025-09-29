@@ -141,7 +141,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "D:\\BaiTapLon\\DATN\\backend\\apps\\user\\src\\generated\\prisma",
+      "value": "D:\\BaiTapLon\\DATN\\DATN\\backend\\apps\\user\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -155,7 +155,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "D:\\BaiTapLon\\DATN\\backend\\apps\\user\\src\\prisma\\schema.prisma",
+    "sourceFilePath": "D:\\BaiTapLon\\DATN\\DATN\\backend\\apps\\user\\src\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -168,6 +168,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {

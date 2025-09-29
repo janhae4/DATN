@@ -11,6 +11,7 @@ export class AuthController {
 
   @MessagePattern(AUTH_PATTERN.REGISTER)
   async register(@Payload() createAuthDto: CreateAuthDto) {
+    console.log(createAuthDto);
     return await this.authService.register(createAuthDto);
   }
 
