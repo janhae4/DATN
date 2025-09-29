@@ -58,6 +58,11 @@ jobs:
           echo "Database task: ${{ env.DATABASE_TASK_URL }}"
           echo "Test"
       
+      - name: Debug secrets
+        run: |
+          echo "D: ${{ secrets.D }}"
+          echo "A: ${{ secrets.A }}"
+      
       # - name: Generate Prisma Client for each service
       #   working-directory: ./backend
       #   run: |
