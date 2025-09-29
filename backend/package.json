@@ -28,6 +28,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.0",
+    "@prisma/client": "^6.16.2",
     "@socket.io/redis-adapter": "^8.3.0",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.9",
@@ -87,7 +88,7 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-        "roots": [
+    "roots": [
       "<rootDir>/apps/",
       "<rootDir>/libs/"
     ],
