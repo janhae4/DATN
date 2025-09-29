@@ -139,7 +139,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "D:\\BaiTapLon\\DATN\\backend\\apps\\notification\\src\\generated\\prisma",
+      "value": "D:\\BaiTapLon\\DATN\\DATN\\backend\\apps\\notification\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -150,14 +150,22 @@ const config = {
         "fromEnvVar": null,
         "value": "windows",
         "native": true
+      },
+      {
+        "fromEnvVar": null,
+        "value": "windows"
+      },
+      {
+        "fromEnvVar": null,
+        "value": "debian-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "D:\\BaiTapLon\\DATN\\backend\\apps\\notification\\src\\prisma\\schema.prisma",
+    "sourceFilePath": "D:\\BaiTapLon\\DATN\\DATN\\backend\\apps\\notification\\src\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": "../../../../../.env",
+    "rootEnvPath": null,
     "schemaEnvPath": "../../../../../.env"
   },
   "relativePath": "../../prisma",
@@ -176,8 +184,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_NOTIFICATION_URL\")\n}\n\nenum NotificationType {\n  CHAT\n  EMAIL\n  SYSTEM\n}\n\nmodel Notification {\n  id      String           @id @default(uuid())\n  userId  String\n  message String\n  title   String\n  isRead  Boolean          @default(false)\n  link    String?\n  type    NotificationType\n\n  createdAt DateTime  @default(now())\n  readAt    DateTime?\n}\n",
-  "inlineSchemaHash": "6405bd2f994283c36c443f2c9fb3e5ed5e23f0c0342afa88949e9cba7bd5d715",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../generated/prisma\"\n  binaryTargets = [\"native\", \"windows\", \"debian-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_NOTIFICATION_URL\")\n}\n\nenum NotificationType {\n  CHAT\n  EMAIL\n  SYSTEM\n}\n\nmodel Notification {\n  id      String           @id @default(uuid())\n  userId  String\n  message String\n  title   String\n  isRead  Boolean          @default(false)\n  link    String?\n  type    NotificationType\n\n  createdAt DateTime  @default(now())\n  readAt    DateTime?\n}\n",
+  "inlineSchemaHash": "bb827fa3d0edb6be6042de6489849b82b595f4d391a9efa8a01c0764e46e74b7",
   "copyEngine": true
 }
 
@@ -218,6 +226,10 @@ Object.assign(exports, Prisma)
 // file annotations for bundling tools to include these files
 path.join(__dirname, "query_engine-windows.dll.node");
 path.join(process.cwd(), "apps/notification/src/generated/prisma/query_engine-windows.dll.node")
+
+// file annotations for bundling tools to include these files
+path.join(__dirname, "libquery_engine-debian-openssl-3.0.x.so.node");
+path.join(process.cwd(), "apps/notification/src/generated/prisma/libquery_engine-debian-openssl-3.0.x.so.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
 path.join(process.cwd(), "apps/notification/src/generated/prisma/schema.prisma")
