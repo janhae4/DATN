@@ -56,3 +56,4 @@ jobs:
           echo "Database user: ${{ env.DATABASE_USER_URL }}"
           echo "Database notification: ${{ env.DATABASE_NOTIFICATION_URL }}"
           echo "Database task: ${{ env.DATABASE_TASK_URL }}"
+          echo "Test"
