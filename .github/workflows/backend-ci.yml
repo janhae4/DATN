@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - ".github/workflows/backend-ci.yml"
       - "backend/**"
   pull_request:
     branches: [main]
@@ -42,7 +43,7 @@ jobs:
         working-directory: ./backend
         run: npm run format -- --check
 
-            - name: Load environment variables
+      - name: Load environment variables
         run: |
           echo '${{ secrets.DATABASE_CONFIG }}' > services.json
           for key in $(jq -r 'keys[]' services.json); do
