@@ -98,4 +98,27 @@ export class ClientConfigService {
       },
     };
   }
+
+  /*
+  -------------------------
+  ------ TASK CLIENT ------
+  -------------------------
+  */
+  getTaskClientPort(): number {
+    return this.config.get<number>('TASK_CLIENT_PORT', 5001);
+  }
+  getTaskQueue(): string {
+    return this.config.get<string>('TASK_QUEUE', 'task_service_queue');
+  }
+  get taskClientOptions(): any {
+    console.log('Task port: ', this.getTaskClientPort());
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getTaskQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
 }

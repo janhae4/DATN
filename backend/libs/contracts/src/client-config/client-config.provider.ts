@@ -8,6 +8,7 @@ import {
   AUTH_CLIENT,
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
+  TASK_CLIENT,
   USER_CLIENT,
 } from '../constants';
 
@@ -62,5 +63,11 @@ export const CLIENT_PROXY_PROVIDER = {
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientProxy =>
       ClientProxyFactory.create(cfg.notificationClientOptions as ClientOptions),
+  },
+  TASK_CLIENT: {
+    provide: TASK_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.taskClientOptions as ClientOptions),
   },
 };
