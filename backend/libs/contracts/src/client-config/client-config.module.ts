@@ -10,6 +10,7 @@ import * as joi from 'joi';
         USER_CLIENT_PORT: joi.number().default(3001),
         AUTH_CLIENT_PORT: joi.number().default(3002),
         REDIS_CLIENT_PORT: joi.number().default(6379),
+        TASK_CLIENT_PORT: joi.number().default(3003),
         NOTIFICATION_CLIENT_PORT: joi.number().default(4001),
         RMQ_URL: joi.string().required(),
         REDIS_QUEUE: joi.string().required(),

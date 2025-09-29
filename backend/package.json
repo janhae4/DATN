@@ -9,9 +9,9 @@
     "build": "nest build",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
-    "start:dev": "nest start --watch",
+    "start:dev": "npm-run-all --parallel start:task-service:dev start:api-gateway:dev",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/apps/backend/main",
+    "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -24,26 +24,12 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.0",
-    "@nestjs/mapped-types": "*",
     "@nestjs/microservices": "^11.1.6",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
-    "@nestjs/platform-socket.io": "^11.1.6",
     "@nestjs/swagger": "^11.2.0",
-    "@nestjs/websockets": "^11.1.6",
-    "@prisma/client": "^6.16.2",
-    "@socket.io/redis-adapter": "^8.3.0",
-    "amqp-connection-manager": "^4.1.14",
-    "amqplib": "^0.10.9",
-    "axios": "^1.12.2",
-    "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.7",
-    "ioredis": "^5.7.0",
+    "class-validator": "^0.14.2",
     "joi": "^18.0.1",
-    "passport": "^0.7.0",
-    "passport-jwt": "^4.0.1",
-    "passport-local": "^1.0.0",
-    "redis": "^5.8.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1"
@@ -67,7 +53,6 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
-    "nx": "21.5.3",
     "prettier": "^3.4.2",
     "prisma": "^6.16.2",
     "source-map-support": "^0.5.21",
@@ -93,15 +78,7 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
-    "coverageDirectory": "./coverage",
-    "testEnvironment": "node",
-    "roots": [
-      "<rootDir>/apps/",
-      "<rootDir>/libs/"
-    ],
-    "moduleNameMapper": {
-      "^@app/contracts(|/.*)$": "<rootDir>/libs/contracts/src/$1"
-    }
-  },
-  "nx": {}
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  }
 }

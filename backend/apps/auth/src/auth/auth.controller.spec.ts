@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UserService } from 'apps/user/src/user/user.service';
-import { RedisService } from 'apps/redis/src/redis/redis.service';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
