@@ -60,8 +60,7 @@ jobs:
       
       - name: Debug secrets
         run: |
-          echo "D: ${{ secrets.D }}"
-          echo "A: ${{ secrets.A }}"
+          cat services.json
       
       # - name: Generate Prisma Client for each service
       #   working-directory: ./backend
