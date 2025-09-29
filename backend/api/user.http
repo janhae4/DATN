@@ -3,11 +3,11 @@ POST http://localhost:3000/auth/register
 Content-Type: application/json
 
 {
-  "username": "newuser",
+  "username": "newuser2",
   "password": "1234",
   "name": "New User",
-  "email": "001@example.com",
-  "phone": "0000000001",
+  "email": "002@example.com",
+  "phone": "0000000002"
 }
 
 ### Lấy danh sách user

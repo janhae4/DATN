@@ -42,6 +42,7 @@ export class AuthService {
 
   async register(createAuthDto: CreateAuthDto) {
     try {
+      console.log(createAuthDto);
       return await firstValueFrom<UserDto>(
         this.userClient.send(USER_PATTERNS.CREATE, createAuthDto),
       );

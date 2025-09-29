@@ -50,11 +50,36 @@ jobs:
         run: npm run build
 
       - name: Start Database Services (Docker Compose)
-        working-directory: ./database
+        working-directory: ../database
         run: docker compose up -d
 
       - name: Wait for Database to be Ready
         run: sleep 10
+
+      - name: Test NestJS Services Startup
+        working-directory: ./backend
+        run: |
+          for service in apps/*; do
+            service_name=$(basename "$service")
+            if [ "$service_name" != "api-gateway" ]; then
+              echo "🚀 Testing service: $service_name"
+              # Start the service in background
+              npm run start:dev $service_name &
+              PID=$!
+              
+              # Wait a few seconds to see if it crashes
+              sleep 5
+
+              if ps -p $PID > /dev/null; then
+                echo "✅ Service $service_name started successfully!"
+                kill $PID
+              else
+                echo "❌ Service $service_name failed to start!"
+                exit 1
+              fi
+            fi
+          done
+
 
       - name: Test backend
         working-directory: ./backend
