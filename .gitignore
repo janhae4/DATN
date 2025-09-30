@@ -12,3 +12,4 @@ backend/credentials*.json
 .env.*
 backend/.env
 frontend/.env
+backend/credentials.local.json
