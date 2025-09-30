@@ -14,7 +14,7 @@ on:
 jobs:
   get-services:
     runs-on: ubuntu-latest
-
+    environment: DEV
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
