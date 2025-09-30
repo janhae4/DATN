@@ -4,3 +4,11 @@ backend/node_modules
 
 # Logs
 *.log
+
+# Secrets and environment files
+backend/credentials.json
+backend/credentials*.json
+.env
+.env.*
+backend/.env
+frontend/.env
