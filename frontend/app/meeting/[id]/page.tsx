@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import Actions from "@/components/meeting/Actions";
+import VideoChat from "@/components/video/VideoChat";
 
 interface MeetingPageProps {
   params: Promise<{ id: string }>;
@@ -16,6 +17,7 @@ export async function generateMetadata({ params }: MeetingPageProps): Promise<Me
 
 export default async function MeetingPage_room({ params }: MeetingPageProps) {
   const { id } = await params;
+  const signalingUrl = (process.env.NEXT_PUBLIC_SIGNALING_URL ?? "http://localhost:4000") + "/webrtc";
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -27,6 +29,11 @@ export default async function MeetingPage_room({ params }: MeetingPageProps) {
       <section className="rounded-lg border p-6">
         <p className="mb-4 text-gray-700">{id}</p>
         <Actions id={id} />
+      </section>
+
+      <section className="mt-6 rounded-lg border p-6">
+        <h2 className="mb-4 text-lg font-medium">Video Call</h2>
+        <VideoChat roomId={id} signalingUrl={signalingUrl} />
       </section>
     </main>
   );
