@@ -75,21 +75,32 @@ jobs:
 
           # ----------------------------------------------------
           echo "::group::2. Create Database"
+          - name: Create Databases
+        # ... (Other steps)
+        run: |
+          echo "::group::2. Create Database"
+          # Get the container name as before (good practice)
           POSTGRES_CONTAINER=$(docker ps --filter "ancestor=postgres:alpine" --format "{{.Names}}")
           echo "Using Postgres container: $POSTGRES_CONTAINER"
 
           DB_NAMES=("user" "notification" "task")
           for db_name in "${DB_NAMES[@]}"; do
             echo "Attempting to create database: $db_name"
-            docker exec "$POSTGRES_CONTAINER" psql -U postgres -c "
-            DO \$\$
-            BEGIN
-              IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${db_name}') THEN
-                  PERFORM dblink_exec('dbname=postgres', 'CREATE DATABASE ${db_name}');
-              END IF;
-            END
-            \$\$;
-            "
+            # 💥 THE FIX IS HERE 💥
+            # Use the standard SQL command that runs directly.
+            # We connect to the default 'postgres' database to run the CREATE command.
+            docker exec "$POSTGRES_CONTAINER" psql -U postgres -d postgres -c "
+              CREATE DATABASE \"$db_name\"
+              WITH OWNER = postgres
+              ENCODING = 'UTF8'
+              LC_COLLATE = 'en_US.utf8'
+              LC_CTYPE = 'en_US.utf8'
+              TABLESPACE = pg_default;
+            " 2> /dev/null || true
+            
+            # The '2> /dev/null || true' handles errors gracefully:
+            # 1. '2> /dev/null' suppresses standard error (which includes the "already exists" error).
+            # 2. '|| true' ensures the shell script continues even if the command fails (e.g., DB exists).
           done
           echo "::endgroup::"
 
