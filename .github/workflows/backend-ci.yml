@@ -50,6 +50,10 @@ jobs:
       - name: Wait for Database to be Ready
         run: sleep 10
 
+      - name: Create Database
+        run: |
+          
+
 
       # --- BƯỚC ĐÃ TỐI ƯU HÓA (KẾT HỢP LOAD SECRETS VÀ PRISMA GENERATE) ---
       - name: Load Secrets, Generate Prisma Client, and Build
@@ -78,6 +82,22 @@ jobs:
 
           # Dọn dẹp file tạm
           rm secret_config.json
+          echo "::endgroup::"
+
+          # ----------------------------------------------------
+          echo "::group::2. Create Database"
+          echo "Checking and creating databases..."
+
+          # Create 'user' database
+          docker run --rm postgres psql "$DATABASE_USER_URL" -c "CREATE DATABASE \"user\"" || true
+          
+          # Create 'notification' database
+          docker run --rm postgres psql "$DATABASE_NOTIFICATION_URL" -c "CREATE DATABASE notification" || true
+          
+          # Create 'task' database (The one that was failing)
+          docker run --rm postgres psql "$ADATABAE_TASK_URL" -c "CREATE DATABASE task" || true
+          
+          echo "Database creation attempt complete."
           echo "::endgroup::"
 
           # ----------------------------------------------------
