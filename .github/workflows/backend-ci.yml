@@ -75,17 +75,14 @@ jobs:
 
           # ----------------------------------------------------
           echo "::group::2. Create Database"
-          echo "Checking and creating databases..."
-          ADMIN_DB_URL="postgresql://postgres:postgres@postgres:5432/postgres"
+          POSTGRES_CONTAINER=$(docker ps --filter "ancestor=postgres:alpine" --format "{{.Names}}")
+          echo "Using Postgres container: $POSTGRES_CONTAINER"
 
           DB_NAMES=("user" "notification" "task")
-
           for db_name in "${DB_NAMES[@]}"; do
             echo "Attempting to create database: $db_name"
-            docker run --rm --network host postgres psql "$ADMIN_DB_URL" -c "CREATE DATABASE \"$db_name\" IF NOT EXISTS" || true
+            docker exec "$POSTGRES_CONTAINER" psql -U postgres -c "SELECT 'CREATE DATABASE $db_name' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$db_name')\gexec"
           done
-
-          echo "Database creation attempt complete."
           echo "::endgroup::"
 
           # ----------------------------------------------------
