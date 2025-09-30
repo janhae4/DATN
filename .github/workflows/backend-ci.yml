@@ -50,11 +50,6 @@ jobs:
       - name: Wait for Database to be Ready
         run: sleep 10
 
-      - name: Create Database
-        run: |
-          
-
-
       # --- BƯỚC ĐÃ TỐI ƯU HÓA (KẾT HỢP LOAD SECRETS VÀ PRISMA GENERATE) ---
       - name: Load Secrets, Generate Prisma Client, and Build
         working-directory: ./backend # Áp dụng cho cả 3 lệnh
@@ -87,22 +82,21 @@ jobs:
           # ----------------------------------------------------
           echo "::group::2. Create Database"
           echo "Checking and creating databases..."
+          ADMIN_DB_URL="postgresql://postgres:postgres@postgres:5432/postgres"
 
-          # Create 'user' database
-          docker run --rm postgres psql "$DATABASE_USER_URL" -c "CREATE DATABASE \"user\"" || true
-          
-          # Create 'notification' database
-          docker run --rm postgres psql "$DATABASE_NOTIFICATION_URL" -c "CREATE DATABASE notification" || true
-          
-          # Create 'task' database (The one that was failing)
-          docker run --rm postgres psql "$ADATABAE_TASK_URL" -c "CREATE DATABASE task" || true
-          
+          DB_NAMES=("user" "notification" "task")
+
+          for db_name in "${DB_NAMES[@]}"; do
+            echo "Attempting to create database: $db_name"
+            docker run --rm --network host postgres psql "$ADMIN_DB_URL" -c "CREATE DATABASE \"$db_name\" IF NOT EXISTS" || true
+          done
+
           echo "Database creation attempt complete."
           echo "::endgroup::"
 
           # ----------------------------------------------------
 
-          echo "::group::2. Generate Prisma Client for each service"
+          echo "::group::3. Generate Prisma Client for each service"
           echo "🔍 Looking for prisma schemas..."
 
           # Lệnh này bây giờ SẼ THÀNH CÔNG vì các biến môi trường (như DATABASE_URL)
@@ -116,13 +110,13 @@ jobs:
 
           # ----------------------------------------------------
 
-          echo "::group::3. Build Backend"
+          echo "::group::4. Build Backend"
           npm run build
           echo "::endgroup::"
 
           # ----------------------------------------------------
 
-          echo "::group::4. Run Backend"
+          echo "::group::5. Run Backend"
 
           for service in apps/*; do
             service_name=$(basename "$service")
@@ -146,6 +140,6 @@ jobs:
           done
           echo "::endgroup::"
 
-          echo "::group::5. Test Backend"
+          echo "::group::6. Test Backend"
           npm run test --if-present
           echo "::endgroup::"
