@@ -42,10 +42,14 @@ jobs:
       - name: Format check
         working-directory: ./backend
         run: npm run format -- --check
+      
+      - name: Start Database Services (Docker Compose)
+        working-directory: ./database
+        run: docker compose up -d
 
-      # ... (Các bước Checkout, Setup Node.js, Install dependencies giữ nguyên)
+      - name: Wait for Database to be Ready
+        run: sleep 10
 
-      # Giả định bước 'Install dependencies' là bước 3
 
       # --- BƯỚC ĐÃ TỐI ƯU HÓA (KẾT HỢP LOAD SECRETS VÀ PRISMA GENERATE) ---
       - name: Load Secrets, Generate Prisma Client, and Build
@@ -96,16 +100,10 @@ jobs:
           npm run build
           echo "::endgroup::"
 
-      - name: Start Database Services (Docker Compose)
-        working-directory: ./database
-        run: docker compose up -d
+          # ----------------------------------------------------
 
-      - name: Wait for Database to be Ready
-        run: sleep 10
+          echo "::group::4. Run Backend"
 
-      - name: Test NestJS Services Startup
-        working-directory: ./backend
-        run: |
           for service in apps/*; do
             service_name=$(basename "$service")
             if [ "$service_name" != "api-gateway" ]; then
@@ -126,7 +124,8 @@ jobs:
               fi
             fi
           done
+          echo "::endgroup::"
 
-      - name: Test backend
-        working-directory: ./backend
-        run: npm run test --if-present
+          echo "::group::5. Test Backend"
+          npm run test --if-present
+          echo "::endgroup::"
