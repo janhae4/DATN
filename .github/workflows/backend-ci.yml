@@ -76,10 +76,7 @@ jobs:
           # ----------------------------------------------------
           echo "::group::2. Create Database"
           - name: Create Databases
-        # ... (Other steps)
-        run: |
-          echo "::group::2. Create Database"
-          # Get the container name as before (good practice)
+
           POSTGRES_CONTAINER=$(docker ps --filter "ancestor=postgres:alpine" --format "{{.Names}}")
           echo "Using Postgres container: $POSTGRES_CONTAINER"
 
