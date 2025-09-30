@@ -50,21 +50,17 @@ jobs:
       - name: Wait for Database to be Ready
         run: sleep 10
 
-      # --- BƯỚC ĐÃ TỐI ƯU HÓA (KẾT HỢP LOAD SECRETS VÀ PRISMA GENERATE) ---
       - name: Load Secrets, Generate Prisma Client, and Build
-        working-directory: ./backend # Áp dụng cho cả 3 lệnh
+        working-directory: ./backend
         shell: bash
         run: |
           echo "::group::1. Load Database Secrets"
-          # Ghi Secret vào file tạm (phương pháp đáng tin cậy nhất)
           cat << EOF > secret_config.json
           ${{ secrets.DATABASE_CONFIG }}
           EOF
 
-          # Tăng cường bảo mật: Thêm Masking cho toàn bộ Secret
           echo "::add-mask::${{ secrets.DATABASE_CONFIG }}"
 
-          # Chuyển đổi JSON thành chuỗi export (export KEY='VALUE';)
           ENV_EXPORTS=$(jq -r '
             to_entries | 
             .[] | 
@@ -72,10 +68,8 @@ jobs:
             "export \(.key)='\''\(.value)'\'';"
           ' secret_config.json)
 
-          # Thiết lập biến môi trường vào shell hiện tại
           eval $ENV_EXPORTS
 
-          # Dọn dẹp file tạm
           rm secret_config.json
           echo "::endgroup::"
 
@@ -98,10 +92,8 @@ jobs:
 
           echo "::group::3. Generate Prisma Client for each service"
           echo "🔍 Looking for prisma schemas..."
-
-          # Lệnh này bây giờ SẼ THÀNH CÔNG vì các biến môi trường (như DATABASE_URL)
-          # đã được thiết lập bởi eval $ENV_EXPORTS
-          find apps -type f -path "*/prisma/schema.prisma" | while read schema; do
+          
+          find apps -type f -path "*/src/prisma/schema.prisma" | while read schema; do
             service=$(echo "$schema" | cut -d'/' -f2)
             echo "🚀 Generating Prisma Client for $service using $schema"
             npx prisma generate --schema="$schema"
@@ -139,6 +131,8 @@ jobs:
             fi
           done
           echo "::endgroup::"
+
+          # ----------------------------------------------------
 
           echo "::group::6. Test Backend"
           npm run test --if-present
