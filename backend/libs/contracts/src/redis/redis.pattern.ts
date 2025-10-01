@@ -4,4 +4,5 @@ export const REDIS_PATTERN = {
   CLEAR_REFRESH_TOKENS: 'redis.clearRefreshTokens',
   GET_STORED_REFRESH_TOKEN: 'redis.getStoredRefreshToken',
   SET_LOCK_KEY: 'redis.setLockKey',
+  NOTIFICATION: 'redis.notification',
 };

@@ -9,7 +9,11 @@ export class RedisService {
   constructor() {
     this.redis = new Redis({
       host: process.env.HOST_URL,
+<<<<<<< HEAD
       port: 6379,
+=======
+      port: Number(process.env.REDIS_CLIENT_PORT) || 6379,
+>>>>>>> main
     });
   }
 
