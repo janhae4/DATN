@@ -1,14 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "apps/backend/src",
+  "sourceRoot": "apps/api-gateway/src",
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
-    "tsConfigPath": "apps/backend/tsconfig.app.json"
+    "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
   },
   "monorepo": true,
-  "root": "apps/backend",
+  "root": "apps/api-gateway",
   "projects": {
     "api-gateway": {
       "type": "application",
@@ -28,15 +28,6 @@
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
-    "backend": {
-      "type": "application",
-      "root": "apps/backend",
-      "entryFile": "main",
-      "sourceRoot": "apps/backend/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/backend/tsconfig.app.json"
-      }
-    },
     "contracts": {
       "type": "library",
       "root": "libs/contracts",
@@ -44,6 +35,15 @@
       "sourceRoot": "libs/contracts/src",
       "compilerOptions": {
         "tsConfigPath": "libs/contracts/tsconfig.lib.json"
+      }
+    },
+    "notification": {
+      "type": "application",
+      "root": "apps/notification",
+      "entryFile": "main",
+      "sourceRoot": "apps/notification/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/notification/tsconfig.app.json"
       }
     },
     "redis": {
@@ -55,15 +55,6 @@
         "tsConfigPath": "apps/redis/tsconfig.app.json"
       }
     },
-    "session": {
-      "type": "application",
-      "root": "apps/session",
-      "entryFile": "main",
-      "sourceRoot": "apps/session/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/session/tsconfig.app.json"
-      }
-    },
     "user": {
       "type": "application",
       "root": "apps/user",
@@ -72,6 +63,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/user/tsconfig.app.json"
       }
+    },
+    "task-service": {
+        "type": "application",
+        "root": "apps/task-service",
+        "entryFile": "main",
+        "sourceRoot": "apps/task-service/src",
+        "compilerOptions": {
+          "tsConfigPath": "apps/task-service/tsconfig.app.json"
+        }
+      }
     }
   }
-}

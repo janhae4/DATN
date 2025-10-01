@@ -9,10 +9,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/login')
-  async login(
+  login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
+    console.log(loginDto);
     return this.authService.login(loginDto, response);
   }
 
@@ -22,11 +23,11 @@ export class AuthController {
   }
 
   @Post('/refresh')
-  async refresh(
+  refresh(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    return await this.authService.refresh(request, response);
+    return this.authService.refresh(request, response);
   }
 
   @Post('/logout')

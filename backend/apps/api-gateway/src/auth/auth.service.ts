@@ -3,12 +3,18 @@ import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
 import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { AUTH_CLIENT, USER_CLIENT } from '@app/contracts/constants';
-import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { AUTH_CLIENT } from '@app/contracts/constants';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
-import { firstValueFrom } from 'rxjs';
+import { catchError, tap, throwError } from 'rxjs';
+import { UserService } from '../user/user.service';
 
 const setCookie = (
   accessToken: string,
@@ -36,50 +42,67 @@ const clearCookie = (response: Response) => {
 export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
-    @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
+    private readonly userService: UserService,
   ) {}
 
   findAllUser() {
-    this.userClient.send(USER_PATTERNS.FIND_ALL, {});
+    this.userService.findAll();
   }
 
   register(createAuthDto: CreateAuthDto) {
-    this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto);
+    return this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto).pipe(
+      catchError((error) => {
+        const status =
+          (error as { status?: number }).status ??
+          HttpStatus.INTERNAL_SERVER_ERROR;
+        const message = (error as { error?: string }).error ?? 'Unknown error';
+
+        return throwError(() => new HttpException(message, status));
+      }),
+    );
   }
 
-  async login(loginDto: LoginDto, response: Response) {
-    const { accessToken, refreshToken } =
-      await firstValueFrom<LoginResponseDto>(
-        this.authClient.send(AUTH_PATTERN.LOGIN, { ...loginDto }),
-      );
-    setCookie(accessToken, refreshToken, response);
-    return { accessToken, refreshToken };
+  login(loginDto: LoginDto, response: Response) {
+    this.authClient.send(AUTH_PATTERN.LOGIN, { ...loginDto }).pipe(
+      tap((token: LoginResponseDto) => {
+        const { accessToken, refreshToken } = token;
+        setCookie(token.accessToken, token.refreshToken, response);
+        return { accessToken, refreshToken };
+      }),
+      catchError(() => {
+        return throwError(
+          () => new UnauthorizedException('Invalid credentials'),
+        );
+      }),
+    );
   }
 
-  async refresh(request: Request, response: Response) {
+  refresh(request: Request, response: Response) {
     const refreshToken = request.cookies?.refreshToken as string | undefined;
     if (!refreshToken) throw new UnauthorizedException('Invalid refresh token');
-    try {
-      const token = await firstValueFrom<LoginResponseDto>(
-        this.authClient.send(AUTH_PATTERN.REFRESH, refreshToken),
-      );
-      setCookie(token.accessToken, token.refreshToken, response);
-    } catch {
-      clearCookie(response);
-      throw new UnauthorizedException('Invalid refresh token');
-    }
+    return this.authClient.send(AUTH_PATTERN.REFRESH, refreshToken).pipe(
+      tap((token: LoginResponseDto) => {
+        setCookie(token.accessToken, token.refreshToken, response);
+      }),
+      catchError(() => {
+        clearCookie(response);
+        return throwError(
+          () => new UnauthorizedException('Invalid refresh token'),
+        );
+      }),
+    );
   }
 
   logout(request: Request, response: Response) {
     clearCookie(response);
     const refreshToken = request.cookies.refreshToken as string | undefined;
-    return this.authClient.send(AUTH_PATTERN.LOGOUT, refreshToken);
+    this.authClient.emit(AUTH_PATTERN.LOGOUT, refreshToken);
   }
 
   logoutAll(request: Request, response: Response) {
     const refreshToken = request.cookies.refreshToken as string | undefined;
     clearCookie(response);
-    return this.authClient.send(AUTH_PATTERN.LOGOUT_ALL, refreshToken);
+    this.authClient.emit(AUTH_PATTERN.LOGOUT_ALL, refreshToken);
   }
 
   validateToken(token: string) {

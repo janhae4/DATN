@@ -14,6 +14,10 @@ export class RedisController {
     hashedRefresh: string;
     exp: number;
   }) {
+<<<<<<< HEAD
+=======
+    console.log(data);
+>>>>>>> main
     const { userId, sessionId, hashedRefresh, exp } = data;
     return await this.redisService.storeRefreshToken(
       userId,
