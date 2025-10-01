@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - redis-data:/data
+  
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+    restart: always
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+  
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:

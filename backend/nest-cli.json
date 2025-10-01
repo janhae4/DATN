@@ -1,12 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/api-gateway/src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "webpack": true
+    "webpack": true,
+    "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
   },
+  "root": "apps/api-gateway",
   "monorepo": true,
-  "root": "apps",
   "projects": {
     "api-gateway": {
       "type": "application",
@@ -17,15 +19,60 @@
         "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
       }
     },
-    "task-service": {
+    "auth": {
       "type": "application",
-      "root": "apps/task-service",
+      "root": "apps/auth",
       "entryFile": "main",
-      "sourceRoot": "apps/task-service/src",
+      "sourceRoot": "apps/auth/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/task-service/tsconfig.app.json"
+        "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
+    "contracts": {
+      "type": "library",
+      "root": "libs/contracts",
+      "entryFile": "index",
+      "sourceRoot": "libs/contracts/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/contracts/tsconfig.lib.json"
+      }
+    },
+    "notification": {
+      "type": "application",
+      "root": "apps/notification",
+      "entryFile": "main",
+      "sourceRoot": "apps/notification/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/notification/tsconfig.app.json"
+      }
+    },
+    "redis": {
+      "type": "application",
+      "root": "apps/redis",
+      "entryFile": "main",
+      "sourceRoot": "apps/redis/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/redis/tsconfig.app.json"
+      }
+    },
+    "user": {
+      "type": "application",
+      "root": "apps/user",
+      "entryFile": "main",
+      "sourceRoot": "apps/user/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/user/tsconfig.app.json"
+      }
+    },
+    "task-service": {
+        "type": "application",
+        "root": "apps/task-service",
+        "entryFile": "main",
+        "sourceRoot": "apps/task-service/src",
+        "compilerOptions": {
+          "tsConfigPath": "apps/task-service/tsconfig.app.json"
+        }
+      },
     "video-service": {
       "type": "application",
       "root": "apps/video-service",

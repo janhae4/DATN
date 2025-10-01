@@ -1,11 +1,11 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TaskServiceService } from './task-service.service';
-import { Task } from '@app/prisma';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskPayloadDto } from './dto/update-task-payload.dto';
 import { FindTaskDto } from './dto/find-task.dto';
 import { TASK_PATTERNS } from '@app/contracts/task/task.patterns';
+import { Task } from './generated/prisma';
 
 @Controller()
 export class TaskServiceController {
@@ -25,7 +25,9 @@ export class TaskServiceController {
   async create(@Payload() createTaskDto: CreateTaskDto): Promise<Task> {
     const data = {
       ...createTaskDto,
-      deadline: createTaskDto.deadline ? new Date(createTaskDto.deadline) : undefined,
+      deadline: createTaskDto.deadline
+        ? new Date(createTaskDto.deadline)
+        : undefined,
     };
     return this.taskServiceService.create(data);
   }

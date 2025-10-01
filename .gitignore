@@ -1,15 +1,8 @@
 # Ignore node_modules for both frontend and backend
-frontend/node_modules
-backend/node_modules
-
+node_modules/
 # Logs
 *.log
 
-# Secrets and environment files
-backend/credentials.json
-backend/credentials*.json
-.env
-.env.*
-backend/.env
-frontend/.env
-backend/credentials.local.json
+venv/
+ml/ner
+ml/__pycache__

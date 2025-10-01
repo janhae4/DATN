@@ -1,4 +1,4 @@
-import { TaskStatus } from '@app/prisma';
+import { TaskStatus } from '../generated/prisma';
 
 export class UpdateTaskDto {
   title?: string;
