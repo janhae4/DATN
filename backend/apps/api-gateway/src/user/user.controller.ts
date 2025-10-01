@@ -23,21 +23,13 @@ export class UserController {
   }
 
   @Get()
-<<<<<<< HEAD
-  @Roles(Role.Admin)
-=======
   @Roles(Role.ADMIN)
->>>>>>> main
   findAll() {
     return this.userService.findAll();
   }
 
   @Get(':id')
-<<<<<<< HEAD
-  @Roles(Role.User)
-=======
   @Roles(Role.USER)
->>>>>>> main
   findOne(@Param('id') id: string) {
     return this.userService.findOne(+id);
   }

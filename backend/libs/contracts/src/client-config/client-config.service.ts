@@ -121,4 +121,27 @@ export class ClientConfigService {
       },
     };
   }
+
+  /*
+  -------------------------
+  ------ TEAM CLIENT ------
+  -------------------------
+  */
+  getTeamClientPort(): number {
+    return this.config.get<number>('TEAM_CLIENT_PORT', 3003);
+  }
+  getTeamQueue(): string {
+    return this.config.get<string>('TEAM_QUEUE', 'team_service_queue');
+  }
+  get teamClientOptions(): any {
+    console.log('Team port: ', this.getTeamClientPort());
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getTeamQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
 }

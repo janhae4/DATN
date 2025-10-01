@@ -13,8 +13,9 @@ import {
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
-import { catchError, tap, throwError } from 'rxjs';
+import { catchError, firstValueFrom, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
+import { RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
 
 const setCookie = (
   accessToken: string,
@@ -105,7 +106,9 @@ export class AuthService {
     this.authClient.emit(AUTH_PATTERN.LOGOUT_ALL, refreshToken);
   }
 
-  validateToken(token: string) {
-    return this.authClient.send(AUTH_PATTERN.VALIDATE_TOKEN, token);
+  async validateToken(token: string) {
+    return await firstValueFrom<RefreshTokenDto>(
+      this.authClient.send(AUTH_PATTERN.VALIDATE_TOKEN, token),
+    );
   }
 }
