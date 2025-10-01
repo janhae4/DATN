@@ -11,11 +11,15 @@ import * as joi from 'joi';
         AUTH_CLIENT_PORT: joi.number().default(3002),
         REDIS_CLIENT_PORT: joi.number().default(6379),
         TASK_CLIENT_PORT: joi.number().default(3003),
+        TEAM_CLIENT_PORT: joi.number().default(3004),
         NOTIFICATION_CLIENT_PORT: joi.number().default(4001),
+
         RMQ_URL: joi.string().default('amqp://localhost:5672'),
+
         REDIS_QUEUE: joi.string().default('redis_service_queue'),
         TASK_QUEUE: joi.string().default('task_service_queue'),
         NOTIFICATION_QUEUE: joi.string().default('notification_service_queue'),
+        TEAM_QUEUE: joi.string().default('team_service_queue'),
       }),
     }),
   ],

@@ -9,6 +9,7 @@ import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
   TASK_CLIENT,
+  TEAM_CLIENT,
   USER_CLIENT,
 } from '../constants';
 
@@ -36,6 +37,12 @@ export const CLIENT_PROVIDER = {
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientOptions =>
       cfg.notificationClientOptions as ClientOptions,
+  },
+  TEAM_CLIENT: {
+    name: TEAM_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientOptions =>
+      cfg.teamClientOptions as ClientOptions,
   },
 };
 
@@ -69,5 +76,11 @@ export const CLIENT_PROXY_PROVIDER = {
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientProxy =>
       ClientProxyFactory.create(cfg.taskClientOptions as ClientOptions),
+  },
+  TEAM_CLIENT: {
+    provide: TEAM_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.teamClientOptions as ClientOptions),
   },
 };

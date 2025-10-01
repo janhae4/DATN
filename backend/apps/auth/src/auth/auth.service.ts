@@ -2,19 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, map } from 'rxjs';
-<<<<<<< HEAD
-import { REDIS_CLIENT, USER_CLIENT } from '@app/contracts/constants';
-=======
 import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
   USER_CLIENT,
 } from '@app/contracts/constants';
->>>>>>> main
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { ConfigModule } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
@@ -23,23 +18,16 @@ import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
 import { UnauthorizedException } from '@app/contracts/errror';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { StoredRefreshTokenDto } from '@app/contracts/redis/store-refreshtoken.dto';
-<<<<<<< HEAD
-=======
 import { NOTIFICATION_PATTERN } from '@app/contracts/notification/notification.pattern';
 import { NotificationType } from '@app/contracts/notification/notification.enum';
->>>>>>> main
-ConfigModule.forRoot();
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
-<<<<<<< HEAD
-=======
     @Inject(NOTIFICATION_CLIENT)
     private readonly notificationClient: ClientProxy,
->>>>>>> main
     private jwtService: JwtService,
   ) {}
 
@@ -50,37 +38,17 @@ export class AuthService {
     };
   }
 
-<<<<<<< HEAD
   register(createAuthDto: CreateAuthDto) {
     return this.userClient.send(USER_PATTERNS.CREATE, createAuthDto);
   }
 
   async login(loginDto: LoginDto) {
-=======
-  async register(createAuthDto: CreateAuthDto) {
-    try {
-      console.log(createAuthDto);
-      return await firstValueFrom<UserDto>(
-        this.userClient.send(USER_PATTERNS.CREATE, createAuthDto),
-      );
-    } catch (error) {
-      console.log(error);
-      throw new RpcException(error);
-    }
-  }
-
-  async login(loginDto: LoginDto) {
-    console.log(loginDto);
->>>>>>> main
     const user = await firstValueFrom(
       this.userClient
         .send(USER_PATTERNS.VALIDATE, loginDto)
-        .pipe(map((u) => this.mapper(u))),
+        .pipe(map((u: UserDto) => this.mapper(u))),
     );
-<<<<<<< HEAD
-=======
-    console.log(user);
->>>>>>> main
+
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const sessionId = randomUUID();
@@ -95,14 +63,6 @@ export class AuthService {
         { expiresIn: REFRESH_TTL },
       ),
     ]);
-<<<<<<< HEAD
-    this.redisClient.emit(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
-      userId: user.id,
-      sessionId,
-      hashedRefresh: await bcrypt.hash(refreshToken, 10),
-      exp: REFRESH_TTL,
-    });
-=======
 
     const hashedRefresh = await bcrypt.hash(refreshToken, 10);
 
@@ -120,7 +80,6 @@ export class AuthService {
       type: NotificationType.SYSTEM,
     });
 
->>>>>>> main
     return {
       ...user,
       accessToken: accessToken,

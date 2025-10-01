@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import bcrypt from 'bcrypt';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
@@ -6,7 +6,7 @@ import { CreateUserDto } from '@app/contracts/user/create-user.dto';
 import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
 import { PrismaService } from './prisma.service';
 import { Prisma, User } from '../generated/prisma';
-import { RpcException } from '@nestjs/microservices';
+import { BadRequestException, ConflictException } from '@app/contracts/errror';
 
 @Injectable()
 export class UserService {
@@ -25,13 +25,12 @@ export class UserService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new RpcException({
-            error: `${error.meta?.target?.[0] || 'Account'} already exists`,
-            status: HttpStatus.BAD_REQUEST,
-          });
+          throw new ConflictException(
+            `${error.meta?.target?.[0] || 'Account'} already exists`,
+          );
         }
       }
-      throw new RpcException(error);
+      throw new BadRequestException();
     }
   }
 

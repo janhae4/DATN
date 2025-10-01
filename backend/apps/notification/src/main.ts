@@ -11,7 +11,9 @@ async function bootstrap() {
   ]);
 
   const cfg = appCtx.get(ClientConfigService);
-  app.connectMicroservice<MicroserviceOptions>(cfg.notificationClientOptions);
+  app.connectMicroservice<MicroserviceOptions>(
+    cfg.notificationClientOptions as MicroserviceOptions,
+  );
 
   const redisIoAdapter = new RedisIoAdapter(app);
   await redisIoAdapter.connectToRedis();
