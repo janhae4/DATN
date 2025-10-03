@@ -49,6 +49,11 @@ export function useLocalMedia() {
   // enumerate devices
   const enumerate = useCallback(async () => {
     try {
+      // Check if navigator.mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        return;
+      }
+
       const devices = await navigator.mediaDevices.enumerateDevices();
       const vids = devices.filter((d) => d.kind === "videoinput");
       const auds = devices.filter((d) => d.kind === "audioinput");
@@ -70,6 +75,13 @@ export function useLocalMedia() {
   const startPreview = useCallback(async () => {
     setError(null);
     try {
+      // Check if navigator.mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errorMsg = 'Media devices not supported in this browser';
+        setError(errorMsg);
+        return;
+      }
+
       const constraints: MediaStreamConstraints = {
         video: selectedVideoId ? { deviceId: { exact: selectedVideoId } } : true,
         audio: selectedAudioId ? { deviceId: { exact: selectedAudioId } } : true,
@@ -102,6 +114,13 @@ export function useLocalMedia() {
   const applyNewDevices = useCallback(async () => {
     if (!isPreviewing) return startPreview();
     try {
+      // Check if navigator.mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errorMsg = 'Media devices not supported in this browser';
+        setError(errorMsg);
+        return;
+      }
+
       const constraints: MediaStreamConstraints = {
         video: selectedVideoId ? { deviceId: { exact: selectedVideoId } } : true,
         audio: selectedAudioId ? { deviceId: { exact: selectedAudioId } } : true,

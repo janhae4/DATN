@@ -9,12 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-
- type RoomInfo = {
-  id: string;
-  members: Set<string>;
-  maxSize: number;
-};
+import { RoomInfo } from '@app/contracts/video-chat/room-info.type';
 
 @WebSocketGateway({
   namespace: '/webrtc',
@@ -28,6 +23,8 @@ import { Server, Socket } from 'socket.io';
 })
 
 export class SignalingGateway implements OnGatewayConnection, OnGatewayDisconnect {
+
+
   @WebSocketServer() server!: Server;
   private readonly logger = new Logger(SignalingGateway.name);
   private rooms = new Map<string, RoomInfo>();
@@ -64,7 +61,15 @@ export class SignalingGateway implements OnGatewayConnection, OnGatewayDisconnec
 
     let room = this.rooms.get(roomId);
     if (!room) {
-      room = { id: roomId, members: new Set(), maxSize: 55 };
+      room = {
+        id: roomId,
+        members: new Set(),
+        pending: new Set(),
+        owner: client.id,
+        isPrivate: false,
+        maxSize: 55,
+        createdAt: new Date(),
+      };
       this.rooms.set(roomId, room);
     }
 
@@ -74,6 +79,7 @@ export class SignalingGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
 
     client.join(roomId);
+
     room.members.add(client.id);
     this.socketRoom.set(client.id, roomId);
 

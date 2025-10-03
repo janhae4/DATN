@@ -1,6 +1,6 @@
 "use client";
 import VideoControls from "@/components/video/VideoControls";
-import { useLocalMedia } from "@/lib/hooks/useLocalMedia";
+import { useLocalMedia } from "@/lib/WebRTC/hooks/useLocalMedia";
 
 export default function VideoAccess() {
   const {

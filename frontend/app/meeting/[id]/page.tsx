@@ -33,7 +33,7 @@ export default async function MeetingPage_room({ params }: MeetingPageProps) {
 
       <section className="mt-6 rounded-lg border p-6">
         <h2 className="mb-4 text-lg font-medium">Video Call</h2>
-        <VideoChat roomId={id} signalingUrl={signalingUrl} />
+        <VideoChat roomId={id} signalingUrl={signalingUrl}  />
       </section>
     </main>
   );

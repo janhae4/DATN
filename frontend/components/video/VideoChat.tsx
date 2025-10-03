@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import { useWebRTC } from '../../lib/hooks/useWebRTC';
+import { useWebRTC } from '../../lib/WebRTC/hooks/useWebRTC';
 
 export type VideoChatProps = {
   roomId: string;
@@ -43,7 +43,6 @@ export default function VideoChat({ roomId, signalingUrl, multi = false }: Video
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <div className="mb-1 text-sm">Local</div>
           <video ref={localRef} autoPlay playsInline muted className="w-full bg-black" />
         </div>
         {remoteStreams.map((s, idx) => (
