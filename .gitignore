@@ -3,6 +3,12 @@ node_modules/
 # Logs
 *.log
 
+
+
 venv/
-ml/ner
+.venv/
+ml/train/output
+ml/train/dev.spacy 
+ml/train/train.spacy
+ml/train/config.cfg 
 ml/__pycache__
