@@ -4,8 +4,9 @@ import { X, Edit2, Plus, Save, Trash2, Clipboard } from "lucide-react";
 
 // Định nghĩa các nhãn (labels) mà người dùng có thể chọn
 const LABELS = [
-  "DATE",
+  "PERSON",
   "TIME",
+  "DATE",
   "TASK"
 ];
 
@@ -340,12 +341,12 @@ const AnnotationTool = () => {
                     )}
                     "
                   </p>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-4 gap-4">
                     {LABELS.map((label) => (
                       <button
                         key={label}
                         onClick={() => handleLabelSelect(label)}
-                        className={`px-3 py-3 w-64 text-xs rounded-full border-2 transition-all hover:scale-105 ${LABEL_COLORS[label]}`}
+                        className={`px-3 py-3 w-52 text-xs rounded-full border-2 transition-all hover:scale-105 ${LABEL_COLORS[label]}`}
                       >
                         {label}
                       </button>
