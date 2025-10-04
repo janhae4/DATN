@@ -46,4 +46,9 @@ export class TaskServiceController {
   async remove(@Payload() data: FindTaskDto): Promise<Task> {
     return this.taskServiceService.remove(data.id);
   }
+
+  @MessagePattern(TASK_PATTERNS.PREDICT)
+  predict(@Payload() data: { text: string }) {
+    return this.taskServiceService.predict(data.text);
+  }
 }

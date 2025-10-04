@@ -39,4 +39,9 @@ export class TasksController {
   remove(@Param('id') id: string) {
     return this.tasksService.remove(+id);
   }
+
+  @Post('predict')
+  predict(@Body('text') text: string) {
+    return this.tasksService.predict(text);
+  }
 }

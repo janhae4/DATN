@@ -15,7 +15,7 @@ interface RpcError {
 
 @Injectable()
 export class TasksService {
-  constructor(@Inject(TASK_CLIENT) private readonly client: ClientProxy) {}
+  constructor(@Inject(TASK_CLIENT) private readonly client: ClientProxy) { }
 
   create(createTaskDto: CreateTaskDto) {
     return this.client.send(TASK_PATTERNS.CREATE, createTaskDto);
@@ -64,5 +64,9 @@ export class TasksService {
         return throwError(() => err);
       }),
     );
+  }
+
+  predict(text: string) {
+    return this.client.send(TASK_PATTERNS.PREDICT, { text });
   }
 }

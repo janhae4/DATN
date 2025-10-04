@@ -1,11 +1,18 @@
 from typing import List, Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
-import vi_task_ner  # thư viện tùy bạn đã build
-
+import vi_task_ner
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
-# Load mô hình
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 nlp = vi_task_ner.load()
 
 class TextInput(BaseModel):
