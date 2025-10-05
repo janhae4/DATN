@@ -1,13 +1,14 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @MessagePattern(AUTH_PATTERN.REGISTER)
   async register(@Payload() createAuthDto: CreateAuthDto) {
@@ -38,5 +39,17 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERN.LOGOUT_ALL)
   logoutAll(@Payload() refreshToken: string) {
     return this.authService.logoutAll(refreshToken);
+  }
+
+  @MessagePattern(AUTH_PATTERN.GOOGLE_LOGIN)
+  @UseGuards(AuthGuard('google'))
+  googleLogin() {
+  }
+
+  @MessagePattern(AUTH_PATTERN.GOOGLE_CALLBACK)
+  @UseGuards(AuthGuard('google'))
+  async googleRedirect(@Payload() req) {
+    console.log('User info:', req.user);
+    return req.user;
   }
 }

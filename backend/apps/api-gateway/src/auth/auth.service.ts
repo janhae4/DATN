@@ -43,7 +43,7 @@ export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     private readonly userService: UserService,
-  ) {}
+  ) { }
 
   findAllUser() {
     this.userService.findAll();
@@ -107,5 +107,13 @@ export class AuthService {
 
   validateToken(token: string) {
     return this.authClient.send(AUTH_PATTERN.VALIDATE_TOKEN, token);
+  }
+
+  googleLogin() {
+    return this.authClient.emit(AUTH_PATTERN.GOOGLE_LOGIN, {});
+  }
+
+  googleCallback() {
+    return this.authClient.emit(AUTH_PATTERN.GOOGLE_CALLBACK, {});
   }
 }
