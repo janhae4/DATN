@@ -7,16 +7,29 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
+<<<<<<< HEAD
+=======
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
+>>>>>>> main
 }
 
 datasource db {
   provider = "postgresql"
+<<<<<<< HEAD
   url      = env("DATABASE_URL")
 }
 
 enum Role {
   User
   Admin
+=======
+  url      = env("DATABASE_USER_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+>>>>>>> main
 }
 
 model User {
@@ -26,7 +39,11 @@ model User {
   email     String    @unique
   phone     String    @unique
   password  String
+<<<<<<< HEAD
   role      Role      @default(User)
+=======
+  role      Role      @default(USER)
+>>>>>>> main
   isActive  Boolean   @default(true)
   
   image     String?
@@ -35,4 +52,9 @@ model User {
   
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+<<<<<<< HEAD
+=======
+
+  @@map("User")
+>>>>>>> main
 }

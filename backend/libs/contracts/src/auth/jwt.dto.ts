@@ -1,10 +1,11 @@
 import { PartialType } from '@nestjs/mapped-types';
+import { Role } from '../user/user.dto';
 
 export class JwtDto {
   id: string;
   iat: number;
   exp: number;
-  role: string;
+  role: Role;
 }
 
 export class AccessTokenDto extends PartialType(JwtDto) {}

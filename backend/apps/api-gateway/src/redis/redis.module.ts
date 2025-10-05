@@ -1,22 +1,12 @@
 import { Module } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { RedisController } from './redis.controller';
-import { ClientConfigModule } from '../../client-config/client-config.module';
-import { REDIS_CLIENT } from '@app/contracts/constants';
-import { ClientProxyFactory } from '@nestjs/microservices';
-import { ClientConfigService } from '../../client-config/client-config.service';
+import { ClientConfigModule } from '../../../../libs/contracts/src/client-config/client-config.module';
+import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
 
 @Module({
   imports: [ClientConfigModule],
   controllers: [RedisController],
-  providers: [
-    RedisService,
-    {
-      provide: REDIS_CLIENT,
-      useFactory: (configService: ClientConfigService) =>
-        ClientProxyFactory.create(configService.redisClientOptions),
-      inject: [ClientConfigService],
-    },
-  ],
+  providers: [RedisService, CLIENT_PROXY_PROVIDER.REDIS_CLIENT],
 })
 export class RedisModule {}

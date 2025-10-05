@@ -1,6 +1,6 @@
 export enum Role {
-  User = 'User',
-  Admin = 'Admin',
+  USER = 'USER',
+  ADMIN = 'ADMIN',
 }
 export class UserDto {
   id: string;

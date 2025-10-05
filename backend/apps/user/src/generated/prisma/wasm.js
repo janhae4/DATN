@@ -123,8 +123,13 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 exports.Role = exports.$Enums.Role = {
+<<<<<<< HEAD
   User: 'User',
   Admin: 'Admin'
+=======
+  USER: 'USER',
+  ADMIN: 'ADMIN'
+>>>>>>> main
 };
 
 exports.Prisma.ModelName = {
@@ -141,7 +146,11 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
+<<<<<<< HEAD
       "value": "D:\\BaiTapLon\\DATN\\backend\\apps\\user\\src\\generated\\prisma",
+=======
+      "value": "D:\\BaiTapLon\\DATN\\DATN\\backend\\apps\\user\\src\\generated\\prisma",
+>>>>>>> main
       "fromEnvVar": null
     },
     "config": {
@@ -152,6 +161,7 @@ const config = {
         "fromEnvVar": null,
         "value": "windows",
         "native": true
+<<<<<<< HEAD
       }
     ],
     "previewFeatures": [],
@@ -160,6 +170,24 @@ const config = {
   },
   "relativeEnvPaths": {
     "rootEnvPath": "../../../../../.env",
+=======
+      },
+      {
+        "fromEnvVar": null,
+        "value": "windows"
+      },
+      {
+        "fromEnvVar": null,
+        "value": "debian-openssl-3.0.x"
+      }
+    ],
+    "previewFeatures": [],
+    "sourceFilePath": "D:\\BaiTapLon\\DATN\\DATN\\backend\\apps\\user\\src\\prisma\\schema.prisma",
+    "isCustomOutput": true
+  },
+  "relativeEnvPaths": {
+    "rootEnvPath": null,
+>>>>>>> main
     "schemaEnvPath": "../../../../../.env"
   },
   "relativePath": "../../prisma",
@@ -173,18 +201,31 @@ const config = {
   "inlineDatasources": {
     "db": {
       "url": {
+<<<<<<< HEAD
         "fromEnvVar": "DATABASE_URL",
+=======
+        "fromEnvVar": "DATABASE_USER_URL",
+>>>>>>> main
         "value": null
       }
     }
   },
+<<<<<<< HEAD
   "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nenum Role {\n  User\n  Admin\n}\n\nmodel User {\n  id       String  @id @default(uuid())\n  name     String\n  username String  @unique\n  email    String  @unique\n  phone    String  @unique\n  password String\n  role     Role    @default(User)\n  isActive Boolean @default(true)\n\n  image     String?\n  bio       String?\n  lastLogin DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n",
   "inlineSchemaHash": "ec3c2c3f67f768a20067785730891a0507e461ff5bf4f5091a1abc341c6b0cbc",
+=======
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../generated/prisma\"\n  binaryTargets = [\"native\", \"windows\", \"debian-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_USER_URL\")\n}\n\nenum Role {\n  USER\n  ADMIN\n}\n\nmodel User {\n  id       String  @id @default(uuid())\n  name     String\n  username String  @unique\n  email    String  @unique\n  phone    String  @unique\n  password String\n  role     Role    @default(USER)\n  isActive Boolean @default(true)\n\n  image     String?\n  bio       String?\n  lastLogin DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"User\")\n}\n",
+  "inlineSchemaHash": "c00326a7f423aef8982a5ba7dc97af559b6129ea451d541490759ec49e163c44",
+>>>>>>> main
   "copyEngine": true
 }
 config.dirname = '/'
 
+<<<<<<< HEAD
 config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"username\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"Role\"},{\"name\":\"isActive\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bio\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lastLogin\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+=======
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"username\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"Role\"},{\"name\":\"isActive\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bio\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lastLogin\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"User\"}},\"enums\":{},\"types\":{}}")
+>>>>>>> main
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: async () => require('./query_engine_bg.js'),
@@ -198,7 +239,11 @@ config.compilerWasm = undefined
 
 config.injectableEdgeEnv = () => ({
   parsed: {
+<<<<<<< HEAD
     DATABASE_URL: typeof globalThis !== 'undefined' && globalThis['DATABASE_URL'] || typeof process !== 'undefined' && process.env && process.env.DATABASE_URL || undefined
+=======
+    DATABASE_USER_URL: typeof globalThis !== 'undefined' && globalThis['DATABASE_USER_URL'] || typeof process !== 'undefined' && process.env && process.env.DATABASE_USER_URL || undefined
+>>>>>>> main
   }
 })
 
