@@ -34,6 +34,7 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.9",
+    "@types/passport-google-oauth20": "^2.0.16",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
