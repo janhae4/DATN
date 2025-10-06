@@ -4,4 +4,5 @@ export const TASK_PATTERNS = {
   CREATE: 'task.create',
   UPDATE: 'task.update',
   REMOVE: 'task.remove',
+  FIND_GOOGLE_EVENTS: 'task.findGoogleEvents',
 };

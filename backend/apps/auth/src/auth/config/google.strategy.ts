@@ -1,15 +1,29 @@
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
+import { Provider } from '@app/contracts/user/user.dto';
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-google-oauth20';
+import { Strategy, StrategyOptions } from 'passport-google-oauth20';
 @Injectable()
-export class GoogleStrategy extends PassportStrategy(Strategy) {
+export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     constructor() {
         super({
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             callbackURL: process.env.GOOGLE_CALLBACK_URL,
-            scope: ['email', 'profile'],
-        });
+            scope: [
+                'email',
+                'profile',
+                'https://www.googleapis.com/auth/calendar',
+                'https://www.googleapis.com/auth/calendar.events',
+            ],
+        } as StrategyOptions);
+    }
+
+    authorizationParams(): any {
+        return {
+            access_type: 'offline',
+            prompt: 'consent',
+        }
     }
 
     validate(
@@ -18,15 +32,19 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
         profile: any,
         done: Function,
     ) {
-        console.log(profile);
-        const { name, emails, photos } = profile;
-        const user = {
-            email: emails[0].value,
-            firstName: name.givenName,
-            lastName: name.familyName,
-            picture: photos[0].value,
+        const { id, name, emails, photos } = profile;
+
+        const user: CreateAuthOAuthDto = {
+            provider: Provider.GOOGLE,
+            providerId: id || emails?.[0]?.value,
+            email: emails?.[0]?.value,
+            name: `${name?.givenName || ''} ${name?.familyName || ''}`.trim(),
+            avatar: photos?.[0]?.value,
             accessToken,
+            refreshToken,
         };
+
         done(null, user);
     }
+
 }

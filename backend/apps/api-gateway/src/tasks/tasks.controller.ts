@@ -13,11 +13,17 @@ import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(private readonly tasksService: TasksService) { }
 
   @Post()
   create(@Body() createTaskDto: CreateTaskDto) {
     return this.tasksService.create(createTaskDto);
+  }
+  
+  @Get('events')
+  findGoogleEvents() {
+    console.log('Here');
+    return this.tasksService.findGoogleEvents();
   }
 
   @Get()
@@ -39,4 +45,6 @@ export class TasksController {
   remove(@Param('id') id: string) {
     return this.tasksService.remove(+id);
   }
+
+
 }

@@ -108,4 +108,9 @@ export class AuthService {
   validateToken(token: string) {
     return this.authClient.send(AUTH_PATTERN.VALIDATE_TOKEN, token);
   }
+
+  handleGoogleCallback(request: Request) {
+    const user = request.user;
+    return this.authClient.send(AUTH_PATTERN.GOOGLE_CALLBACK, user);
+  }
 }

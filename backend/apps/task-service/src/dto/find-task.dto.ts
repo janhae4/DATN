@@ -1,3 +1,3 @@
 export class FindTaskDto {
-  id: number;
+  id: string;
 }

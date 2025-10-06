@@ -6,10 +6,13 @@ import { UpdateTaskPayloadDto } from './dto/update-task-payload.dto';
 import { FindTaskDto } from './dto/find-task.dto';
 import { TASK_PATTERNS } from '@app/contracts/task/task.patterns';
 import { Task } from './generated/prisma';
+import { GoogleCalendarService } from './google-calendar.service';
 
 @Controller()
 export class TaskServiceController {
-  constructor(private readonly taskServiceService: TaskServiceService) {}
+  constructor(private readonly taskServiceService: TaskServiceService,
+    private readonly googleCalendarService: GoogleCalendarService
+  ) { }
 
   @MessagePattern(TASK_PATTERNS.FIND_ALL)
   async findAll(): Promise<Task[]> {

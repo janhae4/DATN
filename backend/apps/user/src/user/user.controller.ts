@@ -5,14 +5,20 @@ import { CreateUserDto } from '@app/contracts/user/create-user.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 
 @Controller()
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @MessagePattern(USER_PATTERNS.CREATE)
+  @MessagePattern(USER_PATTERNS.CREATE_LOCAL)
   create(@Payload() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+    return this.userService.registerLocal(createUserDto);
+  }
+
+  @MessagePattern(USER_PATTERNS.CREATE_OAUTH)
+  createOAuth(@Payload() data: CreateAuthOAuthDto) {
+    return this.userService.loginOAuth(data);
   }
 
   @MessagePattern(USER_PATTERNS.FIND_ALL)
@@ -35,11 +41,11 @@ export class UserController {
 
   @MessagePattern(USER_PATTERNS.UPDATE)
   update(@Payload() id: string, @Payload() updateUserDto: UpdateUserDto) {
-    return this.userService.update({ id }, updateUserDto);
+    return this.userService.update(id, updateUserDto);
   }
 
   @MessagePattern(USER_PATTERNS.REMOVE)
   remove(@Payload() id: string) {
-    return this.userService.remove({ id });
+    return this.userService.remove(id);
   }
 }

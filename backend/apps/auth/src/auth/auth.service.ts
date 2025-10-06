@@ -10,7 +10,6 @@ import {
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { ConfigModule } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
@@ -21,7 +20,7 @@ import { UserDto } from '@app/contracts/user/user.dto';
 import { StoredRefreshTokenDto } from '@app/contracts/redis/store-refreshtoken.dto';
 import { NOTIFICATION_PATTERN } from '@app/contracts/notification/notification.pattern';
 import { NotificationType } from '@app/contracts/notification/notification.enum';
-ConfigModule.forRoot();
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 
 @Injectable()
 export class AuthService {
@@ -31,7 +30,7 @@ export class AuthService {
     @Inject(NOTIFICATION_CLIENT)
     private readonly notificationClient: ClientProxy,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   mapper(user: UserDto) {
     return {
@@ -44,7 +43,7 @@ export class AuthService {
     try {
       console.log(createAuthDto);
       return await firstValueFrom<UserDto>(
-        this.userClient.send(USER_PATTERNS.CREATE, createAuthDto),
+        this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createAuthDto),
       );
     } catch (error) {
       console.log(error);
@@ -177,5 +176,9 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid token');
     }
+  }
+
+  handleGoogleCallback(user: CreateAuthOAuthDto) {
+    return this.userClient.send(USER_PATTERNS.CREATE_OAUTH, user);
   }
 }
