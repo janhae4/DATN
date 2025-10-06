@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Res, Req } from '@nestjs/common';
+import { Controller, Post, Body, Res, Req, Get, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
@@ -49,5 +50,15 @@ export class AuthController {
   @Post('/findAllUser')
   findAllUser() {
     return this.authService.findAllUser();
+  }
+
+  @Get('/google/login')
+  @UseGuards(AuthGuard('google'))
+  googleLogin() {}
+  
+  @Get('/google/callback')
+  @UseGuards(AuthGuard('google'))
+  googleCallback(@Req() request: Request) {
+    return this.authService.handleGoogleCallback(request);
   }
 }

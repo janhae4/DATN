@@ -1,87 +1,142 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { RpcException } from '@nestjs/microservices';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 
-import bcrypt from 'bcrypt';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateUserDto } from '@app/contracts/user/create-user.dto';
 import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
-import { PrismaService } from './prisma.service';
-import { Prisma, User } from '../generated/prisma';
-import { RpcException } from '@nestjs/microservices';
+import { User } from './entity/user.entity';
+import { ConflictException } from '@app/contracts/errror';
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
+import { Account, Provider } from './entity/account.entity';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
-  async create(createUserDto: CreateUserDto): Promise<any> {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+    @InjectRepository(Account)
+    private readonly accountRepo: Repository<Account>,
+  ) { }
+
+  async registerLocal(createUserDto: CreateUserDto) {
     try {
-      return await this.prisma.user.create({
-        data: {
-          username: createUserDto.username,
-          email: createUserDto.email,
-          password: bcrypt.hashSync(createUserDto.password, 10),
-          name: createUserDto.name,
-          phone: createUserDto.phone,
+      const existingAccount = await this.accountRepo.findOne({
+        where: {
+          provider: Provider.LOCAL,
+          providerId: createUserDto.username,
         },
       });
+
+      if (existingAccount) {
+        throw new ConflictException('Username already exists');
+      }
+
+      const user = this.userRepo.create({
+        name: createUserDto.name,
+        email: createUserDto.email,
+        phone: createUserDto.phone,
+      });
+
+      const savedUser = await this.userRepo.save(user);
+
+      const account = this.accountRepo.create({
+        provider: Provider.LOCAL,
+        providerId: createUserDto.username,
+        password: bcrypt.hashSync(createUserDto.password, 10),
+        user: savedUser,
+      });
+
+      await this.accountRepo.save(account);
+      return savedUser;
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new RpcException({
-            error: `${error.meta?.target?.[0] || 'Account'} already exists`,
-            status: HttpStatus.BAD_REQUEST,
-          });
-        }
+      if (error.code === '23505') {
+        throw new ConflictException(error.detail || 'Account already exists');
       }
       throw new RpcException(error);
     }
   }
 
-  async findAll(params: {
+  async loginOAuth(data: CreateAuthOAuthDto) {
+    let account = await this.accountRepo.findOne({
+      where: {
+        provider: data.provider,
+        providerId: data.providerId,
+      },
+      relations: ['user'],
+    });
+
+    if (account) {
+      account.accessToken = data.accessToken || account.accessToken;
+      account.refreshToken = data.refreshToken || account.refreshToken;
+      await this.accountRepo.save(account);
+      return account.user;
+    }
+
+    const user = this.userRepo.create({
+      name: data.name,
+      email: data.email,
+      avatar: data.avatar
+    });
+    const savedUser = await this.userRepo.save(user);
+
+    const newAccount = this.accountRepo.create({
+      provider: data.provider,
+      providerId: data.providerId,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      user: savedUser,
+    });
+    await this.accountRepo.save(newAccount);
+
+    return savedUser;
+  }
+
+
+  async findAll(query: {
     skip?: number;
     take?: number;
-    cursor?: Prisma.UserWhereUniqueInput;
-    where?: Prisma.UserWhereInput;
-    orderBy?: Prisma.UserOrderByWithRelationInput;
+    where?: any;
+    orderBy?: any;
   }): Promise<User[]> {
-    const { skip, take, cursor, where, orderBy } = params;
-    return this.prisma.user.findMany({
+    const { skip, take, where, orderBy } = query;
+    return this.userRepo.find({
       skip,
       take,
-      cursor,
       where,
-      orderBy,
+      order: orderBy,
     });
   }
 
-  async findOne(id: Prisma.UserWhereUniqueInput): Promise<User | null> {
-    return await this.prisma.user.findUnique({
-      where: id,
-    });
+  async findOne(where: any): Promise<User | null> {
+    return this.userRepo.findOne({ where });
   }
 
   async validate(loginDto: LoginDto) {
-    const user = await this.prisma.user.findFirst({
+    const account = await this.accountRepo.findOne({
       where: {
-        OR: [{ username: loginDto.username }, { email: loginDto.username }],
+        provider: Provider.LOCAL,
+        providerId: loginDto.username,
       },
+      relations: ['user'],
     });
-    if (user && (await bcrypt.compare(loginDto.password, user.password))) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password: _password, ...result } = user;
-      return result;
+
+    if (account && await bcrypt.compare(loginDto.password, account?.password!)) {
+      const { password, ...restAccount } = account;
+      return restAccount as any;
     }
+
     return null;
   }
 
-  async update(where: Prisma.UserWhereUniqueInput, data: UpdateUserDto) {
-    return this.prisma.user.update({
-      where,
-      data,
-    });
+  async update(id: string, data: UpdateUserDto) {
+    await this.userRepo.update(id, data);
+    return this.userRepo.findOne({ where: { id } });
   }
 
-  async remove(where: Prisma.UserWhereUniqueInput) {
-    return this.prisma.user.delete({
-      where,
-    });
+  async remove(id: string) {
+    return this.userRepo.delete(id);
   }
 }

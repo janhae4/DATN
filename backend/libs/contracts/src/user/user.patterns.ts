@@ -1,5 +1,6 @@
 export const USER_PATTERNS = {
-  CREATE: 'user.create',
+  CREATE_LOCAL: 'user.createLocal',
+  CREATE_OAUTH: 'user.createOAuth',
   FIND_ALL: 'user.findAll',
   FIND_ONE: 'user.findOne',
   UPDATE: 'user.update',

@@ -18,7 +18,7 @@ import * as joi from 'joi';
         NOTIFICATION_QUEUE: joi.string().default('notification_service_queue'),
         GOOGLE_CLIENT_ID: joi.string().required(),
         GOOGLE_CLIENT_SECRET: joi.string().required(),
-        GOOGLE_REDIRECT_URL: joi.string().uri().required(),
+        GOOGLE_CALLBACK_URL: joi.string().uri().required(),
       }),
     }),
   ],

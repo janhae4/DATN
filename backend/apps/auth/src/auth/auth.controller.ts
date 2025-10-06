@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 
 @Controller()
 export class AuthController {
@@ -18,6 +19,11 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERN.LOGIN)
   async login(@Payload() loginDto: LoginDto) {
     return await this.authService.login(loginDto);
+  }
+
+  @MessagePattern(AUTH_PATTERN.GOOGLE_CALLBACK)
+  googleCallback(@Payload() user: CreateAuthOAuthDto) {
+    return this.authService.handleGoogleCallback(user);
   }
 
   @MessagePattern(AUTH_PATTERN.VALIDATE_TOKEN)

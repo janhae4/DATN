@@ -7,9 +7,10 @@ import { ClientConfigModule } from '../../../libs/contracts/src/client-config/cl
 import { APP_GUARD } from '@nestjs/core';
 import { RoleGuard } from './role.guard';
 import { RedisModule } from './redis/redis.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
-  imports: [UserModule, AuthModule, ClientConfigModule, RedisModule],
+  imports: [UserModule, AuthModule, ClientConfigModule, RedisModule, TasksModule],
   controllers: [ApiGatewayController],
   providers: [
     ApiGatewayService,

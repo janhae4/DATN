@@ -13,12 +13,12 @@ export class TaskServiceService {
     return await this.prisma.task.findMany();
   }
 
-  async findOne(id: number): Promise<Task> {
+  async findOne(id: string): Promise<Task> {
     const task = await this.prisma.task.findUnique({
       where: { taskId: id },
     });
     if (!task) {
-      throw new RpcException(TASK_ERRORS.NOT_FOUND(id));
+      throw new RpcException(TASK_ERRORS.NOT_FOUND());
     }
     return task;
   }
@@ -35,12 +35,12 @@ export class TaskServiceService {
     });
   }
 
-  async update(id: number, data: UpdateTaskDto): Promise<Task> {
+  async update(id: string, data: UpdateTaskDto): Promise<Task> {
     const existing = await this.prisma.task.findUnique({
       where: { taskId: id },
     });
     if (!existing) {
-      throw new RpcException(TASK_ERRORS.NOT_FOUND(id));
+      throw new RpcException(TASK_ERRORS.NOT_FOUND());
     }
     return this.prisma.task.update({
       where: { taskId: id },
@@ -48,12 +48,12 @@ export class TaskServiceService {
     });
   }
 
-  async remove(id: number): Promise<Task> {
+  async remove(id: string): Promise<Task> {
     const existing = await this.prisma.task.findUnique({
       where: { taskId: id },
     });
     if (!existing) {
-      throw new RpcException(TASK_ERRORS.NOT_FOUND(id));
+      throw new RpcException(TASK_ERRORS.NOT_FOUND());
     }
     return this.prisma.task.delete({
       where: { taskId: id },
