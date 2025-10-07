@@ -6,10 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+  Req,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from '@app/contracts/task/create-task.dto';
 import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
+import type { Request } from 'express';
 
 @Controller('tasks')
 export class TasksController {
@@ -21,9 +23,9 @@ export class TasksController {
   }
   
   @Get('events')
-  findGoogleEvents() {
+  findGoogleEvents(@Req() request: Request) {
     console.log('Here');
-    return this.tasksService.findGoogleEvents();
+    return this.tasksService.findGoogleEvents(request);
   }
 
   @Get()

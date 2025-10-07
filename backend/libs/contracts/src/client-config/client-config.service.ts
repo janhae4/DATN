@@ -5,6 +5,10 @@ import { Transport } from '@nestjs/microservices';
 export class ClientConfigService {
   constructor(private config: ConfigService) {}
 
+  getJWTSecret(): string {
+    return this.config.get<string>('JWT_ACCESS_SECRET', 'default_jwt_secret');
+  }
+
   /* 
   -------------------------
   --------- RMQ  ----------

@@ -17,6 +17,7 @@ export class AuthController {
 
   @MessagePattern(AUTH_PATTERN.LOGIN)
   async login(@Payload() loginDto: LoginDto) {
+    console.log(loginDto);
     return await this.authService.login(loginDto);
   }
 

@@ -125,9 +125,17 @@ export class UserService {
     });
   }
 
-  async findOne(where: any): Promise<User | null> {
-    return this.userRepo.findOne({ where });
+  async findOne(id: string): Promise<User | null> {
+    return await this.userRepo.findOne({ where: { id } });
   }
+
+  async findOneGoogle(id: string): Promise<Account | null> {
+    return await this.accountRepo.findOne({
+      where: { provider: Provider.GOOGLE, user: { id } },
+      relations: ['user'],
+    });
+  }
+
 
   async validate(loginDto: LoginDto) {
     const account = await this.accountRepo.findOne({
@@ -138,9 +146,9 @@ export class UserService {
       relations: ['user'],
     });
 
+
     if (account && await bcrypt.compare(loginDto.password, account?.password!)) {
-      const { password, ...restAccount } = account;
-      return restAccount as any;
+      return account.user;
     }
     return null;
   }

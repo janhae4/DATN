@@ -1,13 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { RpcException } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { TASK_ERRORS } from '@app/contracts/task/task.errors';
 import { Task, TaskStatus } from './generated/prisma';
+import { GoogleCalendarService } from './google-calendar.service';
+import { JwtService } from '@nestjs/jwt';
+import { USER_CLIENT } from '@app/contracts/constants';
+import { firstValueFrom } from 'rxjs';
+import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
+import { UserDto } from '@app/contracts/user/user.dto';
+import { AccountDto } from '@app/contracts/user/account.dto';
 
 @Injectable()
 export class TaskServiceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService,
+    private googleService: GoogleCalendarService,
+    private jwtService: JwtService,
+    @Inject(USER_CLIENT) private userClient: ClientProxy
+  ) { }
 
   async findAll(): Promise<Task[]> {
     return await this.prisma.task.findMany();
@@ -58,5 +69,36 @@ export class TaskServiceService {
     return this.prisma.task.delete({
       where: { taskId: id },
     });
+  }
+
+  private async getGoogleTokens(accessToken: string) {
+    const id = this.jwtService.decode(accessToken).id as string;
+    const account = await firstValueFrom<AccountDto>(
+      this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE, id)
+    );
+    if (!account) {
+      throw new RpcException(TASK_ERRORS.NOT_FOUND);
+    }
+    return account;
+  }
+
+  async findGoogleEvents(accessToken: string, refreshToken: string) {
+    const account = await this.getGoogleTokens(accessToken);
+    return this.googleService.findEvents(account?.accessToken!, account?.refreshToken!);
+  }
+
+  async createGoogleEvent(accessToken: string, refreshToken: string, event: Task) {
+    const account = await this.getGoogleTokens(accessToken);
+    return this.googleService.createEvent(account?.accessToken!, account?.refreshToken!, event);
+  }
+
+  async updateGoogleEvent(accessToken: string, refreshToken: string, eventId: string, event: Task) {
+    const account = await this.getGoogleTokens(accessToken);
+    return this.googleService.updateEvent(account?.accessToken!, account?.refreshToken!, eventId, event);
+  }
+
+  async deleteGoogleEvent(accessToken: string, refreshToken: string, eventId: string) {
+    const account = await this.getGoogleTokens(accessToken);
+    return this.googleService.deleteEvent(account?.accessToken!, account?.refreshToken!, eventId);
   }
 }

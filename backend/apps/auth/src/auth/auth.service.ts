@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { catchError, firstValueFrom, map } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
@@ -54,7 +54,7 @@ export class AuthService {
         .send(USER_PATTERNS.VALIDATE, loginDto)
         .pipe(map((u) => this.mapper(u))),
     );
-    console.log(user);
+    console.log("User: ", user);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const sessionId = randomUUID();
@@ -176,6 +176,10 @@ export class AuthService {
 
   handleGoogleCallback(user: CreateAuthOAuthDto) {
     return this.userClient.send(USER_PATTERNS.CREATE_OAUTH, user);
+  }
+
+  findUserById(id: string) {
+    return this.userClient.send(USER_PATTERNS.FIND_ONE, id);
   }
 
 }

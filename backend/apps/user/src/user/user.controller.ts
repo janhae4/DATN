@@ -27,8 +27,13 @@ export class UserController {
   }
 
   @MessagePattern(USER_PATTERNS.FIND_ONE)
-  findOne(@Payload() id: string) {
-    return this.userService.findOne({ id });
+  async findOne(@Payload() id: string) {
+    return await this.userService.findOne(id );
+  }
+
+  @MessagePattern(USER_PATTERNS.FIND_ONE_GOOGLE)
+  async findOneGoogle(@Payload() id: string) {
+    return await this.userService.findOneGoogle(id);
   }
 
   @MessagePattern(USER_PATTERNS.VALIDATE)

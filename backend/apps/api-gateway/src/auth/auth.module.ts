@@ -4,7 +4,7 @@ import { AuthController } from './auth.controller';
 import { ClientConfigModule } from '../../../../libs/contracts/src/client-config/client-config.module';
 import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
 import { UserModule } from '../user/user.module';
-import { GoogleStrategy } from 'apps/auth/src/auth/config/google.strategy';
+import { GoogleStrategy } from 'apps/api-gateway/src/google.strategy';
 
 @Module({
   imports: [ClientConfigModule, UserModule],

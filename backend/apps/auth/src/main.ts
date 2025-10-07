@@ -3,9 +3,10 @@ import { AuthModule } from './auth/auth.module';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
 import { RpcExceptionFilter } from './rcp-exception.filter';
+import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 
 async function bootstrap() {
-  const appCtx = await NestFactory.createApplicationContext(AuthModule);
+  const appCtx = await NestFactory.createApplicationContext(ClientConfigModule);
   const cfg = appCtx.get(ClientConfigService);
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AuthModule,

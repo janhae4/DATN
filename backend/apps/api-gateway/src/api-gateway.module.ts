@@ -8,9 +8,16 @@ import { APP_GUARD } from '@nestjs/core';
 import { RoleGuard } from './role.guard';
 import { RedisModule } from './redis/redis.module';
 import { TasksModule } from './tasks/tasks.module';
+import { SharedJwtModule } from '@app/contracts/auth/jwt/jwt.module';
 
 @Module({
-  imports: [UserModule, AuthModule, ClientConfigModule, RedisModule, TasksModule],
+  imports: [
+    UserModule, 
+    AuthModule, 
+    ClientConfigModule, 
+    RedisModule, 
+    SharedJwtModule,
+    TasksModule],
   controllers: [ApiGatewayController],
   providers: [
     ApiGatewayService,

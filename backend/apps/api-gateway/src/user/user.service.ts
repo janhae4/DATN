@@ -11,7 +11,7 @@ import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
 export class UserService {
   constructor(@Inject(USER_CLIENT) private readonly userClient: ClientProxy) {}
   create(createUserDto: CreateUserDto) {
-    return this.userClient.send(USER_PATTERNS.CREATE, createUserDto);
+    return this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createUserDto);
   }
 
   findAll() {
