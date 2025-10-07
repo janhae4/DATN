@@ -1,8 +1,6 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { firstValueFrom } from 'rxjs';
 import { ROLES_KEY } from './role.decorator';
-import { AuthService } from './auth/auth.service';
 import { Role } from '@app/contracts/user/user.dto';
 import { Request } from 'express';
 import { RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
@@ -27,9 +25,9 @@ export class RoleGuard implements CanActivate {
 
     const contextRequest: Request = context.switchToHttp().getRequest();
     const cookies = contextRequest.cookies;
-    if (!cookies.accessToken) return false;
+    if (!cookies.accessToken) throw new UnauthorizedException('No token found');
     try {
-      const user = this.jwtService.verify<RefreshTokenDto>(cookies.accessToken)
+      const user = await this.jwtService.verifyAsync<RefreshTokenDto>(cookies.accessToken)
       if (!user) return false;
       return requiredRoles.some((roleRequired) => user.role === roleRequired);
     } catch {

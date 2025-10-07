@@ -95,7 +95,6 @@ export class AuthService {
 
   async refresh(token: string) {
     const payload = await this.verifyToken(token);
-
     const stored = await firstValueFrom(
       this.redisClient
         .send(REDIS_PATTERN.GET_STORED_REFRESH_TOKEN, {

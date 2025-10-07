@@ -5,12 +5,12 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { TASK_ERRORS } from '@app/contracts/task/task.errors';
 import { Task, TaskStatus } from './generated/prisma';
 import { GoogleCalendarService } from './google-calendar.service';
-import { JwtService } from '@nestjs/jwt';
+import { JsonWebTokenError, JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { USER_CLIENT } from '@app/contracts/constants';
 import { firstValueFrom } from 'rxjs';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
-import { UserDto } from '@app/contracts/user/user.dto';
 import { AccountDto } from '@app/contracts/user/account.dto';
+import { BadRequestException, UnauthorizedException } from '@app/contracts/errror';
 
 @Injectable()
 export class TaskServiceService {
@@ -72,14 +72,23 @@ export class TaskServiceService {
   }
 
   private async getGoogleTokens(accessToken: string) {
-    const id = this.jwtService.decode(accessToken).id as string;
-    const account = await firstValueFrom<AccountDto>(
-      this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE, id)
-    );
-    if (!account) {
-      throw new RpcException(TASK_ERRORS.NOT_FOUND);
+    try {
+      const { id } = await this.jwtService.verifyAsync(accessToken);
+      const account = await firstValueFrom<AccountDto>(
+        this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE, id)
+      );
+      if (!account) {
+        throw new BadRequestException('No Google account linked');
+      }
+      return account;
+    } catch (error) {
+      if (error instanceof TokenExpiredError) {
+        throw new UnauthorizedException('Access token expired');
+      }
+      if (error instanceof JsonWebTokenError) {
+        throw new UnauthorizedException('Invalid access token');
+      }
     }
-    return account;
   }
 
   async findGoogleEvents(accessToken: string, refreshToken: string) {

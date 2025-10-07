@@ -1,9 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ApiGatewayModule } from './api-gateway.module';
+import { ApiGatewayModule } from './api-gateway/api-gateway.module';
 import cookieParser from 'cookie-parser';
 import { RpcToHttpInterceptor } from './rpc-to-http.interceptor';
+import { RefreshTokenInterceptor } from './refresh-token.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
@@ -25,7 +26,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new RpcToHttpInterceptor());
+  app.useGlobalInterceptors(app.get(RpcToHttpInterceptor), app.get(RefreshTokenInterceptor));
 
   await app.listen(process.env.port ?? 3000);
 }
