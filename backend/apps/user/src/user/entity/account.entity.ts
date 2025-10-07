@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 import { User } from './user.entity';
 
 export enum Provider {
@@ -8,6 +8,7 @@ export enum Provider {
 }
 
 @Entity('accounts')
+@Index(['provider', 'providerId'], { unique: true })
 export class Account {
     @PrimaryGeneratedColumn('uuid')
     id: string;

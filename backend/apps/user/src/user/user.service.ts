@@ -15,9 +15,9 @@ import { Account, Provider } from './entity/account.entity';
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User)
+    @InjectRepository(User, "USER_CONNECTION")
     private readonly userRepo: Repository<User>,
-    @InjectRepository(Account)
+    @InjectRepository(Account, "USER_CONNECTION")
     private readonly accountRepo: Repository<Account>,
   ) { }
 
@@ -31,7 +31,7 @@ export class UserService {
       });
 
       if (existingAccount) {
-        throw new ConflictException('Username already exists');
+        throw new ConflictException('Email already exists');
       }
 
       const user = this.userRepo.create({
@@ -55,43 +55,58 @@ export class UserService {
       if (error.code === '23505') {
         throw new ConflictException(error.detail || 'Account already exists');
       }
-      throw new RpcException(error);
+      if (error instanceof RpcException) {
+        throw error;
+      }
+
+      throw new RpcException({
+        status: 500,
+        message: error.message || 'Internal server error',
+      });
     }
   }
 
+  private async createAccount(partial: Partial<Account>) {
+    const account = this.accountRepo.create(partial);
+    return this.accountRepo.save(account);
+  }
+
   async loginOAuth(data: CreateAuthOAuthDto) {
+    const { provider, providerId, accessToken, refreshToken, email, name, avatar } = data;
+
     let account = await this.accountRepo.findOne({
-      where: {
-        provider: data.provider,
-        providerId: data.providerId,
-      },
+      where: { provider, providerId },
       relations: ['user'],
     });
 
     if (account) {
-      account.accessToken = data.accessToken || account.accessToken;
-      account.refreshToken = data.refreshToken || account.refreshToken;
-      await this.accountRepo.save(account);
+      const updated = this.accountRepo.merge(account, {
+        accessToken: accessToken ?? account.accessToken,
+        refreshToken: refreshToken ?? account.refreshToken,
+      });
+      await this.accountRepo.save(updated);
       return account.user;
     }
 
-    const user = this.userRepo.create({
-      name: data.name,
-      email: data.email,
-      avatar: data.avatar
+    let user = await this.userRepo.findOne({
+      where: { email },
+      relations: ['accounts'],
     });
-    const savedUser = await this.userRepo.save(user);
 
-    const newAccount = this.accountRepo.create({
-      provider: data.provider,
-      providerId: data.providerId,
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-      user: savedUser,
+    if (!user) {
+      user = this.userRepo.create({ name, email, avatar });
+      await this.userRepo.save(user);
+    }
+
+    await this.createAccount({
+      provider,
+      providerId,
+      accessToken,
+      refreshToken,
+      user,
     });
-    await this.accountRepo.save(newAccount);
 
-    return savedUser;
+    return user;
   }
 
 

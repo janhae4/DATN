@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { firstValueFrom, map } from 'rxjs';
+import { catchError, firstValueFrom, map } from 'rxjs';
 import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
@@ -39,17 +39,13 @@ export class AuthService {
     };
   }
 
-  async register(createAuthDto: CreateAuthDto) {
-    try {
-      console.log(createAuthDto);
-      return await firstValueFrom<UserDto>(
-        this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createAuthDto),
-      );
-    } catch (error) {
-      console.log(error);
-      throw new RpcException(error);
-    }
+  register(createAuthDto: CreateAuthDto) {
+    return this.userClient.send(
+      USER_PATTERNS.CREATE_LOCAL,
+      createAuthDto,
+    )
   }
+
 
   async login(loginDto: LoginDto) {
     console.log(loginDto);

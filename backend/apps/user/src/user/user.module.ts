@@ -8,13 +8,18 @@ import { Account } from './entity/account.entity';
 
 @Module({
   imports: [
-    ClientConfigModule, 
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.DATABASE_USER_URL,
-      entities: [User, Account],
-      synchronize: true,
-    })
+    ClientConfigModule,
+    TypeOrmModule.forRootAsync({
+      name: 'USER_CONNECTION',
+
+      useFactory: () => ({
+        type: 'postgres',
+        url: process.env.DATABASE_USER_URL,
+        entities: [User, Account],
+        synchronize: true,
+      }),
+    }),
+    TypeOrmModule.forFeature([User, Account], 'USER_CONNECTION'),
   ],
   controllers: [UserController],
   providers: [UserService],

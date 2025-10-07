@@ -5,8 +5,6 @@ import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { AUTH_CLIENT } from '@app/contracts/constants';
 import {
-  HttpException,
-  HttpStatus,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -43,7 +41,7 @@ export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     private readonly userService: UserService,
-  ) {}
+  ) { }
 
   findAllUser() {
     this.userService.findAll();
@@ -51,14 +49,7 @@ export class AuthService {
 
   register(createAuthDto: CreateAuthDto) {
     return this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto).pipe(
-      catchError((error) => {
-        const status =
-          (error as { status?: number }).status ??
-          HttpStatus.INTERNAL_SERVER_ERROR;
-        const message = (error as { error?: string }).error ?? 'Unknown error';
-
-        return throwError(() => new HttpException(message, status));
-      }),
+      catchError((error) => { console.log(error); throw error }),
     );
   }
 

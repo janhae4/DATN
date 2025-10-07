@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Account } from "./account.entity";
 
 enum UserRole {
@@ -12,6 +12,7 @@ export class User {
     id: string;
 
     @Column({ unique: true })
+    @Index()
     email: string;
 
     @Column()
@@ -21,6 +22,7 @@ export class User {
     avatar?: string;
 
     @Column({ unique: true, nullable: true })
+    @Index()
     phone?: string;
 
     @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
