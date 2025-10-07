@@ -177,4 +177,5 @@ export class AuthService {
   handleGoogleCallback(user: CreateAuthOAuthDto) {
     return this.userClient.send(USER_PATTERNS.CREATE_OAUTH, user);
   }
+
 }

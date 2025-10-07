@@ -142,7 +142,6 @@ export class UserService {
       const { password, ...restAccount } = account;
       return restAccount as any;
     }
-
     return null;
   }
 
