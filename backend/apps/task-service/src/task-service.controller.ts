@@ -7,13 +7,11 @@ import { FindTaskDto } from './dto/find-task.dto';
 import { TASK_PATTERNS } from '@app/contracts/task/task.patterns';
 import { Task } from './generated/prisma';
 import { RequestGoogleTaskDto } from '@app/contracts/task/request-google-task.dto';
-import { JwtService } from '@nestjs/jwt';
 
 @Controller()
 export class TaskServiceController {
   constructor(
     private readonly taskServiceService: TaskServiceService,
-    private readonly jwtService: JwtService,
   ) {}
 
   @MessagePattern(TASK_PATTERNS.FIND_ALL)

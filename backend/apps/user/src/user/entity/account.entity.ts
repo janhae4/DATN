@@ -30,12 +30,6 @@ export class Account {
   @Column({ nullable: true })
   password?: string;
 
-  @Column({ nullable: true })
-  accessToken?: string;
-
-  @Column({ nullable: true })
-  refreshToken?: string;
-
   @CreateDateColumn()
   createdAt: Date;
 

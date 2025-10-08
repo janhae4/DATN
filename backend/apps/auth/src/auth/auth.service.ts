@@ -21,6 +21,7 @@ import { StoredRefreshTokenDto } from '@app/contracts/redis/store-refreshtoken.d
 import { NOTIFICATION_PATTERN } from '@app/contracts/notification/notification.pattern';
 import { NotificationType } from '@app/contracts/notification/notification.enum';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
+import { AccountDto } from '@app/contracts/user/account.dto';
 
 @Injectable()
 export class AuthService {
@@ -30,7 +31,7 @@ export class AuthService {
     @Inject(NOTIFICATION_CLIENT)
     private readonly notificationClient: ClientProxy,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   mapper(user: UserDto) {
     return {
@@ -169,8 +170,53 @@ export class AuthService {
     }
   }
 
-  handleGoogleCallback(user: CreateAuthOAuthDto) {
-    return this.userClient.send(USER_PATTERNS.CREATE_OAUTH, user);
+  async handleGoogleCallback(data: CreateAuthOAuthDto) {
+    const {
+      accessToken,
+      refreshToken,
+      provider,
+      providerId,
+      email,
+      name,
+      avatar,
+    } = data;
+
+
+
+    const account = await firstValueFrom<AccountDto>(
+      this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL, email));
+
+    console.log(account)
+
+    
+    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+      userId: account.user.id,
+      accessToken,
+      refreshToken
+    });
+
+
+    if (account) {
+      return account;
+    }
+
+    let user = await firstValueFrom<UserDto>(
+      this.userClient.send(USER_PATTERNS.FIND_ONE, email));
+
+    if (!user) {
+      user = await firstValueFrom<UserDto>(
+        this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
+          provider,
+          providerId,
+          name,
+          email,
+          avatar
+        }))
+    }
+
+    console.log(123)
+
+    return user;
   }
 
   findUserById(id: string) {

@@ -23,10 +23,29 @@ export class RedisController {
     );
   }
 
+  @MessagePattern(REDIS_PATTERN.STORE_GOOGLE_TOKEN)
+  async storeGoogleToken(data: {
+    userId: string;
+    accessToken: string;
+    refreshToken: string;
+  }) {
+    const { userId, accessToken, refreshToken } = data;
+    console.log("userID", userId);
+    console.log("accessToken", accessToken);
+    console.log("refreshToken", refreshToken); 
+    return await this.redisService.storeGoogleToken(userId, accessToken, refreshToken);
+  }
+
   @MessagePattern(REDIS_PATTERN.GET_STORED_REFRESH_TOKEN)
   async getStoredRefreshToken(data: { userId: string; sessionId: string }) {
     const { userId, sessionId } = data;
     return await this.redisService.getStoredRefreshToken(userId, sessionId);
+  }
+
+  @MessagePattern(REDIS_PATTERN.GET_GOOGLE_TOKEN)
+  async getGoogleToken(userId: string) {
+    console.log(userId);
+    return await this.redisService.getGoogleToken(userId);
   }
 
   @MessagePattern(REDIS_PATTERN.DELETE_REFRESH_TOKEN)

@@ -11,6 +11,7 @@ import { TasksModule } from '../tasks/tasks.module';
 import { SharedJwtModule } from '@app/contracts/auth/jwt/jwt.module';
 import { RpcToHttpInterceptor } from '../rpc-to-http.interceptor';
 import { RefreshTokenInterceptor } from '../refresh-token.interceptor';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { RefreshTokenInterceptor } from '../refresh-token.interceptor';
     RedisModule,
     SharedJwtModule,
     TasksModule,
+    HttpModule,
   ],
   controllers: [ApiGatewayController],
   providers: [

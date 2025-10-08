@@ -9,6 +9,8 @@ import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
 import { catchError, firstValueFrom, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
+import { Provider } from '@app/contracts/user/user.dto';
 
 @Injectable()
 export class AuthService {
@@ -48,8 +50,6 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto, response: Response) {
-    console.log(loginDto, 'In Auth Service');
-
     try {
       const token = await firstValueFrom<LoginResponseDto>(
         this.authClient.send(AUTH_PATTERN.LOGIN, loginDto),
@@ -100,7 +100,10 @@ export class AuthService {
   }
 
   handleGoogleCallback(request: Request) {
-    const user = request.user;
-    return this.authClient.send(AUTH_PATTERN.GOOGLE_CALLBACK, user);
+    const userCreate: CreateAuthOAuthDto = {
+      ...request.user,
+      provider: Provider.GOOGLE,
+    }
+    return this.authClient.send(AUTH_PATTERN.GOOGLE_CALLBACK, userCreate);
   }
 }

@@ -1,12 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { calendar_v3, google } from 'googleapis';
 import { Task } from './generated/prisma';
+import { REDIS_CLIENT } from '@app/contracts/constants';
+import { ClientProxy } from '@nestjs/microservices';
+import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 
 @Injectable()
 export class GoogleCalendarService {
   private readonly logger = new Logger(GoogleCalendarService.name);
 
-  private getCalendarClient(accessToken: string, refreshToken: string) {
+  constructor(@Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy) { }
+
+  private async getCalendarClient(userId: string, accessToken: string, refreshToken: string) {
     const oAuth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -18,6 +23,15 @@ export class GoogleCalendarService {
       refresh_token: refreshToken,
     });
 
+    if (!oAuth2Client.credentials.expiry_date || Date.now() > oAuth2Client.credentials.expiry_date!) {
+      const { credentials } = await oAuth2Client.refreshAccessToken();
+      this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+        userId,
+        accessToken: credentials.access_token,
+        refreshToken: credentials.refresh_token
+      })
+    }
+
     return google.calendar({ version: 'v3', auth: oAuth2Client });
   }
 
@@ -27,23 +41,23 @@ export class GoogleCalendarService {
       description: task.description || '',
       start: task.deadline
         ? {
-            dateTime: new Date(task.deadline).toISOString(),
-            timeZone: 'Asia/Ho_Chi_Minh',
-          }
+          dateTime: new Date(task.deadline).toISOString(),
+          timeZone: 'Asia/Ho_Chi_Minh',
+        }
         : undefined,
       end: task.deadline
         ? {
-            dateTime: new Date(
-              new Date(task.deadline).getTime() + 60 * 60 * 1000,
-            ).toISOString(), // +1h default
-            timeZone: 'Asia/Ho_Chi_Minh',
-          }
+          dateTime: new Date(
+            new Date(task.deadline).getTime() + 60 * 60 * 1000,
+          ).toISOString(), // +1h default
+          timeZone: 'Asia/Ho_Chi_Minh',
+        }
         : undefined,
     };
   }
 
-  async createEvent(accessToken: string, refreshToken: string, task: Task) {
-    const calendar = this.getCalendarClient(accessToken, refreshToken);
+  async createEvent(userId: string, accessToken: string, refreshToken: string, task: Task) {
+    const calendar = await this.getCalendarClient(userId, accessToken, refreshToken);
     const event = this.toGoogleEvent(task);
 
     const response = await calendar.events.insert({
@@ -56,12 +70,13 @@ export class GoogleCalendarService {
   }
 
   async updateEvent(
+    userId: string,
     accessToken: string,
     refreshToken: string,
     eventId: string,
     task: Task,
   ) {
-    const calendar = this.getCalendarClient(accessToken, refreshToken);
+    const calendar = await this.getCalendarClient(userId, accessToken, refreshToken);
     const event = this.toGoogleEvent(task);
 
     const response = await calendar.events.patch({
@@ -75,11 +90,12 @@ export class GoogleCalendarService {
   }
 
   async deleteEvent(
+    userId: string,
     accessToken: string,
     refreshToken: string,
     eventId: string,
   ) {
-    const calendar = this.getCalendarClient(accessToken, refreshToken);
+    const calendar = await this.getCalendarClient(userId, accessToken, refreshToken);
     await calendar.events.delete({
       calendarId: 'primary',
       eventId,
@@ -87,8 +103,8 @@ export class GoogleCalendarService {
     this.logger.log(`Event deleted: ${eventId}`);
   }
 
-  async findEvents(accessToken: string, refreshToken: string) {
-    const calendar = this.getCalendarClient(accessToken, refreshToken);
+  async findEvents(userId: string, accessToken: string, refreshToken: string) {
+    const calendar = await this.getCalendarClient(userId, accessToken, refreshToken);
     const response = await calendar.events.list({
       calendarId: 'primary',
       maxResults: 100,

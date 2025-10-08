@@ -6,15 +6,15 @@ import { TASK_ERRORS } from '@app/contracts/task/task.errors';
 import { Task, TaskStatus } from './generated/prisma';
 import { GoogleCalendarService } from './google-calendar.service';
 import { JsonWebTokenError, JwtService, TokenExpiredError } from '@nestjs/jwt';
-import { USER_CLIENT } from '@app/contracts/constants';
+import { REDIS_CLIENT, } from '@app/contracts/constants';
 import { firstValueFrom } from 'rxjs';
-import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
-import { AccountDto } from '@app/contracts/user/account.dto';
 import {
   BadRequestException,
   UnauthorizedException,
 } from '@app/contracts/errror';
 import { JwtDto } from '@app/contracts/auth/jwt.dto';
+import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
+import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 
 @Injectable()
 export class TaskServiceService {
@@ -22,7 +22,7 @@ export class TaskServiceService {
     private prisma: PrismaService,
     private googleService: GoogleCalendarService,
     private jwtService: JwtService,
-    @Inject(USER_CLIENT) private userClient: ClientProxy,
+    @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
   ) {}
 
   async findAll(): Promise<Task[]> {
@@ -78,14 +78,22 @@ export class TaskServiceService {
 
   private async getGoogleTokens(accessToken: string) {
     try {
-      const { id } = await this.jwtService.verifyAsync<JwtDto>(accessToken);
-      const account = await firstValueFrom<AccountDto>(
-        this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE, id),
+      const jwtPayload = await this.jwtService.verifyAsync<JwtDto>(accessToken);
+
+      const jwt = await firstValueFrom<LoginResponseDto>(
+        this.redisClient.send(REDIS_PATTERN.GET_GOOGLE_TOKEN, jwtPayload.id),
       );
-      if (!account) {
+
+      if (!jwt) {
         throw new BadRequestException('No Google account linked');
       }
-      return account;
+
+      return {
+        accessToken: jwt.accessToken,
+        refreshToken: jwt.refreshToken,
+        userId: jwtPayload.id,
+      };
+      
     } catch (error) {
       if (error instanceof TokenExpiredError) {
         throw new UnauthorizedException('Access token expired');
@@ -97,49 +105,54 @@ export class TaskServiceService {
   }
 
   async findGoogleEvents(accessToken: string) {
-    const account = await this.getGoogleTokens(accessToken);
-    if (!account?.accessToken || !account?.refreshToken) {
+    const jwt = await this.getGoogleTokens(accessToken);
+    console.log(jwt);
+    if (!jwt?.accessToken || !jwt?.refreshToken || !jwt?.userId) {
       throw new BadRequestException('No Google account linked');
     }
     return this.googleService.findEvents(
-      account?.accessToken,
-      account?.refreshToken,
+      jwt?.userId,
+      jwt?.accessToken,
+      jwt?.refreshToken,
     );
   }
 
   async createGoogleEvent(accessToken: string, event: Task) {
-    const account = await this.getGoogleTokens(accessToken);
-    if (!account?.accessToken || !account?.refreshToken) {
+    const jwt = await this.getGoogleTokens(accessToken);
+    if (!jwt?.accessToken || !jwt?.refreshToken || !jwt?.userId) {
       throw new BadRequestException('No Google account linked');
     }
     return this.googleService.createEvent(
-      account?.accessToken,
-      account?.refreshToken,
+      jwt?.userId,
+      jwt?.accessToken,
+      jwt?.refreshToken,
       event,
     );
   }
 
   async updateGoogleEvent(accessToken: string, eventId: string, event: Task) {
-    const account = await this.getGoogleTokens(accessToken);
-    if (!account?.accessToken || !account?.refreshToken) {
+    const jwt = await this.getGoogleTokens(accessToken);
+    if (!jwt?.accessToken || !jwt?.refreshToken || !jwt?.userId) {
       throw new BadRequestException('No Google account linked');
     }
     return this.googleService.updateEvent(
-      account?.accessToken,
-      account?.refreshToken,
+      jwt?.userId,
+      jwt?.accessToken,
+      jwt?.refreshToken,
       eventId,
       event,
     );
   }
 
   async deleteGoogleEvent(accessToken: string, eventId: string) {
-    const account = await this.getGoogleTokens(accessToken);
-    if (!account?.accessToken || !account?.refreshToken) {
+    const jwt = await this.getGoogleTokens(accessToken);
+    if (!jwt?.accessToken || !jwt?.refreshToken || !jwt?.userId) {
       throw new BadRequestException('No Google account linked');
     }
     return this.googleService.deleteEvent(
-      account?.accessToken,
-      account?.refreshToken,
+      jwt?.userId,
+      jwt?.accessToken,
+      jwt?.refreshToken,
       eventId,
     );
   }

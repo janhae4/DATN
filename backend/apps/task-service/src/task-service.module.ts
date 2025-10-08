@@ -13,7 +13,7 @@ import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-confi
   providers: [
     TaskServiceService,
     GoogleCalendarService,
-    CLIENT_PROXY_PROVIDER.USER_CLIENT,
+    CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
   ],
 })
 export class TaskServiceModule {}

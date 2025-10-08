@@ -12,6 +12,7 @@ import { ConflictException } from '@app/contracts/errror';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { Account, Provider } from './entity/account.entity';
 import { PostgresError } from 'postgres';
+import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local';
 
 @Injectable()
 export class UserService {
@@ -20,9 +21,14 @@ export class UserService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Account, 'USER_CONNECTION')
     private readonly accountRepo: Repository<Account>,
-  ) {}
+  ) { }
 
-  async registerLocal(createUserDto: CreateUserDto) {
+  private async create(createUserDto: Partial<User>) {
+    const user = this.userRepo.create(createUserDto);
+    return await this.userRepo.save(user);
+  }
+
+  async registerLocal(createUserDto: CreateAuthLocalDto) {
     try {
       const existingAccount = await this.accountRepo.findOne({
         where: {
@@ -35,22 +41,19 @@ export class UserService {
         throw new ConflictException('Email already exists');
       }
 
-      const user = this.userRepo.create({
+      const savedUser = await this.create({
         name: createUserDto.name,
         email: createUserDto.email,
-        phone: createUserDto.phone,
+        phone: createUserDto.phone
       });
 
-      const savedUser = await this.userRepo.save(user);
-
-      const account = this.accountRepo.create({
+      this.createAccount({
         provider: Provider.LOCAL,
         providerId: createUserDto.username,
         password: bcrypt.hashSync(createUserDto.password, 10),
         user: savedUser,
       });
 
-      await this.accountRepo.save(account);
       return savedUser;
     } catch (e) {
       const error = e as PostgresError;
@@ -72,51 +75,29 @@ export class UserService {
 
   private async createAccount(partial: Partial<Account>) {
     const account = this.accountRepo.create(partial);
-    return this.accountRepo.save(account);
+    return await this.accountRepo.save(account);
   }
 
-  async loginOAuth(data: CreateAuthOAuthDto) {
+  async createOAuth(data: CreateAuthOAuthDto) {
     const {
       provider,
       providerId,
-      accessToken,
-      refreshToken,
       email,
       name,
       avatar,
     } = data;
 
-    const account = await this.accountRepo.findOne({
-      where: { provider, providerId },
-      relations: ['user'],
+    const user = await this.create({
+      name: name ?? '',
+      email: email ?? '',
+      avatar: avatar ?? '',
     });
 
-    if (account) {
-      const updated = this.accountRepo.merge(account, {
-        accessToken: accessToken ?? account.accessToken,
-        refreshToken: refreshToken ?? account.refreshToken,
-      });
-      await this.accountRepo.save(updated);
-      return account.user;
-    }
-
-    let user = await this.userRepo.findOne({
-      where: { email },
-      relations: ['accounts'],
-    });
-
-    if (!user) {
-      user = this.userRepo.create({ name, email, avatar });
-      await this.userRepo.save(user);
-    }
-
-    await this.createAccount({
+    this.createAccount({
       provider,
       providerId,
-      accessToken,
-      refreshToken,
-      user,
-    });
+      user
+    })
 
     return user;
   }
@@ -129,9 +110,9 @@ export class UserService {
     return await this.userRepo.findOne({ where: { id } });
   }
 
-  async findOneGoogle(id: string): Promise<Account | null> {
+  async findOneGoogle(email: string): Promise<Account | null> {
     return await this.accountRepo.findOne({
-      where: { provider: Provider.GOOGLE, user: { id } },
+      where: { provider: Provider.GOOGLE, user: { email } },
       relations: ['user'],
     });
   }

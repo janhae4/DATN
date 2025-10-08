@@ -23,6 +23,7 @@ export class AuthController {
 
   @MessagePattern(AUTH_PATTERN.GOOGLE_CALLBACK)
   googleCallback(@Payload() user: CreateAuthOAuthDto) {
+    console.log("GOOGLE CALLBACK");
     return this.authService.handleGoogleCallback(user);
   }
 

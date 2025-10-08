@@ -1,3 +1,4 @@
+import { BadRequestException } from '@app/contracts/errror';
 import { StoredRefreshTokenDto } from '@app/contracts/redis/store-refreshtoken.dto';
 import { Injectable } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -67,5 +68,38 @@ export class RedisService {
       cursor = keys[0];
     }
     return found;
+  }
+
+  async storeGoogleToken(
+    userId: string,
+    accessToken: string,
+    refreshToken: string,
+  ) {
+    const accessKey = `google:${userId}:access`;
+    const refreshKey = `google:${userId}:refresh`;
+
+    await this.redis.set(accessKey, accessToken, 'EX', 3600);
+
+    if (refreshToken) {
+      await this.redis.set(refreshKey, refreshToken);
+    }
+  }
+
+  async getGoogleToken(userId: string) {
+    const accessKey = `google:${userId}:access`;
+    const refreshKey = `google:${userId}:refresh`;
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.redis.get(accessKey),
+      this.redis.get(refreshKey),
+    ]);
+
+    
+    if (!refreshToken) {
+      throw new BadRequestException('No Google account linked');
+    }
+    console.log(accessToken, refreshToken);
+
+    return { accessToken, refreshToken };
   }
 }
