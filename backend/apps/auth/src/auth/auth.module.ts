@@ -7,11 +7,7 @@ import { ClientConfigModule } from '@app/contracts/client-config/client-config.m
 import { SharedJwtModule } from '@app/contracts/auth/jwt/jwt.module';
 
 @Module({
-  imports: [
-    PassportModule,
-    SharedJwtModule,
-    ClientConfigModule,
-  ],
+  imports: [PassportModule, SharedJwtModule, ClientConfigModule],
   controllers: [AuthController],
   providers: [
     AuthService,

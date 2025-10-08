@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Res, Req, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  Req,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
@@ -54,7 +62,7 @@ export class AuthController {
   @Get('/google/login')
   @UseGuards(AuthGuard('google'))
   googleLogin() {}
-  
+
   @Get('/google/callback')
   @UseGuards(AuthGuard('google'))
   googleCallback(@Req() request: Request) {

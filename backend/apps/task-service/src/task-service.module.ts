@@ -10,6 +10,10 @@ import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-confi
 @Module({
   imports: [PrismaModule, ClientConfigModule, SharedJwtModule],
   controllers: [TaskServiceController],
-  providers: [TaskServiceService, GoogleCalendarService, CLIENT_PROXY_PROVIDER.USER_CLIENT],
+  providers: [
+    TaskServiceService,
+    GoogleCalendarService,
+    CLIENT_PROXY_PROVIDER.USER_CLIENT,
+  ],
 })
 export class TaskServiceModule {}

@@ -15,13 +15,13 @@ import type { Request } from 'express';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) { }
+  constructor(private readonly tasksService: TasksService) {}
 
   @Post()
   create(@Body() createTaskDto: CreateTaskDto) {
     return this.tasksService.create(createTaskDto);
   }
-  
+
   @Get('events')
   findGoogleEvents(@Req() request: Request) {
     console.log('Here');
@@ -47,6 +47,4 @@ export class TasksController {
   remove(@Param('id') id: string) {
     return this.tasksService.remove(+id);
   }
-
-
 }

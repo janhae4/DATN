@@ -11,9 +11,10 @@ import { JwtService } from '@nestjs/jwt';
 
 @Controller()
 export class TaskServiceController {
-  constructor(private readonly taskServiceService: TaskServiceService,
-    private readonly jwtService: JwtService
-  ) { }
+  constructor(
+    private readonly taskServiceService: TaskServiceService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @MessagePattern(TASK_PATTERNS.FIND_ALL)
   async findAll(): Promise<Task[]> {
@@ -53,6 +54,8 @@ export class TaskServiceController {
 
   @MessagePattern(TASK_PATTERNS.FIND_GOOGLE_EVENTS)
   async findGoogleEvents(@Payload() data: RequestGoogleTaskDto) {
-    return this.taskServiceService.findGoogleEvents(data.accessToken, data.refreshToken);
+    return this.taskServiceService.findGoogleEvents(
+      data.accessToken,
+    );
   }
 }

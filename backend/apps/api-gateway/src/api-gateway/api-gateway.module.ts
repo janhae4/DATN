@@ -14,12 +14,13 @@ import { RefreshTokenInterceptor } from '../refresh-token.interceptor';
 
 @Module({
   imports: [
-    UserModule, 
-    AuthModule, 
-    ClientConfigModule, 
-    RedisModule, 
+    UserModule,
+    AuthModule,
+    ClientConfigModule,
+    RedisModule,
     SharedJwtModule,
-    TasksModule],
+    TasksModule,
+  ],
   controllers: [ApiGatewayController],
   providers: [
     RpcToHttpInterceptor,

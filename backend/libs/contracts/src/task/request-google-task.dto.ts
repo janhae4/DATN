@@ -1,4 +1,4 @@
 export class RequestGoogleTaskDto {
-    accessToken: string;
-    refreshToken: string;
+  accessToken: string;
+  refreshToken: string;
 }

@@ -10,15 +10,20 @@ import { USER_CLIENT } from '@app/contracts/constants';
 import { firstValueFrom } from 'rxjs';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { AccountDto } from '@app/contracts/user/account.dto';
-import { BadRequestException, UnauthorizedException } from '@app/contracts/errror';
+import {
+  BadRequestException,
+  UnauthorizedException,
+} from '@app/contracts/errror';
+import { JwtDto } from '@app/contracts/auth/jwt.dto';
 
 @Injectable()
 export class TaskServiceService {
-  constructor(private prisma: PrismaService,
+  constructor(
+    private prisma: PrismaService,
     private googleService: GoogleCalendarService,
     private jwtService: JwtService,
-    @Inject(USER_CLIENT) private userClient: ClientProxy
-  ) { }
+    @Inject(USER_CLIENT) private userClient: ClientProxy,
+  ) {}
 
   async findAll(): Promise<Task[]> {
     return await this.prisma.task.findMany();
@@ -73,9 +78,9 @@ export class TaskServiceService {
 
   private async getGoogleTokens(accessToken: string) {
     try {
-      const { id } = await this.jwtService.verifyAsync(accessToken);
+      const { id } = await this.jwtService.verifyAsync<JwtDto>(accessToken);
       const account = await firstValueFrom<AccountDto>(
-        this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE, id)
+        this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE, id),
       );
       if (!account) {
         throw new BadRequestException('No Google account linked');
@@ -91,23 +96,51 @@ export class TaskServiceService {
     }
   }
 
-  async findGoogleEvents(accessToken: string, refreshToken: string) {
+  async findGoogleEvents(accessToken: string) {
     const account = await this.getGoogleTokens(accessToken);
-    return this.googleService.findEvents(account?.accessToken!, account?.refreshToken!);
+    if (!account?.accessToken || !account?.refreshToken) {
+      throw new BadRequestException('No Google account linked');
+    }
+    return this.googleService.findEvents(
+      account?.accessToken,
+      account?.refreshToken,
+    );
   }
 
-  async createGoogleEvent(accessToken: string, refreshToken: string, event: Task) {
+  async createGoogleEvent(accessToken: string, event: Task) {
     const account = await this.getGoogleTokens(accessToken);
-    return this.googleService.createEvent(account?.accessToken!, account?.refreshToken!, event);
+    if (!account?.accessToken || !account?.refreshToken) {
+      throw new BadRequestException('No Google account linked');
+    }
+    return this.googleService.createEvent(
+      account?.accessToken,
+      account?.refreshToken,
+      event,
+    );
   }
 
-  async updateGoogleEvent(accessToken: string, refreshToken: string, eventId: string, event: Task) {
+  async updateGoogleEvent(accessToken: string, eventId: string, event: Task) {
     const account = await this.getGoogleTokens(accessToken);
-    return this.googleService.updateEvent(account?.accessToken!, account?.refreshToken!, eventId, event);
+    if (!account?.accessToken || !account?.refreshToken) {
+      throw new BadRequestException('No Google account linked');
+    }
+    return this.googleService.updateEvent(
+      account?.accessToken,
+      account?.refreshToken,
+      eventId,
+      event,
+    );
   }
 
-  async deleteGoogleEvent(accessToken: string, refreshToken: string, eventId: string) {
+  async deleteGoogleEvent(accessToken: string, eventId: string) {
     const account = await this.getGoogleTokens(accessToken);
-    return this.googleService.deleteEvent(account?.accessToken!, account?.refreshToken!, eventId);
+    if (!account?.accessToken || !account?.refreshToken) {
+      throw new BadRequestException('No Google account linked');
+    }
+    return this.googleService.deleteEvent(
+      account?.accessToken,
+      account?.refreshToken,
+      eventId,
+    );
   }
 }

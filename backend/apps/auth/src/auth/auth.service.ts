@@ -30,7 +30,7 @@ export class AuthService {
     @Inject(NOTIFICATION_CLIENT)
     private readonly notificationClient: ClientProxy,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   mapper(user: UserDto) {
     return {
@@ -40,21 +40,17 @@ export class AuthService {
   }
 
   register(createAuthDto: CreateAuthDto) {
-    return this.userClient.send(
-      USER_PATTERNS.CREATE_LOCAL,
-      createAuthDto,
-    )
+    return this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createAuthDto);
   }
-
 
   async login(loginDto: LoginDto) {
     console.log(loginDto);
     const user = await firstValueFrom(
       this.userClient
         .send(USER_PATTERNS.VALIDATE, loginDto)
-        .pipe(map((u) => this.mapper(u))),
+        .pipe(map((u: UserDto) => this.mapper(u))),
     );
-    console.log("User: ", user);
+    console.log('User: ', user);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const sessionId = randomUUID();
@@ -180,5 +176,4 @@ export class AuthService {
   findUserById(id: string) {
     return this.userClient.send(USER_PATTERNS.FIND_ONE, id);
   }
-
 }

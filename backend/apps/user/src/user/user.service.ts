@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RpcException } from '@nestjs/microservices';
-import { Repository } from 'typeorm';
+import { FindManyOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
@@ -11,15 +11,16 @@ import { User } from './entity/user.entity';
 import { ConflictException } from '@app/contracts/errror';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { Account, Provider } from './entity/account.entity';
+import { PostgresError } from 'postgres';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User, "USER_CONNECTION")
+    @InjectRepository(User, 'USER_CONNECTION')
     private readonly userRepo: Repository<User>,
-    @InjectRepository(Account, "USER_CONNECTION")
+    @InjectRepository(Account, 'USER_CONNECTION')
     private readonly accountRepo: Repository<Account>,
-  ) { }
+  ) {}
 
   async registerLocal(createUserDto: CreateUserDto) {
     try {
@@ -51,9 +52,12 @@ export class UserService {
 
       await this.accountRepo.save(account);
       return savedUser;
-    } catch (error) {
+    } catch (e) {
+      const error = e as PostgresError;
       if (error.code === '23505') {
-        throw new ConflictException(error.detail || 'Account already exists');
+        throw new ConflictException(
+          (error?.detail as string) || 'Account already exists',
+        );
       }
       if (error instanceof RpcException) {
         throw error;
@@ -61,7 +65,7 @@ export class UserService {
 
       throw new RpcException({
         status: 500,
-        message: error.message || 'Internal server error',
+        message: 'Internal server error',
       });
     }
   }
@@ -72,9 +76,17 @@ export class UserService {
   }
 
   async loginOAuth(data: CreateAuthOAuthDto) {
-    const { provider, providerId, accessToken, refreshToken, email, name, avatar } = data;
+    const {
+      provider,
+      providerId,
+      accessToken,
+      refreshToken,
+      email,
+      name,
+      avatar,
+    } = data;
 
-    let account = await this.accountRepo.findOne({
+    const account = await this.accountRepo.findOne({
       where: { provider, providerId },
       relations: ['user'],
     });
@@ -109,20 +121,8 @@ export class UserService {
     return user;
   }
 
-
-  async findAll(query: {
-    skip?: number;
-    take?: number;
-    where?: any;
-    orderBy?: any;
-  }): Promise<User[]> {
-    const { skip, take, where, orderBy } = query;
-    return this.userRepo.find({
-      skip,
-      take,
-      where,
-      order: orderBy,
-    });
+  async findAll(query: FindManyOptions<User>): Promise<User[]> {
+    return this.userRepo.find(query);
   }
 
   async findOne(id: string): Promise<User | null> {
@@ -136,7 +136,6 @@ export class UserService {
     });
   }
 
-
   async validate(loginDto: LoginDto) {
     const account = await this.accountRepo.findOne({
       where: {
@@ -146,8 +145,10 @@ export class UserService {
       relations: ['user'],
     });
 
-
-    if (account && await bcrypt.compare(loginDto.password, account?.password!)) {
+    if (
+      account &&
+      (await bcrypt.compare(loginDto.password, account.password || ''))
+    ) {
       return account.user;
     }
     return null;

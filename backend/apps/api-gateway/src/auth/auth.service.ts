@@ -4,14 +4,10 @@ import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
 import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { AUTH_CLIENT } from '@app/contracts/constants';
-import {
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
-import { catchError, firstValueFrom, map, tap, throwError } from 'rxjs';
+import { catchError, firstValueFrom, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -19,7 +15,7 @@ export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
   private setCookies(
     accessToken: string,
@@ -36,12 +32,12 @@ export class AuthService {
       secure: true,
       maxAge: REFRESH_TTL,
     });
-  };
+  }
 
   private clearCookies(response: Response) {
     response.clearCookie('accessToken');
     response.clearCookie('refreshToken');
-  };
+  }
 
   findAllUser() {
     this.userService.findAll();
@@ -52,21 +48,21 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto, response: Response) {
-    console.log(loginDto, "In Auth Service");
+    console.log(loginDto, 'In Auth Service');
 
     try {
-      const token = await firstValueFrom(
-        this.authClient.send(AUTH_PATTERN.LOGIN, loginDto)
+      const token = await firstValueFrom<LoginResponseDto>(
+        this.authClient.send(AUTH_PATTERN.LOGIN, loginDto),
       );
 
-      const { accessToken, refreshToken } = token as LoginResponseDto;
+      const { accessToken, refreshToken } = token;
 
       console.log(accessToken, refreshToken);
       this.setCookies(accessToken, refreshToken, response);
 
       return { accessToken, refreshToken };
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error('Login failed:', error);
       throw new UnauthorizedException('Invalid credentials');
     }
   }

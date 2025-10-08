@@ -1,39 +1,47 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 import { User } from './user.entity';
 
 export enum Provider {
-    LOCAL = 'LOCAL',
-    GOOGLE = 'GOOGLE',
-    FACEBOOK = 'FACEBOOK',
+  LOCAL = 'LOCAL',
+  GOOGLE = 'GOOGLE',
+  FACEBOOK = 'FACEBOOK',
 }
 
 @Entity('accounts')
 @Index(['provider', 'providerId'], { unique: true })
 export class Account {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Column({ type: 'enum', enum: Provider })
-    provider: Provider;
+  @Column({ type: 'enum', enum: Provider })
+  provider: Provider;
 
-    @Column()
-    providerId: string;
+  @Column()
+  providerId: string;
 
-    @Column({ nullable: true })
-    password?: string;
+  @Column({ nullable: true })
+  password?: string;
 
-    @Column({ nullable: true })
-    accessToken?: string;
+  @Column({ nullable: true })
+  accessToken?: string;
 
-    @Column({ nullable: true })
-    refreshToken?: string;
+  @Column({ nullable: true })
+  refreshToken?: string;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 
-    @ManyToOne(() => User, (user) => user.accounts, { onDelete: 'CASCADE' })
-    user: User;
+  @ManyToOne(() => User, (user) => user.accounts, { onDelete: 'CASCADE' })
+  user: User;
 }

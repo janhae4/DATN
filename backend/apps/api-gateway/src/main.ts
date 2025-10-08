@@ -26,7 +26,10 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(app.get(RpcToHttpInterceptor), app.get(RefreshTokenInterceptor));
+  app.useGlobalInterceptors(
+    app.get(RpcToHttpInterceptor),
+    app.get(RefreshTokenInterceptor),
+  );
 
   await app.listen(process.env.port ?? 3000);
 }

@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsPhoneNumber, IsString } from "class-validator";
+import { IsEmail, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
 
 export class CreateAuthDto {
   @IsString()
@@ -13,7 +13,7 @@ export class CreateAuthDto {
 
   @IsString()
   name: string;
-  
+
   @IsOptional()
   @IsPhoneNumber('VN')
   phone?: string;

@@ -29,3 +29,9 @@ export class BadRequestException extends RpcException {
     super({ error: 'Bad request', status: 400, message });
   }
 }
+
+export interface Error {
+  error: string;
+  status: number;
+  message: string;
+}

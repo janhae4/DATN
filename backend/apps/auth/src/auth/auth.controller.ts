@@ -33,7 +33,7 @@ export class AuthController {
 
   @MessagePattern(AUTH_PATTERN.REFRESH)
   async getRefreshToken(@Payload() token: string) {
-    console.log("REFRESH TOKEN");
+    console.log('REFRESH TOKEN');
     return await this.authService.refresh(token);
   }
 

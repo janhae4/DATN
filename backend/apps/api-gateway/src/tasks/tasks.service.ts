@@ -8,7 +8,6 @@ import { TASK_CLIENT } from '@app/contracts/constants';
 import { CreateTaskDto } from '@app/contracts/task/create-task.dto';
 import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
 import { Request } from 'express';
-import { access } from 'fs';
 import { RequestGoogleTaskDto } from '@app/contracts/task/request-google-task.dto';
 
 interface RpcError {
@@ -18,7 +17,7 @@ interface RpcError {
 
 @Injectable()
 export class TasksService {
-  constructor(@Inject(TASK_CLIENT) private readonly client: ClientProxy) { }
+  constructor(@Inject(TASK_CLIENT) private readonly client: ClientProxy) {}
 
   create(createTaskDto: CreateTaskDto) {
     return this.client.send(TASK_PATTERNS.CREATE, createTaskDto);
@@ -72,10 +71,10 @@ export class TasksService {
   findGoogleEvents(request: Request) {
     const cookies = request.cookies;
     const data: RequestGoogleTaskDto = {
-      accessToken: cookies.accessToken,
-      refreshToken: cookies.refreshToken,
-    }
-    console.log(data)
+      accessToken: cookies.accessToken as string,
+      refreshToken: cookies.refreshToken as string,
+    };
+    console.log(data);
     return this.client.send(TASK_PATTERNS.FIND_GOOGLE_EVENTS, data);
   }
 }
