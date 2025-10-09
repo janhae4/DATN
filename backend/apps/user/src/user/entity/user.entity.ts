@@ -42,7 +42,7 @@ export class User {
   @Column({ nullable: true })
   bio?: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastLogin?: Date;
 
   @CreateDateColumn()

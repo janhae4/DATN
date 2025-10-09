@@ -19,8 +19,9 @@ export class RefreshTokenFilter implements ExceptionFilter {
 
         console.info('[RefreshTokenFilter] Triggered');
         const refreshToken = req.cookies?.refreshToken;
+        const accessToken = req.cookies?.accessToken;
 
-        if (refreshToken) {
+        if (refreshToken && !accessToken) {
             try {
                 const token = await firstValueFrom(this.authService.refresh(req, res));
                 console.info('[RefreshTokenFilter] Refreshed token:', token);
@@ -28,9 +29,8 @@ export class RefreshTokenFilter implements ExceptionFilter {
                 req.cookies.accessToken = token.accessToken;
                 req.cookies.refreshToken = token.refreshToken;
 
-                return res.status(200).json({
-                    message: 'Token refreshed, please retry the request.',
-                });
+                const handler = (req as any).route?.stack?.[0]?.handle;
+                if (handler) return handler(req, res);
             } catch (e) {
                 console.error('[RefreshTokenFilter] Refresh failed:', e.message);
                 return res.status(401).json({

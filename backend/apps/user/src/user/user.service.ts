@@ -117,6 +117,13 @@ export class UserService {
     });
   }
 
+  async findOneWithPassword(id: string): Promise<Account | null> {
+    return await this.accountRepo.findOne({
+      where: { provider: Provider.LOCAL, user: { id } },
+      relations: ['user']
+    });
+  }
+
   async validate(loginDto: LoginDto) {
     const account = await this.accountRepo.findOne({
       where: {
@@ -135,9 +142,28 @@ export class UserService {
     return null;
   }
 
-  async update(id: string, data: UpdateUserDto) {
-    await this.userRepo.update(id, data);
-    return this.userRepo.findOne({ where: { id } });
+  async updatePassword(id: string, password: string) {
+    const result = await this.accountRepo.query(`
+      UPDATE accounts SET password = $1 WHERE id = $2
+      RETURNING (
+        SELECT row_to_json(u)
+        FROM "users" u
+        WHERE u.id = accounts."userId"
+      ) as user
+      `, [password, id]);
+    return result[0]?.[0]?.user;
+  }
+
+  async update(id: string, data: Partial<User>) {
+    const result = await this.userRepo
+      .createQueryBuilder()
+      .update(User)
+      .set(data)
+      .where('id = :id', { id })
+      .returning('*')
+      .execute();
+    console.log(result);
+    return result.raw[0];
   }
 
   async remove(id: string) {

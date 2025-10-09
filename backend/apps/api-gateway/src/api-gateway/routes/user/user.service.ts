@@ -18,7 +18,7 @@ export class UserService {
     return this.userClient.send(USER_PATTERNS.FIND_ALL, {});
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return this.userClient.send(USER_PATTERNS.FIND_ONE, id);
   }
 

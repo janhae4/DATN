@@ -22,7 +22,7 @@ export class RpcToHttpInterceptor implements NestInterceptor {
         }
         throw new HttpException(
           { success: false, message: e.message || "Internal server error" },
-          e.status || 500,
+          e.statusCode || 500,
         );
       }),
     );

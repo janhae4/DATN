@@ -11,13 +11,15 @@ import { catchError, firstValueFrom, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { Provider } from '@app/contracts/user/user.dto';
+import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { access } from 'fs';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     private readonly userService: UserService,
-  ) {}
+  ) { }
 
   private setCookies(
     accessToken: string,
@@ -49,22 +51,26 @@ export class AuthService {
     return this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto);
   }
 
+  resetPassword(resetPasswordDto: ResetPasswordDto) {
+    return this.authClient.send(AUTH_PATTERN.RESET_PASSWORD, resetPasswordDto);
+  }
+
   async login(loginDto: LoginDto, response: Response) {
-    try {
-      const token = await firstValueFrom<LoginResponseDto>(
-        this.authClient.send(AUTH_PATTERN.LOGIN, loginDto),
-      );
+    return this.authClient.send(AUTH_PATTERN.LOGIN, loginDto).pipe(
+      tap((token: LoginResponseDto) => {
+        this.setCookies(token.accessToken, token.refreshToken, response);
+        return {accessToken: token.accessToken, refreshToken: token.refreshToken};
+      }),
+      catchError(() => {
+        return throwError(
+          () => new UnauthorizedException('Invalid credentials'),
+        );
+      }),
+    )
+  }
 
-      const { accessToken, refreshToken } = token;
-
-      console.log(accessToken, refreshToken);
-      this.setCookies(accessToken, refreshToken, response);
-
-      return { accessToken, refreshToken };
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw new UnauthorizedException('Invalid credentials');
-    }
+  getInfo(id: string) {
+    return this.userService.findOne(id);
   }
 
   refresh(request: Request, response: Response) {

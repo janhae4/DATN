@@ -33,9 +33,12 @@ export class RoleGuard implements CanActivate {
     const cookies = contextRequest.cookies;
     if (!cookies.accessToken) throw new UnauthorizedException('No token found');
     try {
+      console.log("[RoleGuard] Validating token...");
       const user = await firstValueFrom(this.authService.validateToken(cookies.accessToken));
+      console.log("[RoleGuard] Token validated:", user);
       if (!user) throw new UnauthorizedException('Invalid token');
       contextRequest.user = user;
+      
       if (!requiredRoles || requiredRoles.length === 0) {
         return true;
       }

@@ -15,13 +15,14 @@ import * as bcrypt from 'bcrypt';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
-import { UnauthorizedException } from '@app/contracts/errror';
+import { BadRequestException, NotFoundException, UnauthorizedException } from '@app/contracts/errror';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { StoredRefreshTokenDto } from '@app/contracts/redis/store-refreshtoken.dto';
 import { NOTIFICATION_PATTERN } from '@app/contracts/notification/notification.pattern';
 import { NotificationType } from '@app/contracts/notification/notification.enum';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { AccountDto } from '@app/contracts/user/account.dto';
+import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -45,7 +46,6 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    console.log(loginDto);
     const user = await firstValueFrom(
       this.userClient
         .send(USER_PATTERNS.VALIDATE, loginDto)
@@ -69,6 +69,14 @@ export class AuthService {
 
     const hashedRefresh = await bcrypt.hash(refreshToken, 10);
 
+    this.userClient.emit(USER_PATTERNS.UPDATE, {
+      id: user.id,
+      updateUser: {
+        isActive: true,
+        lastLogin: new Date()
+      }
+    })
+
     this.redisClient.emit(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
       userId: user.id,
       sessionId,
@@ -84,10 +92,13 @@ export class AuthService {
     });
 
     return {
-      ...user,
       accessToken: accessToken,
       refreshToken: refreshToken,
     };
+  }
+
+  getInfo(id: string) {
+    return this.userClient.send(USER_PATTERNS.FIND_ONE, id);  
   }
 
   async refresh(token: string) {
@@ -147,6 +158,22 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const account = await firstValueFrom<AccountDto>(this.userClient.send(USER_PATTERNS.FIND_ONE_WITH_PASSWORD, resetPasswordDto.id));
+    if (!account) 
+      throw new NotFoundException('User not found');
+    const isMatch = await bcrypt.compare(resetPasswordDto.oldPassword, account.password || '');
+    if (!isMatch) 
+      throw new UnauthorizedException('Invalid password');
+    const isSame = await bcrypt.compare(resetPasswordDto.newPassword, account.password || '');
+    if (isSame) 
+      throw new BadRequestException('New password is the same as old password');
+    const hashedPassword = await bcrypt.hash(resetPasswordDto.newPassword, 10);
+    return await firstValueFrom(this.userClient.send(USER_PATTERNS.UPDATE_PASSWORD, { id: account.id, password: hashedPassword }));
+  }
+
+  forgetPassword() { }
+
   logoutAll(userId: string) {
     return this.redisClient.send(REDIS_PATTERN.CLEAR_REFRESH_TOKENS, {
       userId,
@@ -181,14 +208,12 @@ export class AuthService {
       avatar,
     } = data;
 
-
-
     const account = await firstValueFrom<AccountDto>(
       this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL, email));
 
     console.log(account)
 
-    
+
     this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
       userId: account.user.id,
       accessToken,
