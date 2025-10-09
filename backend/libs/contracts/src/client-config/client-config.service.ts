@@ -125,4 +125,27 @@ export class ClientConfigService {
       },
     };
   }
+
+  /*
+  -------------------------
+  ------ GMAIL CLIENT -----
+  -------------------------
+  */
+  getGmailClientPort(): number {
+    return this.config.get<number>('GMAIL_CLIENT_PORT', 3005);
+  }
+  getGmailQueue(): string {
+    return this.config.get<string>('GMAIL_QUEUE', 'gmail_service_queue');
+  }
+  get gmailClientOptions(): any {
+    console.log('Gmail port: ', this.getGmailClientPort());
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getGmailQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
 }

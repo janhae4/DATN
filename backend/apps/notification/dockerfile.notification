@@ -1,0 +1,31 @@
+FROM node:18-alpine AS deps
+WORKDIR /app
+
+
+# copy đúng file package.json của backend
+COPY package*.json ./
+
+RUN npm install --legacy-peer-deps
+
+# copy toàn bộ backend code
+COPY . .
+
+# Build notification app
+RUN npx nest build notification
+
+FROM node:18-alpine
+WORKDIR /app
+
+# Environment for RMQ-based microservice
+ENV NODE_ENV=production \
+    RMQ_URL=amqp://rabbitmq:5672 \
+    NOTIFICATION_QUEUE=notification_service_queue
+
+# Copy runtime artifacts
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/dist ./dist
+
+# No port exposure needed for RMQ microservice
+
+# Adjust path if your build output differs
+CMD ["node", "dist/apps/notification/main.js"]

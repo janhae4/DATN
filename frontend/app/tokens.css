@@ -1,0 +1,187 @@
+/* Design Tokens and project-level utility classes
+   This file centralizes CSS variables (colors, spacing, sizing, radii, shadows, z-index, durations)
+   and a few pragmatic utility classes commonly used across real-world projects.
+   Tailwind remains the primary utility system; these tokens provide semantic consistency.
+*/
+
+/* Primitives: spacing scale */
+:root {
+  /* Spacing scale (4px baseline) */
+  --space-0: 0px;
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+  --space-16: 4rem;    /* 64px */
+  --space-20: 5rem;    /* 80px */
+  --space-24: 6rem;    /* 96px */
+
+  /* Layout sizing */
+  --container-max: 1200px;
+  --content-max: 80ch;
+  --sidebar-width: 280px;
+
+  /* Radii (mapped to Tailwind variables in globals.css already) */
+  --radius-xs: calc(var(--radius) - 6px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 12px 16px -4px rgb(0 0 0 / 0.08), 0 4px 6px -2px rgb(0 0 0 / 0.04);
+
+  /* Z-index scale */
+  --z-docked: 10;
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-overlay: 1200;
+  --z-modal: 1300;
+  --z-popover: 1400;
+  --z-tooltip: 1500;
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+}
+
+/***** Semantic color aliases mapping to existing globals.css vars *****/
+:root {
+  /* These point to the variables defined in app/globals.css */
+  --color-surface: var(--background);
+  --color-on-surface: var(--foreground);
+  --color-brand: var(--primary);
+  --color-on-brand: var(--primary-foreground);
+  --color-border-default: var(--border);
+  --color-on-muted: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--accent-foreground);
+  --color-danger: var(--destructive);
+}
+/***** Pragmatic utility classes (optional, to complement Tailwind) *****/
+/* Containers */
+.container-app {
+  max-width: var(--container-max);
+  margin-inline: auto;
+}
+.container-content {
+  max-width: var(--content-max);
+  margin-inline: auto;
+}
+
+/* Surfaces */
+.bg-surface { background-color: var(--color-surface) !important; }
+.text-on-surface { color: var(--color-on-surface) !important; }
+.bg-brand { background-color: var(--color-brand) !important; }
+.text-brand { color: var(--color-brand) !important; }
+.text-muted-fg { color: var(--color-on-muted) !important; }
+.border-default { border-color: var(--color-border-default) !important; }
+
+/* Semantic border colors */
+.border-brand { border-color: var(--color-brand) !important; }
+.border-accent { border-color: var(--color-accent) !important; }
+.border-muted { border-color: var(--color-muted) !important; }
+.border-danger { border-color: var(--color-danger) !important; }
+.border-surface { border-color: var(--color-surface) !important; }
+
+/* Radius shortcuts */
+.radius-xs { border-radius: var(--radius-xs) !important; }
+.radius-sm { border-radius: var(--radius-sm) !important; }
+.radius-md { border-radius: var(--radius-md) !important; }
+.radius-lg { border-radius: var(--radius-lg) !important; }
+.radius-xl { border-radius: var(--radius-xl) !important; }
+
+/* Elevation */
+.shadow-xs { box-shadow: var(--shadow-xs) !important; }
+.shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.shadow-md { box-shadow: var(--shadow-md) !important; }
+.shadow-lg { box-shadow: var(--shadow-lg) !important; }
+
+/* Z-index utilities */
+.z-docked { z-index: var(--z-docked) !important; }
+.z-dropdown { z-index: var(--z-dropdown) !important; }
+.z-sticky { z-index: var(--z-sticky) !important; }
+.z-overlay { z-index: var(--z-overlay) !important; }
+.z-modal { z-index: var(--z-modal) !important; }
+.z-popover { z-index: var(--z-popover) !important; }
+.z-tooltip { z-index: var(--z-tooltip) !important; }
+
+/* Stacks (rhythm helpers) */
+.stack-sm > * + * { margin-top: var(--space-2); }
+.stack-md > * + * { margin-top: var(--space-3); }
+.stack-lg > * + * { margin-top: var(--space-4); }
+
+/* Pixel spacing utilities
+   Usage:
+   - Choose a token: space-4 (4px), space-8 (8px), space-16 (16px), ... sets --space-current
+   - Apply with helpers: p-space, px-space, py-space, m-space, gap-space, space-x-space, space-y-space
+   Example: <div class="space-8 p-space"> 8px padding </div>
+*/
+/* Tokens (mapped to app/globals.css spacing scale) */
+.space-0  { --space-current: var(--space-0); }
+.space-1  { --space-current: var(--space-1); }
+.space-2  { --space-current: var(--space-2); }
+.space-3  { --space-current: var(--space-3); }
+.space-4  { --space-current: var(--space-4); }
+.space-5  { --space-current: var(--space-5); }
+.space-6  { --space-current: var(--space-6); }
+.space-8  { --space-current: var(--space-8); }
+.space-10 { --space-current: var(--space-10); }
+.space-12 { --space-current: var(--space-12); }
+.space-16 { --space-current: var(--space-16); }
+.space-20 { --space-current: var(--space-20); }
+.space-24 { --space-current: var(--space-24); }
+
+/* Helpers: padding */
+.p-space  { padding: var(--space-current) !important; }
+.px-space { padding-left: var(--space-current) !important; padding-right: var(--space-current) !important; }
+.py-space { padding-top: var(--space-current) !important; padding-bottom: var(--space-current) !important; }
+.pt-space { padding-top: var(--space-current) !important; }
+.pr-space { padding-right: var(--space-current) !important; }
+.pb-space { padding-bottom: var(--space-current) !important; }
+.pl-space { padding-left: var(--space-current) !important; }
+
+/* Helpers: margin */
+.m-space  { margin: var(--space-current) !important; }
+.mx-space { margin-left: var(--space-current) !important; margin-right: var(--space-current) !important; }
+.my-space { margin-top: var(--space-current) !important; margin-bottom: var(--space-current) !important; }
+.mt-space { margin-top: var(--space-current) !important; }
+.mr-space { margin-right: var(--space-current) !important; }
+.mb-space { margin-bottom: var(--space-current) !important; }
+.ml-space { margin-left: var(--space-current) !important; }
+
+/* Helpers: gap/space between */
+.gap-space    { gap: var(--space-current) !important; }
+.space-x-space { column-gap: var(--space-current) !important; }
+.space-y-space { row-gap: var(--space-current) !important; }
+
+/* Example component shortcuts (optional) */
+.card {
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn-brand {
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+  border-radius: var(--radius-md);
+  transition: background-color var(--duration-normal) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+}
+.btn-brand:hover {
+  filter: brightness(0.95);
+  box-shadow: var(--shadow-sm);
+}

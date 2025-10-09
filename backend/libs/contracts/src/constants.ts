@@ -8,3 +8,5 @@ export const NOTIFICATION_CLIENT = Symbol('NOTIFICATION_CLIENT');
 export const NOTIFICATION_CLIENT_PORT = 4001;
 export const TASK_CLIENT = Symbol('TASK_CLIENT');
 export const TASK_CLIENT_PORT = 3003;
+export const GMAIL_CLIENT = Symbol('GMAIL_CLIENT');
+export const GMAIL_CLIENT_PORT = 3005; 

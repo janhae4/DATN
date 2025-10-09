@@ -5,6 +5,7 @@ export const USER_PATTERNS = {
   FIND_ALL: 'user.findAll',
   FIND_ONE: 'user.findOne',
   FIND_ONE_GOOGLE_BY_EMAIL: 'user.findOneGoogleByEmail',
+  FIND_ONE_BY_EMAIL: 'find_one_user_by_email',
   UPDATE: 'user.update',
   REMOVE: 'user.remove',
   VALIDATE: 'user.validate',

@@ -6,6 +6,7 @@ import {
 import { ClientConfigService } from './client-config.service';
 import {
   AUTH_CLIENT,
+  GMAIL_CLIENT,
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
   TASK_CLIENT,
@@ -69,5 +70,12 @@ export const CLIENT_PROXY_PROVIDER = {
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientProxy =>
       ClientProxyFactory.create(cfg.taskClientOptions as ClientOptions),
+  },
+
+  GMAIL_CLIENT: {
+    provide: GMAIL_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.gmailClientOptions as ClientOptions),
   },
 };

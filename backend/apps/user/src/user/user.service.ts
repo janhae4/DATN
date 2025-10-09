@@ -110,6 +110,10 @@ export class UserService {
     return await this.userRepo.findOne({ where: { id } });
   }
 
+  async findOneByEmail(email: string): Promise<User | null> {
+    return this.userRepo.findOne({ where: { email } });
+  }
+
   async findOneGoogle(email: string): Promise<Account | null> {
     return await this.accountRepo.findOne({
       where: { provider: Provider.GOOGLE, user: { email } },

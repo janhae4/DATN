@@ -1,12 +1,4 @@
 ### Tạo user mới
-<<<<<<< HEAD
-POST http://localhost:3000/user
-Content-Type: application/json
-
-{
-  "username": "Alice",
-  "password": "alice@example.com"
-=======
 POST http://localhost:3000/auth/register
 Content-Type: application/json
 
@@ -16,7 +8,6 @@ Content-Type: application/json
   "name": "New User",
   "email": "002@example.com",
   "phone": "0000000002"
->>>>>>> main
 }
 
 ### Lấy danh sách user

@@ -1,7 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { firstValueFrom, map } from 'rxjs';
+import { firstValueFrom, map, catchError } from 'rxjs';
 import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
@@ -186,37 +186,38 @@ export class AuthService {
     const account = await firstValueFrom<AccountDto>(
       this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL, email));
 
-    console.log(account)
-
-    
-    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
-      userId: account.user.id,
-      accessToken,
-      refreshToken
-    });
-
+    console.log("account tra ve: ", account)
 
     if (account) {
+      this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+        userId: account.user.id,
+        accessToken,
+        refreshToken
+      });
       return account;
     }
+    else {
 
-    let user = await firstValueFrom<UserDto>(
-      this.userClient.send(USER_PATTERNS.FIND_ONE, email));
+      let user = await firstValueFrom<UserDto>(
+        this.userClient.send(USER_PATTERNS.FIND_ONE_BY_EMAIL, email)); // cai ham nay ne, no so sanh id chu k phai email, phai lam sao?
 
-    if (!user) {
-      user = await firstValueFrom<UserDto>(
-        this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
-          provider,
-          providerId,
-          name,
-          email,
-          avatar
-        }))
+      console.log("created user: ", user)
+
+      if (!user) {
+        user = await firstValueFrom<UserDto>(
+          this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
+            provider,
+            providerId,
+            name,
+            email,
+            avatar
+          }))
+      }
+
+      return user;
     }
 
-    console.log(123)
 
-    return user;
   }
 
   findUserById(id: string) {

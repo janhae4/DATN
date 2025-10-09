@@ -37,12 +37,17 @@ export class UserController {
     return await this.userService.findOneGoogle(email);
   }
 
+  @MessagePattern(USER_PATTERNS.FIND_ONE_BY_EMAIL)
+  async findOneByEmail(@Payload() email: string) {
+    return await this.userService.findOneByEmail(email);
+  }
+
   @MessagePattern(USER_PATTERNS.VALIDATE)
   validate(@Payload() loginDto: LoginDto) {
     console.log(loginDto);
     const user = this.userService.validate(loginDto);
     console.log(user);
-    return user;
+    return user;  
   }
 
   @MessagePattern(USER_PATTERNS.UPDATE)
