@@ -12,16 +12,16 @@ import { Observable, catchError } from 'rxjs';
 export class RpcToHttpInterceptor implements NestInterceptor {
   intercept(_context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
-      catchError((e) => {
-        if (e?.error) {
-          const error = e?.error as Error;
-          throw new HttpException(
-            { success: false, message: error.message },
-            error.statusCode || 400,
-          );
-        }
+      catchError((err) => {
+        const e =
+          typeof err === 'object' && err !== null && 'error' in err
+            ? (err as { error: Error }).error
+            : (err as Error);
         throw new HttpException(
-          { success: false, message: e.message || "Internal server error" },
+          {
+            success: false,
+            message: e.message || 'Internal server error',
+          },
           e.statusCode || 500,
         );
       }),

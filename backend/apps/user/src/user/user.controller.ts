@@ -52,11 +52,14 @@ export class UserController {
 
   @MessagePattern(USER_PATTERNS.UPDATE_PASSWORD)
   updatePassword(@Payload() updatePasswordDto: UpdatePasswordDto) {
-    return this.userService.updatePassword(updatePasswordDto.id, updatePasswordDto.password);
+    return this.userService.updatePassword(
+      updatePasswordDto.id,
+      updatePasswordDto.password,
+    );
   }
 
   @MessagePattern(USER_PATTERNS.UPDATE)
-  update(@Payload() data: { id: string; updateUser: Partial<User>}) {
+  update(@Payload() data: { id: string; updateUser: Partial<User> }) {
     return this.userService.update(data.id, data.updateUser);
   }
 

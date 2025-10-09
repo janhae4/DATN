@@ -10,9 +10,7 @@ import { RequestGoogleTaskDto } from '@app/contracts/task/request-google-task.dt
 
 @Controller()
 export class TaskServiceController {
-  constructor(
-    private readonly taskServiceService: TaskServiceService,
-  ) {}
+  constructor(private readonly taskServiceService: TaskServiceService) {}
 
   @MessagePattern(TASK_PATTERNS.FIND_ALL)
   async findAll(): Promise<Task[]> {
@@ -52,8 +50,6 @@ export class TaskServiceController {
 
   @MessagePattern(TASK_PATTERNS.FIND_GOOGLE_EVENTS)
   async findGoogleEvents(@Payload() data: RequestGoogleTaskDto) {
-    return this.taskServiceService.findGoogleEvents(
-      data.accessToken,
-    );
+    return this.taskServiceService.findGoogleEvents(data.accessToken);
   }
 }

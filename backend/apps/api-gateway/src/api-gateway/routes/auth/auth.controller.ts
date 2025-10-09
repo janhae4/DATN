@@ -24,17 +24,17 @@ export class AuthController {
   @Get('/info')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
-  async info(@Req() request: Request) {
+  info(@Req() request: Request) {
     const user = request?.user as UserDto;
-    return await this.authService.getInfo(user.id);
+    return this.authService.getInfo(user.id);
   }
 
   @Post('/login')
-  async login(
+  login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    return await this.authService.login(loginDto, response);
+    return this.authService.login(loginDto, response);
   }
 
   @Post('/register')
@@ -45,9 +45,12 @@ export class AuthController {
   @Post('/resetPassword')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
-  resetPassword(@Body() resetPasswordDto: ResetPasswordDto, @Req() request: Request) {
+  resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+    @Req() request: Request,
+  ) {
     const user = request?.user as UserDto;
-    return this.authService.resetPassword({...resetPasswordDto, id: user.id});
+    return this.authService.resetPassword({ ...resetPasswordDto, id: user.id });
   }
 
   @Post('/refresh')

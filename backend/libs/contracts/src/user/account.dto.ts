@@ -1,4 +1,10 @@
-import { IsEnum, IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { UserDto } from './user.dto';
 export enum Provider {
   LOCAL = 'LOCAL',

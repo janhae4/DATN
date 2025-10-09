@@ -6,18 +6,19 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@app/contracts/user/user.dto';
+import { Role, UserDto } from '@app/contracts/user/user.dto';
 import { Request } from 'express';
 import { ROLES_KEY } from './role.decorator';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../api-gateway/routes/auth/auth.service';
+import { Error } from '@app/contracts/errror';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private readonly authService: AuthService
-  ) { }
+    private readonly authService: AuthService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
@@ -33,12 +34,14 @@ export class RoleGuard implements CanActivate {
     const cookies = contextRequest.cookies;
     if (!cookies.accessToken) throw new UnauthorizedException('No token found');
     try {
-      console.log("[RoleGuard] Validating token...");
-      const user = await firstValueFrom(this.authService.validateToken(cookies.accessToken));
-      console.log("[RoleGuard] Token validated:", user);
+      console.log('[RoleGuard] Validating token...');
+      const user = (await firstValueFrom(
+        this.authService.validateToken(cookies.accessToken as string),
+      )) as UserDto;
+      console.log('[RoleGuard] Token validated:', user);
       if (!user) throw new UnauthorizedException('Invalid token');
       contextRequest.user = user;
-      
+
       if (!requiredRoles || requiredRoles.length === 0) {
         return true;
       }
@@ -49,8 +52,9 @@ export class RoleGuard implements CanActivate {
       }
 
       return true;
-    } catch(err) {
-      console.error('[RoleGuard] Token validation failed:', err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('[RoleGuard] Token validation failed:', error.message);
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

@@ -1,4 +1,4 @@
-import { Controller, Req } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
@@ -6,7 +6,7 @@ import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
-import type { Request } from 'express';
+import { UserDto } from '@app/contracts/user/user.dto';
 
 @Controller()
 export class AuthController {
@@ -29,14 +29,15 @@ export class AuthController {
   }
 
   @MessagePattern(AUTH_PATTERN.RESET_PASSWORD)
-  async resetPassword(@Payload() resetPasswordDto: ResetPasswordDto) {
-    console.log(resetPasswordDto);
+  async resetPassword(
+    @Payload() resetPasswordDto: ResetPasswordDto,
+  ): Promise<UserDto> {
     return await this.authService.resetPassword(resetPasswordDto);
   }
 
   @MessagePattern(AUTH_PATTERN.GOOGLE_CALLBACK)
   googleCallback(@Payload() user: CreateAuthOAuthDto) {
-    console.log("GOOGLE CALLBACK");
+    console.log('GOOGLE CALLBACK');
     return this.authService.handleGoogleCallback(user);
   }
 

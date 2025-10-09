@@ -30,10 +30,14 @@ export class RedisController {
     refreshToken: string;
   }) {
     const { userId, accessToken, refreshToken } = data;
-    console.log("userID", userId);
-    console.log("accessToken", accessToken);
-    console.log("refreshToken", refreshToken); 
-    return await this.redisService.storeGoogleToken(userId, accessToken, refreshToken);
+    console.log('userID', userId);
+    console.log('accessToken', accessToken);
+    console.log('refreshToken', refreshToken);
+    return await this.redisService.storeGoogleToken(
+      userId,
+      accessToken,
+      refreshToken,
+    );
   }
 
   @MessagePattern(REDIS_PATTERN.GET_STORED_REFRESH_TOKEN)

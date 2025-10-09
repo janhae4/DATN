@@ -29,7 +29,7 @@ async function bootstrap() {
 
   app.useGlobalGuards(app.get(RoleGuard));
 
-  app.useGlobalFilters(app.get(RefreshTokenFilter))
+  app.useGlobalFilters(app.get(RefreshTokenFilter));
 
   app.useGlobalInterceptors(app.get(RpcToHttpInterceptor));
 

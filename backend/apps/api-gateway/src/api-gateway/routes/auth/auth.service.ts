@@ -7,19 +7,18 @@ import { AUTH_CLIENT } from '@app/contracts/constants';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
-import { catchError, firstValueFrom, tap, throwError } from 'rxjs';
+import { catchError, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { Provider } from '@app/contracts/user/user.dto';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
-import { access } from 'fs';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
   private setCookies(
     accessToken: string,
@@ -55,18 +54,21 @@ export class AuthService {
     return this.authClient.send(AUTH_PATTERN.RESET_PASSWORD, resetPasswordDto);
   }
 
-  async login(loginDto: LoginDto, response: Response) {
+  login(loginDto: LoginDto, response: Response) {
     return this.authClient.send(AUTH_PATTERN.LOGIN, loginDto).pipe(
       tap((token: LoginResponseDto) => {
         this.setCookies(token.accessToken, token.refreshToken, response);
-        return {accessToken: token.accessToken, refreshToken: token.refreshToken};
+        return {
+          accessToken: token.accessToken,
+          refreshToken: token.refreshToken,
+        };
       }),
       catchError(() => {
         return throwError(
           () => new UnauthorizedException('Invalid credentials'),
         );
       }),
-    )
+    );
   }
 
   getInfo(id: string) {
@@ -109,7 +111,7 @@ export class AuthService {
     const userCreate: CreateAuthOAuthDto = {
       ...request.user,
       provider: Provider.GOOGLE,
-    }
+    };
     return this.authClient.send(AUTH_PATTERN.GOOGLE_CALLBACK, userCreate);
   }
 }
