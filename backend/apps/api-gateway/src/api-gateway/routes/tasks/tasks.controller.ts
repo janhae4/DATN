@@ -7,11 +7,15 @@ import {
   Param,
   Delete,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from '@app/contracts/task/create-task.dto';
 import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
 import type { Request } from 'express';
+import { RoleGuard } from 'apps/api-gateway/src/common/role/role.guard';
+import { Roles } from 'apps/api-gateway/src/common/role/role.decorator';
+import { Role } from '@app/contracts/user/user.dto';
 
 @Controller('tasks')
 export class TasksController {
@@ -24,11 +28,12 @@ export class TasksController {
 
   @Get('events')
   findGoogleEvents(@Req() request: Request) {
-    console.log('Here');
     return this.tasksService.findGoogleEvents(request);
   }
 
   @Get()
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
   findAll() {
     return this.tasksService.findAll();
   }

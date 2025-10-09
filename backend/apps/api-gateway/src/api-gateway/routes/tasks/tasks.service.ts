@@ -74,7 +74,6 @@ export class TasksService {
       accessToken: cookies.accessToken as string,
       refreshToken: cookies.refreshToken as string,
     };
-    console.log(data);
     return this.client.send(TASK_PATTERNS.FIND_GOOGLE_EVENTS, data);
   }
 }

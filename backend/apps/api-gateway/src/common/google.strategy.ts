@@ -3,7 +3,7 @@ import { Provider } from '@app/contracts/user/user.dto';
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, StrategyOptions } from 'passport-google-oauth20';
-import { GoogleProfile } from './dto/google-profile.dto';
+import { GoogleProfile } from '../dto/google-profile.dto';
 import { VerifiedCallback } from 'passport-jwt';
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {

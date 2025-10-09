@@ -10,7 +10,7 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from '@app/contracts/user/create-user.dto';
 import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
-import { Roles } from '../role.decorator';
+import { Roles } from '../../../common/role/role.decorator';
 import { Role } from '@app/contracts/user/user.dto';
 
 @Controller('user')

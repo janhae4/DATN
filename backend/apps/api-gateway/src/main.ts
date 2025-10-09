@@ -3,8 +3,9 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ApiGatewayModule } from './api-gateway/api-gateway.module';
 import cookieParser from 'cookie-parser';
-import { RpcToHttpInterceptor } from './rpc-to-http.interceptor';
-import { RefreshTokenInterceptor } from './refresh-token.interceptor';
+import { RpcToHttpInterceptor } from './common/interceptor/rpc-to-http.interceptor';
+import { RoleGuard } from './common/role/role.guard';
+import { RefreshTokenFilter } from './common/filter/refresh-token.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
@@ -26,10 +27,11 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(
-    app.get(RpcToHttpInterceptor),
-    app.get(RefreshTokenInterceptor),
-  );
+  app.useGlobalGuards(app.get(RoleGuard));
+
+  app.useGlobalFilters(app.get(RefreshTokenFilter))
+
+  app.useGlobalInterceptors(app.get(RpcToHttpInterceptor));
 
   await app.listen(process.env.port ?? 3000);
 }

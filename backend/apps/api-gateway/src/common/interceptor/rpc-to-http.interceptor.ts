@@ -17,7 +17,7 @@ export class RpcToHttpInterceptor implements NestInterceptor {
           const error = e?.error as Error;
           throw new HttpException(
             { success: false, message: error.message },
-            error.status,
+            error.statusCode || 400,
           );
         }
         throw new HttpException(
