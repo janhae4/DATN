@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GmailService } from './gmail.service';
+import { GmailService } from 'apps/gmail/src/gmail/gmail.service';
 
 describe('GmailService', () => {
   let service: GmailService;
