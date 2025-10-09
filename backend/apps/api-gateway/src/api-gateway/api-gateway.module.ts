@@ -12,6 +12,7 @@ import { SharedJwtModule } from '@app/contracts/auth/jwt/jwt.module';
 import { RpcToHttpInterceptor } from '../rpc-to-http.interceptor';
 import { RefreshTokenInterceptor } from '../refresh-token.interceptor';
 import { HttpModule } from '@nestjs/axios';
+import { GmailModule } from '../gmail/gmail.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { HttpModule } from '@nestjs/axios';
     AuthModule,
     ClientConfigModule,
     RedisModule,
+    GmailModule,
     SharedJwtModule,
     TasksModule,
     HttpModule,

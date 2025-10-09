@@ -1,3 +1,4 @@
+import { REDIS_CLIENT } from '@app/contracts/constants';
 import { SendMailDto } from '@app/contracts/gmail/send-mail.dto';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
@@ -10,7 +11,7 @@ export class GmailService {
   private oauth2Client;
 
   constructor(
-    @Inject('REDIS_SERVICE') private readonly redisClient: ClientProxy,
+    @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
   ) {
     this.oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
@@ -30,12 +31,15 @@ export class GmailService {
   }
 
   async getUnreadEmails(userId: string) {
+    console.log("userId trong getUnreadEmails: ", userId);
     const tokens = await this.getGoogleTokens(userId);
     this.oauth2Client.setCredentials(tokens);
     const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
     const response = await gmail.users.messages.list({ userId: 'me', q: 'is:unread' });
+    console.log("response", response.data.messages || []);
     return response.data.messages || [];
   }
+
 
   async sendEmail(payload: SendMailDto) {
     const { userId, to, subject, messageText } = payload;

@@ -13,7 +13,7 @@ export class GmailController {
   @Get('unread')
   @UseGuards(JwtAuthGuard)
   async getUnreadEmails(@Req() req) {
-    return this.gmailService.getUnreadEmails(req.user.id);
+    return await this.gmailService.getUnreadEmails(req.user.id);
   }
 
   @Post('send')
@@ -23,8 +23,6 @@ export class GmailController {
     @Body() body: Omit<SendMailDto, 'userId'>,
   ) {
     const userId = req.user.id;
-    return await firstValueFrom(
-      this.gmailService.sendEmail(userId, body.to, body.subject, body.messageText),
-    );
+    return await this.gmailService.sendEmail(userId, body.to, body.subject, body.messageText);
   }
 }
