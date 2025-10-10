@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { RpcException } from '@nestjs/microservices';
 import { FindManyOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { User } from './entity/user.entity';
@@ -12,6 +13,11 @@ import { Account, Provider } from './entity/account.entity';
 import { PostgresError } from 'postgres';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local';
 import { UserDto } from '@app/contracts/user/user.dto';
+import { Inject, forwardRef } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { GMAIL_CLIENT } from '@app/contracts/constants';
+import { GMAIL_PATTERNS } from '@app/contracts/gmail/gmail.patterns';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class UserService {
@@ -20,6 +26,7 @@ export class UserService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Account, 'USER_CONNECTION')
     private readonly accountRepo: Repository<Account>,
+    @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
   ) {}
 
   private async create(createUserDto: Partial<User>) {
@@ -40,18 +47,37 @@ export class UserService {
         throw new ConflictException('Email already exists');
       }
 
+      const verificationToken = this.generateVerificationToken();
       const savedUser = await this.create({
         name: createUserDto.name,
         email: createUserDto.email,
         phone: createUserDto.phone,
+        emailVerified: false,
+        verificationToken: verificationToken,
+        verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       });
 
-      this.createAccount({
+      await this.createAccount({
         provider: Provider.LOCAL,
         providerId: createUserDto.username,
         password: bcrypt.hashSync(createUserDto.password, 10),
         user: savedUser,
       });
+
+      // Send verification email
+      try {
+        await firstValueFrom(
+          this.gmailClient.send(GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL, {
+            userId: savedUser.id,
+            email: savedUser.email,
+            verificationToken: savedUser.verificationToken,
+          })
+        );
+        console.log('Verification email sent successfully');
+      } catch (error) {
+        console.error('Failed to send verification email:', error);
+        // Don't fail registration if email fails, but log it
+      }
 
       return savedUser;
     } catch (e) {
@@ -72,6 +98,32 @@ export class UserService {
     }
   }
 
+  private generateVerificationToken(): string {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  async verifyEmail(token: string): Promise<User | null> {
+    const user = await this.userRepo.findOne({
+      where: {
+        verificationToken: token,
+        verificationTokenExpires: { $gt: new Date() } as any,
+      },
+    });
+
+    if (!user) {
+      throw new RpcException({
+        status: 400,
+        message: 'Invalid or expired verification token',
+      });
+    }
+
+    user.emailVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+
+    return await this.userRepo.save(user);
+  }
+
   private async createAccount(partial: Partial<Account>) {
     const account = this.accountRepo.create(partial);
     return await this.accountRepo.save(account);
@@ -84,6 +136,7 @@ export class UserService {
       name: name ?? '',
       email: email ?? '',
       avatar: avatar ?? '',
+      emailVerified: true, // OAuth users are pre-verified
     });
 
     this.createAccount({

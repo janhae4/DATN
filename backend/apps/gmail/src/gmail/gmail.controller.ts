@@ -22,4 +22,14 @@ export class GmailController {
   sendEmailSystem(@Payload() payload: SendMailDto) {
     return this.gmailService.sendEmailSystem(payload);
   }
+
+  @MessagePattern(GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL)
+  sendVerificationEmail(@Payload() payload: { userId: string; email: string; verificationToken: string }) {
+    return this.gmailService.sendVerificationEmail(payload);
+  }
+
+  @MessagePattern(GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL)
+  sendResetPasswordEmail(@Payload() payload: { userId: string; email: string; resetToken: string; name: string }) {
+    return this.gmailService.sendResetPasswordEmail(payload);
+  }
 }

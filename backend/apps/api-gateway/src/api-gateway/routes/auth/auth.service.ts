@@ -3,7 +3,8 @@ import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
 import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { AUTH_CLIENT } from '@app/contracts/constants';
+import { AUTH_CLIENT, USER_CLIENT } from '@app/contracts/constants';
+import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
@@ -12,11 +13,14 @@ import { UserService } from '../user/user.service';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { Provider } from '@app/contracts/user/user.dto';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
+    @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
     private readonly userService: UserService,
   ) {}
 
@@ -113,5 +117,17 @@ export class AuthService {
       provider: Provider.GOOGLE,
     };
     return this.authClient.send(AUTH_PATTERN.GOOGLE_CALLBACK, userCreate);
+  }
+
+  forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    return this.authClient.send(AUTH_PATTERN.FORGET_PASSWORD, forgotPasswordDto);
+  }
+  
+  resetPasswordConfirm(confirmResetPasswordDto: ConfirmResetPasswordDto) {
+    return this.authClient.send(AUTH_PATTERN.RESET_PASSWORD_CONFIRM, confirmResetPasswordDto);
+  }
+
+  verifyEmail(token: string) {
+    return this.userClient.send(USER_PATTERNS.VERIFY_EMAIL, token);
   }
 }

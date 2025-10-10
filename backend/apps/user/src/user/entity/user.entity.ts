@@ -45,6 +45,15 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   lastLogin?: Date;
 
+  @Column({ default: false })
+  emailVerified: boolean;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  verificationToken?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  verificationTokenExpires?: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

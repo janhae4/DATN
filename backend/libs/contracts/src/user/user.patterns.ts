@@ -11,4 +11,6 @@ export const USER_PATTERNS = {
   UPDATE_PASSWORD: 'user.updatePassword',
   REMOVE: 'user.remove',
   VALIDATE: 'user.validate',
+  VERIFY_EMAIL: 'user.verifyEmail',
+  SEND_VERIFICATION_EMAIL: 'user.sendVerificationEmail',
 };

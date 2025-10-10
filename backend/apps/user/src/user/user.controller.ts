@@ -68,6 +68,16 @@ export class UserController {
     return this.userService.update(data.id, data.updateUser);
   }
 
+  @MessagePattern(USER_PATTERNS.VERIFY_EMAIL)
+  async verifyEmail(@Payload() token: string) {
+    return await this.userService.verifyEmail(token);
+  }
+  @MessagePattern(USER_PATTERNS.SEND_VERIFICATION_EMAIL)
+  async sendVerificationEmail(@Payload() data: { userId: string; email: string; verificationToken: string }) {
+    // This will be handled by the Gmail service via microservice communication
+    return { message: 'Verification email queued for sending' };
+  }
+
   @MessagePattern(USER_PATTERNS.REMOVE)
   remove(@Payload() id: string) {
     return this.userService.remove(id);

@@ -1,4 +1,3 @@
-import { Error } from '@app/contracts/errror';
 import {
   Injectable,
   NestInterceptor,
@@ -7,22 +6,37 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+
 @Injectable()
 export class RpcToHttpInterceptor implements NestInterceptor {
-  intercept(_context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
-      catchError((err) => {
-        const e =
-          typeof err === 'object' && err !== null && 'error' in err
-            ? (err as { error: Error }).error
-            : (err as Error);
-        throw new HttpException(
-          {
-            success: false,
-            message: e.message || 'Internal server error',
-          },
-          e.statusCode || 500,
+      catchError((rpcError) => {
+        // Kiểm tra xem lỗi có cấu trúc từ RpcException của NestJS hay không
+        const isRpcException =
+          typeof rpcError === 'object' && rpcError !== null && 'message' in rpcError;
+
+        const errorMessage = isRpcException
+          ? rpcError.message
+          : 'An unexpected error occurred';
+        
+        const statusCode =
+          isRpcException && typeof rpcError.status === 'number'
+            ? rpcError.status
+            : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        // Tạo và ném ra một HttpException chuẩn của HTTP
+        return throwError(
+          () =>
+            new HttpException(
+              {
+                success: false,
+                message: errorMessage,
+              },
+              statusCode,
+            ),
         );
       }),
     );

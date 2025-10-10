@@ -6,13 +6,16 @@ import {
   Req,
   Get,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { AuthGuard } from '@nestjs/passport';
 import { RoleGuard } from 'apps/api-gateway/src/common/role/role.guard';
 import { Roles } from 'apps/api-gateway/src/common/role/role.decorator';
 import { Role, UserDto } from '@app/contracts/user/user.dto';
@@ -87,6 +90,16 @@ export class AuthController {
     return this.authService.findAllUser();
   }
 
+  @Post('/forgot-password')
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('/reset-password-confirm')
+  resetPasswordConfirm(@Body() confirmResetPasswordDto: ConfirmResetPasswordDto) {
+    return this.authService.resetPasswordConfirm(confirmResetPasswordDto);
+  }
+
   @Get('/google/login')
   @UseGuards(AuthGuard('google'))
   googleLogin() { }
@@ -95,5 +108,23 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   googleCallback(@Req() request: Request) {
     return this.authService.handleGoogleCallback(request);
+  }
+
+  @Get('/verify-email')
+  verifyEmail(@Req() request: Request) {
+    const token = request.query.token as string;
+    if (!token) {
+      throw new BadRequestException('Token is required');
+    }
+    return this.authService.verifyEmail(token);
+  }
+
+  @Get('/reset-password')
+  resetPasswordPage(@Req() request: Request) {
+    const token = request.query.token as string;
+    if (!token) {
+      throw new BadRequestException('Token is required');
+    }
+    return { token, message: 'Reset password form' };
   }
 }

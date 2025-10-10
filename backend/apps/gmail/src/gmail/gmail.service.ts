@@ -1,7 +1,7 @@
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
 import { AUTH_CLIENT, REDIS_CLIENT } from '@app/contracts/constants';
 import { NotFoundException } from '@app/contracts/errror';
-import { loginNotificationSubject, loginNotificationTemplate, passwordChangeNotificationSubject, passwordChangeNotificationTemplate, registerNotificationSubject, registerNotificationTemplate, resetPasswordNotificationSubject, resetPasswordNotificationTemplate } from '@app/contracts/gmail/email-subject.constant';
+import { loginNotificationSubject, loginNotificationTemplate, passwordChangeNotificationSubject, passwordChangeNotificationTemplate, registerNotificationSubject, registerNotificationTemplate, resetPasswordNotificationSubject, resetPasswordNotificationTemplate, verificationEmailSubject, verificationEmailTemplate } from '@app/contracts/gmail/email-subject.constant';
 import { EmailSystemType, SendMailDto } from '@app/contracts/gmail/send-mail.dto';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { UserDto } from '@app/contracts/user/user.dto';
@@ -33,7 +33,15 @@ export class GmailService {
     const tokens = await firstValueFrom(
       this.redisClient.send(REDIS_PATTERN.GET_GOOGLE_TOKEN, { userId }),
     );
-    if (!tokens || !tokens.accessToken) {
+
+    console.log('GmailService getGoogleTokens - tokens received:', !!tokens);
+    if (tokens) {
+      console.log('GmailService getGoogleTokens - accessToken exists:', !!tokens.accessToken);
+      console.log('GmailService getGoogleTokens - refreshToken exists:', !!tokens.refreshToken);
+    }
+
+    if (!tokens || !tokens.accessToken || !tokens.refreshToken) {
+      console.log('No valid Google tokens found for user:', userId);
       throw new NotFoundException('No Google account linked');
     }
     return tokens;
@@ -48,7 +56,6 @@ export class GmailService {
     console.log("response", response.data.messages || []);
     return response.data.messages || [];
   }
-
 
   async sendEmail(payload: SendMailDto) {
     const { userId, to, subject, messageText } = payload;
@@ -83,9 +90,8 @@ export class GmailService {
     }
     payload.to = user.email;
 
-
     if (type === EmailSystemType.LOGIN) {
-      subject = loginNotificationSubject; // nếu là hàm trả string
+      subject = loginNotificationSubject;
       content = loginNotificationTemplate(user.name, new Date().toString(), '1.2.3.4');
     }
 
@@ -104,11 +110,66 @@ export class GmailService {
       content = resetPasswordNotificationTemplate(user.name);
     }
 
-    return this.gmailService.sendMail({
-      to: payload.to,
-      subject,
-      html: content,
-    });
   }
 
+  async sendVerificationEmail(payload: { userId: string; email: string; verificationToken: string }) {
+    const { userId, email, verificationToken } = payload;
+
+    try {
+      // Tạo verification URL (cần cập nhật domain thực tế)
+      const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+
+      const subject = verificationEmailSubject;
+      const content = verificationEmailTemplate(
+        email.split('@')[0], // Lấy phần trước @ làm tên
+        verificationUrl,
+        24, // 24 giờ
+        process.env.APP_NAME || 'My App',
+        process.env.SUPPORT_EMAIL || 'support@example.com'
+      );
+
+      return await this.gmailService.sendMail({
+        to: email,
+        subject,
+        html: content,
+      });
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      throw new HttpException(
+        'Failed to send verification email',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async sendResetPasswordEmail(payload: { userId: string; email: string; resetToken: string; name: string }) {
+    const { userId, email, resetToken, name } = payload;
+
+    try {
+      // Tạo reset URL (cần cập nhật domain thực tế)
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+
+      const subject = resetPasswordNotificationSubject;
+      const content = resetPasswordNotificationTemplate(
+        name,
+        15, // 15 phút
+        resetUrl,
+        resetToken,
+        process.env.APP_NAME || 'My App',
+        process.env.SUPPORT_EMAIL || 'support@example.com'
+      );
+
+      return await this.gmailService.sendMail({
+        to: email,
+        subject,
+        html: content,
+      });
+    } catch (error) {
+      console.error('Failed to send reset password email:', error);
+      throw new HttpException(
+        'Failed to send reset password email',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

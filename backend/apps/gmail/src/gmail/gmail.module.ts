@@ -15,8 +15,10 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
         defaults: {
           from: cfg.getSMTPFrom(),
         },
-        preview:true
-      })
+        preview: true,
+      }),
+      inject: [ClientConfigService],
+      imports: [ClientConfigModule] // fixed here 
     })
   ],
   controllers: [GmailController],

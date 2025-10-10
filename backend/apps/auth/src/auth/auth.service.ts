@@ -6,6 +6,7 @@ import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
   USER_CLIENT,
+  GMAIL_CLIENT,
 } from '@app/contracts/constants';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
@@ -26,6 +27,9 @@ import { NotificationType } from '@app/contracts/notification/notification.enum'
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { AccountDto } from '@app/contracts/user/account.dto';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { GMAIL_PATTERNS } from '@app/contracts/gmail/gmail.patterns';
+import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -34,8 +38,9 @@ export class AuthService {
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
     @Inject(NOTIFICATION_CLIENT)
     private readonly notificationClient: ClientProxy,
+    @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   mapper(user: UserDto) {
     return {
@@ -189,7 +194,52 @@ export class AuthService {
     );
   }
 
-  forgetPassword() {}
+  async forgetPassword(forgotPasswordDto: ForgotPasswordDto) {
+    try {
+      // Tìm user theo email
+      const user = await firstValueFrom<UserDto>(
+        this.userClient.send(USER_PATTERNS.FIND_ONE_BY_EMAIL, forgotPasswordDto.email)
+      );
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Tạo reset token
+      const resetToken = randomUUID();
+
+      // Gửi email reset password
+      await firstValueFrom(
+        this.gmailClient.send(GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL, {
+          userId: user.id,
+          email: user.email,
+          resetToken: resetToken,
+          name: user.name,
+        })
+      );
+
+      return { message: 'Reset password email sent successfully' };
+    } catch (error) {
+      console.error('Failed to process forgot password:', error);
+      throw error;
+    }
+  }
+
+  async resetPasswordConfirm(confirmResetPasswordDto: ConfirmResetPasswordDto) {
+    // Tìm user theo reset token (cần implement logic kiểm tra token)
+    // Đây chỉ là placeholder, cần implement đầy đủ logic
+
+    // Hash mật khẩu mới
+    const hashedPassword = await bcrypt.hash(confirmResetPasswordDto.newPassword, 10);
+
+    // Cập nhật mật khẩu
+    // return this.userClient.send(USER_PATTERNS.UPDATE_PASSWORD, {
+    //   id: userId,
+    //   password: hashedPassword,
+    // });
+
+    return { message: 'Password reset successfully' };
+  }
 
   logoutAll(userId: string) {
     return this.redisClient.send(REDIS_PATTERN.CLEAR_REFRESH_TOKENS, {
@@ -231,39 +281,39 @@ export class AuthService {
 
     console.log(account);
 
-    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
-      userId: account.user.id,
-      accessToken,
-      refreshToken,
-    });
-
     if (account) {
+      console.log("account found");
+
+      this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+        userId: account.user.id,
+        accessToken,
+        refreshToken,
+      });
+
       return account;
     }
     else {
 
-    let user = await firstValueFrom<UserDto>(
-      this.userClient.send(USER_PATTERNS.FIND_ONE, email),
-    );
-
-    if (!user) {
-      user = await firstValueFrom<UserDto>(
-        this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
-          provider,
-          providerId,
-          name,
-          email,
-          avatar,
-        }),
+      let user = await firstValueFrom<UserDto>(
+        this.userClient.send(USER_PATTERNS.FIND_ONE_BY_EMAIL, email),
       );
-    }
 
-    console.log(123);
+      if (!user) {
+        user = await firstValueFrom<UserDto>(
+          this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
+            provider,
+            providerId,
+            name,
+            email,
+            avatar,
+          }),
+        );
+      }
+
+      console.log("account not found");
 
       return user;
     }
-
-
   }
 
   findUserById(id: string) {

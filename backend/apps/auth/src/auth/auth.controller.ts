@@ -5,6 +5,8 @@ import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
+import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { UserDto } from '@app/contracts/user/user.dto';
 
@@ -60,5 +62,15 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERN.LOGOUT_ALL)
   logoutAll(@Payload() refreshToken: string) {
     return this.authService.logoutAll(refreshToken);
+  }
+
+  @MessagePattern(AUTH_PATTERN.FORGET_PASSWORD)
+  async forgetPassword(@Payload() payload: ForgotPasswordDto) {
+    return await this.authService.forgetPassword(payload);
+  }
+
+  @MessagePattern(AUTH_PATTERN.RESET_PASSWORD_CONFIRM)
+  async resetPasswordConfirm(@Payload() confirmResetPasswordDto: ConfirmResetPasswordDto) {
+    return await this.authService.resetPasswordConfirm(confirmResetPasswordDto);
   }
 }
