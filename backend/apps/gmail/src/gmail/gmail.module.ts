@@ -11,7 +11,7 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
     ClientConfigModule,
     MailerModule.forRootAsync({
       useFactory: (cfg: ClientConfigService) => ({
-        transport: cfg.getSMTPHost(),
+        transport: cfg.getSMTPTransport(),
         defaults: {
           from: cfg.getSMTPFrom(),
         },

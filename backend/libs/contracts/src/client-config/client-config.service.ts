@@ -9,8 +9,8 @@ export class ClientConfigService {
   --------- SMTP  ---------
   -------------------------
   */
-  getSMTPHost(): string {
-    return this.config.get<string>('SMTP_HOST', 'smtps://user@domain.com:pass@smtp.domain.com');
+  getSMTPTransport(): string {
+    return this.config.get<string>('SMTP_TRANSPORT', 'smtps://user@domain.com:pass@smtp.domain.com');
   }
 
   getSMTPFrom(): string {
