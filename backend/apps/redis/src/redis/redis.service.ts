@@ -94,7 +94,6 @@ export class RedisService {
       this.redis.get(refreshKey),
     ]);
 
-    
     if (!refreshToken) {
       throw new BadRequestException('No Google account linked');
     }

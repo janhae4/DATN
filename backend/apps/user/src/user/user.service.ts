@@ -5,14 +5,13 @@ import { FindManyOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { CreateUserDto } from '@app/contracts/user/create-user.dto';
-import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
 import { User } from './entity/user.entity';
 import { ConflictException } from '@app/contracts/errror';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { Account, Provider } from './entity/account.entity';
 import { PostgresError } from 'postgres';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local';
+import { UserDto } from '@app/contracts/user/user.dto';
 
 @Injectable()
 export class UserService {
@@ -21,7 +20,7 @@ export class UserService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Account, 'USER_CONNECTION')
     private readonly accountRepo: Repository<Account>,
-  ) { }
+  ) {}
 
   private async create(createUserDto: Partial<User>) {
     const user = this.userRepo.create(createUserDto);
@@ -44,7 +43,7 @@ export class UserService {
       const savedUser = await this.create({
         name: createUserDto.name,
         email: createUserDto.email,
-        phone: createUserDto.phone
+        phone: createUserDto.phone,
       });
 
       this.createAccount({
@@ -79,13 +78,7 @@ export class UserService {
   }
 
   async createOAuth(data: CreateAuthOAuthDto) {
-    const {
-      provider,
-      providerId,
-      email,
-      name,
-      avatar,
-    } = data;
+    const { provider, providerId, email, name, avatar } = data;
 
     const user = await this.create({
       name: name ?? '',
@@ -96,8 +89,8 @@ export class UserService {
     this.createAccount({
       provider,
       providerId,
-      user
-    })
+      user,
+    });
 
     return user;
   }
@@ -121,6 +114,13 @@ export class UserService {
     });
   }
 
+  async findOneWithPassword(id: string): Promise<Account | null> {
+    return await this.accountRepo.findOne({
+      where: { provider: Provider.LOCAL, user: { id } },
+      relations: ['user'],
+    });
+  }
+
   async validate(loginDto: LoginDto) {
     const account = await this.accountRepo.findOne({
       where: {
@@ -139,9 +139,34 @@ export class UserService {
     return null;
   }
 
-  async update(id: string, data: UpdateUserDto) {
-    await this.userRepo.update(id, data);
-    return this.userRepo.findOne({ where: { id } });
+  async updatePassword(id: string, password: string) {
+    const result = await this.accountRepo.query<[[{ user: UserDto }], number]>(
+      `
+      UPDATE accounts SET password = $1 WHERE id = $2
+      RETURNING (
+        SELECT row_to_json(u)
+        FROM "users" u
+        WHERE u.id = accounts."userId"
+      ) as user
+      `,
+      [password, id],
+    );
+    return result[0]?.[0]?.user;
+  }
+
+  async update(id: string, data: Partial<User>) {
+    const result = await this.userRepo
+      .createQueryBuilder()
+      .update(User)
+      .set(data)
+      .where('id = :id', { id })
+      .returning('*')
+      .execute();
+
+    const rows = result.raw as User[];
+    const user = rows[0] ?? null;
+
+    return user;
   }
 
   async remove(id: string) {

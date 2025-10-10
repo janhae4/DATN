@@ -38,6 +38,19 @@ export const CLIENT_PROVIDER = {
     useFactory: (cfg: ClientConfigService): ClientOptions =>
       cfg.notificationClientOptions as ClientOptions,
   },
+  TASK_CLIENT: {
+    name: TASK_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientOptions =>
+      cfg.taskClientOptions as ClientOptions,
+  },
+
+  GMAIL_CLIENT: {
+    name: GMAIL_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientOptions =>
+      cfg.gmailClientOptions as ClientOptions,
+  },
 };
 
 export const CLIENT_PROXY_PROVIDER = {

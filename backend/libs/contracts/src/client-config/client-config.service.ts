@@ -4,6 +4,24 @@ import { Transport } from '@nestjs/microservices';
 @Injectable()
 export class ClientConfigService {
   constructor(private config: ConfigService) {}
+  /*  
+  -------------------------
+  --------- SMTP  ---------
+  -------------------------
+  */
+  getSMTPHost(): string {
+    return this.config.get<string>('SMTP_HOST', 'smtps://user@domain.com:pass@smtp.domain.com');
+  }
+
+  getSMTPFrom(): string {
+    return this.config.get<string>('SMTP_FROM', 'user@domain.com');
+  }
+
+  /* 
+  -------------------------
+  --------- JWT  ----------
+  -------------------------
+  */
 
   getJWTSecret(): string {
     return this.config.get<string>('JWT_ACCESS_SECRET', 'default_jwt_secret');

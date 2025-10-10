@@ -25,7 +25,7 @@ model Task {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  @@map("Task")
+  @@map("task")
 }
 
 enum TaskStatus {

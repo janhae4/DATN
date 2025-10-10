@@ -6,10 +6,11 @@ import { TASK_ERRORS } from '@app/contracts/task/task.errors';
 import { Task, TaskStatus } from './generated/prisma';
 import { GoogleCalendarService } from './google-calendar.service';
 import { JsonWebTokenError, JwtService, TokenExpiredError } from '@nestjs/jwt';
-import { REDIS_CLIENT, } from '@app/contracts/constants';
+import { REDIS_CLIENT } from '@app/contracts/constants';
 import { firstValueFrom } from 'rxjs';
 import {
   BadRequestException,
+  NotFoundException,
   UnauthorizedException,
 } from '@app/contracts/errror';
 import { JwtDto } from '@app/contracts/auth/jwt.dto';
@@ -56,7 +57,7 @@ export class TaskServiceService {
       where: { taskId: id },
     });
     if (!existing) {
-      throw new RpcException(TASK_ERRORS.NOT_FOUND());
+      throw new NotFoundException('Cannot find this task');
     }
     return this.prisma.task.update({
       where: { taskId: id },
@@ -69,7 +70,7 @@ export class TaskServiceService {
       where: { taskId: id },
     });
     if (!existing) {
-      throw new RpcException(TASK_ERRORS.NOT_FOUND());
+      throw new NotFoundException('Cannot find this task');
     }
     return this.prisma.task.delete({
       where: { taskId: id },
@@ -93,7 +94,6 @@ export class TaskServiceService {
         refreshToken: jwt.refreshToken,
         userId: jwtPayload.id,
       };
-      
     } catch (error) {
       if (error instanceof TokenExpiredError) {
         throw new UnauthorizedException('Access token expired');

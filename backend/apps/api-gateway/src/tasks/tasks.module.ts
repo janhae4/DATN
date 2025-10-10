@@ -1,12 +1,21 @@
 import { Module } from '@nestjs/common';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
 
 @Module({
-  imports: [ClientConfigModule],
+  imports: [
+    ClientsModule.register([
+      {
+        name: 'TASKS_SERVICE',
+        transport: Transport.TCP,
+        options: {
+          port: 3002,
+        },
+      },
+    ]),
+  ],
   controllers: [TasksController],
-  providers: [TasksService, CLIENT_PROXY_PROVIDER.TASK_CLIENT],
+  providers: [TasksService],
 })
 export class TasksModule {}
