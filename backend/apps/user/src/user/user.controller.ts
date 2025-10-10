@@ -48,9 +48,9 @@ export class UserController {
   }
 
   @MessagePattern(USER_PATTERNS.VALIDATE)
-  validate(@Payload() loginDto: LoginDto) {
+  async validate(@Payload() loginDto: LoginDto) {
     console.log(loginDto);
-    const user = this.userService.validate(loginDto);
+    const user = await this.userService.validate(loginDto);
     console.log(user);
     return user;  
   }

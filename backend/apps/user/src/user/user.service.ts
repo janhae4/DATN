@@ -130,6 +130,8 @@ export class UserService {
       relations: ['user'],
     });
 
+    console.log(account);
+
     if (
       account &&
       (await bcrypt.compare(loginDto.password, account.password || ''))

@@ -17,4 +17,9 @@ export class GmailController {
   sendEmail(@Payload() payload: SendMailDto) {
     return this.gmailService.sendEmail(payload);
   }
+
+  @MessagePattern(GMAIL_PATTERNS.SEND_EMAIL_SYSTEM)
+  sendEmailSystem(@Payload() payload: SendMailDto) {
+    return this.gmailService.sendEmailSystem(payload);
+  }
 }
