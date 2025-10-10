@@ -7,9 +7,10 @@ import { TasksModule } from './routes/tasks/tasks.module';
 import { RpcToHttpInterceptor } from '../common/interceptor/rpc-to-http.interceptor';
 import { HttpModule } from '@nestjs/axios';
 import { RefreshTokenFilter } from '../common/filter/refresh-token.filter';
+import { GmailModule } from './routes/gmail/gmail.module';
 
 @Module({
-  imports: [UserModule, AuthModule, TasksModule, HttpModule],
+  imports: [UserModule, AuthModule, TasksModule, HttpModule, GmailModule],
   controllers: [ApiGatewayController],
   providers: [RpcToHttpInterceptor, RefreshTokenFilter, ApiGatewayService],
 })

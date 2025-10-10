@@ -23,7 +23,6 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
   providers: [GmailService,
     CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
     CLIENT_PROXY_PROVIDER.AUTH_CLIENT
-    
   ],
 })
 export class GmailModule { }
