@@ -5,15 +5,9 @@ import { ConfigModule } from '@nestjs/config';
 import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
 ConfigModule.forRoot();
 async function bootstrap() {
-  const appCtx = await NestFactory.createApplicationContext(UserModule);
-  const cfg = appCtx.get(ClientConfigService);
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    UserModule,
-    cfg.userClientOptions as MicroserviceOptions,
-  );
-  console.log(
-    `Microservice  running on http://localhost:${process.env.USER_CLIENT_PORT}`,
-  );
-  await app.listen();
+  const app = await NestFactory.create(UserModule);
+  const cfg = app.get(ClientConfigService);
+  app.connectMicroservice(cfg.userClientOptions as MicroserviceOptions);
+  await app.startAllMicroservices();
 }
 bootstrap();
