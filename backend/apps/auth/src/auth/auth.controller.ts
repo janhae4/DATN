@@ -4,13 +4,15 @@ import { AuthService } from './auth.service';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
-import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
+import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
+import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @MessagePattern(AUTH_PATTERN.REGISTER)
   register(@Payload() createAuthDto: CreateAuthDto) {
@@ -27,9 +29,26 @@ export class AuthController {
     return this.authService.verifyLocalToken(token);
   }
 
+  @MessagePattern(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD)
+  verifyForgotPassword(@Payload() data: ConfirmResetPasswordDto) {
+    console.log(data);
+    return this.authService.verifyForgotPassword(data.userId ?? '', data.code ?? '', data.password ?? '');
+  }
+
+  @MessagePattern(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN)
+  verifyForgotPasswordToken(@Payload() data: { token: string; password: string }) {
+    const { token, password } = data;
+    return this.authService.verifyForgotPasswordToken(token, password);
+  }
+
   @MessagePattern(AUTH_PATTERN.RESET_CODE)
   resetCode(@Payload() userId: string) {
     return this.authService.resetCode(userId);
+  }
+
+  @MessagePattern(AUTH_PATTERN.RESET_VERIFICATION_CODE)
+  resetVerificationCode(@Payload() userId: string) {
+    return this.authService.resetVerificationCode(userId);
   }
 
   @MessagePattern(AUTH_PATTERN.LOGIN)
@@ -43,11 +62,11 @@ export class AuthController {
     return this.authService.getInfo(id);
   }
 
-  @MessagePattern(AUTH_PATTERN.RESET_PASSWORD)
-  async resetPassword(
-    @Payload() resetPasswordDto: ResetPasswordDto,
+  @MessagePattern(AUTH_PATTERN.CHANGE_PASSWORD)
+  async changePassword(
+    @Payload() changePasswordDto: ChangePasswordDto,
   ): Promise<UserDto> {
-    return await this.authService.resetPassword(resetPasswordDto);
+    return await this.authService.changePassword(changePasswordDto);
   }
 
   @MessagePattern(AUTH_PATTERN.GOOGLE_CALLBACK)
@@ -76,5 +95,10 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERN.LOGOUT_ALL)
   logoutAll(@Payload() refreshToken: string) {
     return this.authService.logoutAll(refreshToken);
+  }
+
+  @MessagePattern(AUTH_PATTERN.FORGET_PASSWORD)
+  async forgetPassword(@Payload() payload: ForgotPasswordDto) {
+    return await this.authService.forgetPassword(payload);
   }
 }

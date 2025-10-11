@@ -9,7 +9,7 @@ export class RedisService {
   private redis: Redis;
   constructor() {
     this.redis = new Redis({
-      host: process.env.HOST_URL,
+      host: process.env.REDIS_CLIENT_HOST || 'localhost',
       port: Number(process.env.REDIS_CLIENT_PORT) || 6379,
     });
   }
@@ -78,11 +78,18 @@ export class RedisService {
     const accessKey = `google:${userId}:access`;
     const refreshKey = `google:${userId}:refresh`;
 
+    console.log('Storing Google tokens for user:', userId);
+    console.log('Access token length:', accessToken?.length);
+    console.log('Refresh token length:', refreshToken?.length);
+
     await this.redis.set(accessKey, accessToken, 'EX', 3600);
 
     if (refreshToken) {
       await this.redis.set(refreshKey, refreshToken);
+      console.log('Stored refresh token for user:', userId);
     }
+
+    console.log('Successfully stored Google tokens for user:', userId);
   }
 
   async getGoogleToken(userId: string) {
@@ -94,11 +101,16 @@ export class RedisService {
       this.redis.get(refreshKey),
     ]);
 
+    console.log('Redis getGoogleToken - userId:', userId);
+    console.log('Redis getGoogleToken - accessToken exists:', !!accessToken);
+    console.log('Redis getGoogleToken - refreshToken exists:', !!refreshToken);
+
     if (!refreshToken) {
+      console.log('No refresh token found for user:', userId);
       throw new BadRequestException('No Google account linked');
     }
-    console.log(accessToken, refreshToken);
 
+    console.log('Found tokens for user:', userId);
     return { accessToken, refreshToken };
   }
 }

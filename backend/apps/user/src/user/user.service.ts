@@ -15,6 +15,7 @@ import { Account, Provider } from './entity/account.entity';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { randomInt } from 'crypto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 
 @Injectable()
 export class UserService {
@@ -25,7 +26,7 @@ export class UserService {
     private readonly accountRepo: Repository<Account>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   private async create(createUserDto: Partial<User>) {
     const user = this.userRepo.create(createUserDto);
@@ -75,56 +76,17 @@ export class UserService {
       });
       await manager.save(savedUser);
 
+      const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
       const account = manager.create(Account, {
         provider: Provider.LOCAL,
         providerId: createUserDto.username,
-        password: bcrypt.hashSync(createUserDto.password, 10),
+        password: hashedPassword,
         user: savedUser,
+        email: createUserDto.email,
       });
       await manager.save(account);
 
       return savedUser;
-    });
-  }
-
-  async verifyLocal(userId: string, code: string) {
-    const user = await this.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    if (user.verifiedCode && user.verifiedCode !== code) {
-      console.log(user.verifiedCode, code);
-      throw new BadRequestException('Invalid verification code');
-    }
-
-    if (user.expiredCode && user.expiredCode < new Date()) {
-      throw new BadRequestException('Verification code expired');
-    }
-
-    user.isVerified = true;
-    user.verifiedCode = undefined;
-    user.expiredCode = undefined;
-    return await this.userRepo.save(user);
-  }
-
-  async resetCode(userId: string) {
-    return await this.dataSource.transaction(async (manager) => {
-      const user = await manager.findOne(User, {
-        where: { id: userId },
-        lock: { mode: 'pessimistic_write' },
-      });
-
-      if (!user) throw new NotFoundException('User not found');
-      if (user.isVerified)
-        throw new BadRequestException('User already verified');
-      if (user.expiredCode && user.expiredCode > new Date()) {
-        throw new BadRequestException('Verification code not expired');
-      }
-
-      user.verifiedCode = randomInt(100000, 999999).toString();
-      user.expiredCode = new Date(Date.now() + 15 * 60 * 1000);
-      await manager.save(user);
     });
   }
 
@@ -150,6 +112,86 @@ export class UserService {
     });
 
     return user;
+  }
+
+  async verifyLocal(userId: string, code: string) {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.verifiedCode && user.verifiedCode !== code) {
+      console.log(user.verifiedCode, code);
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    if (user.expiredCode && user.expiredCode < new Date()) {
+      throw new BadRequestException('Verification code expired');
+    }
+
+    return await this.userRepo.update(user.id, {
+      verifiedCode: null,
+      expiredCode: null,
+      isVerified: true
+    })
+  }
+
+  async verifyForgotPassword(userId: string, code: string, password: string) {
+      const user = await this.findOne(userId);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (!password)
+        throw new BadRequestException('Password is required');
+
+      if (!user.resetCode)
+        throw new BadRequestException('Invalid verification code');
+
+      if (user.resetCode && user.resetCode !== code) {
+        throw new BadRequestException('Invalid verification code');
+      }
+
+      if (user.expiredCode && user.expiredCode < new Date()) {
+        throw new BadRequestException('Verification code expired');
+      }
+
+      const account = user?.accounts.find((a) => a.provider === Provider.LOCAL) as Account;
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await Promise.all([
+        this.userRepo.update(user.id, {
+          resetCode: null,
+          expiredCode: null
+        }),
+        this.accountRepo.update(account.id, {
+          password: hashedPassword
+        })
+      ])
+      
+      return { message: "Password changed successfully" };
+    
+  }
+
+  async resetCode(userId: string, typeCode: 'verify' | 'reset' = 'verify') {
+    return await this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, {
+        where: { id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!user) throw new NotFoundException('User not found');
+      if (user.isVerified && typeCode === 'verify')
+        throw new BadRequestException('User already verified');
+      if (user.expiredCode && user.expiredCode > new Date()) {
+        throw new BadRequestException('Verification code not expired');
+      }
+
+      const code = randomInt(100000, 999999).toString();
+      typeCode === 'verify' ? (user.verifiedCode = code) : (user.resetCode = code);
+      user.expiredCode = new Date(Date.now() + 15 * 60 * 1000);
+      await manager.save(user);
+    });
   }
 
   async findAll(query: FindManyOptions<User>): Promise<User[]> {
@@ -185,6 +227,13 @@ export class UserService {
     return this.userRepo.findOne({ where: { email }, relations: ['accounts'] });
   }
 
+  async findOneByEmailOrUserName(data: string): Promise<Account | null> {
+    return await this.accountRepo.findOne({
+      where: [{ email: data }, { providerId: data, provider: Provider.LOCAL }],
+      relations: ['user'],
+    });
+  }
+
   async findOneGoogle(email: string): Promise<Account | null> {
     return await this.accountRepo.findOne({
       where: { provider: Provider.GOOGLE, user: { email } },
@@ -217,6 +266,81 @@ export class UserService {
       return account.user;
     }
     return null;
+  }
+
+  async resetPassword(email: string) {
+    const MIN_WAIT_TIME_MS = 60 * 1000;
+    const EXPIRY_TIME_MS = 15 * 60 * 1000;
+
+    return await this.dataSource.transaction(async (manager) => {
+
+      const user = await manager.findOne(User, {
+        where: [
+          { email },
+          {
+            accounts: {
+              provider: Provider.LOCAL,
+              providerId: email
+            },
+          },
+        ],
+        relations: ['accounts'],
+        lock: {
+          mode: 'pessimistic_write',
+          tables: ['users']
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('Account not found');
+      }
+
+      const account = user.accounts.find((a) => a.provider === Provider.LOCAL);
+      if (!account) {
+        throw new NotFoundException('Local account not found');
+      }
+
+      const now = Date.now();
+      const lastSentTime = user.expiredCode ? user.expiredCode.getTime() - EXPIRY_TIME_MS : 0;
+
+      if (user.resetCode && (now < lastSentTime + MIN_WAIT_TIME_MS)) {
+        const timeRemaining = Math.ceil((lastSentTime + MIN_WAIT_TIME_MS - now) / 1000);
+        throw new BadRequestException(
+          `Reset code already sent! Please wait ${timeRemaining} seconds`,
+        );
+      }
+
+      const resetCode = randomInt(100000, 1000000).toString();
+      const expiredCode = new Date(now + EXPIRY_TIME_MS);
+
+      await manager.update(User, { id: user.id }, {
+        resetCode,
+        expiredCode,
+      });
+
+      return { user, resetCode, expiredCode };
+    });
+  }
+
+
+  async confirmResetPassword(userId: string, code: string, password: string) {
+    console.log(userId, code, password);
+    const user = await this.findOne(userId);
+    const account = user?.accounts.find((a) => a.provider === Provider.LOCAL);
+    if (!account) throw new NotFoundException('Account not found');
+    if (user?.resetCode !== code) throw new BadRequestException('Invalid code');
+    if (user.expiredCode && user.expiredCode < new Date())
+      throw new BadRequestException('Code expired');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    return await Promise.all([
+      this.userRepo.update(user.id, {
+        resetCode: undefined,
+        expiredCode: undefined
+      }),
+      this.accountRepo.update(account.id, {
+        password: hashedPassword
+      })
+    ])
   }
 
   async updatePassword(id: string, password: string) {

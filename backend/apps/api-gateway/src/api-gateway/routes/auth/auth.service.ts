@@ -3,21 +3,25 @@ import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
 import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { AUTH_CLIENT } from '@app/contracts/constants';
+import { AUTH_CLIENT, USER_CLIENT } from '@app/contracts/constants';
+import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
 import { catchError, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
-import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
+import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
+    @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
     private readonly userService: UserService,
-  ) {}
+  ) { }
 
   private setCookies(
     accessToken: string,
@@ -53,6 +57,18 @@ export class AuthService {
     return this.authClient.send(AUTH_PATTERN.VERIFY_LOCAL, { userId, code });
   }
 
+  verifyForgetPasswordCode(userId: string, code: string, password: string) {
+    return this.authClient.send(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD, {
+      userId,
+      code,
+      password
+    });
+  }
+
+  verifyForgetPasswordToken(token: string, password: string) {
+    return this.authClient.send(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN, {token, password});
+  }
+
   verifyToken(token: string) {
     return this.authClient.send(AUTH_PATTERN.VERIFY_LOCAL_TOKEN, token);
   }
@@ -61,8 +77,12 @@ export class AuthService {
     return this.authClient.send(AUTH_PATTERN.RESET_CODE, userId);
   }
 
-  resetPassword(resetPasswordDto: ResetPasswordDto) {
-    return this.authClient.send(AUTH_PATTERN.RESET_PASSWORD, resetPasswordDto);
+  resetVerificationCode(userId: string) {
+    return this.authClient.send(AUTH_PATTERN.RESET_VERIFICATION_CODE, userId);
+  }
+
+  changePassword(changePasswordDto: ChangePasswordDto) {
+    return this.authClient.send(AUTH_PATTERN.CHANGE_PASSWORD, changePasswordDto);
   }
 
   login(loginDto: LoginDto, response: Response) {
@@ -120,5 +140,23 @@ export class AuthService {
 
   handleGoogleCallback(user: GoogleAccountDto) {
     return this.authClient.send(AUTH_PATTERN.GOOGLE_CALLBACK, user);
+  }
+
+  forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    return this.authClient.send(
+      AUTH_PATTERN.FORGET_PASSWORD,
+      forgotPasswordDto,
+    );
+  }
+
+  forgotPasswordConfirm(confirmResetPasswordDto: ConfirmResetPasswordDto) {
+    return this.authClient.send(
+      AUTH_PATTERN.RESET_PASSWORD_CONFIRM,
+      confirmResetPasswordDto,
+    );
+  }
+
+  verifyEmail(token: string) {
+    return this.userClient.send(USER_PATTERNS.VERIFY_EMAIL, token);
   }
 }

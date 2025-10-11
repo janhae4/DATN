@@ -14,6 +14,7 @@ import { SharedJwtModule } from '@app/contracts/auth/jwt/jwt.module';
     CLIENT_PROXY_PROVIDER.USER_CLIENT,
     CLIENT_PROXY_PROVIDER.NOTIFICATION_CLIENT,
     CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
+    CLIENT_PROXY_PROVIDER.GMAIL_CLIENT,
   ],
 })
 export class AuthModule {}

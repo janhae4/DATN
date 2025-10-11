@@ -4,7 +4,9 @@ export const USER_PATTERNS = {
   CREATE_OAUTH: 'user.createOAuth',
   CREATE_ACCOUNT: 'user.createAccount',
   VERIFY_LOCAL: 'user.verifyLocal',
+  VERIFY_FORGET_PASSWORD: 'user.verifyForgetPasswordCode',
   RESET_CODE: 'user.resetCode',
+  RESET_PASSWORD: 'user.resetPassword',
   FIND_ALL: 'user.findAll',
   FIND_ONE: 'user.findOne',
   FIND_ONE_WITH_PASSWORD: 'user.findOneWithPassword',
@@ -15,4 +17,6 @@ export const USER_PATTERNS = {
   UPDATE_PASSWORD: 'user.updatePassword',
   REMOVE: 'user.remove',
   VALIDATE: 'user.validate',
+  VERIFY_EMAIL: 'user.verifyEmail',
+  SEND_VERIFICATION_EMAIL: 'user.sendVerificationEmail',
 };

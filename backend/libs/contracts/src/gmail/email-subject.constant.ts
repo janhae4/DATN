@@ -25,7 +25,7 @@ export const loginNotificationTemplate = (
                   We detected a login to your account on <strong>${datetime}</strong> from IP <strong>${ip}</strong>.
                 </p>
                 <p style="margin:0 0 16px;color:#374151;">
-                  If this was you, no action is needed. If you don't recognize this activity, please <a href="{{securityUrl}}" style="color:#2563eb;text-decoration:none;">secure your account</a> or contact us at <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>.
+                  If this was you, no action is needed. If you don't recognize this activity, please <a href="${securityUrl}" style="color:#2563eb;text-decoration:none;">secure your account</a> or contact us at <a href="mailto:${supportEmail}">${supportEmail}</a>.
                 </p>
 
                 <div style="margin-top:20px;">
@@ -172,8 +172,75 @@ export const resetPasswordNotificationTemplate = (
                 <hr style="margin:20px 0;border:none;border-top:1px solid #eef2ff;" />
                 <p style="margin:0;color:#9ca3af;font-size:12px;">
                   For your safety, do not share this code or link.
-                  If the button doesn’t work, you can also paste this URL into your browser: <br />
+                  If the button doesn't work, you can also paste this URL into your browser: <br />
                   <a href="${resetUrl}" style="word-break:break-all;color:#2563eb;">${resetUrl}</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+`;
+
+export const verificationEmailSubject = 'Verify your email address';
+export const verificationEmailTemplate = (
+  name: string,
+  verificationUrl: string,
+  verificationCode: string,
+  expiryMinutes: number = 24,
+  appName: string = APP_NAME,
+  supportEmail: string = SUPPORT_EMAIL,
+) => `
+<!doctype html>
+<html>
+  <body style="font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;background:#f8fafc;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      <tr>
+        <td align="center" style="padding:28px 0;">
+          <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
+            <tr>
+              <td style="padding:28px;text-align:left;">
+                <h2 style="margin:0 0 8px;font-size:20px;color:#0f172a;">Verify your email address</h2>
+                <p style="margin:0 0 12px;color:#374151;">Hi ${name},</p>
+                <p style="margin:0 0 12px;color:#374151;">
+                  Welcome to <strong>${appName}</strong>! Please verify your email address to activate your account and start using all features.
+                </p>
+                <p style="margin:0 0 16px;color:#374151;">
+                  You can verify your email by clicking the button below, or by entering the verification code on our application.
+                  The link and code will expire in ${expiryMinutes} minutes for security reasons.
+                </p>
+
+                <p style="margin:20px 0 10px;color:#374151;text-align:center;font-size:16px;font-weight:600;">
+                  Your verification code is:
+                </p>
+                <p style="margin:0 0 24px;text-align:center;">
+                  <span style="display:inline-block;padding:12px 25px;background:#f1f5f9;color:#2563eb;font-size:24px;font-weight:700;border-radius:8px;letter-spacing:4px;border:1px dashed #cbd5e1;">
+                    ${verificationCode}
+                  </span>
+                </p>
+
+                <p style="margin:18px 0;text-align:center;">
+                  <a href="${verificationUrl}" style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;">Verify email address</a>
+                </p>
+
+                <p style="margin:0 0 12px;color:#374151;">
+                  If the button doesn't work or you prefer to use the link directly:
+                </p>
+                <p style="margin:0 0 16px;color:#2563eb;word-break:break-all;font-size:14px;">
+                  ${verificationUrl}
+                </p>
+
+                <p style="margin:0 0 12px;color:#374151;">
+                  If you didn't create an account with ${appName}, please ignore this email or contact <a href="mailto:${supportEmail}">${supportEmail}</a>.
+                </p>
+
+                <hr style="margin:20px 0;border:none;border-top:1px solid #eef2ff;" />
+                <p style="margin:0;color:#9ca3af;font-size:12px;">
+                  For your security, do not share this verification link or code with anyone.
+                  If you have questions, reply to this email or contact <a href="mailto:${supportEmail}">${supportEmail}</a>.
                 </p>
               </td>
             </tr>

@@ -1,6 +1,6 @@
 import { IsOptional, IsString, IsUUID } from 'class-validator';
 
-export class ResetPasswordDto {
+export class ChangePasswordDto {
   @IsOptional()
   @IsUUID()
   id?: string;

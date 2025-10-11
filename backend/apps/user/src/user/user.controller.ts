@@ -34,9 +34,22 @@ export class UserController {
     return this.userService.verifyLocal(data.userId, data.code);
   }
 
+  @MessagePattern(USER_PATTERNS.VERIFY_FORGET_PASSWORD)
+  verifyForgotPassword(@Payload() data: { userId: string; code: string, password: string }) {
+    console.log(data);
+    return this.userService.verifyForgotPassword(data.userId, data.code, data.password);
+  }
+
   @MessagePattern(USER_PATTERNS.RESET_CODE)
-  resetCode(@Payload() userId: string) {
-    return this.userService.resetCode(userId);
+  resetCode(@Payload() data: { userId: string; typeCode: 'verify' | 'reset' }) {
+    const { userId, typeCode } = data;
+    return this.userService.resetCode(userId, typeCode);
+  }
+
+  @MessagePattern(USER_PATTERNS.RESET_PASSWORD)
+  resetPassword(@Payload() email: string) {
+    console.log(email)
+    return this.userService.resetPassword(email);
   }
 
   @MessagePattern(USER_PATTERNS.FIND_ALL)

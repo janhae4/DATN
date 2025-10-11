@@ -29,9 +29,9 @@ export class User {
   @Column({ nullable: true })
   avatar?: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   @Index()
-  phone?: string;
+  phone: string | null;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
@@ -40,19 +40,19 @@ export class User {
   isActive: boolean;
 
   @Column({ default: false })
-  isVerified?: boolean;
+  isVerified: boolean;
 
-  @Column({ nullable: true })
-  verifiedCode?: string;
+  @Column({type: 'text', nullable: true })
+  verifiedCode: string | null;
 
-  @Column({ nullable: true })
-  expiredCode?: Date;
+  @Column({type: 'text', nullable: true })
+  expiredCode: Date | null;
 
-  @Column({ nullable: true })
-  resetToken?: string;
+  @Column({type: 'text', nullable: true })
+  resetCode: string | null;
 
-  @Column({ nullable: true })
-  bio?: string;
+  @Column({type: 'text', nullable: true })
+  bio?: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
   lastLogin?: Date;

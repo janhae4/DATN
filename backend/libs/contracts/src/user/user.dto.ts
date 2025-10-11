@@ -23,7 +23,7 @@ export class UserDto {
   isVerified: boolean;
   verifiedCode?: string;
   expiredCode?: string;
-  resetToken?: string;
+  resetCode?: string;
   image?: string;
   phone?: string;
   bio?: string;

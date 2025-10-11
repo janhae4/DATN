@@ -9,7 +9,12 @@ import { GoogleStrategy } from 'apps/api-gateway/src/common/google.strategy';
 @Module({
   imports: [ClientConfigModule, UserModule],
   controllers: [AuthController],
-  providers: [AuthService, CLIENT_PROXY_PROVIDER.AUTH_CLIENT, GoogleStrategy],
+  providers: [
+    AuthService,
+    CLIENT_PROXY_PROVIDER.AUTH_CLIENT,
+    CLIENT_PROXY_PROVIDER.USER_CLIENT,
+    GoogleStrategy,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

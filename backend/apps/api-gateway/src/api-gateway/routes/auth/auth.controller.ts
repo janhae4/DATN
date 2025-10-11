@@ -12,13 +12,16 @@ import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
-import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { RoleGuard } from 'apps/api-gateway/src/common/role/role.guard';
 import { Roles } from 'apps/api-gateway/src/common/role/role.decorator';
 import { Role, UserDto } from '@app/contracts/user/user.dto';
 import { GoogleAuthGuard } from 'apps/api-gateway/src/common/role/google-auth.guard';
 import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
 import { VerifyAccountDto } from '@app/contracts/auth/verify-account.dto';
+import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
+import { JwtDto } from '@app/contracts/auth/jwt.dto';
+import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -66,20 +69,41 @@ export class AuthController {
   @Post('/resetCode')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
-  resetCode(@Req() request: Request) {
-    const user = request.user as UserDto;
-    return this.authService.resetCode(user.id);
+  resetCode(@Req() request: Request, @Query('type') type: 'verify' | 'forgot') {
+    const payload = request.user as JwtDto;
+    if (type === 'forgot') {
+      return this.authService.resetCode(payload.id);
+    }
+    return this.authService.resetVerificationCode(payload.id);
   }
 
-  @Post('/resetPassword')
+  @Post('/changePassword')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
-  resetPassword(
-    @Body() resetPasswordDto: ResetPasswordDto,
+  changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
     @Req() request: Request,
   ) {
     const user = request?.user as UserDto;
-    return this.authService.resetPassword({ ...resetPasswordDto, id: user.id });
+    return this.authService.changePassword({ ...changePasswordDto, id: user.id });
+  }
+
+  @Post('/forgotPassword')
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('/forgotPassword/confirm/code')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  forgotPasswordConfirm(@Req() request: Request, @Body() data: ConfirmResetPasswordDto) {
+    const payload = request.user as JwtDto;
+      return this.authService.verifyForgetPasswordCode(payload.id, data.code ?? '', data.password ?? '');
+  }
+
+  @Post('/reset-password')
+  forgotPasswordConfirmToken(@Body() data: ConfirmResetPasswordDto) {
+    return this.authService.verifyForgetPasswordToken(data?.token ?? '', data?.password ?? '');
   }
 
   @Post('/refresh')

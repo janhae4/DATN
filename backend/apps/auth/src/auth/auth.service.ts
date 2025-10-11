@@ -6,11 +6,12 @@ import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
   USER_CLIENT,
+  GMAIL_CLIENT,
 } from '@app/contracts/constants';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { randomUUID } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
@@ -26,20 +27,29 @@ import { StoredRefreshTokenDto } from '@app/contracts/redis/store-refreshtoken.d
 import { NOTIFICATION_PATTERN } from '@app/contracts/notification/notification.pattern';
 import { NotificationType } from '@app/contracts/notification/notification.enum';
 import { AccountDto } from '@app/contracts/user/account.dto';
-import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
+import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
+import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
+import { GMAIL_PATTERNS } from '@app/contracts/gmail/gmail.patterns';
+import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email-verification.dto';
+import { sendEmailResetPasswordDto } from '@app/contracts/gmail/dto/send-email-reset-password.dto';
+import { StringRegexOptions } from 'joi';
+import { Account } from 'apps/user/src/user/entity/account.entity';
+import { User } from 'apps/user/src/user/entity/user.entity';
+import { VerifyForgotTokenDto } from './dto/verify-forgot-token.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
-    @Inject(NOTIFICATION_CLIENT)
-    private readonly notificationClient: ClientProxy,
+    @Inject(NOTIFICATION_CLIENT) private readonly notificationClient: ClientProxy,
+    @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   private handleRpc<T>(obs: Observable<T>): Observable<T> {
     return obs.pipe(
@@ -55,7 +65,7 @@ export class AuthService {
   }
 
   async register(createAuthDto: CreateAuthDto) {
-    const user = await firstValueFrom<UserDto>(
+    const user = await firstValueFrom<User>(
       this.handleRpc(
         this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createAuthDto),
       ),
@@ -65,9 +75,18 @@ export class AuthService {
       { userId: user.id, verifiedCode },
       { expiresIn: 15 * 60 },
     );
+    const verifiedUrl = `${process.env.HOST_URL || 'http://localhost:3000'}/auth/verify/token?token=${token}`
+
+    this.gmailClient.emit(GMAIL_PATTERNS.SEND_EMAIL_REGISTER, user);
+    this.gmailClient.emit(GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL, {
+      user,
+      code: verifiedCode,
+      verificationUrl: verifiedUrl
+    } as SendEmailVerificationDto)
+
     return {
       verifiedCode,
-      verifiedUrl: 'http://localhost:3000/auth/verify/token?token=' + token,
+      verifiedUrl,
     };
   }
 
@@ -79,8 +98,6 @@ export class AuthService {
 
   async verifyLocalToken(token: string) {
     try {
-      console.log(token);
-      console.log(this.jwtService.decode(token));
       const payload = await this.jwtService.verifyAsync<VerifyTokenDto>(token);
       if (!payload) throw new UnauthorizedException('Invalid token');
       return this.handleRpc(
@@ -96,9 +113,41 @@ export class AuthService {
     }
   }
 
+  async verifyForgotPassword(userId: string, code: string, password: string) {
+    return this.handleRpc(this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
+      userId,
+      code,
+      password
+    }))
+  }
+
+  async verifyForgotPasswordToken(token: string, password: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync<VerifyForgotTokenDto>(token);
+      if (!payload) throw new UnauthorizedException('Invalid token');
+      return this.handleRpc(
+        this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
+          userId: payload.userId,
+          code: payload.resetCode,
+          password
+        }),
+      );
+    } catch (error) {
+      if (error instanceof JsonWebTokenError)
+        throw new UnauthorizedException('Invalid token');
+      throw error;
+    }
+  }
+
   resetCode(userId: string) {
     return this.handleRpc(
-      this.userClient.send(USER_PATTERNS.RESET_CODE, userId),
+      this.userClient.send(USER_PATTERNS.RESET_CODE, { userId, typeCode: 'reset' }),
+    );
+  }
+
+  resetVerificationCode(userId: string) {
+    return this.handleRpc(
+      this.userClient.send(USER_PATTERNS.RESET_CODE, { userId, typeCode: 'verify' }),
     );
   }
 
@@ -139,6 +188,8 @@ export class AuthService {
       message: 'Logged in successfully',
       type: NotificationType.SYSTEM,
     });
+
+    this.gmailClient.emit(GMAIL_PATTERNS.SEND_LOGIN_EMAIL, user);
 
     return { accessToken, refreshToken };
   }
@@ -325,26 +376,26 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+  async changePassword(changePasswordDto: ChangePasswordDto) {
     const account = await firstValueFrom<AccountDto>(
       this.userClient.send(
         USER_PATTERNS.FIND_ONE_WITH_PASSWORD,
-        resetPasswordDto.id,
+        changePasswordDto.id,
       ),
     );
     if (!account) throw new NotFoundException('User not found');
     const isMatch = await bcrypt.compare(
-      resetPasswordDto.oldPassword,
+      changePasswordDto.oldPassword,
       account.password || '',
     );
     if (!isMatch) throw new UnauthorizedException('Invalid password');
     const isSame = await bcrypt.compare(
-      resetPasswordDto.newPassword,
+      changePasswordDto.newPassword,
       account.password || '',
     );
     if (isSame)
       throw new BadRequestException('New password is the same as old password');
-    const hashedPassword = await bcrypt.hash(resetPasswordDto.newPassword, 10);
+    const hashedPassword = await bcrypt.hash(changePasswordDto.newPassword, 10);
     return await firstValueFrom<UserDto>(
       this.userClient.send(USER_PATTERNS.UPDATE_PASSWORD, {
         id: account.id,
@@ -353,7 +404,37 @@ export class AuthService {
     );
   }
 
-  forgetPassword() {}
+  async forgetPassword(forgotPasswordDto: ForgotPasswordDto) {
+    try {
+      const payload = await firstValueFrom<{user: User, resetCode: string, expiredCode: Date}>(
+        this.handleRpc(this.userClient.send(USER_PATTERNS.RESET_PASSWORD, forgotPasswordDto.email)),
+      )
+
+      if (!payload.user) {
+        throw new NotFoundException('Account not found');
+      }
+
+      const {user, resetCode, expiredCode } = payload
+      const token = await this.jwtService.signAsync(
+        { userId: payload.user.id, resetCode, expiredCode },
+        { expiresIn: 15 * 60 }
+      );
+
+      const resetUrl = `${process.env.HOST_URL || 'http://localhost:3000'}/auth/reset-password?token=${token}`
+
+      this.gmailClient.send(GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL, {
+        user, code: resetCode, resetUrl
+      } as sendEmailResetPasswordDto);
+
+      return {
+        resetUrl,
+        resetCode,
+      };
+    } catch (error) {
+      console.error('Failed to process forgot password:', error);
+      throw error;
+    }
+  }
 
   logoutAll(userId: string) {
     return this.redisClient.send(REDIS_PATTERN.CLEAR_REFRESH_TOKENS, {
@@ -379,6 +460,6 @@ export class AuthService {
   }
 
   findUserById(id: string) {
-    return this.userClient.send(USER_PATTERNS.FIND_ONE, id);
+    return this.handleRpc(this.userClient.send(USER_PATTERNS.FIND_ONE, id));
   }
 }

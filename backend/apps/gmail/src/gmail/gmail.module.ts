@@ -17,6 +17,8 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
         },
         preview: true,
       }),
+      inject: [ClientConfigService],
+      imports: [ClientConfigModule],
     }),
   ],
   controllers: [GmailController],
