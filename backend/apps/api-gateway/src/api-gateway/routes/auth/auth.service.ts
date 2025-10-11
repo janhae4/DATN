@@ -9,9 +9,8 @@ import { ClientProxy } from '@nestjs/microservices';
 import type { Request, Response } from 'express';
 import { catchError, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
-import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
-import { Provider } from '@app/contracts/user/user.dto';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
 
 @Injectable()
 export class AuthService {
@@ -48,6 +47,18 @@ export class AuthService {
 
   register(createAuthDto: CreateAuthDto) {
     return this.authClient.send(AUTH_PATTERN.REGISTER, createAuthDto);
+  }
+
+  verifyLocal(userId: string, code: string) {
+    return this.authClient.send(AUTH_PATTERN.VERIFY_LOCAL, { userId, code });
+  }
+
+  verifyToken(token: string) {
+    return this.authClient.send(AUTH_PATTERN.VERIFY_LOCAL_TOKEN, token);
+  }
+
+  resetCode(userId: string) {
+    return this.authClient.send(AUTH_PATTERN.RESET_CODE, userId);
   }
 
   resetPassword(resetPasswordDto: ResetPasswordDto) {
@@ -107,11 +118,7 @@ export class AuthService {
     return this.authClient.send(AUTH_PATTERN.VALIDATE_TOKEN, token);
   }
 
-  handleGoogleCallback(request: Request) {
-    const userCreate: CreateAuthOAuthDto = {
-      ...request.user,
-      provider: Provider.GOOGLE,
-    };
-    return this.authClient.send(AUTH_PATTERN.GOOGLE_CALLBACK, userCreate);
+  handleGoogleCallback(user: GoogleAccountDto) {
+    return this.authClient.send(AUTH_PATTERN.GOOGLE_CALLBACK, user);
   }
 }

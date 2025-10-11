@@ -3,19 +3,13 @@ import { RedisIoAdapter } from './adapter/redis-io.adapter';
 import { NotificationModule } from './notification/notification.module';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 
 async function bootstrap() {
-  const [appCtx, app] = await Promise.all([
-    NestFactory.createApplicationContext(ClientConfigModule),
-    NestFactory.create(NotificationModule),
-  ]);
-
-  const cfg = appCtx.get(ClientConfigService);
+  const app = await NestFactory.create(NotificationModule);
+  const cfg = app.get(ClientConfigService);
   app.connectMicroservice<MicroserviceOptions>(
     cfg.notificationClientOptions as MicroserviceOptions,
   );
-
   const redisIoAdapter = new RedisIoAdapter(app);
   await redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);

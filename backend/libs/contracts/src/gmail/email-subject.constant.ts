@@ -1,14 +1,14 @@
 const SUPPORT_EMAIL = 'example@gmail.com';
-const APP_NAME = "My App";
+const APP_NAME = 'My App';
 const LOGIN_URL = 'http://localhost:3000/auth/login';
 
 export const loginNotificationSubject = 'New sign-in detected';
 export const loginNotificationTemplate = (
-    name: string,
-    datetime: string,
-    ip: string,
-    securityUrl = '',
-    supportEmail: string = SUPPORT_EMAIL
+  name: string,
+  datetime: string,
+  ip: string,
+  securityUrl = '',
+  supportEmail: string = SUPPORT_EMAIL,
 ) => `
 <!doctype html>
 <html>
@@ -45,14 +45,14 @@ export const loginNotificationTemplate = (
     </table>
   </body>
 </html>
-`
+`;
 
-export const registerNotificationSubject ='New account created';
+export const registerNotificationSubject = 'New account created';
 export const registerNotificationTemplate = (
-    name: string,
-    loginUrl: string = LOGIN_URL,
-    appName: string = APP_NAME,
-    supportEmail: string = SUPPORT_EMAIL
+  name: string,
+  loginUrl: string = LOGIN_URL,
+  appName: string = APP_NAME,
+  supportEmail: string = SUPPORT_EMAIL,
 ) => `
 <!doctype html>
 <html>
@@ -83,14 +83,14 @@ export const registerNotificationTemplate = (
     </table>
   </body>
 </html>
-`
+`;
 
-export const passwordChangeNotificationSubject =  'Password changed';
+export const passwordChangeNotificationSubject = 'Password changed';
 export const passwordChangeNotificationTemplate = (
-    name: string,
-    datetime: string,
-    resetUrl: string = "",
-    supportEmail: string = SUPPORT_EMAIL
+  name: string,
+  datetime: string,
+  resetUrl: string = '',
+  supportEmail: string = SUPPORT_EMAIL,
 ) => `
 <!doctype html>
 <html>
@@ -125,7 +125,7 @@ export const passwordChangeNotificationTemplate = (
     </table>
   </body>
 </html>
-`
+`;
 
 export const resetPasswordNotificationSubject = 'Reset your password';
 export const resetPasswordNotificationTemplate = (
@@ -134,7 +134,7 @@ export const resetPasswordNotificationTemplate = (
   resetUrl: string = '',
   code: string = '',
   appName: string = APP_NAME,
-  supportEmail: string = SUPPORT_EMAIL
+  supportEmail: string = SUPPORT_EMAIL,
 ) => `
 <!doctype html>
 <html>
@@ -184,4 +184,3 @@ export const resetPasswordNotificationTemplate = (
   </body>
 </html>
 `;
-

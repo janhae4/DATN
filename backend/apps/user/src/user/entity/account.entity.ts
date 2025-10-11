@@ -28,6 +28,9 @@ export class Account {
   providerId: string;
 
   @Column({ nullable: true })
+  email?: string;
+
+  @Column({ nullable: true })
   password?: string;
 
   @CreateDateColumn()

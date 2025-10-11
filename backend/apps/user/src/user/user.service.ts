@@ -1,25 +1,30 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { RpcException } from '@nestjs/microservices';
-import { FindManyOptions, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, FindManyOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { User } from './entity/user.entity';
-import { ConflictException } from '@app/contracts/errror';
-import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@app/contracts/errror';
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
 import { Account, Provider } from './entity/account.entity';
-import { PostgresError } from 'postgres';
-import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local';
+import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
 import { UserDto } from '@app/contracts/user/user.dto';
+import { randomInt } from 'crypto';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User, 'USER_CONNECTION')
+    @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-    @InjectRepository(Account, 'USER_CONNECTION')
+    @InjectRepository(Account)
     private readonly accountRepo: Repository<Account>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   private async create(createUserDto: Partial<User>) {
@@ -28,51 +33,102 @@ export class UserService {
   }
 
   async registerLocal(createUserDto: CreateAuthLocalDto) {
-    try {
-      const existingAccount = await this.accountRepo.findOne({
+    return await this.dataSource.transaction(async (manager) => {
+      const { email, username } = createUserDto;
+
+      const emailExistInUser = await manager.findOne(User, {
+        where: { email },
+      });
+
+      if (emailExistInUser) {
+        throw new ConflictException('This email is already in use');
+      }
+
+      const emailExistInAccount = await manager.findOne(Account, {
+        where: { email },
+      });
+
+      if (emailExistInAccount) {
+        throw new ConflictException('This email is already in use');
+      }
+
+      const usernameExist = await manager.findOne(Account, {
         where: {
           provider: Provider.LOCAL,
-          providerId: createUserDto.username,
+          providerId: username,
         },
       });
 
-      if (existingAccount) {
-        throw new ConflictException('Email already exists');
+      if (usernameExist) {
+        throw new ConflictException('This username is already in use');
       }
 
-      const savedUser = await this.create({
+      const verifiedCode = randomInt(100000, 999999).toString();
+      const expiredCode = new Date(Date.now() + 15 * 60 * 1000);
+
+      const savedUser = manager.create(User, {
         name: createUserDto.name,
         email: createUserDto.email,
         phone: createUserDto.phone,
+        verifiedCode,
+        expiredCode,
       });
+      await manager.save(savedUser);
 
-      this.createAccount({
+      const account = manager.create(Account, {
         provider: Provider.LOCAL,
         providerId: createUserDto.username,
         password: bcrypt.hashSync(createUserDto.password, 10),
         user: savedUser,
       });
+      await manager.save(account);
 
       return savedUser;
-    } catch (e) {
-      const error = e as PostgresError;
-      if (error.code === '23505') {
-        throw new ConflictException(
-          (error?.detail as string) || 'Account already exists',
-        );
-      }
-      if (error instanceof RpcException) {
-        throw error;
-      }
-
-      throw new RpcException({
-        status: 500,
-        message: 'Internal server error',
-      });
-    }
+    });
   }
 
-  private async createAccount(partial: Partial<Account>) {
+  async verifyLocal(userId: string, code: string) {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.verifiedCode && user.verifiedCode !== code) {
+      console.log(user.verifiedCode, code);
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    if (user.expiredCode && user.expiredCode < new Date()) {
+      throw new BadRequestException('Verification code expired');
+    }
+
+    user.isVerified = true;
+    user.verifiedCode = undefined;
+    user.expiredCode = undefined;
+    return await this.userRepo.save(user);
+  }
+
+  async resetCode(userId: string) {
+    return await this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, {
+        where: { id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!user) throw new NotFoundException('User not found');
+      if (user.isVerified)
+        throw new BadRequestException('User already verified');
+      if (user.expiredCode && user.expiredCode > new Date()) {
+        throw new BadRequestException('Verification code not expired');
+      }
+
+      user.verifiedCode = randomInt(100000, 999999).toString();
+      user.expiredCode = new Date(Date.now() + 15 * 60 * 1000);
+      await manager.save(user);
+    });
+  }
+
+  async createAccount(partial: Partial<Account>) {
     const account = this.accountRepo.create(partial);
     return await this.accountRepo.save(account);
   }
@@ -84,9 +140,10 @@ export class UserService {
       name: name ?? '',
       email: email ?? '',
       avatar: avatar ?? '',
+      isVerified: true,
     });
 
-    this.createAccount({
+    await this.createAccount({
       provider,
       providerId,
       user,
@@ -96,15 +153,36 @@ export class UserService {
   }
 
   async findAll(query: FindManyOptions<User>): Promise<User[]> {
-    return this.userRepo.find(query);
+    return this.userRepo.find({ ...query, relations: ['accounts'] });
   }
 
   async findOne(id: string): Promise<User | null> {
-    return await this.userRepo.findOne({ where: { id } });
+    console.log(id);
+    return await this.userRepo.findOne({
+      where: { id },
+      relations: ['accounts'],
+    });
+  }
+
+  async findOneWithAccounts(id: string): Promise<User | null> {
+    return await this.userRepo.findOne({
+      where: { id },
+      relations: ['accounts'],
+    });
+  }
+
+  async findOneOAuth(
+    provider: Provider,
+    providerId: string,
+  ): Promise<Account | null> {
+    return await this.accountRepo.findOne({
+      where: { provider, providerId },
+      relations: ['user'],
+    });
   }
 
   async findOneByEmail(email: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { email } });
+    return this.userRepo.findOne({ where: { email }, relations: ['accounts'] });
   }
 
   async findOneGoogle(email: string): Promise<Account | null> {

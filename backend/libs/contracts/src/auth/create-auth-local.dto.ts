@@ -13,4 +13,7 @@ export class CreateAuthLocalDto {
   @IsOptional()
   @IsString()
   phone?: string;
+  @IsOptional()
+  @IsString()
+  verifiedToken?: string;
 }

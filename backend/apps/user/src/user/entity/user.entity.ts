@@ -39,6 +39,18 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  isVerified?: boolean;
+
+  @Column({ nullable: true })
+  verifiedCode?: string;
+
+  @Column({ nullable: true })
+  expiredCode?: Date;
+
+  @Column({ nullable: true })
+  resetToken?: string;
+
   @Column({ nullable: true })
   bio?: string;
 

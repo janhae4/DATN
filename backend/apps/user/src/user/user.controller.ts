@@ -3,10 +3,12 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
-import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
-import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local';
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
+import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
 import { UpdatePasswordDto } from '@app/contracts/user/update-password';
 import { User } from './entity/user.entity';
+import { Provider } from '@app/contracts/user/account.dto';
+import { Account } from './entity/account.entity';
 
 @Controller()
 export class UserController {
@@ -20,6 +22,21 @@ export class UserController {
   @MessagePattern(USER_PATTERNS.CREATE_OAUTH)
   createOAuth(@Payload() data: CreateAuthOAuthDto) {
     return this.userService.createOAuth(data);
+  }
+
+  @MessagePattern(USER_PATTERNS.CREATE_ACCOUNT)
+  createAccount(@Payload() partial: Partial<Account>) {
+    return this.userService.createAccount(partial);
+  }
+
+  @MessagePattern(USER_PATTERNS.VERIFY_LOCAL)
+  verifyLocal(@Payload() data: { userId: string; code: string }) {
+    return this.userService.verifyLocal(data.userId, data.code);
+  }
+
+  @MessagePattern(USER_PATTERNS.RESET_CODE)
+  resetCode(@Payload() userId: string) {
+    return this.userService.resetCode(userId);
   }
 
   @MessagePattern(USER_PATTERNS.FIND_ALL)
@@ -47,12 +64,19 @@ export class UserController {
     return await this.userService.findOneByEmail(email);
   }
 
+  @MessagePattern(USER_PATTERNS.FIND_ONE_OAUTH)
+  async findOneOAuth(
+    @Payload() data: { provider: Provider; providerId: string },
+  ) {
+    return await this.userService.findOneOAuth(data.provider, data.providerId);
+  }
+
   @MessagePattern(USER_PATTERNS.VALIDATE)
   async validate(@Payload() loginDto: LoginDto) {
     console.log(loginDto);
     const user = await this.userService.validate(loginDto);
     console.log(user);
-    return user;  
+    return user;
   }
 
   @MessagePattern(USER_PATTERNS.UPDATE_PASSWORD)

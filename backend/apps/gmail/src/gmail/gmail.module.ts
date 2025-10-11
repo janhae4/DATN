@@ -15,14 +15,15 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
         defaults: {
           from: cfg.getSMTPFrom(),
         },
-        preview:true
-      })
-    })
+        preview: true,
+      }),
+    }),
   ],
   controllers: [GmailController],
-  providers: [GmailService,
+  providers: [
+    GmailService,
     CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
-    CLIENT_PROXY_PROVIDER.AUTH_CLIENT
+    CLIENT_PROXY_PROVIDER.AUTH_CLIENT,
   ],
 })
-export class GmailModule { }
+export class GmailModule {}

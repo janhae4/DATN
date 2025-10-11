@@ -1,3 +1,5 @@
+import { AccountDto } from './account.dto';
+
 export enum Role {
   USER = 'USER',
   ADMIN = 'ADMIN',
@@ -18,10 +20,15 @@ export class UserDto {
   password?: string;
   role: Role;
   isActive: boolean;
+  isVerified: boolean;
+  verifiedCode?: string;
+  expiredCode?: string;
+  resetToken?: string;
   image?: string;
   phone?: string;
   bio?: string;
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
+  accounts?: AccountDto[];
 }

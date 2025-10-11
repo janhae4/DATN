@@ -1,6 +1,9 @@
 export const AUTH_PATTERN = {
   INFO: 'auth.info',
   LOGIN: 'auth.login',
+  VERIFY_LOCAL: 'auth.verifyLocal',
+  VERIFY_LOCAL_TOKEN: 'auth.verifyToken',
+  RESET_CODE: 'auth.resetCode',
   FORGET_PASSWORD: 'auth.forgetPassword',
   RESET_PASSWORD: 'auth.resetPassword',
   GOOGLE_CALLBACK: 'auth.googleCallback',

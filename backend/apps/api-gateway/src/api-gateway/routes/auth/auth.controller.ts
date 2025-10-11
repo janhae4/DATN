@@ -6,24 +6,27 @@ import {
   Req,
   Get,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { RoleGuard } from 'apps/api-gateway/src/common/role/role.guard';
 import { Roles } from 'apps/api-gateway/src/common/role/role.decorator';
 import { Role, UserDto } from '@app/contracts/user/user.dto';
+import { GoogleAuthGuard } from 'apps/api-gateway/src/common/role/google-auth.guard';
+import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
+import { VerifyAccountDto } from '@app/contracts/auth/verify-account.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Get('hello')
   hello() {
-    return { message: "hello" };
+    return { message: 'hello' };
   }
 
   @Get('/info')
@@ -45,6 +48,27 @@ export class AuthController {
   @Post('/register')
   register(@Body() createAuthDto: CreateAuthDto) {
     return this.authService.register(createAuthDto);
+  }
+
+  @Post('/verify/code')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  verifyLocal(@Req() request: Request, @Body() data: VerifyAccountDto) {
+    const user = request.user as UserDto;
+    return this.authService.verifyLocal(user.id, data.code);
+  }
+
+  @Get('/verify/token')
+  verifyToken(@Query('token') token: string) {
+    return this.authService.verifyToken(token);
+  }
+
+  @Post('/resetCode')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  resetCode(@Req() request: Request) {
+    const user = request.user as UserDto;
+    return this.authService.resetCode(user.id);
   }
 
   @Post('/resetPassword')
@@ -87,13 +111,17 @@ export class AuthController {
     return this.authService.findAllUser();
   }
 
-  @Get('/google/login')
-  @UseGuards(AuthGuard('google'))
-  googleLogin() { }
+  @Get('/google/')
+  @UseGuards(GoogleAuthGuard)
+  googleLogin(@Query('type') type: 'link' | 'login') {
+    void type;
+  }
 
   @Get('/google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   googleCallback(@Req() request: Request) {
-    return this.authService.handleGoogleCallback(request);
+    return this.authService.handleGoogleCallback(
+      request.user as GoogleAccountDto,
+    );
   }
 }

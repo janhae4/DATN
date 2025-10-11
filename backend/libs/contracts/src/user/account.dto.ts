@@ -23,6 +23,10 @@ export class AccountDto {
 
   @IsOptional()
   @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
   password?: string;
 
   @IsObject()

@@ -1,7 +1,7 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Inject, Injectable } from '@nestjs/common';
+import { JsonWebTokenError, JwtService } from '@nestjs/jwt';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { firstValueFrom, map, catchError } from 'rxjs';
+import { firstValueFrom, map, catchError, throwError, Observable } from 'rxjs';
 import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
@@ -17,15 +17,19 @@ import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
 import {
   BadRequestException,
+  Error,
+  NotFoundException,
   UnauthorizedException,
 } from '@app/contracts/errror';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { StoredRefreshTokenDto } from '@app/contracts/redis/store-refreshtoken.dto';
 import { NOTIFICATION_PATTERN } from '@app/contracts/notification/notification.pattern';
 import { NotificationType } from '@app/contracts/notification/notification.enum';
-import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { AccountDto } from '@app/contracts/user/account.dto';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
+import { VerifyTokenDto } from './dto/verify-token.dto';
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
 
 @Injectable()
 export class AuthService {
@@ -37,26 +41,68 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  mapper(user: UserDto) {
+  private handleRpc<T>(obs: Observable<T>): Observable<T> {
+    return obs.pipe(
+      catchError((err) => {
+        const e = err as Error;
+        const rpcError = new RpcException({
+          message: e?.message || 'Internal Server Error',
+          statusCode: e?.statusCode || 500,
+        });
+        return throwError(() => rpcError);
+      }),
+    );
+  }
+
+  async register(createAuthDto: CreateAuthDto) {
+    const user = await firstValueFrom<UserDto>(
+      this.handleRpc(
+        this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createAuthDto),
+      ),
+    );
+    const verifiedCode = user.verifiedCode;
+    const token = await this.jwtService.signAsync(
+      { userId: user.id, verifiedCode },
+      { expiresIn: 15 * 60 },
+    );
     return {
-      id: user.id,
-      role: user.role,
+      verifiedCode,
+      verifiedUrl: 'http://localhost:3000/auth/verify/token?token=' + token,
     };
   }
 
-  register(createAuthDto: CreateAuthDto) {
-    return this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createAuthDto);
+  verifyLocal(userId: string, code: string) {
+    return this.handleRpc(
+      this.userClient.send(USER_PATTERNS.VERIFY_LOCAL, { userId, code }),
+    );
   }
 
-  async login(loginDto: LoginDto) {
-    const user = await firstValueFrom(
-      this.userClient
-        .send(USER_PATTERNS.VALIDATE, loginDto)
-        .pipe(map((u: UserDto) => this.mapper(u))),
-    );
-    console.log('User: ', user);
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+  async verifyLocalToken(token: string) {
+    try {
+      console.log(token);
+      console.log(this.jwtService.decode(token));
+      const payload = await this.jwtService.verifyAsync<VerifyTokenDto>(token);
+      if (!payload) throw new UnauthorizedException('Invalid token');
+      return this.handleRpc(
+        this.userClient.send(USER_PATTERNS.VERIFY_LOCAL, {
+          userId: payload.userId,
+          code: payload.verifiedCode,
+        }),
+      );
+    } catch (error) {
+      if (error instanceof JsonWebTokenError)
+        throw new UnauthorizedException('Invalid token');
+      throw error;
+    }
+  }
 
+  resetCode(userId: string) {
+    return this.handleRpc(
+      this.userClient.send(USER_PATTERNS.RESET_CODE, userId),
+    );
+  }
+
+  private async generateTokensAndSession(user: UserDto) {
     const sessionId = randomUUID();
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -65,12 +111,19 @@ export class AuthService {
         { expiresIn: ACCESS_TTL },
       ),
       this.jwtService.signAsync(
-        { id: user.id, sessionId: sessionId, role: user.role },
+        { id: user.id, sessionId, role: user.role },
         { expiresIn: REFRESH_TTL },
       ),
     ]);
 
     const hashedRefresh = await bcrypt.hash(refreshToken, 10);
+
+    this.redisClient.emit(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
+      userId: user.id,
+      sessionId,
+      hashedRefresh,
+      exp: REFRESH_TTL,
+    });
 
     this.userClient.emit(USER_PATTERNS.UPDATE, {
       id: user.id,
@@ -80,24 +133,135 @@ export class AuthService {
       },
     });
 
-    this.redisClient.emit(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
-      userId: user.id,
-      sessionId,
-      hashedRefresh,
-      exp: REFRESH_TTL,
-    });
-
     this.notificationClient.emit(NOTIFICATION_PATTERN.SEND, {
       userId: user.id,
       title: 'Login Notification',
-      message: 'You have logged in successfully',
+      message: 'Logged in successfully',
       type: NotificationType.SYSTEM,
     });
 
-    return {
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    };
+    return { accessToken, refreshToken };
+  }
+
+  async login(loginDto: LoginDto) {
+    const user = await firstValueFrom<UserDto>(
+      this.userClient.send(USER_PATTERNS.VALIDATE, loginDto),
+    );
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+    return await this.generateTokensAndSession(user);
+  }
+
+  private async handleLinking(data: GoogleAccountDto, account: AccountDto) {
+    const {
+      accessToken,
+      refreshToken,
+      provider,
+      providerId,
+      email,
+      name,
+      avatar,
+      linkedUser,
+    } = data;
+
+    const user = await this.verifyToken(linkedUser ?? '');
+    if (!user) {
+      throw new UnauthorizedException(
+        'You must be logged in to link a provider',
+      );
+    }
+
+    if (account) {
+      throw new BadRequestException('Google account already linked');
+    }
+
+    const currentUser = await firstValueFrom<UserDto>(
+      this.userClient.send(USER_PATTERNS.FIND_ONE, user.id),
+    );
+
+    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+      userId: user.id,
+      accessToken,
+      refreshToken,
+    });
+
+    await firstValueFrom(
+      this.handleRpc(
+        this.userClient.send(USER_PATTERNS.CREATE_ACCOUNT, {
+          providerId,
+          provider,
+          name,
+          avatar,
+          email,
+          user: currentUser,
+        } as Partial<AccountDto>),
+      ),
+    );
+
+    return { message: 'Google account linked successfully' };
+  }
+
+  private async handleLoginGoogle(data: GoogleAccountDto, account: AccountDto) {
+    const { accessToken, refreshToken } = data;
+
+    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+      userId: account.user.id,
+      accessToken,
+      refreshToken,
+    });
+
+    return await this.generateTokensAndSession(account.user);
+  }
+
+  private async handleRegisterGoogle(data: GoogleAccountDto) {
+    const {
+      accessToken,
+      refreshToken,
+      provider,
+      providerId,
+      email,
+      name,
+      avatar,
+    } = data;
+
+    const user = await firstValueFrom<UserDto>(
+      this.handleRpc(
+        this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
+          provider,
+          providerId,
+          name,
+          email,
+          avatar,
+        } as CreateAuthOAuthDto),
+      ),
+    );
+
+    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+      userId: user.id,
+      accessToken,
+      refreshToken,
+    });
+
+    return await this.generateTokensAndSession(user);
+  }
+
+  async handleGoogleCallback(data: GoogleAccountDto) {
+    if (!data.email) {
+      throw new BadRequestException('Google account missing email');
+    }
+
+    const account = await firstValueFrom<AccountDto>(
+      this.userClient.send(USER_PATTERNS.FIND_ONE_OAUTH, {
+        provider: data.provider,
+        providerId: data.providerId,
+      }),
+    );
+
+    if (data.isLinking && data.linkedUser)
+      return await this.handleLinking(data, account);
+
+    if (account) return await this.handleLoginGoogle(data, account);
+
+    return await this.handleRegisterGoogle(data);
   }
 
   getInfo(id: string) {
@@ -212,58 +376,6 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid token');
     }
-  }
-
-  async handleGoogleCallback(data: CreateAuthOAuthDto) {
-    const {
-      accessToken,
-      refreshToken,
-      provider,
-      providerId,
-      email,
-      name,
-      avatar,
-    } = data;
-
-    const account = await firstValueFrom<AccountDto>(
-      this.userClient.send(USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL, email),
-    );
-
-    console.log(account);
-
-    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
-      userId: account.user.id,
-      accessToken,
-      refreshToken,
-    });
-
-    if (account) {
-      return account;
-    }
-    else {
-
-    let user = await firstValueFrom<UserDto>(
-      this.userClient.send(USER_PATTERNS.FIND_ONE, email),
-    );
-
-    if (!user) {
-      user = await firstValueFrom<UserDto>(
-        this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
-          provider,
-          providerId,
-          name,
-          email,
-          avatar,
-        }),
-      );
-    }
-
-    console.log(123);
-
-      return user;
-    }
-
-
   }
 
   findUserById(id: string) {

@@ -1,4 +1,4 @@
-import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
+import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
 
 export interface GoogleProfile {
   id: string;

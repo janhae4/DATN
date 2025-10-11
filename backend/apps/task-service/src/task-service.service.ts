@@ -5,7 +5,7 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { TASK_ERRORS } from '@app/contracts/task/task.errors';
 import { Task, TaskStatus } from './generated/prisma';
 import { GoogleCalendarService } from './google-calendar.service';
-import { JsonWebTokenError, JwtService, TokenExpiredError } from '@nestjs/jwt';
+import { JsonWebTokenError, TokenExpiredError } from '@nestjs/jwt';
 import { REDIS_CLIENT } from '@app/contracts/constants';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -13,7 +13,6 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@app/contracts/errror';
-import { JwtDto } from '@app/contracts/auth/jwt.dto';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 
@@ -22,7 +21,6 @@ export class TaskServiceService {
   constructor(
     private prisma: PrismaService,
     private googleService: GoogleCalendarService,
-    private jwtService: JwtService,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
   ) {}
 
@@ -77,12 +75,10 @@ export class TaskServiceService {
     });
   }
 
-  private async getGoogleTokens(accessToken: string) {
+  private async getGoogleTokens(userId: string) {
     try {
-      const jwtPayload = await this.jwtService.verifyAsync<JwtDto>(accessToken);
-
       const jwt = await firstValueFrom<LoginResponseDto>(
-        this.redisClient.send(REDIS_PATTERN.GET_GOOGLE_TOKEN, jwtPayload.id),
+        this.redisClient.send(REDIS_PATTERN.GET_GOOGLE_TOKEN, userId),
       );
 
       if (!jwt) {
@@ -92,7 +88,7 @@ export class TaskServiceService {
       return {
         accessToken: jwt.accessToken,
         refreshToken: jwt.refreshToken,
-        userId: jwtPayload.id,
+        userId,
       };
     } catch (error) {
       if (error instanceof TokenExpiredError) {

@@ -1,27 +1,5 @@
-import { JwtAuthGuard } from '@app/contracts/auth/jwt/jwt-auth.guard';
-import { SendMailDto } from '@app/contracts/gmail/send-mail.dto';
-import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
-import { GmailService } from './gmail.service';
+import { Controller } from "@nestjs/common";
 
 @Controller('gmail')
 export class GmailController {
-  constructor(
-    private readonly gmailService: GmailService,
-  ) { }
-
-  @Get('unread')
-  @UseGuards(JwtAuthGuard)
-  async getUnreadEmails(@Req() req) {
-    return await this.gmailService.getUnreadEmails(req.user.id);
-  }
-
-  @Post('send')
-  @UseGuards(JwtAuthGuard)
-  async sendEmail(
-    @Req() req,
-    @Body() body: Omit<SendMailDto, 'userId'>,
-  ) {
-    const userId = req.user.id;
-    return await this.gmailService.sendEmail(userId, body.to ?? "", body.subject, body.messageText);
-  }
 }

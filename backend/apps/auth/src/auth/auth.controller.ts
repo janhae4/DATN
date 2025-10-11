@@ -4,9 +4,9 @@ import { AuthService } from './auth.service';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
-import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth';
 import { ResetPasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { UserDto } from '@app/contracts/user/user.dto';
+import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
 
 @Controller()
 export class AuthController {
@@ -15,6 +15,21 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERN.REGISTER)
   register(@Payload() createAuthDto: CreateAuthDto) {
     return this.authService.register(createAuthDto);
+  }
+
+  @MessagePattern(AUTH_PATTERN.VERIFY_LOCAL)
+  verifyLocal(@Payload() data: { userId: string; code: string }) {
+    return this.authService.verifyLocal(data.userId, data.code);
+  }
+
+  @MessagePattern(AUTH_PATTERN.VERIFY_LOCAL_TOKEN)
+  verifyLocalToken(@Payload() token: string) {
+    return this.authService.verifyLocalToken(token);
+  }
+
+  @MessagePattern(AUTH_PATTERN.RESET_CODE)
+  resetCode(@Payload() userId: string) {
+    return this.authService.resetCode(userId);
   }
 
   @MessagePattern(AUTH_PATTERN.LOGIN)
@@ -36,8 +51,9 @@ export class AuthController {
   }
 
   @MessagePattern(AUTH_PATTERN.GOOGLE_CALLBACK)
-  googleCallback(@Payload() user: CreateAuthOAuthDto) {
+  googleCallback(@Payload() user: GoogleAccountDto) {
     console.log('GOOGLE CALLBACK');
+    console.log(user);
     return this.authService.handleGoogleCallback(user);
   }
 
