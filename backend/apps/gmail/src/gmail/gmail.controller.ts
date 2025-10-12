@@ -8,7 +8,7 @@ import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email.dt
 
 @Controller()
 export class GmailController {
-  constructor(private readonly gmailService: GmailService) { }
+  constructor(private readonly gmailService: GmailService) {}
 
   @MessagePattern(GMAIL_PATTERNS.GET_UNREAD_MAILS)
   getUnreadEmails(@Payload('userId') userId: string) {
@@ -38,7 +38,7 @@ export class GmailController {
   @MessagePattern(GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL)
   sendVerificationEmail(
     @Payload()
-    verificationEmail: SendEmailVerificationDto
+    verificationEmail: SendEmailVerificationDto,
   ) {
     return this.gmailService.sendVerificationEmail(verificationEmail);
   }
@@ -46,7 +46,7 @@ export class GmailController {
   @MessagePattern(GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL)
   sendResetPasswordEmail(
     @Payload()
-    resetPassword: SendEmailVerificationDto
+    resetPassword: SendEmailVerificationDto,
   ) {
     return this.gmailService.sendResetPasswordEmail(resetPassword);
   }

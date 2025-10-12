@@ -21,7 +21,7 @@ export class AuthService {
     @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
   private setCookies(
     accessToken: string,
@@ -62,12 +62,15 @@ export class AuthService {
     return this.authClient.send(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD, {
       userId,
       code,
-      password
+      password,
     });
   }
 
   verifyForgetPasswordToken(token: string, password: string) {
-    return this.authClient.send(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN, {token, password});
+    return this.authClient.send(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN, {
+      token,
+      password,
+    });
   }
 
   verifyToken(token: string) {
@@ -75,15 +78,24 @@ export class AuthService {
   }
 
   resetCode(userId: string) {
-    return this.authClient.send(AUTH_PATTERN.RESET_CODE, {userId, typeCode: 'reset'});
+    return this.authClient.send(AUTH_PATTERN.RESET_CODE, {
+      userId,
+      typeCode: 'reset',
+    });
   }
 
   resetVerificationCode(userId: string) {
-    return this.authClient.send(AUTH_PATTERN.RESET_VERIFICATION_CODE, {userId, typeCode: 'verify'});
+    return this.authClient.send(AUTH_PATTERN.RESET_VERIFICATION_CODE, {
+      userId,
+      typeCode: 'verify',
+    });
   }
 
   changePassword(changePasswordDto: ChangePasswordDto) {
-    return this.authClient.send(AUTH_PATTERN.CHANGE_PASSWORD, changePasswordDto);
+    return this.authClient.send(
+      AUTH_PATTERN.CHANGE_PASSWORD,
+      changePasswordDto,
+    );
   }
 
   login(loginDto: LoginDto, response: Response) {

@@ -14,9 +14,7 @@ import {
   verificationEmailSubject,
   verificationEmailTemplate,
 } from '@app/contracts/gmail/email-subject.constant';
-import {
-  SendMailDto,
-} from '@app/contracts/gmail/send-mail.dto';
+import { SendMailDto } from '@app/contracts/gmail/send-mail.dto';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -32,7 +30,7 @@ export class GmailService {
   constructor(
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
     private readonly gmailService: MailerService,
-  ) { }
+  ) {}
 
   private async getGoogleTokens(userId: string) {
     const tokens = await firstValueFrom<LoginResponseDto | null>(
@@ -107,13 +105,12 @@ export class GmailService {
     return { message: 'Email đã được gửi thành công!' };
   }
 
-
   async sendEmailLogin(user: UserDto): Promise<void> {
     const subject = loginNotificationSubject;
     const content = loginNotificationTemplate(
       user.name,
       new Date().toISOString(),
-      "",
+      '',
     );
 
     await this.gmailService.sendMail({
@@ -126,31 +123,34 @@ export class GmailService {
   async sendEmailRegister(user: UserDto): Promise<void> {
     const subject = registerNotificationSubject;
     const content = registerNotificationTemplate(user.name);
-    console.log("SEND EMAIL REGISTER TO", user.email);
+    console.log('SEND EMAIL REGISTER TO', user.email);
     await this.gmailService.sendMail({
       to: user.email,
       subject,
       html: content,
-    })
+    });
   }
 
   async sendEmailPasswordChange(user: UserDto): Promise<void> {
     const subject = passwordChangeNotificationSubject;
-    const content = passwordChangeNotificationTemplate(user.name, new Date().toLocaleString('vi-VN', {
-      timeZone: 'Asia/Ho_Chi_Minh',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }));
+    const content = passwordChangeNotificationTemplate(
+      user.name,
+      new Date().toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }),
+    );
     await this.gmailService.sendMail({
       to: user.email,
       subject,
       html: content,
-    })
+    });
   }
 
   async sendVerificationEmail(verificationEmail: SendEmailVerificationDto) {
@@ -161,7 +161,7 @@ export class GmailService {
         user?.name ?? '',
         url,
         code,
-        15
+        15,
       );
 
       await this.gmailService.sendMail({
@@ -174,8 +174,7 @@ export class GmailService {
       throw new RpcException({
         message: 'Failed to send verification email',
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      }
-      );
+      });
     }
   }
 
@@ -200,8 +199,7 @@ export class GmailService {
       throw new RpcException({
         message: 'Failed to send reset password email',
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      }
-      );
+      });
     }
   }
 }

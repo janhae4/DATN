@@ -42,16 +42,16 @@ export class User {
   @Column({ default: false })
   isVerified: boolean;
 
-  @Column({type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true })
   verifiedCode: string | null;
 
-  @Column({type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   expiredCode: Date | null;
 
-  @Column({type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true })
   resetCode: string | null;
 
-  @Column({type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true })
   bio?: string | null;
 
   @Column({ type: 'timestamp', nullable: true })

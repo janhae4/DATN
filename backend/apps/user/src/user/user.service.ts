@@ -13,9 +13,7 @@ import {
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
 import { Account, Provider } from './entity/account.entity';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
-import { UserDto } from '@app/contracts/user/user.dto';
 import { randomInt } from 'crypto';
-import { BroadcastOperator } from 'socket.io';
 
 @Injectable()
 export class UserService {
@@ -28,7 +26,7 @@ export class UserService {
     private readonly accountRepo: Repository<Account>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   private async create(createUserDto: Partial<User>) {
     const user = this.userRepo.create(createUserDto);
@@ -137,9 +135,9 @@ export class UserService {
     await this.userRepo.update(user.id, {
       verifiedCode: null,
       expiredCode: null,
-      isVerified: true
-    })
-    return { message: "Account verified successfully" };
+      isVerified: true,
+    });
+    return { message: 'Account verified successfully' };
   }
 
   async verifyForgotPassword(userId: string, code: string, password: string) {
@@ -148,8 +146,7 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    if (!password)
-      throw new BadRequestException('Password is required');
+    if (!password) throw new BadRequestException('Password is required');
 
     if (!user.resetCode)
       throw new BadRequestException('Invalid verification code');
@@ -162,24 +159,27 @@ export class UserService {
       throw new BadRequestException('Verification code expired');
     }
 
-    const account = user?.accounts.find((a) => a.provider === Provider.LOCAL) as Account;
-    if (await bcrypt.compare(password, account.password ?? "")) {
-      throw new BadRequestException('Password must be different from old password');
+    const account = user?.accounts.find(
+      (a) => a.provider === Provider.LOCAL,
+    ) as Account;
+    if (await bcrypt.compare(password, account.password ?? '')) {
+      throw new BadRequestException(
+        'Password must be different from old password',
+      );
     }
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await Promise.all([
       this.userRepo.update(user.id, {
         resetCode: null,
-        expiredCode: null
+        expiredCode: null,
       }),
       this.accountRepo.update(account.id, {
-        password: hashedPassword
-      })
-    ])
+        password: hashedPassword,
+      }),
+    ]);
 
-    return { message: "Password changed successfully" };
-
+    return { message: 'Password changed successfully' };
   }
 
   async resetCode(userId: string, typeCode: 'verify' | 'reset') {
@@ -197,15 +197,18 @@ export class UserService {
       if (!user.resetCode && typeCode === 'reset')
         throw new BadRequestException('There is no reset code for this user');
       if (user.expiredCode && user.expiredCode > new Date()) {
-        throw new BadRequestException(`${typeCode === 'verify' ? 'Verification' : 'Reset'} code not expired`);
+        throw new BadRequestException(
+          `${typeCode === 'verify' ? 'Verification' : 'Reset'} code not expired`,
+        );
       }
 
-      console.log(user.resetCode)
+      console.log(user.resetCode);
       const code = randomInt(100000, 999999).toString();
       const expiredCode = new Date(Date.now() + this.EXPIRY_TIME_MS);
-      const updateData = typeCode === 'verify'
-        ? { verifiedCode: code, expiredCode }
-        : { resetCode: code, expiredCode };
+      const updateData =
+        typeCode === 'verify'
+          ? { verifiedCode: code, expiredCode }
+          : { resetCode: code, expiredCode };
 
       await manager.update(User, { id: userId }, updateData);
 
@@ -287,21 +290,20 @@ export class UserService {
 
   async resetPassword(email: string) {
     return await this.dataSource.transaction(async (manager) => {
-
       const user = await manager.findOne(User, {
         where: [
           { email },
           {
             accounts: {
               provider: Provider.LOCAL,
-              providerId: email
+              providerId: email,
             },
           },
         ],
         relations: ['accounts'],
         lock: {
           mode: 'pessimistic_write',
-          tables: ['users']
+          tables: ['users'],
         },
       });
 
@@ -315,10 +317,14 @@ export class UserService {
       }
 
       const now = Date.now();
-      const lastSentTime = user.expiredCode ? user.expiredCode.getTime() - this.EXPIRY_TIME_MS : 0;
+      const lastSentTime = user.expiredCode
+        ? user.expiredCode.getTime() - this.EXPIRY_TIME_MS
+        : 0;
 
-      if (user.resetCode && (now < lastSentTime + this.MIN_WAIT_TIME_MS)) {
-        const timeRemaining = Math.ceil((lastSentTime + this.MIN_WAIT_TIME_MS - now) / 1000);
+      if (user.resetCode && now < lastSentTime + this.MIN_WAIT_TIME_MS) {
+        const timeRemaining = Math.ceil(
+          (lastSentTime + this.MIN_WAIT_TIME_MS - now) / 1000,
+        );
         throw new BadRequestException(
           `Reset code already sent! Please wait ${timeRemaining} seconds`,
         );
@@ -327,15 +333,18 @@ export class UserService {
       const resetCode = randomInt(100000, 1000000).toString();
       const expiredCode = new Date(now + this.EXPIRY_TIME_MS);
 
-      await manager.update(User, { id: user.id }, {
-        resetCode,
-        expiredCode,
-      });
+      await manager.update(
+        User,
+        { id: user.id },
+        {
+          resetCode,
+          expiredCode,
+        },
+      );
 
       return { user, resetCode, expiredCode };
     });
   }
-
 
   async confirmResetPassword(userId: string, code: string, password: string) {
     const user = await this.findOne(userId);
@@ -344,25 +353,29 @@ export class UserService {
     if (user?.resetCode !== code) throw new BadRequestException('Invalid code');
     if (user.expiredCode && user.expiredCode < new Date())
       throw new BadRequestException('Code expired');
-    console.log(await bcrypt.compare(password, account.password ?? ""));
-    if (await bcrypt.compare(password, account.password ?? "")) 
-      throw new BadRequestException('Password must be different from old password');
+    console.log(await bcrypt.compare(password, account.password ?? ''));
+    if (await bcrypt.compare(password, account.password ?? ''))
+      throw new BadRequestException(
+        'Password must be different from old password',
+      );
     const hashedPassword = await bcrypt.hash(password, 10);
     return await Promise.all([
       this.userRepo.update(user.id, {
         resetCode: undefined,
-        expiredCode: undefined
+        expiredCode: undefined,
       }),
       this.accountRepo.update(account.id, {
-        password: hashedPassword
-      })
-    ])
+        password: hashedPassword,
+      }),
+    ]);
   }
 
   async updatePassword(id: string, oldPassword: string, newPassword: string) {
     return await this.dataSource.transaction(async (manager) => {
       if (oldPassword === newPassword) {
-        throw new BadRequestException('New password must be different from old password');
+        throw new BadRequestException(
+          'New password must be different from old password',
+        );
       }
 
       const user = await manager.findOne(User, {
@@ -370,7 +383,7 @@ export class UserService {
         relations: ['accounts'],
         lock: {
           mode: 'pessimistic_write',
-          tables: ['users']
+          tables: ['users'],
         },
       });
       if (!user) {
@@ -381,14 +394,18 @@ export class UserService {
         throw new NotFoundException('Local account not found');
       }
 
-      if (!(await bcrypt.compare(oldPassword, account.password ?? ""))) {
+      if (!(await bcrypt.compare(oldPassword, account.password ?? ''))) {
         throw new BadRequestException('Old password is incorrect');
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await manager.update(Account, { id: account.id }, { password: hashedPassword });
+      await manager.update(
+        Account,
+        { id: account.id },
+        { password: hashedPassword },
+      );
       return user;
-    })
+    });
   }
 
   async update(id: string, data: Partial<User>) {

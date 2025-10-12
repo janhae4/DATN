@@ -1,7 +1,14 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { JsonWebTokenError, JwtOptionsFactory, JwtService } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { firstValueFrom, map, catchError, throwError, Observable, tap } from 'rxjs';
+import {
+  firstValueFrom,
+  map,
+  catchError,
+  throwError,
+  Observable,
+  tap,
+} from 'rxjs';
 import {
   NOTIFICATION_CLIENT,
   REDIS_CLIENT,
@@ -11,7 +18,7 @@ import {
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { JwtDto, RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { randomInt, randomUUID, Verify } from 'crypto';
+import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
@@ -43,14 +50,16 @@ export class AuthService {
   constructor(
     @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
-    @Inject(NOTIFICATION_CLIENT) private readonly notificationClient: ClientProxy,
+    @Inject(NOTIFICATION_CLIENT)
+    private readonly notificationClient: ClientProxy,
     @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   private handleRpc<T>(obs: Observable<T>): Observable<T> {
     return obs.pipe(
-      catchError((err: any) => {
+      catchError((e: any) => {
+        const err = e as Error;
         const rpcError = new RpcException({
           message: err?.message || 'Internal Server Error',
           statusCode: err?.statusCode || HttpStatus.INTERNAL_SERVER_ERROR,
@@ -68,11 +77,11 @@ export class AuthService {
     );
     this.gmailClient.emit(GMAIL_PATTERNS.SEND_EMAIL_REGISTER, user);
     const { code, url } = await this.generateAndSendCode(
-      user.verifiedCode ?? "",
+      user.verifiedCode ?? '',
       user.expiredCode ?? new Date(),
       'verify',
       GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL,
-      user
+      user,
     );
     return {
       verifiedCode: code,
@@ -89,18 +98,20 @@ export class AuthService {
   async verifyLocalToken(token: string) {
     const payload = await this.verifyToken<VerifyTokenDto>(token);
     if (!payload) throw new UnauthorizedException('Invalid token');
-    const { userId, code } = payload
+    const { userId, code } = payload;
     return this.handleRpc(
       this.userClient.send(USER_PATTERNS.VERIFY_LOCAL, { userId, code }),
     );
   }
 
-  async verifyForgotPassword(userId: string, code: string, password: string) {
-    return this.handleRpc(this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
-      userId,
-      code,
-      password
-    }))
+  verifyForgotPassword(userId: string, code: string, password: string) {
+    return this.handleRpc(
+      this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
+        userId,
+        code,
+        password,
+      }),
+    );
   }
 
   async verifyForgotPasswordToken(token: string, password: string) {
@@ -110,7 +121,7 @@ export class AuthService {
       this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
         userId: payload.userId,
         code: payload.code,
-        password
+        password,
       }),
     );
   }
@@ -121,17 +132,16 @@ export class AuthService {
     typeCode: 'verify' | 'reset',
     pattern: string,
     user: User,
-  ): Promise<{ code: string, url: string }> {
+  ): Promise<{ code: string; url: string }> {
     const tokenPayload = {
       userId: user.id,
       code,
-      expiredCode
+      expiredCode,
     };
 
-    const token = await this.jwtService.signAsync(
-      tokenPayload as any,
-      { expiresIn: 15 * 60 },
-    );
+    const token = await this.jwtService.signAsync(tokenPayload, {
+      expiresIn: 15 * 60,
+    });
 
     const urlSegment = typeCode === 'reset' ? 'reset/password' : 'verify/token';
     const url = `${process.env.HOST_URL || 'http://localhost:3000'}/auth/${urlSegment}?token=${token}`;
@@ -148,9 +158,7 @@ export class AuthService {
 
   async resetCode(id: string) {
     const payload = await firstValueFrom<ResetCodeDto>(
-      this.handleRpc(
-        this.userClient.send(USER_PATTERNS.RESET_CODE, id),
-      ),
+      this.handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, id)),
     );
 
     const { code, url } = await this.generateAndSendCode(
@@ -158,7 +166,7 @@ export class AuthService {
       payload.expiredCode,
       'reset',
       GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL,
-      payload.user
+      payload.user,
     );
 
     return {
@@ -169,16 +177,14 @@ export class AuthService {
 
   async resetVerificationCode(userId: string) {
     const payload = await firstValueFrom<ResetCodeDto>(
-      this.handleRpc(
-        this.userClient.send(USER_PATTERNS.RESET_CODE, userId),
-      ),
+      this.handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, userId)),
     );
     const { code, url } = await this.generateAndSendCode(
       payload.code,
       payload.expiredCode,
       'verify',
       GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL,
-      payload.user
+      payload.user,
     );
 
     return {
@@ -187,16 +193,16 @@ export class AuthService {
     };
   }
 
-
-  private async generateTokensAndSession(payload: JwtDto | null = null, user: User | null = null, isRefresh = false) {
+  private async generateTokensAndSession(
+    payload: JwtDto | null = null,
+    user: User | null = null,
+    isRefresh = false,
+  ) {
     const sessionId = randomUUID();
     const id = payload?.id ?? user?.id;
     const role = payload?.role ?? user?.role;
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(
-        { id, role },
-        { expiresIn: ACCESS_TTL },
-      ),
+      this.jwtService.signAsync({ id, role }, { expiresIn: ACCESS_TTL }),
       this.jwtService.signAsync(
         { id, sessionId, role },
         { expiresIn: REFRESH_TTL },
@@ -249,7 +255,16 @@ export class AuthService {
   }
 
   private async handleLinking(data: GoogleAccountDto, account: Account) {
-    const { accessToken, refreshToken, provider, providerId, email, name, avatar, linkedUser } = data;
+    const {
+      accessToken,
+      refreshToken,
+      provider,
+      providerId,
+      email,
+      name,
+      avatar,
+      linkedUser,
+    } = data;
 
     const user = await this.verifyToken<JwtDto>(linkedUser ?? '');
     if (!user) {
@@ -301,18 +316,33 @@ export class AuthService {
   }
 
   private async handleRegisterGoogle(data: GoogleAccountDto) {
-    const { accessToken, refreshToken, provider, providerId, email, name, avatar } = data;
+    const {
+      accessToken,
+      refreshToken,
+      provider,
+      providerId,
+      email,
+      name,
+      avatar,
+    } = data;
 
     const user = await firstValueFrom<User>(
       this.handleRpc(
         this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
-          provider, providerId, name, email, avatar,
+          provider,
+          providerId,
+          name,
+          email,
+          avatar,
         } as CreateAuthOAuthDto),
       ),
     );
 
-    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN,
-      { userId: user.id, accessToken, refreshToken });
+    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+      userId: user.id,
+      accessToken,
+      refreshToken,
+    });
 
     return await this.generateTokensAndSession(null, user, true);
   }
@@ -371,39 +401,57 @@ export class AuthService {
         message: 'Refresh in progress',
       });
 
-    return await this.generateTokensAndSession({ id: payload.id, role: payload.role } as JwtDto, null, true);
+    return await this.generateTokensAndSession(
+      { id: payload.id, role: payload.role } as JwtDto,
+      null,
+      true,
+    );
   }
 
   changePassword(changePasswordDto: ChangePasswordDto) {
     return this.handleRpc(
-      this.userClient.send(USER_PATTERNS.UPDATE_PASSWORD, changePasswordDto).pipe(
-        tap((user: User) => {
-          console.log(user)
-          this.gmailClient.emit(GMAIL_PATTERNS.SEND_EMAIL_PASSWORD_CHANGE, user);
-        }),
-        map(() => ({ message: 'Password changed successfully' })),
-      ),    
-    )
+      this.userClient
+        .send(USER_PATTERNS.UPDATE_PASSWORD, changePasswordDto)
+        .pipe(
+          tap((user: User) => {
+            console.log(user);
+            this.gmailClient.emit(
+              GMAIL_PATTERNS.SEND_EMAIL_PASSWORD_CHANGE,
+              user,
+            );
+          }),
+          map(() => ({ message: 'Password changed successfully' })),
+        ),
+    );
   }
 
   async forgetPassword(forgotPasswordDto: ForgotPasswordDto) {
     try {
-      const payload = await firstValueFrom<{ user: User, resetCode: string, expiredCode: Date }>(
-        this.handleRpc(this.userClient.send(USER_PATTERNS.RESET_PASSWORD, forgotPasswordDto.email)),
-      )
+      const payload = await firstValueFrom<{
+        user: User;
+        resetCode: string;
+        expiredCode: Date;
+      }>(
+        this.handleRpc(
+          this.userClient.send(
+            USER_PATTERNS.RESET_PASSWORD,
+            forgotPasswordDto.email,
+          ),
+        ),
+      );
 
       if (!payload.user) {
         throw new NotFoundException('Account not found');
       }
 
-      const { user, resetCode, expiredCode } = payload
+      const { user, resetCode, expiredCode } = payload;
       const { code, url } = await this.generateAndSendCode(
         resetCode,
         expiredCode,
         'reset',
         GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL,
-        user
-      )
+        user,
+      );
       return {
         resetUrl: url,
         resetCode: code,

@@ -4,16 +4,15 @@ import { AuthService } from './auth.service';
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
 import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
-import { UserDto } from '@app/contracts/user/user.dto';
 import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
 import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
 import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
-import { JwtDto, RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
+import { JwtDto } from '@app/contracts/auth/jwt.dto';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @MessagePattern(AUTH_PATTERN.REGISTER)
   register(@Payload() createAuthDto: CreateAuthDto) {
@@ -24,7 +23,6 @@ export class AuthController {
   validateToken(@Payload() token: string) {
     return this.authService.verifyToken<JwtDto>(token);
   }
-
 
   @MessagePattern(AUTH_PATTERN.VERIFY_LOCAL)
   verifyLocal(@Payload() data: { userId: string; code: string }) {
@@ -38,11 +36,17 @@ export class AuthController {
 
   @MessagePattern(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD)
   verifyForgotPassword(@Payload() data: ConfirmResetPasswordDto) {
-    return this.authService.verifyForgotPassword(data.userId ?? '', data.code ?? '', data.password ?? '');
+    return this.authService.verifyForgotPassword(
+      data.userId ?? '',
+      data.code ?? '',
+      data.password ?? '',
+    );
   }
 
   @MessagePattern(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN)
-  verifyForgotPasswordToken(@Payload() data: { token: string; password: string }) {
+  verifyForgotPasswordToken(
+    @Payload() data: { token: string; password: string },
+  ) {
     const { token, password } = data;
     return this.authService.verifyForgotPasswordToken(token, password);
   }
@@ -69,9 +73,7 @@ export class AuthController {
   }
 
   @MessagePattern(AUTH_PATTERN.CHANGE_PASSWORD)
-  changePassword(
-    @Payload() changePasswordDto: ChangePasswordDto,
-  ) {
+  changePassword(@Payload() changePasswordDto: ChangePasswordDto) {
     return this.authService.changePassword(changePasswordDto);
   }
 

@@ -7,7 +7,7 @@ export class ConfirmResetPasswordDto {
 
   @IsOptional()
   @IsString()
-  userId?: string
+  userId?: string;
   @IsString()
   @IsOptional()
   code?: string;

@@ -35,8 +35,14 @@ export class UserController {
   }
 
   @MessagePattern(USER_PATTERNS.VERIFY_FORGET_PASSWORD)
-  verifyForgotPassword(@Payload() data: { userId: string; code: string, password: string }) {
-    return this.userService.verifyForgotPassword(data.userId, data.code, data.password);
+  verifyForgotPassword(
+    @Payload() data: { userId: string; code: string; password: string },
+  ) {
+    return this.userService.verifyForgotPassword(
+      data.userId,
+      data.code,
+      data.password,
+    );
   }
 
   @MessagePattern(USER_PATTERNS.RESET_CODE)
@@ -48,7 +54,7 @@ export class UserController {
 
   @MessagePattern(USER_PATTERNS.RESET_PASSWORD)
   resetPassword(@Payload() email: string) {
-    console.log(email)
+    console.log(email);
     return this.userService.resetPassword(email);
   }
 
@@ -92,9 +98,9 @@ export class UserController {
   @MessagePattern(USER_PATTERNS.UPDATE_PASSWORD)
   async updatePassword(@Payload() updatePasswordDto: ChangePasswordDto) {
     return await this.userService.updatePassword(
-      updatePasswordDto.id ?? "",
+      updatePasswordDto.id ?? '',
       updatePasswordDto.oldPassword,
-      updatePasswordDto.newPassword
+      updatePasswordDto.newPassword,
     );
   }
 

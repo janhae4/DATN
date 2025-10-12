@@ -6,7 +6,7 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
 async function bootstrap() {
   const app = await NestFactory.create(RedisModule);
   const cfg = app.get(ClientConfigService);
-  
+
   app.connectMicroservice(cfg.redisClientOptions as MicroserviceOptions);
   await app.startAllMicroservices();
 }

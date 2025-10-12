@@ -22,9 +22,6 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
     }),
   ],
   controllers: [GmailController],
-  providers: [
-    GmailService,
-    CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
-  ],
+  providers: [GmailService, CLIENT_PROXY_PROVIDER.REDIS_CLIENT],
 })
 export class GmailModule {}
