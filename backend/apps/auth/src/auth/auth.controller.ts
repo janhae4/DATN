@@ -9,6 +9,7 @@ import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
 import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
 import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
+import { JwtDto, RefreshTokenDto } from '@app/contracts/auth/jwt.dto';
 
 @Controller()
 export class AuthController {
@@ -18,6 +19,12 @@ export class AuthController {
   register(@Payload() createAuthDto: CreateAuthDto) {
     return this.authService.register(createAuthDto);
   }
+
+  @MessagePattern(AUTH_PATTERN.VALIDATE_TOKEN)
+  validateToken(@Payload() token: string) {
+    return this.authService.verifyToken<JwtDto>(token);
+  }
+
 
   @MessagePattern(AUTH_PATTERN.VERIFY_LOCAL)
   verifyLocal(@Payload() data: { userId: string; code: string }) {
@@ -31,7 +38,6 @@ export class AuthController {
 
   @MessagePattern(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD)
   verifyForgotPassword(@Payload() data: ConfirmResetPasswordDto) {
-    console.log(data);
     return this.authService.verifyForgotPassword(data.userId ?? '', data.code ?? '', data.password ?? '');
   }
 
@@ -63,10 +69,10 @@ export class AuthController {
   }
 
   @MessagePattern(AUTH_PATTERN.CHANGE_PASSWORD)
-  async changePassword(
+  changePassword(
     @Payload() changePasswordDto: ChangePasswordDto,
-  ): Promise<UserDto> {
-    return await this.authService.changePassword(changePasswordDto);
+  ) {
+    return this.authService.changePassword(changePasswordDto);
   }
 
   @MessagePattern(AUTH_PATTERN.GOOGLE_CALLBACK)
@@ -74,11 +80,6 @@ export class AuthController {
     console.log('GOOGLE CALLBACK');
     console.log(user);
     return this.authService.handleGoogleCallback(user);
-  }
-
-  @MessagePattern(AUTH_PATTERN.VALIDATE_TOKEN)
-  async validateToken(@Payload() token: string) {
-    return await this.authService.verifyToken(token);
   }
 
   @MessagePattern(AUTH_PATTERN.REFRESH)

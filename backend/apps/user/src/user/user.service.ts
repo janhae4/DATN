@@ -15,10 +15,12 @@ import { Account, Provider } from './entity/account.entity';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { randomInt } from 'crypto';
-import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
+import { BroadcastOperator } from 'socket.io';
 
 @Injectable()
 export class UserService {
+  private readonly MIN_WAIT_TIME_MS = 60 * 1000;
+  private readonly EXPIRY_TIME_MS = 15 * 60 * 1000;
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -33,7 +35,7 @@ export class UserService {
     return await this.userRepo.save(user);
   }
 
-  async registerLocal(createUserDto: CreateAuthLocalDto) {
+  async createLocal(createUserDto: CreateAuthLocalDto) {
     return await this.dataSource.transaction(async (manager) => {
       const { email, username } = createUserDto;
 
@@ -120,7 +122,10 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    if (user.verifiedCode && user.verifiedCode !== code) {
+    if (!user.verifiedCode)
+      throw new BadRequestException('You have already verified your account');
+
+    if (user.verifiedCode !== code) {
       console.log(user.verifiedCode, code);
       throw new BadRequestException('Invalid verification code');
     }
@@ -129,68 +134,82 @@ export class UserService {
       throw new BadRequestException('Verification code expired');
     }
 
-    return await this.userRepo.update(user.id, {
+    await this.userRepo.update(user.id, {
       verifiedCode: null,
       expiredCode: null,
       isVerified: true
     })
+    return { message: "Account verified successfully" };
   }
 
   async verifyForgotPassword(userId: string, code: string, password: string) {
-      const user = await this.findOne(userId);
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-      if (!password)
-        throw new BadRequestException('Password is required');
+    if (!password)
+      throw new BadRequestException('Password is required');
 
-      if (!user.resetCode)
-        throw new BadRequestException('Invalid verification code');
+    if (!user.resetCode)
+      throw new BadRequestException('Invalid verification code');
 
-      if (user.resetCode && user.resetCode !== code) {
-        throw new BadRequestException('Invalid verification code');
-      }
+    if (user.resetCode && user.resetCode !== code) {
+      throw new BadRequestException('Invalid verification code');
+    }
 
-      if (user.expiredCode && user.expiredCode < new Date()) {
-        throw new BadRequestException('Verification code expired');
-      }
+    if (user.expiredCode && user.expiredCode < new Date()) {
+      throw new BadRequestException('Verification code expired');
+    }
 
-      const account = user?.accounts.find((a) => a.provider === Provider.LOCAL) as Account;
-      const hashedPassword = await bcrypt.hash(password, 10);
+    const account = user?.accounts.find((a) => a.provider === Provider.LOCAL) as Account;
+    if (await bcrypt.compare(password, account.password ?? "")) {
+      throw new BadRequestException('Password must be different from old password');
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      await Promise.all([
-        this.userRepo.update(user.id, {
-          resetCode: null,
-          expiredCode: null
-        }),
-        this.accountRepo.update(account.id, {
-          password: hashedPassword
-        })
-      ])
-      
-      return { message: "Password changed successfully" };
-    
+    await Promise.all([
+      this.userRepo.update(user.id, {
+        resetCode: null,
+        expiredCode: null
+      }),
+      this.accountRepo.update(account.id, {
+        password: hashedPassword
+      })
+    ])
+
+    return { message: "Password changed successfully" };
+
   }
 
-  async resetCode(userId: string, typeCode: 'verify' | 'reset' = 'verify') {
+  async resetCode(userId: string, typeCode: 'verify' | 'reset') {
     return await this.dataSource.transaction(async (manager) => {
       const user = await manager.findOne(User, {
         where: { id: userId },
         lock: { mode: 'pessimistic_write' },
       });
 
+      console.log(typeCode === 'verify', typeCode === 'reset', typeCode);
+
       if (!user) throw new NotFoundException('User not found');
       if (user.isVerified && typeCode === 'verify')
         throw new BadRequestException('User already verified');
+      if (!user.resetCode && typeCode === 'reset')
+        throw new BadRequestException('There is no reset code for this user');
       if (user.expiredCode && user.expiredCode > new Date()) {
-        throw new BadRequestException('Verification code not expired');
+        throw new BadRequestException(`${typeCode === 'verify' ? 'Verification' : 'Reset'} code not expired`);
       }
 
+      console.log(user.resetCode)
       const code = randomInt(100000, 999999).toString();
-      typeCode === 'verify' ? (user.verifiedCode = code) : (user.resetCode = code);
-      user.expiredCode = new Date(Date.now() + 15 * 60 * 1000);
-      await manager.save(user);
+      const expiredCode = new Date(Date.now() + this.EXPIRY_TIME_MS);
+      const updateData = typeCode === 'verify'
+        ? { verifiedCode: code, expiredCode }
+        : { resetCode: code, expiredCode };
+
+      await manager.update(User, { id: userId }, updateData);
+
+      return { user, code, expiredCode };
     });
   }
 
@@ -257,8 +276,6 @@ export class UserService {
       relations: ['user'],
     });
 
-    console.log(account);
-
     if (
       account &&
       (await bcrypt.compare(loginDto.password, account.password || ''))
@@ -269,9 +286,6 @@ export class UserService {
   }
 
   async resetPassword(email: string) {
-    const MIN_WAIT_TIME_MS = 60 * 1000;
-    const EXPIRY_TIME_MS = 15 * 60 * 1000;
-
     return await this.dataSource.transaction(async (manager) => {
 
       const user = await manager.findOne(User, {
@@ -301,17 +315,17 @@ export class UserService {
       }
 
       const now = Date.now();
-      const lastSentTime = user.expiredCode ? user.expiredCode.getTime() - EXPIRY_TIME_MS : 0;
+      const lastSentTime = user.expiredCode ? user.expiredCode.getTime() - this.EXPIRY_TIME_MS : 0;
 
-      if (user.resetCode && (now < lastSentTime + MIN_WAIT_TIME_MS)) {
-        const timeRemaining = Math.ceil((lastSentTime + MIN_WAIT_TIME_MS - now) / 1000);
+      if (user.resetCode && (now < lastSentTime + this.MIN_WAIT_TIME_MS)) {
+        const timeRemaining = Math.ceil((lastSentTime + this.MIN_WAIT_TIME_MS - now) / 1000);
         throw new BadRequestException(
           `Reset code already sent! Please wait ${timeRemaining} seconds`,
         );
       }
 
       const resetCode = randomInt(100000, 1000000).toString();
-      const expiredCode = new Date(now + EXPIRY_TIME_MS);
+      const expiredCode = new Date(now + this.EXPIRY_TIME_MS);
 
       await manager.update(User, { id: user.id }, {
         resetCode,
@@ -324,13 +338,15 @@ export class UserService {
 
 
   async confirmResetPassword(userId: string, code: string, password: string) {
-    console.log(userId, code, password);
     const user = await this.findOne(userId);
     const account = user?.accounts.find((a) => a.provider === Provider.LOCAL);
     if (!account) throw new NotFoundException('Account not found');
     if (user?.resetCode !== code) throw new BadRequestException('Invalid code');
     if (user.expiredCode && user.expiredCode < new Date())
       throw new BadRequestException('Code expired');
+    console.log(await bcrypt.compare(password, account.password ?? ""));
+    if (await bcrypt.compare(password, account.password ?? "")) 
+      throw new BadRequestException('Password must be different from old password');
     const hashedPassword = await bcrypt.hash(password, 10);
     return await Promise.all([
       this.userRepo.update(user.id, {
@@ -343,19 +359,36 @@ export class UserService {
     ])
   }
 
-  async updatePassword(id: string, password: string) {
-    const result = await this.accountRepo.query<[[{ user: UserDto }], number]>(
-      `
-      UPDATE accounts SET password = $1 WHERE id = $2
-      RETURNING (
-        SELECT row_to_json(u)
-        FROM "users" u
-        WHERE u.id = accounts."userId"
-      ) as user
-      `,
-      [password, id],
-    );
-    return result[0]?.[0]?.user;
+  async updatePassword(id: string, oldPassword: string, newPassword: string) {
+    return await this.dataSource.transaction(async (manager) => {
+      if (oldPassword === newPassword) {
+        throw new BadRequestException('New password must be different from old password');
+      }
+
+      const user = await manager.findOne(User, {
+        where: { id },
+        relations: ['accounts'],
+        lock: {
+          mode: 'pessimistic_write',
+          tables: ['users']
+        },
+      });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      const account = user.accounts.find((a) => a.provider === Provider.LOCAL);
+      if (!account) {
+        throw new NotFoundException('Local account not found');
+      }
+
+      if (!(await bcrypt.compare(oldPassword, account.password ?? ""))) {
+        throw new BadRequestException('Old password is incorrect');
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await manager.update(Account, { id: account.id }, { password: hashedPassword });
+      return user;
+    })
   }
 
   async update(id: string, data: Partial<User>) {

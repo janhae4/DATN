@@ -1,9 +1,7 @@
-import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
 import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
-import { AUTH_CLIENT, REDIS_CLIENT } from '@app/contracts/constants';
+import { REDIS_CLIENT } from '@app/contracts/constants';
 import { NotFoundException } from '@app/contracts/errror';
-import { sendEmailResetPasswordDto } from '@app/contracts/gmail/dto/send-email-reset-password.dto';
-import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email-verification.dto';
+import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email.dto';
 import {
   loginNotificationSubject,
   loginNotificationTemplate,
@@ -17,24 +15,21 @@ import {
   verificationEmailTemplate,
 } from '@app/contracts/gmail/email-subject.constant';
 import {
-  EmailSystemType,
   SendMailDto,
 } from '@app/contracts/gmail/send-mail.dto';
 import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { MailerService } from '@nestjs-modules/mailer';
-import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Inject, HttpStatus } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { OAuth2Client } from 'google-auth-library';
 import { google, gmail_v1 } from 'googleapis';
-import { userInfo } from 'os';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class GmailService {
   private oauth2Client: OAuth2Client = new OAuth2Client();
   constructor(
-    @Inject(AUTH_CLIENT) private readonly authClient: ClientProxy,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
     private readonly gmailService: MailerService,
   ) { }
@@ -131,30 +126,40 @@ export class GmailService {
   async sendEmailRegister(user: UserDto): Promise<void> {
     const subject = registerNotificationSubject;
     const content = registerNotificationTemplate(user.name);
+    console.log("SEND EMAIL REGISTER TO", user.email);
     await this.gmailService.sendMail({
       to: user.email,
       subject,
-      text: content,
+      html: content,
     })
   }
 
   async sendEmailPasswordChange(user: UserDto): Promise<void> {
     const subject = passwordChangeNotificationSubject;
-    const content = passwordChangeNotificationTemplate(user.name, new Date().toISOString());
+    const content = passwordChangeNotificationTemplate(user.name, new Date().toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }));
     await this.gmailService.sendMail({
       to: user.email,
       subject,
-      text: content,
+      html: content,
     })
   }
 
   async sendVerificationEmail(verificationEmail: SendEmailVerificationDto) {
     try {
-      const { verificationUrl, user, code } = verificationEmail;
+      const { url, user, code } = verificationEmail;
       const subject = verificationEmailSubject;
       const content = verificationEmailTemplate(
         user?.name ?? '',
-        verificationUrl,
+        url,
         code,
         15
       );
@@ -174,14 +179,14 @@ export class GmailService {
     }
   }
 
-  async sendResetPasswordEmail(resetPassword: sendEmailResetPasswordDto) {
+  async sendResetPasswordEmail(resetPassword: SendEmailVerificationDto) {
     try {
-      const { resetUrl, user, code } = resetPassword;
+      const { url, user, code } = resetPassword;
       const subject = resetPasswordNotificationSubject;
       const content = resetPasswordNotificationTemplate(
         user?.name ?? '',
         15,
-        resetUrl,
+        url,
         code,
       );
 
@@ -192,9 +197,10 @@ export class GmailService {
       });
     } catch (error) {
       console.error('Failed to send reset password email:', error);
-      throw new HttpException(
-        'Failed to send reset password email',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+      throw new RpcException({
+        message: 'Failed to send reset password email',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      }
       );
     }
   }

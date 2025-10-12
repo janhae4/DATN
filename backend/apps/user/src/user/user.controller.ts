@@ -5,10 +5,10 @@ import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
-import { UpdatePasswordDto } from '@app/contracts/user/update-password';
 import { User } from './entity/user.entity';
 import { Provider } from '@app/contracts/user/account.dto';
 import { Account } from './entity/account.entity';
+import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
 
 @Controller()
 export class UserController {
@@ -16,7 +16,7 @@ export class UserController {
 
   @MessagePattern(USER_PATTERNS.CREATE_LOCAL)
   create(@Payload() createUserDto: CreateAuthLocalDto) {
-    return this.userService.registerLocal(createUserDto);
+    return this.userService.createLocal(createUserDto);
   }
 
   @MessagePattern(USER_PATTERNS.CREATE_OAUTH)
@@ -36,13 +36,13 @@ export class UserController {
 
   @MessagePattern(USER_PATTERNS.VERIFY_FORGET_PASSWORD)
   verifyForgotPassword(@Payload() data: { userId: string; code: string, password: string }) {
-    console.log(data);
     return this.userService.verifyForgotPassword(data.userId, data.code, data.password);
   }
 
   @MessagePattern(USER_PATTERNS.RESET_CODE)
   resetCode(@Payload() data: { userId: string; typeCode: 'verify' | 'reset' }) {
     const { userId, typeCode } = data;
+    console.log(data);
     return this.userService.resetCode(userId, typeCode);
   }
 
@@ -86,17 +86,15 @@ export class UserController {
 
   @MessagePattern(USER_PATTERNS.VALIDATE)
   async validate(@Payload() loginDto: LoginDto) {
-    console.log(loginDto);
-    const user = await this.userService.validate(loginDto);
-    console.log(user);
-    return user;
+    return await this.userService.validate(loginDto);
   }
 
   @MessagePattern(USER_PATTERNS.UPDATE_PASSWORD)
-  updatePassword(@Payload() updatePasswordDto: UpdatePasswordDto) {
-    return this.userService.updatePassword(
-      updatePasswordDto.id,
-      updatePasswordDto.password,
+  async updatePassword(@Payload() updatePasswordDto: ChangePasswordDto) {
+    return await this.userService.updatePassword(
+      updatePasswordDto.id ?? "",
+      updatePasswordDto.oldPassword,
+      updatePasswordDto.newPassword
     );
   }
 

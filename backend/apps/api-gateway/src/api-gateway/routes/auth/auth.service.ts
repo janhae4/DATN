@@ -58,6 +58,7 @@ export class AuthService {
   }
 
   verifyForgetPasswordCode(userId: string, code: string, password: string) {
+    console.log(userId, code, password);
     return this.authClient.send(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD, {
       userId,
       code,
@@ -74,11 +75,11 @@ export class AuthService {
   }
 
   resetCode(userId: string) {
-    return this.authClient.send(AUTH_PATTERN.RESET_CODE, userId);
+    return this.authClient.send(AUTH_PATTERN.RESET_CODE, {userId, typeCode: 'reset'});
   }
 
   resetVerificationCode(userId: string) {
-    return this.authClient.send(AUTH_PATTERN.RESET_VERIFICATION_CODE, userId);
+    return this.authClient.send(AUTH_PATTERN.RESET_VERIFICATION_CODE, {userId, typeCode: 'verify'});
   }
 
   changePassword(changePasswordDto: ChangePasswordDto) {

@@ -4,8 +4,7 @@ import { GmailService } from './gmail.service';
 import { GMAIL_PATTERNS } from '@app/contracts/gmail/gmail.patterns';
 import { SendMailDto } from '@app/contracts/gmail/send-mail.dto';
 import { UserDto } from '@app/contracts/user/user.dto';
-import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email-verification.dto';
-import { sendEmailResetPasswordDto } from '@app/contracts/gmail/dto/send-email-reset-password.dto';
+import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email.dto';
 
 @Controller()
 export class GmailController {
@@ -47,7 +46,7 @@ export class GmailController {
   @MessagePattern(GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL)
   sendResetPasswordEmail(
     @Payload()
-    resetPassword: sendEmailResetPasswordDto
+    resetPassword: SendEmailVerificationDto
   ) {
     return this.gmailService.sendResetPasswordEmail(resetPassword);
   }

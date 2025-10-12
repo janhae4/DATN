@@ -1,5 +1,5 @@
 export class VerifyTokenDto {
   userId: string;
-  verifiedCode: string;
+  code: string;
   expiredCode: Date;
 }

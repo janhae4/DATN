@@ -19,7 +19,7 @@
     "start:dev:all": "start cmd /k \"npm run start:dev:api-gateway\" && start cmd /k \"npm run start:dev:user\" && start cmd /k \"npm run start:dev:auth\" && start cmd /k \"npm run start:dev:task\" && start cmd /k \"npm run start:dev:redis\" && start cmd /k \"npm run start:dev:gmail\" && start cmd /k \"npm run start:dev:notification\"",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/apps/backend/main",
-    "start:all": "concurrently -n api,auth,user,task,redis,notification \"npm:start:api\" \"npm:start:auth\" \"npm:start:user\" \"npm:start:task\" \"npm:start:redis\" \"npm:start:notification\"",
+    "start:all": "concurrently -n api,auth,user,task,redis,notification,gmail \"npm:start:api\" \"npm:start:auth\" \"npm:start:user\" \"npm:start:task\" \"npm:start:redis\" \"npm:start:notification\" \"npm:start:gmail\"",
     "start:api": "nest start api-gateway --watch",
     "start:auth": "nest start auth --watch",
     "start:user": "nest start user --watch",

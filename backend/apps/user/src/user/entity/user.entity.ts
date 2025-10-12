@@ -45,7 +45,7 @@ export class User {
   @Column({type: 'text', nullable: true })
   verifiedCode: string | null;
 
-  @Column({type: 'text', nullable: true })
+  @Column({type: 'timestamp', nullable: true })
   expiredCode: Date | null;
 
   @Column({type: 'text', nullable: true })

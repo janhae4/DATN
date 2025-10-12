@@ -1,7 +1,7 @@
 import { User } from "apps/user/src/user/entity/user.entity";
 
-export class SendEmailVerificationDto {
+export class ResetCodeDto {
     user: User
-    url: string
     code: string
+    expiredCode: Date
 }

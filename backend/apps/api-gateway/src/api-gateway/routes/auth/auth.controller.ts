@@ -7,6 +7,7 @@ import {
   Get,
   UseGuards,
   Query,
+  HttpException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
@@ -22,10 +23,11 @@ import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
 import { JwtDto } from '@app/contracts/auth/jwt.dto';
 import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
+import { catchError, throwError } from 'rxjs';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Get('hello')
   hello() {
@@ -66,14 +68,11 @@ export class AuthController {
     return this.authService.verifyToken(token);
   }
 
-  @Post('/resetCode')
+  @Post('/verify/reset')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
-  resetCode(@Req() request: Request, @Query('type') type: 'verify' | 'forgot') {
+  resetCode(@Req() request: Request) {
     const payload = request.user as JwtDto;
-    if (type === 'forgot') {
-      return this.authService.resetCode(payload.id);
-    }
     return this.authService.resetVerificationCode(payload.id);
   }
 
@@ -98,7 +97,7 @@ export class AuthController {
   @Roles(Role.ADMIN, Role.USER)
   forgotPasswordConfirm(@Req() request: Request, @Body() data: ConfirmResetPasswordDto) {
     const payload = request.user as JwtDto;
-      return this.authService.verifyForgetPasswordCode(payload.id, data.code ?? '', data.password ?? '');
+    return this.authService.verifyForgetPasswordCode(payload.id, data.code ?? '', data.password ?? '');
   }
 
   @Post('/reset-password')
