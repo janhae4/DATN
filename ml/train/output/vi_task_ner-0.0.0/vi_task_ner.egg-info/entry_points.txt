@@ -1,2 +1,0 @@
-[spacy_models]
-vi_task_ner = vi_task_ner
