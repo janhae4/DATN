@@ -4,12 +4,11 @@ import { ApiGatewayService } from './api-gateway.service';
 import { UserModule } from './routes/user/user.module';
 import { AuthModule } from './routes/auth/auth.module';
 import { TasksModule } from './routes/tasks/tasks.module';
-import { HttpModule } from '@nestjs/axios';
 import { RefreshTokenFilter } from '../common/filter/refresh-token.filter';
 import { RpcToHttpExceptionFilter } from '../common/filter/rpc-to-http.filter';
 
 @Module({
-  imports: [UserModule, AuthModule, TasksModule, HttpModule],
+  imports: [UserModule, AuthModule, TasksModule],
   controllers: [ApiGatewayController],
   providers: [RpcToHttpExceptionFilter, RefreshTokenFilter, ApiGatewayService],
 })

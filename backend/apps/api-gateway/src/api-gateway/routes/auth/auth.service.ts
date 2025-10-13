@@ -136,9 +136,11 @@ export class AuthService {
   }
 
   logout(request: Request, response: Response) {
-    this.clearCookies(response);
+    console.log(request.cookies)
     const refreshToken = request.cookies.refreshToken as string | undefined;
     this.authClient.emit(AUTH_PATTERN.LOGOUT, refreshToken);
+    this.clearCookies(response);
+    return {message: "Logout successfully"};
   }
 
   logoutAll(request: Request, response: Response) {

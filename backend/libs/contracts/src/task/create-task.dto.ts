@@ -1,40 +1,18 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsDateString,
-  IsInt,
-  Min,
-  Max,
-  IsEnum,
-} from 'class-validator';
-
-enum TaskStatus {
-  TODO = 'TODO',
-  IN_PROGRESS = 'IN_PROGRESS',
-  DONE = 'DONE',
-}
+import { ApiProperty } from "@nestjs/swagger"
+import { IsOptional, IsString } from "class-validator"
 
 export class CreateTaskDto {
-  @IsString()
-  @IsNotEmpty()
-  title: string;
-
   @IsOptional()
   @IsString()
-  description?: string;
+  userId?: string
 
-  @IsOptional()
-  @IsDateString()
-  deadline?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(5)
-  priority?: number;
-
-  @IsOptional()
-  @IsEnum(TaskStatus)
-  status?: TaskStatus;
+  @IsString()
+  @ApiProperty({
+    name: 'text',
+    type: String,
+    description: 'Task text',
+    example: 'Ngày mai nộp báo cáo vào lúc 5 giờ chiều',
+    required: true
+  })
+  text: string
 }

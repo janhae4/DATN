@@ -17,7 +17,7 @@ datasource db {
 
 model Task {
   taskId      String     @id @default(uuid())
-  title       String
+  userId      String
   description String?
   deadline    DateTime?
   priority    Int?

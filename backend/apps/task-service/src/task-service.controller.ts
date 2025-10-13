@@ -1,12 +1,11 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TaskServiceService } from './task-service.service';
-import { CreateTaskDto } from './dto/create-task.dto';
-import { UpdateTaskPayloadDto } from './dto/update-task-payload.dto';
-import { FindTaskDto } from './dto/find-task.dto';
 import { TASK_PATTERNS } from '@app/contracts/task/task.patterns';
 import { Task } from './generated/prisma';
 import { RequestGoogleTaskDto } from '@app/contracts/task/request-google-task.dto';
+import { CreateTaskDto } from '@app/contracts/task/create-task.dto';
+import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
 
 @Controller()
 export class TaskServiceController {
@@ -18,34 +17,30 @@ export class TaskServiceController {
   }
 
   @MessagePattern(TASK_PATTERNS.FIND_ONE)
-  async findOne(@Payload() data: FindTaskDto): Promise<Task> {
-    return this.taskServiceService.findOne(data.id);
+  async findOne(@Payload() id: string): Promise<Task> {
+    return this.taskServiceService.findOne(id);
   }
+
+  @MessagePattern(TASK_PATTERNS.FIND_BY_USER_ID)
+  async findByUserId(@Payload() id: string): Promise<Task[]> {
+    return this.taskServiceService.findByUserId(id);
+  }
+
+
 
   @MessagePattern(TASK_PATTERNS.CREATE)
   async create(@Payload() createTaskDto: CreateTaskDto): Promise<Task> {
-    const data = {
-      ...createTaskDto,
-      deadline: createTaskDto.deadline
-        ? new Date(createTaskDto.deadline)
-        : undefined,
-    };
-    return this.taskServiceService.create(data);
+    return this.taskServiceService.create(createTaskDto);
   }
 
   @MessagePattern(TASK_PATTERNS.UPDATE)
-  async update(@Payload() payload: UpdateTaskPayloadDto): Promise<Task> {
-    const { id, data: updateData } = payload;
-    const processedData = {
-      ...updateData,
-      deadline: updateData.deadline ?? undefined,
-    };
-    return this.taskServiceService.update(id, processedData);
+  async update(@Payload() payload: UpdateTaskDto): Promise<Task> {
+    return this.taskServiceService.update(payload.id, payload);
   }
 
   @MessagePattern(TASK_PATTERNS.REMOVE)
-  async remove(@Payload() data: FindTaskDto): Promise<Task> {
-    return this.taskServiceService.remove(data.id);
+  async remove(@Payload() id: string): Promise<Task> {
+    return this.taskServiceService.remove(id);
   }
 
   @MessagePattern(TASK_PATTERNS.FIND_GOOGLE_EVENTS)

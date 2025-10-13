@@ -16,14 +16,33 @@ import type { Request } from 'express';
 import { RoleGuard } from 'apps/api-gateway/src/common/role/role.guard';
 import { Roles } from 'apps/api-gateway/src/common/role/role.decorator';
 import { Role } from '@app/contracts/user/user.dto';
+import { JwtDto } from '@app/contracts/auth/jwt.dto';
+import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  create(@Body() createTaskDto: CreateTaskDto) {
-    return this.tasksService.create(createTaskDto);
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  @ApiBearerAuth()
+  @ApiBody({type: CreateTaskDto})
+  create(@Req() request: Request, @Body() createTaskDto: CreateTaskDto) {
+    const payload = request.user as JwtDto;
+
+    return this.tasksService.create({
+      ...createTaskDto,
+      userId: payload.id
+    });
+  }
+
+  @Get()
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  findByUserId(@Req() request: Request) {
+    const payload = request.user as JwtDto;
+    return this.tasksService.findByUserId(payload.id);
   }
 
   @Get('events')

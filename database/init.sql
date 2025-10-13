@@ -1,4 +1,0 @@
-CREATE DATABASE "user";
-CREATE DATABASE "notification";
-CREATE DATABASE "task";
-CREATE DATABASE "team";

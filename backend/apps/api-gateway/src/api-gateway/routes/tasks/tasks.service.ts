@@ -10,11 +10,6 @@ import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
 import { Request } from 'express';
 import { RequestGoogleTaskDto } from '@app/contracts/task/request-google-task.dto';
 
-interface RpcError {
-  code?: TaskErrorCode;
-  message?: string;
-}
-
 @Injectable()
 export class TasksService {
   constructor(@Inject(TASK_CLIENT) private readonly client: ClientProxy) {}
@@ -28,44 +23,20 @@ export class TasksService {
   }
 
   findOne(id: number) {
-    return this.client.send(TASK_PATTERNS.FIND_ONE, { id }).pipe(
-      catchError((err: RpcError) => {
-        if (err.code === TaskErrorCode.TASK_NOT_FOUND) {
-          return throwError(
-            () => new NotFoundException(err.message ?? 'Task not found'),
-          );
-        }
-        return throwError(() => err);
-      }),
-    );
+    return this.client.send(TASK_PATTERNS.FIND_ONE, { id })
+  }
+
+  findByUserId(id: string) {
+    return this.client.send(TASK_PATTERNS.FIND_BY_USER_ID, id )
   }
 
   update(id: number, updateTaskDto: UpdateTaskDto) {
     return this.client
       .send(TASK_PATTERNS.UPDATE, { id, data: updateTaskDto })
-      .pipe(
-        catchError((err: RpcError) => {
-          if (err.code === TaskErrorCode.TASK_NOT_FOUND) {
-            return throwError(
-              () => new NotFoundException(err.message ?? 'Task not found'),
-            );
-          }
-          return throwError(() => err);
-        }),
-      );
   }
 
   remove(id: number) {
-    return this.client.send(TASK_PATTERNS.REMOVE, { id }).pipe(
-      catchError((err: RpcError) => {
-        if (err.code === TaskErrorCode.TASK_NOT_FOUND) {
-          return throwError(
-            () => new NotFoundException(err.message ?? 'Task not found'),
-          );
-        }
-        return throwError(() => err);
-      }),
-    );
+    return this.client.send(TASK_PATTERNS.REMOVE, { id })
   }
 
   findGoogleEvents(request: Request) {

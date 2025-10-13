@@ -1,9 +1,71 @@
 services:
-  frontend:
-    build: ./frontend
+  rabbitmq:
+    image: rabbitmq:management
+    hostname: "rabbitmq"
+    container_name: rabbitmq_broker
     ports:
-      - "3000:3000"
-  backend:
-    build: ./backend
+      - "5672:5672" 
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+  redis:
+    image: redis:alpine
+    hostname: "redis"
+    container_name: redis_backend
     ports:
-      - "3001:3001"
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  postgres:
+    image: postgres:alpine
+    hostname: "postgres"
+    container_name: postgres_backend
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  worker:
+    build: 
+      context: ./ml
+      dockerfile: Dockerfile
+    
+    container_name: celery_worker_nlp
+
+    command: fastapi dev main.py --host 0.0.0.0 --port 8000
+    
+    volumes:
+      - ./ml:/app 
+      
+    environment:
+      CELERY_BROKER_URL: "amqp://guest:guest@rabbitmq:5672" 
+      CELERY_RESULT_BACKEND: "redis://redis:6379"
+      
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+        
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 2.5G 
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:

@@ -135,6 +135,11 @@ export class ClientConfigService {
   getTaskQueue(): string {
     return this.config.get<string>('TASK_QUEUE', 'task_service_queue');
   }
+
+  getTaskNerQueue(): string {
+    return this.config.get<string>('TASK_NER_QUEUE', 'celery');
+  }
+
   get taskClientOptions(): any {
     console.log('Task port: ', this.getTaskClientPort());
     return {
@@ -142,6 +147,17 @@ export class ClientConfigService {
       options: {
         urls: [this.getRMQUrl()],
         queue: this.getTaskQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  get taskNerClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getTaskNerQueue(),
         queueOptions: { durable: true },
       },
     };

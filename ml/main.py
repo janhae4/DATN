@@ -1,10 +1,11 @@
 import re
 from datetime import datetime, timedelta
-from typing import TypedDict, Optional, Literal, Dict, List, Any
+from typing import TypedDict, Optional, Literal, Dict, List
 from pydantic import BaseModel, Field
 import calendar
 import spacy
-from celery import Celery
+from fastapi import FastAPI
+
 
 PRIORITY_KEYWORDS: Dict[int, List[str]] = {
     5: ["gấp", "khẩn", "ngay lập tức", "phải làm liền"],
@@ -210,14 +211,17 @@ def detect_datetime_range(
 
     return result, task_text
 
-nlp = spacy.load("vi_ner_task")
-CELERY_BROKER_URL = 'amqp://localhost:5672'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
-celery_app = Celery('tasks', broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
-
+app = FastAPI()
+print("Loading SpaCy Model...")
+try:
+    nlp = spacy.load("vi_ner_task")
+except OSError:
+    print("LỖI: Không tìm thấy model 'vi_ner_task' trong Worker.")
+    nlp = None
 
 class TextInput(BaseModel):
     text: str = Field(..., example="Gấp, viết báo cáo tài chính lúc 10h sáng ngày mai")
+
 
 class TextOutput(BaseModel):
     task: str = Field(
@@ -234,9 +238,11 @@ class TextOutput(BaseModel):
     )
 
 
-@celery_app.task(name='process_nlp')
-def predict(input_data: TextInput):
-    doc = nlp(input_data.text)
+@app.post("/predict")
+def predict(data: TextInput) -> TextOutput:
+    text = data.text
+    print(f"Processing text: {text}")
+    doc = nlp(text)
 
     task = None
     date_text = None
@@ -253,9 +259,7 @@ def predict(input_data: TextInput):
             time_text = ent.text
 
     if not task:
-        task = input_data.text
-
-    priority = detect_priority(input_data.text)
+        task = text
 
     time_input = ""
     if date_text:
@@ -263,11 +267,13 @@ def predict(input_data: TextInput):
     if time_text:
         time_input += time_text
 
+    priority = detect_priority(time_input)
     dt_result, _ = detect_datetime_range(time_input)
 
     deadline_dt = dt_result.get("time") or dt_result.get("date")
     deadline_str = deadline_dt.isoformat() if deadline_dt else None
 
+    print(f"Task: {task}, Priority: {priority}, Deadline: {deadline_str}")
     return TextOutput(
         task=task,
         priority=priority,
