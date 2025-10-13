@@ -1,13 +1,11 @@
 import re
 from datetime import datetime, timedelta
 from typing import TypedDict, Optional, Literal, Dict, List, Any
-from fastapi import FastAPI
 from pydantic import BaseModel, Field
 import calendar
 import spacy
+from celery import Celery
 
-app = FastAPI(title="Task Intent and Priority Parser (Vietnamese)")
-nlp = spacy.load("vi_ner_task")
 PRIORITY_KEYWORDS: Dict[int, List[str]] = {
     5: ["gấp", "khẩn", "ngay lập tức", "phải làm liền"],
     4: ["ưu tiên", "deadline", "ngay", "hôm nay", "nay"],
@@ -212,10 +210,14 @@ def detect_datetime_range(
 
     return result, task_text
 
+nlp = spacy.load("vi_ner_task")
+CELERY_BROKER_URL = 'amqp://localhost:5672'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+celery_app = Celery('tasks', broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
+
 
 class TextInput(BaseModel):
     text: str = Field(..., example="Gấp, viết báo cáo tài chính lúc 10h sáng ngày mai")
-
 
 class TextOutput(BaseModel):
     task: str = Field(
@@ -232,7 +234,7 @@ class TextOutput(BaseModel):
     )
 
 
-@app.post("/predict", response_model=TextOutput)
+@celery_app.task(name='process_nlp')
 def predict(input_data: TextInput):
     doc = nlp(input_data.text)
 
