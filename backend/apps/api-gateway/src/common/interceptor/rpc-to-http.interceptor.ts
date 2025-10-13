@@ -16,12 +16,14 @@ export class RpcToHttpInterceptor implements NestInterceptor {
       catchError((rpcError) => {
         // Kiểm tra xem lỗi có cấu trúc từ RpcException của NestJS hay không
         const isRpcException =
-          typeof rpcError === 'object' && rpcError !== null && 'message' in rpcError;
+          typeof rpcError === 'object' &&
+          rpcError !== null &&
+          'message' in rpcError;
 
         const errorMessage = isRpcException
           ? rpcError.message
           : 'An unexpected error occurred';
-        
+
         const statusCode =
           isRpcException && typeof rpcError.status === 'number'
             ? rpcError.status

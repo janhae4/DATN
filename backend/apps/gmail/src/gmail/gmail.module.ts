@@ -18,13 +18,14 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
         preview: true,
       }),
       inject: [ClientConfigService],
-      imports: [ClientConfigModule] // fixed here 
-    })
+      imports: [ClientConfigModule], // fixed here
+    }),
   ],
   controllers: [GmailController],
-  providers: [GmailService,
+  providers: [
+    GmailService,
     CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
-    CLIENT_PROXY_PROVIDER.AUTH_CLIENT
+    CLIENT_PROXY_PROVIDER.AUTH_CLIENT,
   ],
 })
-export class GmailModule { }
+export class GmailModule {}

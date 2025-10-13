@@ -24,12 +24,27 @@ export class GmailController {
   }
 
   @MessagePattern(GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL)
-  sendVerificationEmail(@Payload() payload: { userId: string; email: string; verificationToken: string }) {
+  sendVerificationEmail(
+    @Payload()
+    payload: {
+      userId: string;
+      email: string;
+      verificationToken: string;
+    },
+  ) {
     return this.gmailService.sendVerificationEmail(payload);
   }
 
   @MessagePattern(GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL)
-  sendResetPasswordEmail(@Payload() payload: { userId: string; email: string; resetToken: string; name: string }) {
+  sendResetPasswordEmail(
+    @Payload()
+    payload: {
+      userId: string;
+      email: string;
+      resetToken: string;
+      name: string;
+    },
+  ) {
     return this.gmailService.sendResetPasswordEmail(payload);
   }
 }

@@ -10,7 +10,10 @@ export class ClientConfigService {
   -------------------------
   */
   getSMTPTransport(): string {
-    return this.config.get<string>('SMTP_TRANSPORT', 'smtps://user@domain.com:pass@smtp.domain.com');
+    return this.config.get<string>(
+      'SMTP_TRANSPORT',
+      'smtps://user@domain.com:pass@smtp.domain.com',
+    );
   }
 
   getSMTPFrom(): string {

@@ -70,7 +70,9 @@ export class AuthController {
   }
 
   @MessagePattern(AUTH_PATTERN.RESET_PASSWORD_CONFIRM)
-  async resetPasswordConfirm(@Payload() confirmResetPasswordDto: ConfirmResetPasswordDto) {
+  async resetPasswordConfirm(
+    @Payload() confirmResetPasswordDto: ConfirmResetPasswordDto,
+  ) {
     return await this.authService.resetPasswordConfirm(confirmResetPasswordDto);
   }
 }

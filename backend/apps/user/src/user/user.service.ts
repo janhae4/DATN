@@ -71,7 +71,7 @@ export class UserService {
             userId: savedUser.id,
             email: savedUser.email,
             verificationToken: savedUser.verificationToken,
-          })
+          }),
         );
         console.log('Verification email sent successfully');
       } catch (error) {

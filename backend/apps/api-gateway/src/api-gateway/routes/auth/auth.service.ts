@@ -120,11 +120,17 @@ export class AuthService {
   }
 
   forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
-    return this.authClient.send(AUTH_PATTERN.FORGET_PASSWORD, forgotPasswordDto);
+    return this.authClient.send(
+      AUTH_PATTERN.FORGET_PASSWORD,
+      forgotPasswordDto,
+    );
   }
-  
+
   resetPasswordConfirm(confirmResetPasswordDto: ConfirmResetPasswordDto) {
-    return this.authClient.send(AUTH_PATTERN.RESET_PASSWORD_CONFIRM, confirmResetPasswordDto);
+    return this.authClient.send(
+      AUTH_PATTERN.RESET_PASSWORD_CONFIRM,
+      confirmResetPasswordDto,
+    );
   }
 
   verifyEmail(token: string) {

@@ -52,7 +52,7 @@ export class UserController {
     console.log(loginDto);
     const user = await this.userService.validate(loginDto);
     console.log(user);
-    return user;  
+    return user;
   }
 
   @MessagePattern(USER_PATTERNS.UPDATE_PASSWORD)
@@ -73,7 +73,14 @@ export class UserController {
     return await this.userService.verifyEmail(token);
   }
   @MessagePattern(USER_PATTERNS.SEND_VERIFICATION_EMAIL)
-  async sendVerificationEmail(@Payload() data: { userId: string; email: string; verificationToken: string }) {
+  async sendVerificationEmail(
+    @Payload()
+    data: {
+      userId: string;
+      email: string;
+      verificationToken: string;
+    },
+  ) {
     // This will be handled by the Gmail service via microservice communication
     return { message: 'Verification email queued for sending' };
   }

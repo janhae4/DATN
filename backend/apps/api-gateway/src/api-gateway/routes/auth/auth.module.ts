@@ -13,7 +13,7 @@ import { GoogleStrategy } from 'apps/api-gateway/src/common/google.strategy';
     AuthService,
     CLIENT_PROXY_PROVIDER.AUTH_CLIENT,
     CLIENT_PROXY_PROVIDER.USER_CLIENT,
-    GoogleStrategy
+    GoogleStrategy,
   ],
   exports: [AuthService],
 })

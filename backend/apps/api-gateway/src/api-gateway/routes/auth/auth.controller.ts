@@ -22,11 +22,11 @@ import { Role, UserDto } from '@app/contracts/user/user.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Get('hello')
   hello() {
-    return { message: "hello" };
+    return { message: 'hello' };
   }
 
   @Get('/info')
@@ -96,13 +96,15 @@ export class AuthController {
   }
 
   @Post('/reset-password-confirm')
-  resetPasswordConfirm(@Body() confirmResetPasswordDto: ConfirmResetPasswordDto) {
+  resetPasswordConfirm(
+    @Body() confirmResetPasswordDto: ConfirmResetPasswordDto,
+  ) {
     return this.authService.resetPasswordConfirm(confirmResetPasswordDto);
   }
 
   @Get('/google/login')
   @UseGuards(AuthGuard('google'))
-  googleLogin() { }
+  googleLogin() {}
 
   @Get('/google/callback')
   @UseGuards(AuthGuard('google'))

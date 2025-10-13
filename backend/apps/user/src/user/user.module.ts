@@ -18,14 +18,13 @@ import { Account } from './entity/account.entity';
         entities: [User, Account],
         synchronize: true,
       }),
-
     }),
     TypeOrmModule.forFeature([User, Account], 'USER_CONNECTION'),
   ],
   controllers: [UserController],
   providers: [
     UserService,
-    CLIENT_PROXY_PROVIDER.GMAIL_CLIENT,  // ✅ Thêm GMAIL_CLIENT provider
+    CLIENT_PROXY_PROVIDER.GMAIL_CLIENT, // ✅ Thêm GMAIL_CLIENT provider
   ],
 })
 export class UserModule {}

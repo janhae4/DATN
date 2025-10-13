@@ -7,6 +7,6 @@ import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-confi
 @Module({
   imports: [ClientConfigModule],
   controllers: [GmailController],
-  providers: [GmailService, CLIENT_PROXY_PROVIDER.GMAIL_CLIENT ],
+  providers: [GmailService, CLIENT_PROXY_PROVIDER.GMAIL_CLIENT],
 })
 export class GmailModule {}

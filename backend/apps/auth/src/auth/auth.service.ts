@@ -40,7 +40,7 @@ export class AuthService {
     private readonly notificationClient: ClientProxy,
     @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   mapper(user: UserDto) {
     return {
@@ -198,7 +198,10 @@ export class AuthService {
     try {
       // Tìm user theo email
       const user = await firstValueFrom<UserDto>(
-        this.userClient.send(USER_PATTERNS.FIND_ONE_BY_EMAIL, forgotPasswordDto.email)
+        this.userClient.send(
+          USER_PATTERNS.FIND_ONE_BY_EMAIL,
+          forgotPasswordDto.email,
+        ),
       );
 
       if (!user) {
@@ -215,7 +218,7 @@ export class AuthService {
           email: user.email,
           resetToken: resetToken,
           name: user.name,
-        })
+        }),
       );
 
       return { message: 'Reset password email sent successfully' };
@@ -230,7 +233,10 @@ export class AuthService {
     // Đây chỉ là placeholder, cần implement đầy đủ logic
 
     // Hash mật khẩu mới
-    const hashedPassword = await bcrypt.hash(confirmResetPasswordDto.newPassword, 10);
+    const hashedPassword = await bcrypt.hash(
+      confirmResetPasswordDto.newPassword,
+      10,
+    );
 
     // Cập nhật mật khẩu
     // return this.userClient.send(USER_PATTERNS.UPDATE_PASSWORD, {
@@ -282,7 +288,7 @@ export class AuthService {
     console.log(account);
 
     if (account) {
-      console.log("account found");
+      console.log('account found');
 
       this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
         userId: account.user.id,
@@ -291,9 +297,7 @@ export class AuthService {
       });
 
       return account;
-    }
-    else {
-
+    } else {
       let user = await firstValueFrom<UserDto>(
         this.userClient.send(USER_PATTERNS.FIND_ONE_BY_EMAIL, email),
       );
@@ -310,7 +314,7 @@ export class AuthService {
         );
       }
 
-      console.log("account not found");
+      console.log('account not found');
 
       return user;
     }
