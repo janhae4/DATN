@@ -27,13 +27,12 @@ export class TasksController {
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
   @ApiBearerAuth()
-  @ApiBody({type: CreateTaskDto})
+  @ApiBody({ type: CreateTaskDto })
   create(@Req() request: Request, @Body() createTaskDto: CreateTaskDto) {
     const payload = request.user as JwtDto;
-
     return this.tasksService.create({
       ...createTaskDto,
-      userId: payload.id
+      userId: payload.id,
     });
   }
 

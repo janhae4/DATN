@@ -18,9 +18,13 @@ datasource db {
 model Task {
   taskId      String     @id @default(uuid())
   userId      String
+  title       String     @default("Title")
+  person      String?
   description String?
-  deadline    DateTime?
+  startTime   DateTime   @default(now())
+  endTime     DateTime?
   priority    Int?
+  isDaily     Boolean    @default(false)
   status      TaskStatus @default(PENDING)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

@@ -26,8 +26,6 @@ export class TaskServiceController {
     return this.taskServiceService.findByUserId(id);
   }
 
-
-
   @MessagePattern(TASK_PATTERNS.CREATE)
   async create(@Payload() createTaskDto: CreateTaskDto): Promise<Task> {
     return this.taskServiceService.create(createTaskDto);

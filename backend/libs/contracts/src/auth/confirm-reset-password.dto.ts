@@ -28,7 +28,7 @@ export class ConfirmResetPasswordDto {
     required: false,
   })
   code?: string;
-  
+
   @IsString()
   @IsOptional()
   @ApiProperty({

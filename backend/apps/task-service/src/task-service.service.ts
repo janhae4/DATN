@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { Prisma, Task, TaskStatus } from './generated/prisma';
+import { Prisma, Task } from './generated/prisma';
 import { GoogleCalendarService } from './google-calendar.service';
 import { JsonWebTokenError, TokenExpiredError } from '@nestjs/jwt';
-import { REDIS_CLIENT } from '@app/contracts/constants';
+import { REDIS_CLIENT, TASK_NER_CLIENT } from '@app/contracts/constants';
 import { firstValueFrom } from 'rxjs';
 import {
   BadRequestException,
@@ -16,30 +16,20 @@ import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
 import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
 import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
 import { CreateTaskDto } from '@app/contracts/task/create-task.dto';
-import { TASK_PATTERNS } from '@app/contracts/task/task.patterns';
-import * as celery from 'celery-node'; 
 
 const SECONDS_IN_HOUR = 60 * 60;
 const SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR;
 @Injectable()
 export class TaskServiceService {
-  private task: any;
   constructor(
     private prisma: PrismaService,
     private googleService: GoogleCalendarService,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
-  ) {
-    console.log('process.env.RMQ_URL', process.env.RMQ_URL);
-    console.log('process.env.REDIS_URL', process.env.REDIS_URL);
-    const client = celery.createClient(
-      "amqp://test:test@localhost:5672/?frameMax=8192",
-      "redis://localhost:6379/",
-    )
-    this.task = client.createTask(TASK_PATTERNS.PROCESS_NLP);
-  }
+    @Inject(TASK_NER_CLIENT) private readonly taskNerClient: ClientProxy,
+  ) {}
 
   private async getTaskNer<T>(text: string): Promise<T> {
-    return await this.task.applyAsync([], { text }).get();
+    return await firstValueFrom(this.taskNerClient.send('parse_text', text));
   }
 
   async findAll(): Promise<Task[]> {
@@ -51,7 +41,7 @@ export class TaskServiceService {
       where: { taskId: id },
     });
     if (!task) {
-      throw new NotFoundException("Task not found");
+      throw new NotFoundException('Task not found');
     }
     return task;
   }
@@ -63,63 +53,85 @@ export class TaskServiceService {
                     t."taskId",
                     t."userId",
                     t.title,
+                    t.person,
                     t.description,
-                    t.deadline,
+                    t.startTime,
+                    t.endTime,
+                    t.isDaily
                     t.status,
                     t."createdAt",
                     t."updatedAt",
                     t.priority AS "dbPriority",
 
                     CASE
-                        WHEN t.deadline IS NULL THEN NULL
-                        ELSE EXTRACT(EPOCH FROM (t.deadline - NOW()))
+                        WHEN t.endTime IS NULL THEN NULL
+                        ELSE EXTRACT(EPOCH FROM (t.endTime - NOW()))
                     END AS "secondsUntilDeadline",
 
                     CASE
                         WHEN t.status = 'DONE' THEN COALESCE(t.priority, 1)
-                        WHEN t.deadline IS NULL THEN COALESCE(t.priority, 1)
+                        WHEN t.endTime IS NULL THEN COALESCE(t.priority, 1)
                         
-                        WHEN EXTRACT(EPOCH FROM (t.deadline - NOW())) <= 0 THEN 5
-                        WHEN EXTRACT(EPOCH FROM (t.deadline - NOW())) < ${6 * SECONDS_IN_HOUR} THEN 5 
-                        WHEN EXTRACT(EPOCH FROM (t.deadline - NOW())) < ${2 * SECONDS_IN_DAY} THEN 4
-                        WHEN EXTRACT(EPOCH FROM (t.deadline - NOW())) < ${7 * SECONDS_IN_DAY} THEN 3
-                        WHEN EXTRACT(EPOCH FROM (t.deadline - NOW())) < ${30 * SECONDS_IN_DAY} THEN 2
+                        WHEN EXTRACT(EPOCH FROM (t.endTime - NOW())) <= 0 THEN 5
+                        WHEN EXTRACT(EPOCH FROM (t.endTime - NOW())) < ${6 * SECONDS_IN_HOUR} THEN 5 
+                        WHEN EXTRACT(EPOCH FROM (t.endTime - NOW())) < ${2 * SECONDS_IN_DAY} THEN 4
+                        WHEN EXTRACT(EPOCH FROM (t.endTime - NOW())) < ${7 * SECONDS_IN_DAY} THEN 3
+                        WHEN EXTRACT(EPOCH FROM (t.endTime - NOW())) < ${30 * SECONDS_IN_DAY} THEN 2
                         
-                        ELSE COALESCE(t.priority, 1) -- Mặc định là priority trong DB hoặc 1
+                        ELSE COALESCE(t.priority, 1)
                     END AS "calculatedPriority" 
 
                 FROM "task" t
                 WHERE t."userId" = ${userId}
             )
-            -- SELECT cuối cùng: trả về tất cả các cột cần thiết
             SELECT
                 "taskId",
                 "userId",
                 title,
                 description,
-                deadline,
+                person,
+                startTime,
+                endTime,
+                isDaily,
                 status,
                 "createdAt",
                 "updatedAt",
                 "calculatedPriority" AS priority
             FROM TaskPriority
-            ORDER BY "calculatedPriority" DESC, deadline ASC
+            ORDER BY "calculatedPriority" DESC, endTime ASC
     `;
   }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
     const { userId, text } = createTaskDto;
-    const data = await this.getTaskNer(text) as Prisma.TaskCreateInput;
-    console.log(data)
-    data.userId = userId ?? data.userId;
-    data.status = TaskStatus.IN_PROGRESS;
+    const taskNer = await this.getTaskNer<{
+      task: string;
+      person: string;
+      startTime: Date;
+      endTime: Date;
+      isDaily: boolean;
+    }>(text);
+
+    const data: Prisma.TaskCreateInput = {
+      userId: userId ?? '',
+      title: taskNer.task,
+      description: text,
+      person: taskNer.person,
+      startTime: new Date(taskNer.startTime),
+      endTime: taskNer.endTime ? new Date(taskNer.endTime) : null,
+      isDaily: taskNer.isDaily,
+    };
+
     try {
       return this.prisma.task.create({ data });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('Task already exists');
       }
-      throw new RpcException(error);
+      throw new RpcException(error as Error);
     }
   }
 
@@ -130,10 +142,13 @@ export class TaskServiceService {
         data,
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException('Task not found');
       }
-      throw new RpcException(error);
+      throw new RpcException(error as Error);
     }
   }
 
@@ -143,10 +158,13 @@ export class TaskServiceService {
         where: { taskId: id },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException('Task not found');
       }
-      throw new RpcException(error);
+      throw new RpcException(error as Error);
     }
   }
 

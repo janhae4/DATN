@@ -22,18 +22,23 @@ import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
 import { JwtDto } from '@app/contracts/auth/jwt.dto';
 import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
 import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Get('/info')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
   info(@Req() request: Request) {
     const user = request?.user as UserDto;
-    return this.authService.getInfo(user.id); 
+    return this.authService.getInfo(user.id);
   }
 
   @Post('/login')
@@ -65,8 +70,8 @@ export class AuthController {
     name: 'token',
     type: String,
     required: true,
-    description: "Verify token from email",
-    example: "eyJH..."
+    description: 'Verify token from email',
+    example: 'eyJH...',
   })
   verifyToken(@Query('token') token: string) {
     return this.authService.verifyToken(token);
@@ -78,8 +83,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Resend verification code',
-    description:
-    'Resend verification code to email',
+    description: 'Resend verification code to email',
   })
   resetCode(@Req() request: Request) {
     const payload = request.user as JwtDto;
@@ -140,8 +144,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Refresh token',
-    description:
-    'Refresh token',
+    description: 'Refresh token',
   })
   refresh(
     @Req() request: Request,
@@ -156,8 +159,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Logout',
-    description:
-    'Logout',
+    description: 'Logout',
   })
   logout(
     @Req() request: Request,
@@ -172,8 +174,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Logout all',
-    description:
-    'Logout all',
+    description: 'Logout all',
   })
   logoutAll(
     @Req() request: Request,
@@ -194,7 +195,7 @@ export class AuthController {
     type: String,
     required: true,
     description: 'login or link',
-    example: 'login'
+    example: 'login',
   })
   googleLogin(@Query('type') type: 'link' | 'login') {
     void type;
@@ -204,8 +205,7 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({
     summary: 'Google callback',
-    description:
-    'Google callback',
+    description: 'Google callback',
   })
   googleCallback(@Req() request: Request) {
     return this.authService.handleGoogleCallback(

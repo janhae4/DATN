@@ -137,7 +137,7 @@ export class ClientConfigService {
   }
 
   getTaskNerQueue(): string {
-    return this.config.get<string>('TASK_NER_QUEUE', 'celery');
+    return this.config.get<string>('TASK_NER_QUEUE', 'process_nlp');
   }
 
   get taskClientOptions(): any {

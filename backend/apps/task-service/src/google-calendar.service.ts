@@ -48,17 +48,17 @@ export class GoogleCalendarService {
     return {
       summary: task.title,
       description: task.description || '',
-      start: task.deadline
+      start: task.startTime
         ? {
-            dateTime: new Date(task.deadline).toISOString(),
+            dateTime: new Date(task.startTime).toISOString(),
             timeZone: 'Asia/Ho_Chi_Minh',
           }
         : undefined,
-      end: task.deadline
+      end: task.endTime
         ? {
             dateTime: new Date(
-              new Date(task.deadline).getTime() + 60 * 60 * 1000,
-            ).toISOString(), // +1h default
+              new Date(task.endTime).getTime() + 60 * 60 * 1000,
+            ).toISOString(),
             timeZone: 'Asia/Ho_Chi_Minh',
           }
         : undefined,
