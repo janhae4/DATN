@@ -6,7 +6,8 @@ import { X, Edit2, Plus, Save, Trash2, Clipboard } from "lucide-react";
 const LABELS = [
   "DATE",
   "TIME",
-  "TASK"
+  "TASK",
+  "PERSON",
 ];
 
 // Ánh xạ nhãn với màu Tailwind CSS

@@ -45,6 +45,499 @@
       }
     ],
     [
+      "Anh Tuấn cần gửi báo cáo tổng hợp chi phí vận hành vào hôm nay.",
+      {
+        "entities": [
+          [
+            0,
+            8,
+            "PERSON"
+          ],
+          [
+            13,
+            50,
+            "TASK"
+          ],
+          [
+            55,
+            61,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Khẩn cấp! Chị Lan cần chốt danh sách người tham dự trước 10 giờ 30 phút sáng mai.",
+      {
+        "entities": [
+          [
+            10,
+            17,
+            "PERSON"
+          ],
+          [
+            22,
+            50,
+            "TASK"
+          ],
+          [
+            51,
+            76,
+            "TIME"
+          ],
+          [
+            77,
+            79,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Tôi sẽ bắt đầu chuẩn bị hồ sơ bảo hiểm từ ngày 1/11 đến hết ngày 15/11.",
+      {
+        "entities": [
+          [
+            0,
+            3,
+            "PERSON"
+          ],
+          [
+            7,
+            38,
+            "TASK"
+          ],
+          [
+            39,
+            69,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Quan trọng: Nhắc sếp Dũng về cuộc họp đánh giá rủi ro vào lúc 3 giờ chiều mai.",
+      {
+        "entities": [
+          [
+            12,
+            53,
+            "TASK"
+          ],
+          [
+            62,
+            73,
+            "TIME"
+          ],
+          [
+            74,
+            76,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Chị Hoa yêu cầu phải làm liền việc tối ưu hóa hiệu suất của database.",
+      {
+        "entities": [
+          [
+            0,
+            7,
+            "PERSON"
+          ],
+          [
+            35,
+            67,
+            "TASK"
+          ]
+        ]
+      }
+    ],
+    [
+      "Cuộc họp với đối tác B sẽ diễn ra từ 9 giờ sáng đến 11 giờ trưa thứ Sáu.",
+      {
+        "entities": [
+          [
+            0,
+            22,
+            "TASK"
+          ],
+          [
+            34,
+            63,
+            "TIME"
+          ],
+          [
+            64,
+            70,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Đừng quên mua thêm vật tư tiêu hao cho phòng lab trước ngày 20/12 năm nay.",
+      {
+        "entities": [
+          [
+            10,
+            48,
+            "TASK"
+          ],
+          [
+            49,
+            54,
+            "TIME"
+          ],
+          [
+            55,
+            72,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Tôi dự định hoàn thành phân tích dữ liệu thị trường trước khi tôi rời văn phòng.",
+      {
+        "entities": [
+          [
+            0,
+            3,
+            "PERSON"
+          ],
+          [
+            12,
+            51,
+            "TASK"
+          ]
+        ]
+      }
+    ],
+    [
+      "Gấp, anh Tài cần đăng ký lớp học tiếng Anh vào tuần sau.",
+      {
+        "entities": [
+          [
+            5,
+            12,
+            "PERSON"
+          ],
+          [
+            17,
+            42,
+            "TASK"
+          ],
+          [
+            47,
+            54,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Ngày 1 tháng 6 là ngày chính thức công bố kết quả tuyển dụng.",
+      {
+        "entities": [
+          [
+            0,
+            14,
+            "DATE"
+          ],
+          [
+            34,
+            59,
+            "TASK"
+          ]
+        ]
+      }
+    ],
+    [
+      "Lúc rảnh, anh Khoa có thể tìm hiểu thêm về các quy định thuế mới.",
+      {
+        "entities": [
+          [
+            10,
+            18,
+            "PERSON"
+          ],
+          [
+            26,
+            63,
+            "TASK"
+          ]
+        ]
+      }
+    ],
+    [
+      "Yêu cầu khẩn: Cần gửi phản hồi chi tiết cho đối tác C trước 1 giờ chiều.",
+      {
+        "entities": [
+          [
+            18,
+            53,
+            "TASK"
+          ],
+          [
+            54,
+            70,
+            "TIME"
+          ]
+        ]
+      }
+    ],
+    [
+      "Không gấp, tôi có thể sắp xếp lại các tài liệu cũ vào cuối tháng.",
+      {
+        "entities": [
+          [
+            11,
+            14,
+            "PERSON"
+          ],
+          [
+            22,
+            49,
+            "TASK"
+          ],
+          [
+            54,
+            63,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Trưởng phòng Linh yêu cầu báo cáo chi phí vận hành hàng tháng phải làm liền.",
+      {
+        "entities": [
+          [
+            0,
+            17,
+            "PERSON"
+          ],
+          [
+            26,
+            61,
+            "TASK"
+          ]
+        ]
+      }
+    ],
+    [
+      "Cuộc họp với nhà cung cấp sẽ diễn ra sau 2 ngày nữa.",
+      {
+        "entities": [
+          [
+            0,
+            25,
+            "TASK"
+          ],
+          [
+            37,
+            47,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Trước khi nghỉ lễ, anh Việt cần chốt danh sách người trực ban đêm.",
+      {
+        "entities": [
+          [
+            19,
+            27,
+            "PERSON"
+          ],
+          [
+            32,
+            64,
+            "TASK"
+          ]
+        ]
+      }
+    ],
+    [
+      "Tôi phải gửi bản sửa đổi cuối cùng cho khách hàng vào hôm nay.",
+      {
+        "entities": [
+          [
+            0,
+            3,
+            "PERSON"
+          ],
+          [
+            9,
+            49,
+            "TASK"
+          ],
+          [
+            54,
+            60,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Hãy kiểm tra lại tất cả các thông số kỹ thuật của dự án trước ngày 5/5.",
+      {
+        "entities": [
+          [
+            4,
+            55,
+            "TASK"
+          ],
+          [
+            56,
+            61,
+            "TIME"
+          ],
+          [
+            67,
+            69,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Mai, tôi nên làm một bản đánh giá rủi ro cho hợp đồng mới.",
+      {
+        "entities": [
+          [
+            0,
+            2,
+            "DATE"
+          ],
+          [
+            5,
+            8,
+            "PERSON"
+          ],
+          [
+            13,
+            56,
+            "TASK"
+          ]
+        ]
+      }
+    ],
+    [
+      "Thứ Hai tuần tới là deadline cuối cùng để nộp hồ sơ.",
+      {
+        "entities": [
+          [
+            0,
+            16,
+            "DATE"
+          ],
+          [
+            42,
+            50,
+            "TASK"
+          ]
+        ]
+      }
+    ],
+    [
+      "Việc này phải được tiến hành sau 1 tháng kể từ hôm nay.",
+      {
+        "entities": [
+          [
+            0,
+            28,
+            "TASK"
+          ],
+          [
+            29,
+            53,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Chị Hoa cần xử lý tất cả các yêu cầu hỗ trợ kỹ thuật còn tồn đọng trước cuối tuần.",
+      {
+        "entities": [
+          [
+            0,
+            7,
+            "PERSON"
+          ],
+          [
+            12,
+            65,
+            "TASK"
+          ],
+          [
+            66,
+            80,
+            "TIME"
+          ]
+        ]
+      }
+    ],
+    [
+      "Tôi sẽ học cách sử dụng phần mềm kế toán mới vào lúc 7 giờ tối thứ Tư.",
+      {
+        "entities": [
+          [
+            0,
+            3,
+            "PERSON"
+          ],
+          [
+            7,
+            44,
+            "TASK"
+          ],
+          [
+            53,
+            62,
+            "TIME"
+          ],
+          [
+            63,
+            68,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
+      "Anh Tuấn cần hoàn thành việc soạn thảo hợp đồng trước 4 giờ chiều ngày 12/8.",
+      {
+        "entities": [
+          [
+            0,
+            8,
+            "PERSON"
+          ],
+          [
+            13,
+            47,
+            "TASK"
+          ],
+          [
+            48,
+            65,
+            "TIME"
+          ],
+          [
+            71,
+            74,
+            "DATE"
+          ]
+        ]
+      }
+    ],
+    [
       "Trưa nay đi ăn với bạn",
       {
         "entities": [
