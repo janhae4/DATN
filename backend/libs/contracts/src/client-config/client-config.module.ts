@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { ClientConfigService } from './client-config.service';
 import { ConfigModule } from '@nestjs/config';
 import * as joi from 'joi';
+import { Global } from '@nestjs/common';
+
+@Global()
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -11,6 +14,7 @@ import * as joi from 'joi';
         AUTH_CLIENT_PORT: joi.number().default(3002),
         REDIS_CLIENT_PORT: joi.number().default(6379),
         TASK_CLIENT_PORT: joi.number().default(3003),
+        VIDEO_CHAT_CLIENT_PORT: joi.number().default(3004),
         NOTIFICATION_CLIENT_PORT: joi.number().default(4001),
         RMQ_URL: joi.string().default('amqp://localhost:5672'),
         REDIS_QUEUE: joi.string().default('redis_service_queue'),

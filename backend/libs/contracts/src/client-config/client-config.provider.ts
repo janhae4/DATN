@@ -11,6 +11,7 @@ import {
   REDIS_CLIENT,
   TASK_CLIENT,
   USER_CLIENT,
+  VIDEO_CHAT_CLIENT,
 } from '../constants';
 
 export const CLIENT_PROVIDER = {
@@ -90,5 +91,12 @@ export const CLIENT_PROXY_PROVIDER = {
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientProxy =>
       ClientProxyFactory.create(cfg.gmailClientOptions as ClientOptions),
+  },
+
+  VIDEO_CHAT_CLIENT: {
+    provide: VIDEO_CHAT_CLIENT,
+    inject: [ClientConfigService] ,
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.videoChatClientOptions as ClientOptions),
   },
 };

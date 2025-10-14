@@ -81,6 +81,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/user/tsconfig.app.json"
       }
+    },
+    "video-chat": {
+      "type": "application",
+      "root": "apps/video-chat",
+      "entryFile": "main",
+      "sourceRoot": "apps/video-chat/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/video-chat/tsconfig.app.json"
+      }
     }
   }
 }

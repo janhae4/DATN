@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 @Injectable()
 export class ClientConfigService {
-  constructor(private config: ConfigService) {}
+  constructor(private config: ConfigService) { }
   /*  
   -------------------------
   --------- SMTP  ---------
@@ -165,6 +165,29 @@ export class ClientConfigService {
       options: {
         urls: [this.getRMQUrl()],
         queue: this.getGmailQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  ------ VIDEO CHAT CLIENT -----
+  -------------------------
+  */
+  getVideoChatClientPort(): number {
+    return this.config.get<number>('VIDEO_CHAT_CLIENT_PORT', 3004);
+  }
+  getVideoChatQueue(): string {
+    return this.config.get<string>('VIDEO_CHAT_QUEUE', 'video_chat_service_queue');
+  }
+  get videoChatClientOptions(): any {
+    console.log('Video chat port: ', this.getVideoChatClientPort());
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getVideoChatQueue(),
         queueOptions: { durable: true },
       },
     };

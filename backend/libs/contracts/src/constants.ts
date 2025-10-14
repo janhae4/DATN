@@ -10,3 +10,5 @@ export const TASK_CLIENT = Symbol('TASK_CLIENT');
 export const TASK_CLIENT_PORT = 3003;
 export const GMAIL_CLIENT = Symbol('GMAIL_CLIENT');
 export const GMAIL_CLIENT_PORT = 3005;
+export const VIDEO_CHAT_CLIENT = Symbol('VIDEO_CHAT_CLIENT');
+export const VIDEO_CHAT_CLIENT_PORT = 3004;

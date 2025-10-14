@@ -7,14 +7,16 @@ import { ClientConfigModule } from '@app/contracts/client-config/client-config.m
 import { SharedJwtModule } from '@app/contracts/auth/jwt/jwt.module';
 
 @Module({
-  imports: [PassportModule, SharedJwtModule, ClientConfigModule],
+  imports: [PassportModule, SharedJwtModule, ClientConfigModule, ],
   controllers: [AuthController],
   providers: [
     AuthService,
     CLIENT_PROXY_PROVIDER.USER_CLIENT,
     CLIENT_PROXY_PROVIDER.NOTIFICATION_CLIENT,
     CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
-    CLIENT_PROXY_PROVIDER.GMAIL_CLIENT, // ✅ Thêm GMAIL_CLIENT provider
+    CLIENT_PROXY_PROVIDER.GMAIL_CLIENT,
+    CLIENT_PROXY_PROVIDER.AUTH_CLIENT,
+    CLIENT_PROXY_PROVIDER.VIDEO_CHAT_CLIENT,
   ],
 })
 export class AuthModule {}
