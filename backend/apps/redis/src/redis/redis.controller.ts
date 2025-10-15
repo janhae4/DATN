@@ -30,9 +30,9 @@ export class RedisController {
     refreshToken: string;
   }) {
     const { userId, accessToken, refreshToken } = data;
-    console.log('userID', userId);
-    console.log('accessToken', accessToken);
-    console.log('refreshToken', refreshToken);
+    console.log('Google userID', userId);
+    console.log('Google accessToken', accessToken);
+    console.log('Google refreshToken', refreshToken);
     return await this.redisService.storeGoogleToken(
       userId,
       accessToken,
@@ -48,7 +48,7 @@ export class RedisController {
 
   @MessagePattern(REDIS_PATTERN.GET_GOOGLE_TOKEN)
   async getGoogleToken(userId: string) {
-    console.log(userId);
+    console.log('Google userID', userId);
     return await this.redisService.getGoogleToken(userId);
   }
 

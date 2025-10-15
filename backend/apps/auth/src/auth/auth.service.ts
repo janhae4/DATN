@@ -40,10 +40,10 @@ import { VerifyTokenDto } from './dto/verify-token.dto';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
 import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
 import { GMAIL_PATTERNS } from '@app/contracts/gmail/gmail.patterns';
-import { User } from 'apps/user/src/user/entity/user.entity';
+import { User } from '@app/contracts/user/entity/user.entity';
 import { ResetCodeDto } from './dto/reset-code.dto';
 import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email.dto';
-import { Account } from 'apps/user/src/user/entity/account.entity';
+import { Account } from '@app/contracts/user/entity/account.entity';
 
 @Injectable()
 export class AuthService {

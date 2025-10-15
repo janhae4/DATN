@@ -75,6 +75,28 @@ export class ClientConfigService {
     };
   }
 
+  /*
+  -------------------------
+  ----- TEAM CLIENT -------
+  -------------------------
+  */
+  getTeamClientPort(): number {
+    return this.config.get<number>('TEAM_CLIENT_PORT', 3003);
+  }
+  getTeamQueue(): string {
+    return this.config.get<string>('TEAM_QUEUE', 'team_service_queue');
+  }
+  get teamClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getTeamQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
   /* 
   -------------------------
   ------ REDIS CLIENT -----
@@ -87,7 +109,6 @@ export class ClientConfigService {
     return this.config.get<string>('REDIS_QUEUE', 'redis_service_queue');
   }
   get redisClientOptions(): any {
-    console.log('Redis port: ', this.getRedisClientPort());
     return {
       transport: Transport.RMQ,
       options: {
@@ -141,7 +162,6 @@ export class ClientConfigService {
   }
 
   get taskClientOptions(): any {
-    console.log('Task port: ', this.getTaskClientPort());
     return {
       transport: Transport.RMQ,
       options: {
@@ -181,6 +201,32 @@ export class ClientConfigService {
       options: {
         urls: [this.getRMQUrl()],
         queue: this.getGmailQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  ------ VIDEO CHAT CLIENT -----
+  -------------------------
+  */
+  getVideoChatClientPort(): number {
+    return this.config.get<number>('VIDEO_CHAT_CLIENT_PORT', 3004);
+  }
+  getVideoChatQueue(): string {
+    return this.config.get<string>(
+      'VIDEO_CHAT_QUEUE',
+      'video_chat_service_queue',
+    );
+  }
+  get videoChatClientOptions(): any {
+    console.log('Video chat port: ', this.getVideoChatClientPort());
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getVideoChatQueue(),
         queueOptions: { durable: true },
       },
     };

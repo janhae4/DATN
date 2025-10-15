@@ -3,8 +3,8 @@ import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './entity/user.entity';
-import { Account } from './entity/account.entity';
+import { User } from '../../../../libs/contracts/src/user/entity/user.entity';
+import { Account } from '../../../../libs/contracts/src/user/entity/account.entity';
 
 @Module({
   imports: [

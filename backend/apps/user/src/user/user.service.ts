@@ -4,14 +4,17 @@ import { DataSource, FindManyOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { User } from './entity/user.entity';
+import { User } from '../../../../libs/contracts/src/user/entity/user.entity';
 import {
   BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@app/contracts/errror';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
-import { Account, Provider } from './entity/account.entity';
+import {
+  Account,
+  Provider,
+} from '../../../../libs/contracts/src/user/entity/account.entity';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
 import { randomInt } from 'crypto';
 
