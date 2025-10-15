@@ -5,6 +5,7 @@ import { GMAIL_PATTERNS } from '@app/contracts/gmail/gmail.patterns';
 import { SendMailDto } from '@app/contracts/gmail/send-mail.dto';
 import { UserDto } from '@app/contracts/user/user.dto';
 import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email.dto';
+import { User } from '@app/contracts/user/entity/user.entity';
 
 @Controller()
 export class GmailController {
@@ -21,18 +22,18 @@ export class GmailController {
   }
 
   @MessagePattern(GMAIL_PATTERNS.SEND_LOGIN_EMAIL)
-  sendEmailLogin(@Payload() user: UserDto) {
-    return this.gmailService.sendEmailLogin(user);
+  sendEmailLogin(@Payload() payload: { user: UserDto; ip: string }) {
+    return this.gmailService.sendLoginEmail(payload.user, payload.ip);
   }
 
   @MessagePattern(GMAIL_PATTERNS.SEND_EMAIL_PASSWORD_CHANGE)
-  sendEmailPasswordChange(@Payload() user: UserDto) {
-    return this.gmailService.sendEmailPasswordChange(user);
+  sendEmailPasswordChange(@Payload() user: User) {
+    return this.gmailService.sendChangePasswordEmail(user);
   }
 
   @MessagePattern(GMAIL_PATTERNS.SEND_EMAIL_REGISTER)
-  sendEmailRegister(@Payload() user: UserDto) {
-    return this.gmailService.sendEmailRegister(user);
+  sendEmailRegister(@Payload() user: User) {
+    return this.gmailService.sendRegisterEmail(user);
   }
 
   @MessagePattern(GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL)

@@ -1,4 +1,4 @@
-import { User } from 'apps/user/src/user/entity/user.entity';
+import { User } from '@app/contracts/user/entity/user.entity';
 
 export class SendEmailVerificationDto {
   user: User;

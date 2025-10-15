@@ -10,6 +10,13 @@ import { Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
+
+  // Thêm CORS để cho phép frontend truy cập
+  app.enableCors({
+    origin: ['http://localhost:5000', 'http://localhost:3000'], // Thêm origin của frontend
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('DATN Project')
     .setDescription('The DATN API description')

@@ -5,9 +5,9 @@ import { LoginDto } from '@app/contracts/auth/login-request.dto';
 import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
-import { User } from './entity/user.entity';
+import { User } from '../../../../libs/contracts/src/user/entity/user.entity';
 import { Provider } from '@app/contracts/user/account.dto';
-import { Account } from './entity/account.entity';
+import { Account } from '../../../../libs/contracts/src/user/entity/account.entity';
 import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
 
 @Controller()
@@ -109,7 +109,6 @@ export class UserController {
     return this.userService.update(data.id, data.updateUser);
   }
 
-  @MessagePattern(USER_PATTERNS.REMOVE)
   @MessagePattern(USER_PATTERNS.REMOVE)
   remove(@Payload() id: string) {
     return this.userService.remove(id);
