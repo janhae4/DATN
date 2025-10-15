@@ -2,21 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindManyOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-
 import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { User } from '../../../../libs/contracts/src/user/entity/user.entity';
 import {
   BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@app/contracts/errror';
 import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
-import {
-  Account,
-  Provider,
-} from '../../../../libs/contracts/src/user/entity/account.entity';
 import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
 import { randomInt } from 'crypto';
+import { User } from '@app/contracts/user/entity/user.entity';
+import { Account } from '@app/contracts/user/entity/account.entity';
+import { Provider } from '@app/contracts/user/account.dto';
 
 @Injectable()
 export class UserService {

@@ -41,7 +41,7 @@ services:
 
   worker:
     build: 
-      context: ./ml:/app
+      context: ./python/ner-service:/app
       dockerfile: Dockerfile
     
     container_name: task_ner
@@ -49,7 +49,7 @@ services:
     command: ["python", "main.py"]
     
     volumes:
-      - ./ml:/app 
+      - ./python/ner-service:/app 
     
     ports:
       - "4002:4002"
