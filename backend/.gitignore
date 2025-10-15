@@ -56,9 +56,15 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 # Prisma
 generated/
 =======
 /generated/prisma
 >>>>>>> origin/feature/email-service
+=======
+
+# Prisma
+generated/
+>>>>>>> feature/team-service

@@ -32,14 +32,6 @@ async function bootstrap() {
     app.get(RefreshTokenFilter),
     app.get(RpcToHttpExceptionFilter),
   );
-
-  app.use((req: Request, res: Response, next: () => void) => {
-    if (req.url.startsWith('/.well-known')) {
-      return res.status(204).send();
-    }
-    next();
-  });
-
   await app.listen(process.env.port ?? 3000);
 }
 bootstrap();
