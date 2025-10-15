@@ -110,6 +110,7 @@ export class UserController {
   }
 
   @MessagePattern(USER_PATTERNS.REMOVE)
+  @MessagePattern(USER_PATTERNS.REMOVE)
   remove(@Payload() id: string) {
     return this.userService.remove(id);
   }
