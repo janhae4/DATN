@@ -6,3 +6,5 @@ node_modules/
 */.venv/
 ml/ner
 ml/__pycache__
+ml/output
+ml/output_model
