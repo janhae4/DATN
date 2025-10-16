@@ -24,7 +24,7 @@ import { Account } from './entity/account.entity';
   controllers: [UserController],
   providers: [
     UserService,
-    CLIENT_PROXY_PROVIDER.GMAIL_CLIENT, // ✅ Thêm GMAIL_CLIENT provider
+    CLIENT_PROXY_PROVIDER.GMAIL_CLIENT,
   ],
 })
 export class UserModule {}

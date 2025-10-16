@@ -17,7 +17,6 @@ export default function CreateVideoCallPage() {
     const newRoomId = roomId.trim() || generateRoomId();
     
     try {
-      // Gọi API để tạo cuộc gọi trong DB
       const response = await fetch('http://localhost:3000/video-chat/create-call', {
         method: 'POST',
         headers: {
@@ -25,12 +24,11 @@ export default function CreateVideoCallPage() {
         },
         body: JSON.stringify({
           roomId: newRoomId,
-          participantIds: [], // Có thể thêm user ID nếu cần
+          participantIds: [],
         }),
       });
       
       if (response.ok) {
-        // Lưu roomId vào localStorage để đánh dấu đã tạo
         localStorage.setItem('createdRoomId', newRoomId);
         router.push(`/video-call/${newRoomId}`);
       } else {
@@ -49,7 +47,6 @@ export default function CreateVideoCallPage() {
     
     setIsCreating(true);
     try {
-      // Kiểm tra phòng có tồn tại không bằng cách gọi API lấy lịch sử cuộc gọi
       const response = await fetch(`http://localhost:3000/video-chat/call-history?roomId=${roomId.trim()}`, {
         method: 'GET',
       });

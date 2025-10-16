@@ -16,7 +16,7 @@ datasource db {
 
 model Call {
   id        String   @id @default(uuid())
-  roomId    String   @unique // Thêm trường roomId để định danh phòng
+  roomId    String   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   endedAt   DateTime?
