@@ -8,9 +8,8 @@ export default function VideoCallPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const router = useRouter();
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const [roomExists, setRoomExists] = useState<boolean | null>(null); // null: đang kiểm tra, true: tồn tại, false: không tồn tại
+  const [roomExists, setRoomExists] = useState<boolean | null>(null)
 
-  // Sử dụng hook để quản lý video call
   const { localStream, peers, isVideoMuted, toggleVideoMute, isAudioMuted, toggleAudioMute, isLoading } = useVideoCall(roomId || '');
 
   useEffect(() => {
