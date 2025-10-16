@@ -10,7 +10,7 @@ import { Role, UserDto } from '@app/contracts/user/user.dto';
 import { Request } from 'express';
 import { ROLES_KEY } from './role.decorator';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../api-gateway/routes/auth/auth.service';
+import { AuthService } from '../../auth/auth.service';
 import { Error } from '@app/contracts/errror';
 
 @Injectable()

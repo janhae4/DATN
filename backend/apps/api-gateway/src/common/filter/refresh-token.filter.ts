@@ -4,7 +4,7 @@ import {
   ArgumentsHost,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthService } from '../../api-gateway/routes/auth/auth.service';
+import { AuthService } from '../../auth/auth.service';
 import { Request, Response } from 'express';
 import { firstValueFrom } from 'rxjs';
 
