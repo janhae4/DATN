@@ -38,10 +38,25 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+
+  mongo:
+    image: mongo:8.0
+    hostname: "mongo"
+    container_name: mongo_db
+    restart: unless-stopped     
+    ports:
+      - "27017:27017"         
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongo
+      - MONGO_INITDB_ROOT_PASSWORD=mongo
+    volumes:
+      - mongo-data:/data/db
+
 
   worker:
     build: 
-      context: ./python/ner-service:/app
+      context: ./python/ner-service
       dockerfile: Dockerfile
     
     container_name: task_ner
@@ -49,7 +64,7 @@ services:
     command: ["python", "main.py"]
     
     volumes:
-      - ./python/ner-service:/app 
+      - ./python/ner-service:/app
     
     ports:
       - "4002:4002"
@@ -63,12 +78,39 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+
+  chatbot: 
+    build: 
+      context: ./python/chatbot-service
+    container_name: rag_chatbot
+    command: ["python", "main.py"]
+    volumes:
+      - ./python/chatbot-service:/app
+    ports:
+      - "4003:4003"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      QUEUE_NAME: process_chatbot
         
-    # deploy:
-    #   resources:
-    #     limits:
-    #       memory: 2.5G 
+  ollama:
+    image: ollama/ollama
+    container_name: ollama_service
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+      - ./init-ollama.sh:/init-ollama.sh
+    entrypoint: ["/bin/sh", "/init-ollama.sh"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
+  ollama-data:
+  mongo-data:
