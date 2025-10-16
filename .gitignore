@@ -3,7 +3,8 @@ node_modules/
 # Logs
 *.log
 
-*.venv
-*.output
-*.output_model
-*__pycache__
+.venv/
+__pycache__
+output_model/
+output/
+chroma_db

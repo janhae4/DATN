@@ -1,0 +1,3 @@
+Quy trình nghỉ phép của công ty ABC rất đơn giản.
+Nhân viên cần điền vào đơn xin nghỉ phép online trên hệ thống nội bộ.
+Sau đó, đơn sẽ được tự động gửi cho quản lý trực tiếp để phê duyệt.
