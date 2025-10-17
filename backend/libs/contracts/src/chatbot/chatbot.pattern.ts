@@ -8,4 +8,5 @@ export const CHATBOT_PATTERN = {
     STREAM_RESPONSE: 'rag_response',
     UPLOAD_FILE: 'chatbot.upload_file',
     GET_FILES_BY_USER_ID: 'chatbot.get_files_by_user_id',
+    DELETE_FILE: 'chatbot.delete_file'
 };
