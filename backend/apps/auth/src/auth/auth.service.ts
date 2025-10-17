@@ -243,6 +243,7 @@ export class AuthService {
 
       this.gmailClient.emit(GMAIL_PATTERNS.SEND_LOGIN_EMAIL, user);
     }
+    console.log(accessToken, refreshToken);
     return { accessToken, refreshToken };
   }
 

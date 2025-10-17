@@ -86,8 +86,16 @@ services:
       - "4003:4003"
     environment:
       RABBITMQ_HOST: rabbitmq
-      QUEUE_NAME: process_chatbot
-        
+      INGESTION_QUEUE: ingestion_queue
+      RAG_QUEUE: rag_queue
+      SUMMARIZE_QUEUE: summarize_queue
+      RESPONSE_QUEUE: chatbot_service_queue
+      NOTIFICATION_QUEUE: notifications_service_queue
+      CHROMA_HOST: chroma
+      CHROMA_PORT: 8000      
+      OLLAMA_BASE_URL: http://ollama:11434 
+      OLLAMA_MODEL: gemma3:4b
+
   ollama:
     image: ollama/ollama
     container_name: ollama_service
