@@ -24,7 +24,7 @@ export class RefreshTokenFilter implements ExceptionFilter {
 
     const refreshToken = req.cookies.refreshToken as string;
     const accessToken = req.cookies.accessToken as string;
-
+    console.log(refreshToken, accessToken);
     if (refreshToken && !accessToken) {
       try {
         const token = await firstValueFrom(this.authService.refresh(req, res));

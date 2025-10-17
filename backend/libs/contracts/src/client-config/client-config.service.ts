@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 @Injectable()
 export class ClientConfigService {
-  constructor(private config: ConfigService) {}
+  constructor(private config: ConfigService) { }
   /*  
   -------------------------
   --------- SMTP  ---------
@@ -230,5 +230,115 @@ export class ClientConfigService {
         queueOptions: { durable: true },
       },
     };
+  }
+
+  /*
+  -------------------------
+  ----- CHATBOT CLIENT ----
+  -------------------------
+  */
+  getChatbotClientPort(): number {
+    return this.config.get<number>('CHATBOT_CLIENT_PORT', 3006);
+  }
+  getChatbotQueue(): string {
+    return this.config.get<string>('CHATBOT_QUEUE', 'chatbot_service_queue');
+  }
+  get chatbotClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getChatbotQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  ------ RAG CLIENT -----
+  -------------------------
+  */
+  getRagQueue(): string {
+    return this.config.get<string>('RAG_QUEUE', 'rag_queue');
+  }
+  get ragClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getRagQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  --- INGESTION CLIENT ---
+  -------------------------
+  */
+  getIngestionQueue(): string {
+    return this.config.get<string>('INGESTION_QUEUE', 'ingestion_queue');
+  }
+  get ingestionClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getIngestionQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  --- RESPONSE CLIENT -----
+  -------------------------
+  */
+  getResponseQueue(): string {
+    return this.config.get<string>('RESPONSE_QUEUE', 'response_queue');
+  }
+  get responseClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getResponseQueue(),
+        queueOptions: { durable: false },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  ------ MINIO CLIENT -----
+  -------------------------
+  */
+
+  getEndPointMinio(): string {
+    return this.config.get<string>('MINIO_ENDPOINT', 'http://localhost:9000');
+  }
+
+  getPortMinio(): number {
+    return this.config.get<number>('MINIO_PORT', 9000);
+  }
+
+  getUseSSLMinio(): boolean {
+    const envValue = this.config.get<string>('MINIO_USE_SSL', 'false');
+    return envValue === 'true';
+  }
+
+  getAccessKeyMinio(): string {
+    return this.config.get<string>('MINIO_ACCESS_KEY', 'minio');
+  }
+
+  getSecretKeyMinio(): string {
+    return this.config.get<string>('MINIO_SECRET_KEY', 'minio123');
+  }
+
+  getBucketName(): string {
+    return this.config.get<string>('MINIO_BUCKET_NAME', 'documents');
   }
 }

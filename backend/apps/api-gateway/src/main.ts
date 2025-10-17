@@ -11,9 +11,8 @@ import { Request, Response } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
 
-  // Thêm CORS để cho phép frontend truy cập
   app.enableCors({
-    origin: ['http://localhost:5000', 'http://localhost:3000'], // Thêm origin của frontend
+    origin: ['http://localhost:5000', 'http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
   });
 

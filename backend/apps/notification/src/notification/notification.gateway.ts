@@ -5,20 +5,17 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { NotificationService } from './notification.service';
+import { NotificationEvent } from './dto/notification.event';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // cho phép frontend connect
+    origin: '*',
   },
 })
 export class NotificationGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
-
-  constructor(private readonly notificationService: NotificationService) {}
 
   handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
@@ -28,13 +25,20 @@ export class NotificationGateway
       return;
     }
 
-    this.notificationService.setServer(this.server);
-    this.notificationService.subscribeUser(userId, client);
+    client.join(userId);
 
-    console.log(`User ${userId} connected`);
+    console.log(`User ${userId} connected and joined room ${userId}`);
   }
 
   handleDisconnect(client: Socket) {
     console.log(`Client ${client.id} disconnected`);
+  }
+
+  sendNotificationToUser(event: NotificationEvent) {
+    this.server.to(event.userId).emit('notification', {
+      title: event.title,
+      message: event.message,
+      type: event.type,
+    });
   }
 }
