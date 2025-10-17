@@ -14,3 +14,7 @@ export const TASK_NER_CLIENT = Symbol('TASK_NER_CLIENT');
 export const TEAM_CLIENT = Symbol('TEAM_CLIENT');
 export const VIDEO_CHAT_CLIENT = Symbol('VIDEO_CHAT_CLIENT');
 export const VIDEO_CHAT_CLIENT_PORT = 3004;
+export const RAG_CLIENT = Symbol('RAG_CLIENT');
+export const CHATBOT_CLIENT = Symbol('CHATBOT_CLIENT');
+export const INGESTION_CLIENT = Symbol('INGESTION_CLIENT');
+export const RESPONSE_CLIENT = Symbol('RESPONSE_CLIENT');

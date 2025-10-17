@@ -4,14 +4,15 @@ import { EventPattern, Payload } from '@nestjs/microservices';
 import { NotificationEvent } from './dto/notification.event';
 import { NotificationUpdateDto } from './dto/notification-update.dto';
 import { NOTIFICATION_PATTERN } from '@app/contracts/notification/notification.pattern';
+import { NotificationGateway } from './notification.gateway';
 
 @Controller('notification')
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(private readonly notificationService: NotificationService, private readonly notificationGateway: NotificationGateway) {}
 
   @EventPattern(NOTIFICATION_PATTERN.SEND)
   handleSendNotification(@Payload() event: NotificationEvent) {
-    this.notificationService.sendNotification(event);
+    this.notificationGateway.sendNotificationToUser(event);
   }
 
   @EventPattern(NOTIFICATION_PATTERN.CREATE)
@@ -56,4 +57,10 @@ export class NotificationController {
   handleGetNotifications(userId: string) {
     return this.notificationService.getNotifications(userId);
   }
+
+  @EventPattern(NOTIFICATION_PATTERN.PROCESS_DOCUMENT)
+  handleGetProcessDocument(@Payload() event: NotificationEvent) {
+    this.notificationGateway.sendNotificationToUser(event);
+  }
+
 }

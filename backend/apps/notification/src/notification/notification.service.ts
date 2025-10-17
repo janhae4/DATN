@@ -7,27 +7,8 @@ import { NotificationUpdateDto } from './dto/notification-update.dto';
 
 @Injectable()
 export class NotificationService {
-  private server: Server;
 
   constructor(private readonly prisma: PrismaService) {}
-
-  setServer(server: Server) {
-    this.server = server;
-  }
-
-  subscribeUser(userId: string, client: Socket) {
-    client.join(userId);
-  }
-
-  async sendNotification(event: NotificationEvent) {
-    if (!this.server) return;
-    await this.addNotification(event);
-    this.server.to(event.userId).emit('notification', {
-      title: event.title,
-      message: event.message,
-      type: event.type,
-    });
-  }
 
   async addNotification(notification: NotificationEvent) {
     await this.prisma.notification.create({

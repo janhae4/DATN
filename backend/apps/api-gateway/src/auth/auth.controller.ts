@@ -37,7 +37,7 @@ export class AuthController {
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
   info(@Req() request: Request) {
-    const user = request?.user as UserDto;
+    const user = request?.user as JwtDto;
     return this.authService.getInfo(user.id);
   }
 
@@ -47,6 +47,7 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
+    console.log(loginDto);
     return this.authService.login(loginDto, response);
   }
 

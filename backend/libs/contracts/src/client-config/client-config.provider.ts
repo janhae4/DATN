@@ -6,8 +6,11 @@ import {
 import { ClientConfigService } from './client-config.service';
 import {
   AUTH_CLIENT,
+  CHATBOT_CLIENT,
   GMAIL_CLIENT,
+  INGESTION_CLIENT,
   NOTIFICATION_CLIENT,
+  RAG_CLIENT,
   REDIS_CLIENT,
   TASK_CLIENT,
   TASK_NER_CLIENT,
@@ -113,5 +116,33 @@ export const CLIENT_PROXY_PROVIDER = {
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientProxy =>
       ClientProxyFactory.create(cfg.videoChatClientOptions as ClientOptions),
+  },
+
+  CHATBOT_CLIENT: {
+    provide: CHATBOT_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.chatbotClientOptions as ClientOptions),
+  },
+
+  RAG_CLIENT: {
+    provide: RAG_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.ragClientOptions as ClientOptions),
+  },
+
+  INGESTION_CLIENT: {
+    provide: INGESTION_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.ingestionClientOptions as ClientOptions),
+  },
+
+  RESPONSE_CLIENT: {
+    provide: 'RESPONSE_CLIENT',
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.responseClientOptions as ClientOptions),
   },
 };
