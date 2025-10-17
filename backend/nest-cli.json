@@ -28,6 +28,15 @@
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
+    "chatbot": {
+      "type": "application",
+      "root": "apps/chatbot",
+      "entryFile": "main",
+      "sourceRoot": "apps/chatbot/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/chatbot/tsconfig.app.json"
+      }
+    },
     "contracts": {
       "type": "library",
       "root": "libs/contracts",

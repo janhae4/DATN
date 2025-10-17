@@ -15,8 +15,8 @@ from minio import Minio
 CHROMA_HOST = os.environ.get("CHROMA_HOST", "localhost")
 CHROMA_PORT = os.environ.get("CHROMA_PORT", "8000")
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-
-llm = ChatOllama(base_url=OLLAMA_BASE_URL, model="gemma3:4b")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma3:4b")
+llm = ChatOllama(base_url=OLLAMA_BASE_URL, model=OLLAMA_MODEL)
 embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
 
 client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
