@@ -4,7 +4,7 @@ import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { ChatbotService } from './chatbot.service';
 import { ChatbotGateway } from './chatbot.gateway';
 import { StorageService } from './storage.service';
-import { file } from 'googleapis/build/src/apis/file';
+import type { ResponseStreamPayload } from './interface/response-stream.itf';
 
 @Controller('chatbot')
 export class ChatbotController {
@@ -18,10 +18,24 @@ export class ChatbotController {
         return this.chatbotService.processDocument(payload.fileName, payload.userId);
     }
 
-    @EventPattern('rag_response')
-    handleStreamResponse(@Payload() response: { socketId: string, type: string, content: string }) {
-        console.log(`[Controller] Nhan response tu queue: ${JSON.stringify(response)}`);
+    @EventPattern(CHATBOT_PATTERN.STREAM_RESPONSE)
+    handleStreamResponse(@Payload() response: ResponseStreamPayload) {
         this.chatbotGateway.handleStreamResponse(response);
+    }
+
+    @MessagePattern(CHATBOT_PATTERN.FIND_CONVERSATION)
+    async findConversation(payload: { userId: string, conversationId: string, page: number, limit: number }) {
+        return await this.chatbotService.findConversation(payload.userId, payload.conversationId, payload.page, payload.limit);
+    }
+
+    @MessagePattern(CHATBOT_PATTERN.FIND_CONVERSATIONS)
+    async findAllConversation(payload: { userId: string, page: number, limit: number }) {
+        return await this.chatbotService.findAllConversation(payload.userId, payload.page, payload.limit);
+    }
+
+    @MessagePattern(CHATBOT_PATTERN.DELETE_CONVERSATION)
+    async deleteConversation(payload: { conversationId: string}) {
+        return await this.chatbotService.deleteConversation(payload.conversationId);
     }
 
     @MessagePattern(CHATBOT_PATTERN.UPLOAD_FILE)
@@ -38,4 +52,5 @@ export class ChatbotController {
     async deleteFile(payload: { fileId: string }) {
         return await this.storageService.deleteFile(payload.fileId);
     }
+
 }

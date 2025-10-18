@@ -1,6 +1,6 @@
-import { Controller, Delete, MaxFileSizeValidator, ParseFilePipe, Post, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Delete, Get, MaxFileSizeValidator, Param, ParseFilePipe, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
-import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
 import { BadRequestException } from '@app/contracts/errror';
 import type { Request } from 'express';
 import { JwtDto } from '@app/contracts/auth/jwt.dto';
@@ -42,7 +42,7 @@ export class ChatbotController {
   ) {
     console.log(file);
     if (file.buffer.length === 0 || !file) {
-      throw new BadRequestException('File không được để trống.');
+      throw new BadRequestException('File is empty.');
     }
     const user = request.user as JwtDto;
     console.log(user)
@@ -53,7 +53,7 @@ export class ChatbotController {
     const fileName = await this.chatbotService.uploadFile(file, user.id);
     this.chatbotService.processDocument(fileName, user.id);
     return {
-      message: "File đang được xử lý",
+      message: "File is processing",
       fileName,
       originalName: file.originalname
     };
@@ -75,20 +75,67 @@ export class ChatbotController {
   @UseGuards(RoleGuard)
   @Roles(Role.USER, Role.ADMIN)
   @ApiBearerAuth()
-  @ApiBody({ 
+  @ApiBody({
     schema: {
       type: 'object',
       properties: {
         fileId: { type: 'string' },
       },
     },
-    examples: {}
-   })
-  async deleteFile(@Req() request: Request, @Payload() payload: { fileId: string }) {
-    const user = request.user as JwtDto;
-    if (!user.id) {
-      throw new BadRequestException('User not found');
+    examples: {
+      'application/json': {
+        value: {
+          fileId: 'fileId'
+        }
+      }
     }
+  })
+  async deleteFile(@Payload() payload: { fileId: string }) {
     return await this.chatbotService.deleteFile(payload.fileId);
+  }
+
+  @Post('conversations')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth()
+  async findConversation(@Req() request: Request, @Query('page') page: number, @Query('limit') limit: number) {
+    const user = request.user as JwtDto;
+    return await this.chatbotService.findAllConversation(user.id, page, limit);
+  }
+
+  @Get('conversations/:id')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'id',
+    type: 'string'
+  })
+  async findConversationById(@Req() request: Request, @Param('id') id: string, @Query('page') page: number, @Query('limit') limit: number) {
+    const user = request.user as JwtDto;
+    return await this.chatbotService.findConversation(user.id, id, page, limit);
+  }
+
+  @Delete('conversations')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth()
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        conversationId: { type: 'string' },
+      },
+    },
+    examples: {
+      'application/json': {
+        value: {
+          conversationId: 'conversationId'
+        }
+      }
+    }
+  })
+  async deleteConversation(@Payload() payload: { conversationId: string }) {
+    return await this.chatbotService.deleteConversation(payload.conversationId);
   }
 }

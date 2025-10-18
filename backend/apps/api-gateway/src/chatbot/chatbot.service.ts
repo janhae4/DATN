@@ -4,6 +4,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { CHATBOT_PATTERN } from '@app/contracts/chatbot/chatbot.pattern';
 import { firstValueFrom } from 'rxjs';
 import { Error } from '@app/contracts/errror';
+import { ConversationResponseDto } from '@app/contracts/chatbot/conversation.dto';
 
 @Injectable()
 export class ChatbotService {
@@ -51,6 +52,43 @@ export class ChatbotService {
                 this.chatbotClient.send(CHATBOT_PATTERN.DELETE_FILE, { fileId })
             )
             return files
+        } catch (err) {
+            const e = err as Error
+            throw new BadRequestException(e.message)
+        }
+    }
+
+    async findAllConversation(userId: string, page: number = 1, limit: number = 15) {
+        try {
+            const conversations = await firstValueFrom<ConversationResponseDto>(
+                this.chatbotClient.send(CHATBOT_PATTERN.FIND_CONVERSATIONS, { userId, page, limit })
+            )
+            return conversations
+        } catch (err) {
+            const e = err as Error
+            throw new BadRequestException(e.message)
+        }
+    }
+
+    async findConversation(userId: string, conversationId: string, page: number = 1, limit: number = 15) {
+        try {
+            const conversations = await firstValueFrom<ConversationResponseDto>(
+                this.chatbotClient.send(CHATBOT_PATTERN.FIND_CONVERSATION, { userId, conversationId, page, limit })
+            )
+            return conversations
+        } catch (err) {
+            const e = err as Error
+            throw new BadRequestException(e.message)
+        }
+    }
+
+
+    async deleteConversation(conversationId: string) {
+        try {
+            const conversations = await firstValueFrom<ConversationResponseDto>(
+                this.chatbotClient.send(CHATBOT_PATTERN.DELETE_CONVERSATION, { conversationId })
+            )
+            return conversations
         } catch (err) {
             const e = err as Error
             throw new BadRequestException(e.message)

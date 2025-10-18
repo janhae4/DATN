@@ -237,6 +237,11 @@ export class ClientConfigService {
   ----- CHATBOT CLIENT ----
   -------------------------
   */
+
+  getChatbotDatabaseURL(): string {
+    return this.config.get<string>('CHATBOT_DATABASE_URL', 'mongodb://localhost:27017');
+  }
+
   getChatbotClientPort(): number {
     return this.config.get<number>('CHATBOT_CLIENT_PORT', 3006);
   }
