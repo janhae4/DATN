@@ -1,10 +1,12 @@
+import {
+  CreateTeamDto,
+  MemberDto,
+  TEAM_CLIENT,
+  TEAM_PATTERN,
+} from '@app/contracts';
 import { Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { CreateTeamDto } from '@app/contracts/team/create-team.dto';
-import { MemberDto } from '@app/contracts/team/member.dto';
-import { TEAM_PATTERN } from '@app/contracts/team/team.pattern';
-import { TEAM_CLIENT } from '@app/contracts/constants';
 
 @Injectable()
 export class TeamService {

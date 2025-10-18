@@ -9,8 +9,8 @@ async function bootstrap() {
   const app = await NestFactory.create(ChatbotModule);
   const cfg = app.get(ClientConfigService);
   app.connectMicroservice(cfg.chatbotClientOptions as MicroserviceOptions);
-  app.useWebSocketAdapter(new IoAdapter(app))
-  app.use(cookieParser())
+  app.useWebSocketAdapter(new IoAdapter(app));
+  app.use(cookieParser());
   await app.startAllMicroservices();
   await app.listen(cfg.getChatbotClientPort());
 }

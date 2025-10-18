@@ -1,40 +1,29 @@
-import {
-  WebSocketGateway,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  WebSocketServer,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { NotificationEvent } from './dto/notification.event';
+import { WebSocketGateway } from '@nestjs/websockets';
+import { Socket } from 'socket.io';
+import { Inject } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { AuthenticatedGateway } from '@app/common';
+import { AUTH_CLIENT, JwtDto, NotificationEventDto } from '@app/contracts';
 
 @WebSocketGateway({
   cors: {
     origin: '*',
   },
 })
-export class NotificationGateway
-  implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer()
-  server: Server;
-
-  handleConnection(client: Socket) {
-    const userId = client.handshake.query.userId as string;
-
-    if (!userId) {
-      client.disconnect(true);
-      return;
-    }
-
-    client.join(userId);
-
-    console.log(`User ${userId} connected and joined room ${userId}`);
+export class NotificationGateway extends AuthenticatedGateway {
+  constructor(
+    @Inject(AUTH_CLIENT)
+    protected authClient: ClientProxy,
+  ) {
+    super(authClient, NotificationGateway.name);
   }
 
-  handleDisconnect(client: Socket) {
-    console.log(`Client ${client.id} disconnected`);
+  protected onClientAuthenticated(client: Socket, user: JwtDto): void {
+    client.join(user.id);
+    this.logger.log(`User ${user.id} joined notification room: ${user.id}`);
   }
 
-  sendNotificationToUser(event: NotificationEvent) {
+  sendNotificationToUser(event: NotificationEventDto) {
     this.server.to(event.userId).emit('notification', {
       title: event.title,
       message: event.message,

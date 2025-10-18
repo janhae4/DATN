@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Account } from './account.entity';
 
-enum UserRole {
+export enum Role {
   ADMIN = 'ADMIN',
   USER = 'USER',
 }
@@ -33,8 +33,8 @@ export class User {
   @Index()
   phone: string | null;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
-  role: UserRole;
+  @Column({ type: 'enum', enum: Role, default: Role.USER })
+  role: Role;
 
   @Column({ default: true })
   isActive: boolean;

@@ -4,7 +4,7 @@ import {
   ArgumentsHost,
   HttpStatus,
 } from '@nestjs/common';
-import { Error as RpcError } from '@app/contracts/errror';
+import { Error as RpcError } from '@app/contracts/error';
 import { RpcException } from '@nestjs/microservices';
 import { Response } from 'express';
 

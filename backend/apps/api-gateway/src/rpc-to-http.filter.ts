@@ -1,4 +1,4 @@
-import { Error } from '@app/contracts/errror';
+import { Error } from '@app/contracts/error';
 import { Catch, ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { Response } from 'express';

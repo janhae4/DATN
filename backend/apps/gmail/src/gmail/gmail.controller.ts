@@ -1,11 +1,12 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { GmailService } from './gmail.service';
-import { GMAIL_PATTERNS } from '@app/contracts/gmail/gmail.patterns';
-import { SendMailDto } from '@app/contracts/gmail/send-mail.dto';
-import { UserDto } from '@app/contracts/user/user.dto';
-import { SendEmailVerificationDto } from '@app/contracts/gmail/dto/send-email.dto';
-import { User } from '@app/contracts/user/entity/user.entity';
+import {
+  GMAIL_PATTERNS,
+  SendEmailVerificationDto,
+  SendMailDto,
+  User,
+} from '@app/contracts';
 
 @Controller()
 export class GmailController {
@@ -22,7 +23,7 @@ export class GmailController {
   }
 
   @MessagePattern(GMAIL_PATTERNS.SEND_LOGIN_EMAIL)
-  sendEmailLogin(@Payload() payload: { user: UserDto; ip: string }) {
+  sendEmailLogin(@Payload() payload: { user: User; ip: string }) {
     return this.gmailService.sendLoginEmail(payload.user, payload.ip);
   }
 

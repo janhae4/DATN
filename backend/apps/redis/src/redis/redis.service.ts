@@ -1,12 +1,13 @@
-import { BadRequestException } from '@app/contracts/errror';
-import { StoredRefreshTokenDto } from '@app/contracts/redis/store-refreshtoken.dto';
-import { Injectable } from '@nestjs/common';
+import { StoredRefreshTokenDto } from '@app/contracts';
+import { BadRequestException } from '@app/contracts/error';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import Redis from 'ioredis';
 ConfigModule.forRoot();
 @Injectable()
 export class RedisService {
   private redis: Redis;
+  private readonly logger = new Logger(RedisService.name);
   constructor() {
     this.redis = new Redis({
       host: process.env.REDIS_CLIENT_HOST || 'localhost',
@@ -26,11 +27,13 @@ export class RedisService {
       createdAt: String(Date.now()),
     });
     await this.redis.expire(key, exp);
+    this.logger.log('Stored refresh token for user:', userId);
   }
 
   async getStoredRefreshToken(userId: string, sessionId: string) {
     const key = `refresh:${userId}:${sessionId}`;
     const data = await this.redis.hgetall(key);
+    this.logger.log('Retrieved refresh token for user:', userId);
     return Object.keys(data).length > 0
       ? (data as unknown as StoredRefreshTokenDto)
       : false;
@@ -39,16 +42,19 @@ export class RedisService {
   async deleteRefreshToken(userId: string, sessionId: string) {
     const key = `refresh:${userId}:${sessionId}`;
     await this.redis.del(key);
+    this.logger.log('Deleted refresh token for user:', userId);
   }
 
   async clearRefreshTokens(userId: string) {
     const pattern = `refresh:${userId}:*`;
     const keys = await this.scanKeys(pattern);
     if (keys.length) await this.redis.del(keys);
+    this.logger.log('Cleared refresh tokens for user:', userId);
   }
 
   async setLockKey(userId: string, sessionId: string) {
     const key = `lock:${userId}:${sessionId}`;
+    this.logger.log('Setting lock key for user:', userId);
     return await this.redis.set(key, '1', 'EX', 1000, 'NX');
   }
 
@@ -67,6 +73,7 @@ export class RedisService {
       if (keys.length) found.push(...keys);
       cursor = keys[0];
     }
+    this.logger.log('Found keys:', found);
     return found;
   }
 
@@ -78,18 +85,13 @@ export class RedisService {
     const accessKey = `google:${userId}:access`;
     const refreshKey = `google:${userId}:refresh`;
 
-    console.log('Storing Google tokens for user:', userId);
-    console.log('Access token length:', accessToken?.length);
-    console.log('Refresh token length:', refreshToken?.length);
-
     await this.redis.set(accessKey, accessToken, 'EX', 3600);
 
     if (refreshToken) {
       await this.redis.set(refreshKey, refreshToken);
-      console.log('Stored refresh token for user:', userId);
+      this.logger.log('Stored refresh token for user:', userId);
     }
-
-    console.log('Successfully stored Google tokens for user:', userId);
+    this.logger.log('Stored access token for user:', userId);
   }
 
   async getGoogleToken(userId: string) {
@@ -101,16 +103,12 @@ export class RedisService {
       this.redis.get(refreshKey),
     ]);
 
-    console.log('Redis getGoogleToken - userId:', userId);
-    console.log('Redis getGoogleToken - accessToken exists:', !!accessToken);
-    console.log('Redis getGoogleToken - refreshToken exists:', !!refreshToken);
-
     if (!refreshToken) {
-      console.log('No refresh token found for user:', userId);
+      this.logger.warn('No valid Google tokens found for user:', userId);
       throw new BadRequestException('No Google account linked');
     }
 
-    console.log('Found tokens for user:', userId);
+    this.logger.log('Retrieved Google tokens for user:', userId);
     return { accessToken, refreshToken };
   }
 }

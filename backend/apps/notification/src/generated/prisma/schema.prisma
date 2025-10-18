@@ -16,9 +16,8 @@ datasource db {
 }
 
 enum NotificationType {
-  CHAT
-  EMAIL
-  SYSTEM
+  SUCCESS
+  FAILED
 }
 
 model Notification {

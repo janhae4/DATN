@@ -1,8 +1,10 @@
+import {
+  CreateCallDto,
+  VIDEO_CHAT_CLIENT,
+  VIDEO_CHAT_PATTERNS,
+} from '@app/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { VIDEO_CHAT_CLIENT } from '@app/contracts/constants';
-import { VIDEO_CHAT_PATTERNS } from '@app/contracts/video-chat/video-chat.patterns';
-import { CreateCallDto } from '@app/contracts/video-chat/create-call.dto';
 
 @Injectable()
 export class VideoChatService {

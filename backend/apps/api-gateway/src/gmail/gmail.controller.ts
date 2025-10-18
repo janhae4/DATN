@@ -1,4 +1,4 @@
-import { SendMailDto } from '@app/contracts/gmail/send-mail.dto';
+import { SendMailDto } from '@app/contracts';
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { GmailService } from './gmail.service';
 

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 @Injectable()
 export class ClientConfigService {
-  constructor(private config: ConfigService) { }
+  constructor(private config: ConfigService) {}
   /*  
   -------------------------
   --------- SMTP  ---------
@@ -239,7 +239,10 @@ export class ClientConfigService {
   */
 
   getChatbotDatabaseURL(): string {
-    return this.config.get<string>('CHATBOT_DATABASE_URL', 'mongodb://localhost:27017');
+    return this.config.get<string>(
+      'CHATBOT_DATABASE_URL',
+      'mongodb://localhost:27017',
+    );
   }
 
   getChatbotClientPort(): number {

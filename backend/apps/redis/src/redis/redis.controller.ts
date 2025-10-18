@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { MessagePattern } from '@nestjs/microservices';
-import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
+import { REDIS_PATTERN } from '@app/contracts';
 
 @Controller()
 export class RedisController {

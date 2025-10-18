@@ -1,5 +1,4 @@
 export enum NotificationType {
-  EMAIL = 'EMAIL',
-  CHAT = 'CHAT',
-  SYSTEM = 'SYSTEM',
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED',
 }

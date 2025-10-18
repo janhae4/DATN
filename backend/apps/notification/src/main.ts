@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { RedisIoAdapter } from './adapter/redis-io.adapter';
 import { NotificationModule } from './notification/notification.module';
 import { MicroserviceOptions } from '@nestjs/microservices';
-import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
+import { ClientConfigService } from '@app/contracts';
 
 async function bootstrap() {
   const app = await NestFactory.create(NotificationModule);

@@ -10,7 +10,7 @@ import {
 import { VideoChatService } from './video-chat.service';
 import { CreateCallDto } from '@app/contracts/video-chat/create-call.dto';
 import type { Request } from 'express';
-import { JwtDto } from '@app/contracts/auth/jwt.dto';
+import { JwtDto } from '@app/contracts';
 
 @Controller('video-chat')
 export class VideoChatController {

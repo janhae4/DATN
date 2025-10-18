@@ -1,11 +1,13 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TaskServiceService } from './task-service.service';
-import { TASK_PATTERNS } from '@app/contracts/task/task.patterns';
 import { Task } from './generated/prisma';
-import { RequestGoogleTaskDto } from '@app/contracts/task/request-google-task.dto';
-import { CreateTaskDto } from '@app/contracts/task/create-task.dto';
-import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
+import {
+  CreateTaskDto,
+  RequestGoogleTaskDto,
+  TASK_PATTERNS,
+  UpdateTaskDto,
+} from '@app/contracts';
 
 @Controller()
 export class TaskServiceController {

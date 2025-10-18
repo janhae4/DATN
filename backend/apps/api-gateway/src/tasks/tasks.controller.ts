@@ -10,14 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto } from '@app/contracts/task/create-task.dto';
-import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
 import type { Request } from 'express';
-import { RoleGuard } from 'apps/api-gateway/src/common/role/role.guard';
-import { Roles } from 'apps/api-gateway/src/common/role/role.decorator';
-import { Role } from '@app/contracts/user/user.dto';
-import { JwtDto } from '@app/contracts/auth/jwt.dto';
 import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { RoleGuard } from '../role.guard';
+import { Roles } from '../common/role/role.decorator';
+import { CreateTaskDto, JwtDto, Role, UpdateTaskDto } from '@app/contracts';
 
 @Controller('tasks')
 export class TasksController {

@@ -3,8 +3,7 @@ import { TaskServiceController } from './task-service.controller';
 import { TaskServiceService } from './task-service.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { GoogleCalendarService } from './google-calendar.service';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
+import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
 
 @Module({
   imports: [PrismaModule, ClientConfigModule],

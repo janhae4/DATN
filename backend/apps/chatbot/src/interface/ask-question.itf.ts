@@ -1,4 +1,4 @@
 export interface AskQuestionPayload {
-    question: string;
-    conversationId?: string;
+  question: string;
+  conversationId?: string;
 }

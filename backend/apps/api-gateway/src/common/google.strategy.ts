@@ -1,11 +1,10 @@
-import { Provider } from '@app/contracts/user/user.dto';
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, StrategyOptionsWithRequest } from 'passport-google-oauth20';
 import { GoogleProfile } from './dto/google-profile.dto';
 import { VerifiedCallback } from 'passport-jwt';
 import { Request } from 'express';
-import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
+import { GoogleAccountDto, Provider } from '@app/contracts';
 interface StatePayload {
   type?: 'link' | 'login';
   jwt?: string;

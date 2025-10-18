@@ -1,4 +1,4 @@
 export interface SummarizeDocumentPayload {
-    fileName: string;
-    conversationId?: string;
+  fileName: string;
+  conversationId?: string;
 }

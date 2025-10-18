@@ -1,12 +1,12 @@
 import { Controller } from '@nestjs/common';
 import { TeamService } from './team.service';
 import { MessagePattern } from '@nestjs/microservices';
-import { CreateTeamDto } from '../../../../libs/contracts/src/team/create-team.dto';
 import {
+  CreateTeamDto,
   MEMBER_ROLE,
   MemberDto,
-} from '../../../../libs/contracts/src/team/member.dto';
-import { TEAM_PATTERN } from '@app/contracts/team/team.pattern';
+  TEAM_PATTERN,
+} from '@app/contracts';
 
 @Controller()
 export class TeamController {

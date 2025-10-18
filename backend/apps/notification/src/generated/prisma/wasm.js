@@ -35,12 +35,12 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 6.16.2
- * Query Engine version: 1c57fdcd7e44b29b9313256c76699e91c3ac3c43
+ * Prisma Client JS version: 6.17.1
+ * Query Engine version: 272a37d34178c2894197e17273bf937f25acdeac
  */
 Prisma.prismaVersion = {
-  client: "6.16.2",
-  engine: "1c57fdcd7e44b29b9313256c76699e91c3ac3c43"
+  client: "6.17.1",
+  engine: "272a37d34178c2894197e17273bf937f25acdeac"
 }
 
 Prisma.PrismaClientKnownRequestError = PrismaClientKnownRequestError;
@@ -119,9 +119,8 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 exports.NotificationType = exports.$Enums.NotificationType = {
-  CHAT: 'CHAT',
-  EMAIL: 'EMAIL',
-  SYSTEM: 'SYSTEM'
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED'
 };
 
 exports.Prisma.ModelName = {
@@ -168,8 +167,8 @@ const config = {
     "schemaEnvPath": "../../../../../.env"
   },
   "relativePath": "../../prisma",
-  "clientVersion": "6.16.2",
-  "engineVersion": "1c57fdcd7e44b29b9313256c76699e91c3ac3c43",
+  "clientVersion": "6.17.1",
+  "engineVersion": "272a37d34178c2894197e17273bf937f25acdeac",
   "datasourceNames": [
     "db"
   ],
@@ -183,8 +182,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../generated/prisma\"\n  binaryTargets = [\"native\", \"windows\", \"debian-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_NOTIFICATION_URL\")\n}\n\nenum NotificationType {\n  CHAT\n  EMAIL\n  SYSTEM\n}\n\nmodel Notification {\n  id      String           @id @default(uuid())\n  userId  String\n  message String\n  title   String\n  isRead  Boolean          @default(false)\n  link    String?\n  type    NotificationType\n\n  createdAt DateTime  @default(now())\n  readAt    DateTime?\n}\n",
-  "inlineSchemaHash": "bb827fa3d0edb6be6042de6489849b82b595f4d391a9efa8a01c0764e46e74b7",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../generated/prisma\"\n  binaryTargets = [\"native\", \"windows\", \"debian-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_NOTIFICATION_URL\")\n}\n\nenum NotificationType {\n  SUCCESS\n  FAILED\n}\n\nmodel Notification {\n  id      String           @id @default(uuid())\n  userId  String\n  message String\n  title   String\n  isRead  Boolean          @default(false)\n  link    String?\n  type    NotificationType\n\n  createdAt DateTime  @default(now())\n  readAt    DateTime?\n}\n",
+  "inlineSchemaHash": "15a02b9393f9b6ff7b2afa87b4ad564a9cabaa1c71a45d8e40fdc513744c627a",
   "copyEngine": true
 }
 config.dirname = '/'

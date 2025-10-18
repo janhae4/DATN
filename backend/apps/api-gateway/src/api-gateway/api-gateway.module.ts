@@ -11,7 +11,14 @@ import { VideoChatModule } from '../video-chat/video-chat.module';
 import { ChatbotModule } from '../chatbot/chatbot.module';
 
 @Module({
-  imports: [UserModule, AuthModule, TasksModule, TeamModule, VideoChatModule, ChatbotModule],
+  imports: [
+    UserModule,
+    AuthModule,
+    TasksModule,
+    TeamModule,
+    VideoChatModule,
+    ChatbotModule,
+  ],
   controllers: [ApiGatewayController],
   providers: [RpcToHttpExceptionFilter, RefreshTokenFilter, ApiGatewayService],
 })

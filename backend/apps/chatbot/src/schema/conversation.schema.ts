@@ -6,14 +6,14 @@ export type ConversationDocument = Conversation & Document;
 
 @Schema({ timestamps: true })
 export class Conversation {
-    @Prop({ required: true, index: true })
-    user_id: string;
+  @Prop({ required: true, index: true })
+  user_id: string;
 
-    @Prop()
-    title?: string;
-    
-    @Prop({ type: [MessageSchema], default: [] })
-    messages: Message[];
+  @Prop()
+  title?: string;
+
+  @Prop({ type: [MessageSchema], default: [] })
+  messages: Message[];
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);
