@@ -1,19 +1,31 @@
-import { Controller, Delete, Get, MaxFileSizeValidator, Param, ParseFilePipe, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Delete,
+  Get,
+  MaxFileSizeValidator,
+  Param,
+  ParseFilePipe,
+  Post,
+  Query,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
-import { BadRequestException } from '@app/contracts/errror';
-import type { Request } from 'express';
-import { JwtDto } from '@app/contracts/auth/jwt.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { RoleGuard } from '../role.guard';
-import { Role } from '@app/contracts/user/user.dto';
+import { JwtDto, Role } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
+import type { Request } from 'express';
 import { Payload } from '@nestjs/microservices';
 
 @Controller('chatbot')
 export class ChatbotController {
-  constructor(private readonly chatbotService: ChatbotService) { }
+  constructor(private readonly chatbotService: ChatbotService) {}
 
   @Post('process-document')
   @UseGuards(RoleGuard)
@@ -26,11 +38,13 @@ export class ChatbotController {
         userId: { type: 'string' },
         file: { type: 'string', format: 'binary' },
       },
-    }
+    },
   })
-  @UseInterceptors(FileInterceptor('file', {
-    storage: multer.memoryStorage()
-  }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multer.memoryStorage(),
+    }),
+  )
   async processDocument(
     @UploadedFile(
       new ParseFilePipe({
@@ -38,14 +52,14 @@ export class ChatbotController {
       }),
     )
     file: Express.Multer.File,
-    @Req() request: Request
+    @Req() request: Request,
   ) {
     console.log(file);
     if (file.buffer.length === 0 || !file) {
       throw new BadRequestException('File is empty.');
     }
     const user = request.user as JwtDto;
-    console.log(user)
+    console.log(user);
     if (!user.id) {
       throw new BadRequestException('User not found');
     }
@@ -53,13 +67,13 @@ export class ChatbotController {
     const fileName = await this.chatbotService.uploadFile(file, user.id);
     this.chatbotService.processDocument(fileName, user.id);
     return {
-      message: "File is processing",
+      message: 'File is processing',
       fileName,
-      originalName: file.originalname
+      originalName: file.originalname,
     };
   }
 
-  @Post("get-files")
+  @Post('get-files')
   @UseGuards(RoleGuard)
   @Roles(Role.USER, Role.ADMIN)
   @ApiBearerAuth()
@@ -71,7 +85,7 @@ export class ChatbotController {
     return await this.chatbotService.getFilesByUserId(user.id);
   }
 
-  @Delete("delete-file")
+  @Delete('delete-file')
   @UseGuards(RoleGuard)
   @Roles(Role.USER, Role.ADMIN)
   @ApiBearerAuth()
@@ -85,10 +99,10 @@ export class ChatbotController {
     examples: {
       'application/json': {
         value: {
-          fileId: 'fileId'
-        }
-      }
-    }
+          fileId: 'fileId',
+        },
+      },
+    },
   })
   async deleteFile(@Payload() payload: { fileId: string }) {
     return await this.chatbotService.deleteFile(payload.fileId);
@@ -98,7 +112,11 @@ export class ChatbotController {
   @UseGuards(RoleGuard)
   @Roles(Role.USER)
   @ApiBearerAuth()
-  async findConversation(@Req() request: Request, @Query('page') page: number, @Query('limit') limit: number) {
+  async findConversation(
+    @Req() request: Request,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ) {
     const user = request.user as JwtDto;
     return await this.chatbotService.findAllConversation(user.id, page, limit);
   }
@@ -109,9 +127,14 @@ export class ChatbotController {
   @ApiBearerAuth()
   @ApiParam({
     name: 'id',
-    type: 'string'
+    type: 'string',
   })
-  async findConversationById(@Req() request: Request, @Param('id') id: string, @Query('page') page: number, @Query('limit') limit: number) {
+  async findConversationById(
+    @Req() request: Request,
+    @Param('id') id: string,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ) {
     const user = request.user as JwtDto;
     return await this.chatbotService.findConversation(user.id, id, page, limit);
   }
@@ -130,10 +153,10 @@ export class ChatbotController {
     examples: {
       'application/json': {
         value: {
-          conversationId: 'conversationId'
-        }
-      }
-    }
+          conversationId: 'conversationId',
+        },
+      },
+    },
   })
   async deleteConversation(@Payload() payload: { conversationId: string }) {
     return await this.chatbotService.deleteConversation(payload.conversationId);

@@ -1,11 +1,13 @@
+import {
+  CreateTaskDto,
+  RequestGoogleTaskDto,
+  TASK_PATTERNS,
+  UpdateTaskDto,
+} from '@app/contracts';
+import { TASK_CLIENT } from '@app/contracts/constants';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { TASK_PATTERNS } from '@app/contracts/task/task.patterns';
-import { TASK_CLIENT } from '@app/contracts/constants';
-import { CreateTaskDto } from '@app/contracts/task/create-task.dto';
-import { UpdateTaskDto } from '@app/contracts/task/update-task.dto';
 import { Request } from 'express';
-import { RequestGoogleTaskDto } from '@app/contracts/task/request-google-task.dto';
 
 @Injectable()
 export class TasksService {

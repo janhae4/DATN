@@ -1,9 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { calendar_v3, google } from 'googleapis';
 import { Task } from './generated/prisma';
-import { REDIS_CLIENT } from '@app/contracts/constants';
 import { ClientProxy } from '@nestjs/microservices';
-import { REDIS_PATTERN } from '@app/contracts/redis/redis.pattern';
+import { REDIS_CLIENT, REDIS_PATTERN } from '@app/contracts';
 
 @Injectable()
 export class GoogleCalendarService {

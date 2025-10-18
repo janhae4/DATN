@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { RedisController } from './redis.controller';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
+import { ClientConfigModule } from '@app/contracts';
 
 @Module({
   imports: [ClientConfigModule],

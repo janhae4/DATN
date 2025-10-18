@@ -1,4 +1,4 @@
-import { Provider } from '../user/user.dto';
+import { Provider } from '@app/contracts';
 
 export class CreateAuthOAuthDto {
   provider: Provider;

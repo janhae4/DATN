@@ -1,14 +1,16 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { UserService } from './user.service';
-import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
-import { CreateAuthOAuthDto } from '@app/contracts/auth/create-auth-oauth.dto';
-import { CreateAuthLocalDto } from '@app/contracts/auth/create-auth-local.dto';
-import { User } from '../../../../libs/contracts/src/user/entity/user.entity';
-import { Provider } from '@app/contracts/user/account.dto';
-import { Account } from '../../../../libs/contracts/src/user/entity/account.entity';
-import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
+import {
+  Account,
+  ChangePasswordDto,
+  CreateAuthLocalDto,
+  CreateAuthOAuthDto,
+  LoginDto,
+  Provider,
+  User,
+  USER_PATTERNS,
+} from '@app/contracts';
 
 @Controller()
 export class UserController {

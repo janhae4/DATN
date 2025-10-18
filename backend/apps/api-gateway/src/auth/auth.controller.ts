@@ -10,24 +10,26 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
-import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
-import { RoleGuard } from 'apps/api-gateway/src/common/role/role.guard';
-import { Roles } from 'apps/api-gateway/src/common/role/role.decorator';
-import { Role, UserDto } from '@app/contracts/user/user.dto';
-import { GoogleAuthGuard } from 'apps/api-gateway/src/common/role/google-auth.guard';
-import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
-import { VerifyAccountDto } from '@app/contracts/auth/verify-account.dto';
-import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
-import { JwtDto } from '@app/contracts/auth/jwt.dto';
-import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
-import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
   ApiQuery,
 } from '@nestjs/swagger';
+import { RoleGuard } from '../role.guard';
+import {
+  ChangePasswordDto,
+  ConfirmResetPasswordDto,
+  CreateAuthDto,
+  ForgotPasswordDto,
+  GoogleAccountDto,
+  JwtDto,
+  LoginDto,
+  Role,
+  VerifyAccountDto,
+} from '@app/contracts';
+import { Roles } from '../common/role/role.decorator';
+import { GoogleAuthGuard } from '../common/role/google-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -62,7 +64,7 @@ export class AuthController {
   @Roles(Role.ADMIN, Role.USER)
   @ApiBody({ type: VerifyAccountDto })
   verifyLocal(@Req() request: Request, @Body() data: VerifyAccountDto) {
-    const user = request.user as UserDto;
+    const user = request.user as JwtDto;
     return this.authService.verifyLocal(user.id, data.code);
   }
 
@@ -100,7 +102,7 @@ export class AuthController {
     @Body() changePasswordDto: ChangePasswordDto,
     @Req() request: Request,
   ) {
-    const user = request?.user as UserDto;
+    const user = request?.user as JwtDto;
     return this.authService.changePassword({
       ...changePasswordDto,
       id: user.id,

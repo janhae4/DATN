@@ -8,8 +8,7 @@ import {
   Patch,
 } from '@nestjs/common';
 import { TeamService } from './team.service';
-import { CreateTeamDto } from '@app/contracts/team/create-team.dto';
-import { MemberDto } from '@app/contracts/team/member.dto';
+import { CreateTeamDto, MemberDto } from '@app/contracts';
 
 @Controller('team')
 export class TeamController {

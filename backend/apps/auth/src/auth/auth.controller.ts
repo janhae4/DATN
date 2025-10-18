@@ -1,14 +1,16 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
-import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
-import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
-import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
-import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
-import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
-import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
-import { JwtDto } from '@app/contracts/auth/jwt.dto';
+import {
+  AUTH_PATTERN,
+  ChangePasswordDto,
+  ConfirmResetPasswordDto,
+  CreateAuthDto,
+  ForgotPasswordDto,
+  GoogleAccountDto,
+  JwtDto,
+  LoginDto,
+} from '@app/contracts';
 
 @Controller()
 export class AuthController {

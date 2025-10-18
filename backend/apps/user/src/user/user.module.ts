@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../../../../libs/contracts/src/user/entity/user.entity';
-import { Account } from '../../../../libs/contracts/src/user/entity/account.entity';
+import { Account, ClientConfigModule, User } from '@app/contracts';
 
 @Module({
   imports: [

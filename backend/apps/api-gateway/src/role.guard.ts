@@ -1,11 +1,10 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@app/contracts/user/user.dto';
+import { Role, JwtDto } from '@app/contracts';
 import { Request } from 'express';
 import { AuthService } from './auth/auth.service';
 import { ROLES_KEY } from './common/role/role.decorator';
-import { firstValueFrom } from 'rxjs';
-import { JwtDto } from '@app/contracts/auth/jwt.dto';
+import { firstValueFrom, Observable } from 'rxjs';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
@@ -28,9 +27,11 @@ export class RoleGuard implements CanActivate {
     const cookies = contextRequest.cookies;
     if (!cookies.accessToken) return false;
     try {
-      const user = await firstValueFrom<JwtDto>(
-        this.authService.validateToken(cookies.accessToken as string)
-      )
+      const userObservable = this.authService.validateToken(
+        cookies.accessToken as string,
+      ) as Observable<JwtDto>;
+
+      const user = await firstValueFrom(userObservable);
       if (!user) return false;
       return requiredRoles.some((roleRequired) => user.role === roleRequired);
     } catch {

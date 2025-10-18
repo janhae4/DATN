@@ -1,24 +1,30 @@
 import { Module } from '@nestjs/common';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ChatbotGateway } from './chatbot.gateway';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
 import { ChatbotController } from './chatbot.controller';
 import { ChatbotService } from './chatbot.service';
 import { StorageService } from './storage.service';
-import { MongooseModule } from '@nestjs/mongoose';
 import { Conversation, ConversationSchema } from './schema/conversation.schema';
-import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
+import {
+  CLIENT_PROXY_PROVIDER,
+  ClientConfigModule,
+  ClientConfigService,
+} from '@app/contracts';
 @Module({
   imports: [
     ClientConfigModule,
     MongooseModule.forRootAsync({
-      useFactory: (config: ClientConfigService) => ({ uri: config.getChatbotDatabaseURL() }),
+      useFactory: (config: ClientConfigService) => ({
+        uri: config.getChatbotDatabaseURL(),
+      }),
       inject: [ClientConfigService],
     }),
-    MongooseModule.forFeature([{
-      name: Conversation.name,
-      schema: ConversationSchema
-    }])
+    MongooseModule.forFeature([
+      {
+        name: Conversation.name,
+        schema: ConversationSchema,
+      },
+    ]),
   ],
   providers: [
     ChatbotGateway,
@@ -26,8 +32,8 @@ import { ClientConfigService } from '@app/contracts/client-config/client-config.
     CLIENT_PROXY_PROVIDER.RAG_CLIENT,
     CLIENT_PROXY_PROVIDER.INGESTION_CLIENT,
     ChatbotService,
-    StorageService
+    StorageService,
   ],
   controllers: [ChatbotController],
 })
-export class ChatbotModule { }
+export class ChatbotModule {}

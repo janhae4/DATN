@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { VideoChatController } from './video-chat.controller';
 import { VideoChatService } from './video-chat.service';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
+import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
 
 @Module({
   imports: [ClientConfigModule],

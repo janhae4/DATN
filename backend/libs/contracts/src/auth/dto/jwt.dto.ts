@@ -1,5 +1,5 @@
+import { Role } from '@app/contracts';
 import { PartialType } from '@nestjs/mapped-types';
-import { Role } from '../user/user.dto';
 
 export class JwtDto {
   id: string;

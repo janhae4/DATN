@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { TeamService } from './team.service';
 import { TeamController } from './team.controller';
 import { typeOrmConfig } from './typeorm.config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Team } from '@app/contracts/team/team.entity';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
+import { ClientConfigModule, Team } from '@app/contracts';
 
 @Module({
   imports: [

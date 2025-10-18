@@ -1,15 +1,17 @@
-import { CHATBOT_PATTERN } from '@app/contracts/chatbot/chatbot.pattern';
-import { INGESTION_CLIENT } from '@app/contracts/constants';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { Conversation, ConversationDocument } from './schema/conversation.schema';
-import mongoose, { Model, Mongoose } from 'mongoose';
-import { Message } from './schema/message.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { title } from 'process';
-import { create } from 'axios';
-import { createAdapter } from '@socket.io/redis-adapter';
-import { NotFoundException } from '@app/contracts/errror';
+import mongoose, { Aggregate, Model } from 'mongoose';
+import {
+    Conversation,
+    ConversationDocument,
+} from './schema/conversation.schema';
+import { Message } from './schema/message.schema';
+import {
+    CHATBOT_PATTERN,
+    INGESTION_CLIENT,
+    NotFoundException,
+} from '@app/contracts';
 
 @Injectable()
 export class ChatbotService {
@@ -21,19 +23,26 @@ export class ChatbotService {
         private readonly conversationModel: Model<ConversationDocument>,
     ) { }
 
-    async handleMessage(userId: string, message: string, conversationId?: string, role: 'user' | 'ai' = 'user'): Promise<ConversationDocument> {
+    async handleMessage(
+        userId: string,
+        message: string,
+        conversationId?: string,
+        role: 'user' | 'ai' = 'user',
+    ): Promise<ConversationDocument> {
         let conversation: ConversationDocument;
         console.log(message);
 
         if (conversationId) {
-            conversation = await this.conversationModel.findById(conversationId) as ConversationDocument;
+            conversation = (await this.conversationModel.findById(
+                conversationId,
+            )) as ConversationDocument;
             this.logger.log(`Conversation ${conversationId} found`);
         } else {
             conversation = new this.conversationModel({
                 user_id: userId,
                 title: message.substring(0, 30) + '...',
             });
-            this.logger.log(`Conversation ${conversation._id} created`);
+            this.logger.log(`Conversation ${String(conversation._id)} created`);
         }
 
         const messageDoc = {
@@ -43,39 +52,59 @@ export class ChatbotService {
 
         conversation.messages.push(messageDoc);
         await conversation.save();
-        this.logger.log(`Message ${messageDoc.content.substring(0, 5) + '...'} added to conversation ${conversation._id}`);
+        this.logger.log(
+            `Message ${messageDoc.content.substring(0, 5) + '...'} added to conversation ${String(conversation._id)}`,
+        );
         return conversation;
     }
 
     processDocument(fileName: string, userId: string) {
-        this.ingestionClient.emit(CHATBOT_PATTERN.PROCESS_DOCUMENT, { fileName, userId });
+        this.ingestionClient.emit(CHATBOT_PATTERN.PROCESS_DOCUMENT, {
+            fileName,
+            userId,
+        });
     }
 
-    async findAllConversation(userId: string, page: number = 1, limit: number = 15) {
-        this.logger.log("")
+    async findAllConversation(
+        userId: string,
+        page: number = 1,
+        limit: number = 15,
+    ) {
+        this.logger.log('');
         const skip = (page - 1) * limit;
-        const dataQuery = await this.conversationModel
+        const dataQuery = this.conversationModel
             .find({ user_id: userId })
             .select('title _id')
-            .sort({ 'updatedAt': -1 })
+            .sort({ updatedAt: -1 })
             .skip(skip)
             .limit(limit)
             .exec();
-        const totalQuery = this.conversationModel.countDocuments({ user_id: userId });
+        const totalQuery = this.conversationModel
+            .countDocuments({
+                user_id: userId,
+            })
+            .exec();
         const [total, data] = await Promise.all([totalQuery, dataQuery]);
         return {
             data,
             total,
             page,
-            totalPages: Math.ceil(total / limit)
+            totalPages: Math.ceil(total / limit),
         };
     }
 
-    async findConversation(userId: string, conversationId: string, page: number = 1, limit: number = 15) {
-        this.logger.log(`Find conversation ${conversationId} from ${userId}`)
+    async findConversation(
+        userId: string,
+        conversationId: string,
+        page: number = 1,
+        limit: number = 15,
+    ) {
+        this.logger.log(`Find conversation ${conversationId} from ${userId}`);
         const skip = (page - 1) * limit;
         const _id = new mongoose.Types.ObjectId(conversationId);
-        const results = await this.conversationModel.aggregate([
+        const results = await this.conversationModel.aggregate<
+            Aggregate<ConversationDocument>
+        >([
             { $match: { _id, user_id: userId } },
             {
                 $project: {
@@ -83,11 +112,11 @@ export class ChatbotService {
                     user_id: 1,
                     createdAt: 1,
                     updatedAt: 1,
-                    totalMessage: { $size: "$messages" },
-                    messages: { $slice: ["$messages", skip, limit] }
-                }
-            }
-        ])
+                    totalMessage: { $size: '$messages' },
+                    messages: { $slice: ['$messages', skip, limit] },
+                },
+            },
+        ]);
 
         if (!results || results.length === 0) {
             throw new NotFoundException('Conversation not found');
@@ -99,8 +128,8 @@ export class ChatbotService {
             data: conversation,
             page,
             limit,
-            totalPages: Math.ceil(conversation.totalMessage / limit)
-        }
+            totalPages: Math.ceil((await conversation).messages.length / limit),
+        };
     }
 
     async deleteConversation(conversationId: string) {

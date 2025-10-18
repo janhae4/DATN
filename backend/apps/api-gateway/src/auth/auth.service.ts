@@ -1,19 +1,23 @@
-import { AUTH_PATTERN } from '@app/contracts/auth/auth.patterns';
-import { CreateAuthDto } from '@app/contracts/auth/create-auth.dto';
-import { ACCESS_TTL, REFRESH_TTL } from '@app/contracts/auth/jwt.constant';
-import { LoginResponseDto } from '@app/contracts/auth/login-reponse.dto';
-import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { AUTH_CLIENT, USER_CLIENT } from '@app/contracts/constants';
-import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import type { Request, Response } from 'express';
-import { catchError, tap, throwError } from 'rxjs';
 import { UserService } from '../user/user.service';
-import { ChangePasswordDto } from '@app/contracts/auth/reset-password.dto';
-import { GoogleAccountDto } from '@app/contracts/auth/account-google.dto';
-import { ForgotPasswordDto } from '@app/contracts/auth/forgot-password.dto';
-import { ConfirmResetPasswordDto } from '@app/contracts/auth/confirm-reset-password.dto';
+import { Response, Request } from 'express';
+import {
+  ACCESS_TTL,
+  AUTH_CLIENT,
+  AUTH_PATTERN,
+  ChangePasswordDto,
+  ConfirmResetPasswordDto,
+  CreateAuthDto,
+  ForgotPasswordDto,
+  GoogleAccountDto,
+  LoginDto,
+  LoginResponseDto,
+  REFRESH_TTL,
+  USER_CLIENT,
+  USER_PATTERNS,
+} from '@app/contracts';
+import { catchError, tap, throwError } from 'rxjs';
 
 @Injectable()
 export class AuthService {

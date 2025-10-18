@@ -1,6 +1,6 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { Team } from '../../../../libs/contracts/src/team/team.entity';
 import { ConfigModule } from '@nestjs/config';
+import { Team } from '@app/contracts';
 ConfigModule.forRoot();
 export const typeOrmConfig: TypeOrmModuleOptions = {
   type: 'postgres',
