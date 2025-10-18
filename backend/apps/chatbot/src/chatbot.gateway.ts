@@ -13,11 +13,7 @@ import { ChatbotService } from './chatbot.service';
 import { ConversationDocument } from './schema/conversation.schema';
 import type { AskQuestionPayload } from './interface/ask-question.itf';
 import { ResponseStreamPayload } from './interface/response-stream.itf';
-
-interface SummarizeDocumentPayload {
-  fileName: string;
-  conversationId?: string;
-}
+import type { SummarizeDocumentPayload } from './interface/summarize-document.itf';
 
 interface AuthenticatedChatSocket extends Socket {
   data: {
@@ -146,11 +142,9 @@ export class ChatbotGateway extends AuthenticatedGateway {
 
   @SubscribeMessage(CHATBOT_PATTERN.SUMMARIZE_DOCUMENT)
   async handleSummarizeDocument(
-    // 6. And here
     client: AuthenticatedChatSocket,
     payload: SummarizeDocumentPayload,
   ): Promise<void> {
-    // This is now type-safe
     const user = client.data.user;
     if (!user) {
       this.logger.warn(
@@ -191,7 +185,6 @@ export class ChatbotGateway extends AuthenticatedGateway {
 
   handleStreamResponse(response: ResponseStreamPayload) {
     const { conversationId, socketId, content, type } = response;
-    // 7. Cast the result of .get() to your new, specific type
     const client = this.server.sockets.sockets.get(socketId) as
       | AuthenticatedChatSocket
       | undefined;
@@ -203,7 +196,6 @@ export class ChatbotGateway extends AuthenticatedGateway {
     this.logger.debug(`handleStreamResponse for ${client.id}, type: ${type}`);
 
     if (type === 'chunk') {
-      // These accesses are now type-safe
       const currentMessage = client.data.accumulatedMessage || '';
       client.data.accumulatedMessage = currentMessage + content;
       client.emit(CHATBOT_PATTERN.RESPONSE_CHUNK, content);
@@ -211,10 +203,8 @@ export class ChatbotGateway extends AuthenticatedGateway {
       client.emit(CHATBOT_PATTERN.RESPONSE_ERROR, content);
     } else if (type === 'end') {
       client.emit(CHATBOT_PATTERN.RESPONSE_END, content);
-      // This access is now type-safe
       const fullMessage = client.data.accumulatedMessage || '';
       if (fullMessage.trim().length > 0) {
-        // This access is now type-safe
         const user = client.data.user;
         if (user) {
           this.handleInteraction(
