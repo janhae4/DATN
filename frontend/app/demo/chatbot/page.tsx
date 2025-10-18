@@ -332,8 +332,7 @@ export default function ChatPage() {
 
       const data = await res.json();
       const messages: MessageResponse = data.data
-      console.log(data)
-      console.log(messages)
+
       setChatMessages(
         messages.messages.map((msg) => ({
           id: msg._id,
@@ -385,11 +384,10 @@ export default function ChatPage() {
       });
       if (!res.ok) throw new Error("Không thể tải thêm tin nhắn.");
 
-      const data: ConversationResponse = await res.json();
-
-      // Thêm tin nhắn cũ vào ĐẦU mảng
+      const data = await res.json();
+      const messages: MessageResponse = data.data
       setChatMessages((prev) => [
-        ...data.messages.map((msg) => ({
+        ...messages.messages.map((msg) => ({
           id: msg._id,
           role: msg.role as "user" | "ai",
           content: msg.content,
