@@ -12,6 +12,6 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app))
   app.use(cookieParser())
   await app.startAllMicroservices();
-  await app.listen(3006);
+  await app.listen(cfg.getChatbotClientPort());
 }
 bootstrap();
