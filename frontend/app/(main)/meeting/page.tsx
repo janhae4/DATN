@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input'; // Chỉ cần Input
 import Image from 'next/image';
 import { toast } from "sonner";
-import { Loader2, Video, Link, ArrowRight } from 'lucide-react'; 
+import { Loader2, Video, Link, ArrowRight } from 'lucide-react';
 
 import meetingImage from '@/public/assets/meeting_resource/meeting.jpg';
 
@@ -47,7 +47,7 @@ export default function CreateVideoCallPage() {
       if (response.ok) {
         localStorage.setItem('createdRoomId', newRoomId);
         toast.success('Phòng đã được tạo!', {
-            description: `Bạn đang được chuyển hướng đến: ${newRoomId}`,
+          description: `Bạn đang được chuyển hướng đến: ${newRoomId}`,
         });
         router.push(`/meeting/${newRoomId}`);
       } else {
@@ -72,7 +72,7 @@ export default function CreateVideoCallPage() {
       });
       return;
     }
-    
+
     let finalRoomId = roomId.trim();
     if (finalRoomId.startsWith('http://') || finalRoomId.startsWith('https://')) {
       try {
@@ -132,11 +132,9 @@ export default function CreateVideoCallPage() {
 
 
   return (
-    // --- BỐ CỤC MỚI: Căn giữa toàn bộ nội dung theo chiều dọc ---
     <div className="flex items-center justify-center  bg-background">
       <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
-        
-        {/* Phần hình ảnh */}
+
         <div className="w-full max-w-md">
           <Image
             src={meetingImage}
@@ -144,11 +142,10 @@ export default function CreateVideoCallPage() {
             width={400}
             height={400}
             className="w-full h-auto object-contain rounded-lg"
-            priority // Tải ảnh ưu tiên
+            priority
           />
         </div>
 
-        {/* Thêm tiêu đề cho trang */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">
             Video Meeting
@@ -159,13 +156,10 @@ export default function CreateVideoCallPage() {
           </p>
         </div>
 
-        {/* Phần điều khiển */}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
-          {/* Nút "Bắt đầu cuộc họp" */}
           <Button
             onClick={handleCreateRoom}
             disabled={isCreating}
-            // Làm nút cao hơn, đồng bộ với Input
             className="px-6 py-3 text-base h-12 flex-grow sm:flex-grow-0"
           >
             {isCreating ? (
@@ -176,30 +170,24 @@ export default function CreateVideoCallPage() {
             {isCreating ? 'Đang tạo...' : 'Bắt đầu cuộc họp'}
           </Button>
 
-          {/* --- INPUT ĐƯỢC LÀM LẠI --- */}
-          {/* Bọc Input bằng một div 'relative' để đặt icon */}
           <div className="relative flex-grow w-full">
-            {/* Icon Link bên trái */}
             <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            
+
             <Input
               type="text"
               placeholder="Nhập mã hoặc liên kết"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
               disabled={isCreating}
-              // Thêm padding trái (pl) và phải (pr) để chừa chỗ cho icon
               className="h-12 pl-10 pr-12 text-base"
             />
-            
-            {/* Nút Join (Mũi tên) bên phải */}
+
             {roomId.trim() && (
               <Button
                 onClick={handleJoinRoom}
                 disabled={isCreating}
                 variant="ghost"
                 size="icon"
-                // Đặt nút tuyệt đối ở bên phải
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9"
               >
                 {isCreating ? (
