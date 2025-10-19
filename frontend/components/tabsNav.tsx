@@ -5,23 +5,23 @@ import {
     TabsTrigger,
 } from "@/components/ui/tabs"
 import Summary from "./features/summary/summary"
-import Backlogs from "./features/backlogs"
+import Backlogs from "./features/backlogs/backlogs"
 export function TabsNav() {
     return (
         <div className="flex w-full  flex-col gap-6">
-            <Tabs defaultValue="summary">
+            <Tabs defaultValue="backlogs">
                 <TabsList>
-                    <TabsTrigger value="summary">Summary</TabsTrigger>
                     <TabsTrigger value="backlogs">Backlogs</TabsTrigger>
+                    <TabsTrigger value="summary">Summary</TabsTrigger>
                     <TabsTrigger value="boards">Boards</TabsTrigger>
                     <TabsTrigger value="timeline">Timeline</TabsTrigger>
                     <TabsTrigger value="pages">Pages</TabsTrigger>
                 </TabsList>
-                <TabsContent value="summary">
-                    <Summary/>
-                </TabsContent>
                 <TabsContent value="backlogs">
                     <Backlogs/>
+                </TabsContent>
+                <TabsContent value="summary">
+                    <Summary/>
                 </TabsContent>
                 <TabsContent value="boards">
                     content
