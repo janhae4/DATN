@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
-import { SharedJwtModule } from '@app/contracts/auth/jwt/jwt.module';
+import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  imports: [PassportModule, SharedJwtModule, ClientConfigModule],
+  imports: [PassportModule, ClientConfigModule, JwtModule.register({
+    secret: process.env.JWT_ACCESS_SECRET,
+    signOptions: { expiresIn: '15m' },
+  })],
   controllers: [AuthController],
   providers: [
     AuthService,

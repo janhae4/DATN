@@ -20,6 +20,10 @@ import { ChatbotModule } from '../chatbot/chatbot.module';
     ChatbotModule,
   ],
   controllers: [ApiGatewayController],
-  providers: [RpcToHttpExceptionFilter, RefreshTokenFilter, ApiGatewayService],
+  providers: [
+    RpcToHttpExceptionFilter, 
+    RefreshTokenFilter, 
+    ApiGatewayService,
+  ],
 })
 export class ApiGatewayModule {}

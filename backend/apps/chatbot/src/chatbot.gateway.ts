@@ -37,7 +37,6 @@ export class ChatbotGateway extends AuthenticatedGateway {
     super(authClient, ChatbotGateway.name);
   }
 
-  // 2. Use the new interface here
   protected onClientAuthenticated(
     client: AuthenticatedChatSocket,
     user: JwtDto,
@@ -46,7 +45,6 @@ export class ChatbotGateway extends AuthenticatedGateway {
     client.emit('authenticated', user);
   }
 
-  // 3. And here
   private async handleInteraction(
     client: AuthenticatedChatSocket,
     user: JwtDto,
@@ -87,7 +85,6 @@ export class ChatbotGateway extends AuthenticatedGateway {
 
     if (!conversationId) {
       this.logger.log(
-        // 4. FIX: Use .toString() on the ObjectId for the template literal
         `Emitting new conversation ID: ${String(savedConversation._id)} for client ${client.id}`,
       );
       client.emit('conversation_started', {
@@ -99,12 +96,10 @@ export class ChatbotGateway extends AuthenticatedGateway {
   }
 
   @SubscribeMessage(CHATBOT_PATTERN.ASK_QUESTION)
-  // 5. And here
   async handleAskQuestion(
     client: AuthenticatedChatSocket,
     payload: AskQuestionPayload,
   ) {
-    // This is now type-safe, and TypeScript knows 'user' is a JwtDto or undefined.
     const user = client.data.user;
     if (!user) {
       this.logger.warn(`Invalid user on ask_question for client ${client.id}.`);
@@ -127,11 +122,20 @@ export class ChatbotGateway extends AuthenticatedGateway {
       return;
     }
 
+    const chatHistory = savedConversation.messages
+      .slice(-20)
+      .map((message) => ({
+        role: message.role.replace("ai", "you").replace("user", "me"),
+        content: message.content,
+    }));
+
+
     const requestPayload = {
       userId: user.id,
       question,
       socketId: client.id,
       conversationId: String(savedConversation._id),
+      chatHistory,
     };
 
     this.logger.log(

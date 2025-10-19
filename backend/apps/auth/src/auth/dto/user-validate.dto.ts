@@ -1,4 +1,4 @@
-import { Role } from '@app/contracts/user/user.dto';
+import { Role } from "@app/contracts";
 
 export class UserValidateDto {
   id: string;

@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -14,6 +15,7 @@ import { AuthService } from '../../auth/auth.service';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
+  private logger = new Logger(RoleGuard.name);
   constructor(
     private reflector: Reflector,
     private readonly authService: AuthService,
@@ -33,11 +35,11 @@ export class RoleGuard implements CanActivate {
     const cookies = contextRequest.cookies;
     if (!cookies.accessToken) throw new UnauthorizedException('No token found');
     try {
-      console.log('[RoleGuard] Validating token...');
+      this.logger.log('[RoleGuard] Validating token...');
       const user = (await firstValueFrom(
         this.authService.validateToken(cookies.accessToken as string),
       )) as Partial<User>;
-      console.log('[RoleGuard] Token validated:', user);
+      this.logger.log('[RoleGuard] Token validated:', user);
       if (!user) throw new UnauthorizedException('Invalid token');
       contextRequest.user = user;
 
@@ -53,7 +55,7 @@ export class RoleGuard implements CanActivate {
       return true;
     } catch (err: unknown) {
       const error = err as Error;
-      console.error('[RoleGuard] Token validation failed:', error.message);
+      this.logger.error('[RoleGuard] Token validation failed:', error.message);
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

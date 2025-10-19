@@ -15,13 +15,13 @@ import {
 } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
-import { RoleGuard } from '../role.guard';
 import { JwtDto, Role } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
 import type { Request } from 'express';
 import { Payload } from '@nestjs/microservices';
+import { RoleGuard } from '../common/role/role.guard';
 
 @Controller('chatbot')
 export class ChatbotController {

@@ -12,9 +12,9 @@ import {
 import { TasksService } from './tasks.service';
 import type { Request } from 'express';
 import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { RoleGuard } from '../role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { CreateTaskDto, JwtDto, Role, UpdateTaskDto } from '@app/contracts';
+import { RoleGuard } from '../common/role/role.guard';
 
 @Controller('tasks')
 export class TasksController {
