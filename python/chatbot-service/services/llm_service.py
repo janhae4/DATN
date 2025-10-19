@@ -7,7 +7,6 @@ class LLMService:
         self.embeddings = OllamaEmbeddings(model=OLLAMA_EMBEDDING_MODEL)
 
     def get_llm(self):
-        
         return self.llm
 
     def get_embeddings(self):
