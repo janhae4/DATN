@@ -1,4 +1,3 @@
-# rag_app/config.py
 import os
 
 RABBITMQ_URL =      os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost/")

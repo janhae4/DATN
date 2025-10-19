@@ -2,7 +2,6 @@ import json
 from aio_pika import IncomingMessage
 from services.vectorstore_service import VectorStoreService
 from services.minio_service import MinioService
-from services.llm_service import LLMService
 from chains.rag_chain import RAGChain
 from chains.summarizer import Summarizer
 from config import (
