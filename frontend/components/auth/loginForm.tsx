@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Icon } from '@iconify-icon/react';
-import styles from '@/app/auth/auth.module.css';
+import styles from '@/app/(secondary)/auth/auth.module.css';
 
 import GoogleIcon from '@/public/assets/login_signup_resources/google_icon.jpg';
 import FacebookIcon from '@/public/assets/login_signup_resources/facebook_icon.jpg';
