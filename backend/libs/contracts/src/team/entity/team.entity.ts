@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { MemberDto } from './dto/member.dto';
+import { MemberDto } from '../dto/member.dto';
 
 @Entity()
 export class Team {

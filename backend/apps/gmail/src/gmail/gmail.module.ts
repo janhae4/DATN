@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
 import { GmailService } from './gmail.service';
 import { GmailController } from './gmail.controller';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
+import { CLIENT_PROXY_PROVIDER, ClientConfigModule, ClientConfigService } from '@app/contracts';
 
 @Module({
   imports: [

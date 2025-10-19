@@ -6,7 +6,6 @@ import cookieParser from 'cookie-parser';
 import { RoleGuard } from './common/role/role.guard';
 import { RefreshTokenFilter } from './common/filter/refresh-token.filter';
 import { RpcToHttpExceptionFilter } from './common/filter/rpc-to-http.filter';
-import { Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);

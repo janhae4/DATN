@@ -16,7 +16,6 @@ import {
   ApiOperation,
   ApiQuery,
 } from '@nestjs/swagger';
-import { RoleGuard } from '../role.guard';
 import {
   ChangePasswordDto,
   ConfirmResetPasswordDto,
@@ -30,6 +29,7 @@ import {
 } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
 import { GoogleAuthGuard } from '../common/role/google-auth.guard';
+import { RoleGuard } from '../common/role/role.guard';
 
 @Controller('auth')
 export class AuthController {
