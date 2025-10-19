@@ -2,9 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt /app/
-COPY main.py /app/
-COPY consumer.py /app/
+COPY . /app/
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
