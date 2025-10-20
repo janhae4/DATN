@@ -1,18 +1,16 @@
 import { CHATBOT_PATTERN } from '@app/contracts/chatbot/chatbot.pattern';
 import { Controller } from '@nestjs/common';
-import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern } from '@nestjs/microservices';
 import { ChatbotService } from './chatbot.service';
-import { ChatbotGateway } from './chatbot.gateway';
 import { StorageService } from './storage.service';
-import type { ResponseStreamPayload } from './interface/response-stream.itf';
+import { MessageDto } from '@app/contracts';
 
 @Controller('chatbot')
 export class ChatbotController {
   constructor(
     private readonly chatbotService: ChatbotService,
-    private readonly chatbotGateway: ChatbotGateway,
     private readonly storageService: StorageService,
-  ) {}
+  ) { }
 
   @MessagePattern(CHATBOT_PATTERN.PROCESS_DOCUMENT)
   processDocument(payload: { fileName: string; userId: string }) {
@@ -20,11 +18,6 @@ export class ChatbotController {
       payload.fileName,
       payload.userId,
     );
-  }
-
-  @EventPattern(CHATBOT_PATTERN.STREAM_RESPONSE)
-  handleStreamResponse(@Payload() response: ResponseStreamPayload) {
-    this.chatbotGateway.handleStreamResponse(response);
   }
 
   @MessagePattern(CHATBOT_PATTERN.FIND_CONVERSATION)
@@ -73,5 +66,10 @@ export class ChatbotController {
   @MessagePattern(CHATBOT_PATTERN.DELETE_FILE)
   async deleteFile(payload: { fileId: string }) {
     return await this.storageService.deleteFile(payload.fileId);
+  }
+
+  @MessagePattern(CHATBOT_PATTERN.ASK_QUESTION)
+  async handleMessage(payload: MessageDto) {
+    return await this.chatbotService.handleMessage(payload.userId, payload.message, payload.conversationId, payload.role);
   }
 }

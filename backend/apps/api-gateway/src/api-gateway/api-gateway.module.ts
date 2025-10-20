@@ -9,6 +9,7 @@ import { RpcToHttpExceptionFilter } from '../common/filter/rpc-to-http.filter';
 import { TeamModule } from '../team/team.module';
 import { VideoChatModule } from '../video-chat/video-chat.module';
 import { ChatbotModule } from '../chatbot/chatbot.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ChatbotModule } from '../chatbot/chatbot.module';
     TeamModule,
     VideoChatModule,
     ChatbotModule,
+    NotificationModule
   ],
   controllers: [ApiGatewayController],
   providers: [

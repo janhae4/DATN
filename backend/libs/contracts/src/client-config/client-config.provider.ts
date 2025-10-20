@@ -12,6 +12,8 @@ import {
   NOTIFICATION_CLIENT,
   RAG_CLIENT,
   REDIS_CLIENT,
+  RESPONSE_CLIENT,
+  SOCKET_CLIENT,
   TASK_CLIENT,
   TASK_NER_CLIENT,
   TEAM_CLIENT,
@@ -140,9 +142,17 @@ export const CLIENT_PROXY_PROVIDER = {
   },
 
   RESPONSE_CLIENT: {
-    provide: 'RESPONSE_CLIENT',
+    provide: RESPONSE_CLIENT,
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientProxy =>
       ClientProxyFactory.create(cfg.responseClientOptions as ClientOptions),
   },
+
+  SOCKET_CLIENT: {
+    provide: SOCKET_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.socketClientOptions as ClientOptions),
+  }
 };
+

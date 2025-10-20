@@ -349,4 +349,28 @@ export class ClientConfigService {
   getBucketName(): string {
     return this.config.get<string>('MINIO_BUCKET_NAME', 'documents');
   }
+
+  /*
+  -------------
+  --- SOCKET --
+  -------------
+  */
+  getSocketPort(): number {
+    return this.config.get<number>('SOCKET_PORT', 4001);
+  }
+
+  getSocketQueue(): string {
+    return this.config.get<string>('SOCKET_QUEUE', 'socket_queue');
+  }
+
+  get socketClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getSocketQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
 }

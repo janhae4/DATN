@@ -27,6 +27,12 @@ export * from './chatbot/dto/chatbot-document.dto';
 export * from './chatbot/dto/conversation.dto';
 export * from './chatbot/dto/message-metadata.dto';
 export * from './chatbot/dto/message-response.dto';
+export * from './chatbot/dto/response-stream.dto';
+export * from './chatbot/dto/summarize-document.dto';
+export * from './chatbot/dto/ask-question.dto';
+export * from './chatbot/dto/message.dto';
+export * from './chatbot/schema/conversation.schema';
+export * from './chatbot/schema/message.schema'
 
 /*----
 CLIENT-CONFIG

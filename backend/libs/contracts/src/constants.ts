@@ -18,3 +18,4 @@ export const RAG_CLIENT = Symbol('RAG_CLIENT');
 export const CHATBOT_CLIENT = Symbol('CHATBOT_CLIENT');
 export const INGESTION_CLIENT = Symbol('INGESTION_CLIENT');
 export const RESPONSE_CLIENT = Symbol('RESPONSE_CLIENT');
+export const SOCKET_CLIENT= Symbol("SOCKET_CLIENT")
