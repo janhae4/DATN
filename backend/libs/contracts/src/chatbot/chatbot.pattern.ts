@@ -12,4 +12,5 @@ export const CHATBOT_PATTERN = {
   FIND_CONVERSATIONS: 'chatbot.find_conversations',
   FIND_CONVERSATION: 'chatbot.find_conversation',
   DELETE_CONVERSATION: 'chatbot.delete_conversation',
+  HANDLE_MESSAGE: 'chatbot.handle_message',
 };

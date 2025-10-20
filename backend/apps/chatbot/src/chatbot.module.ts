@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ChatbotGateway } from './chatbot.gateway';
 import { ChatbotController } from './chatbot.controller';
 import { ChatbotService } from './chatbot.service';
 import { StorageService } from './storage.service';
-import { Conversation, ConversationSchema } from './schema/conversation.schema';
+import { Conversation, ConversationSchema } from '../../../libs/contracts/src/chatbot/schema/conversation.schema';
 import {
   CLIENT_PROXY_PROVIDER,
   ClientConfigModule,
@@ -27,9 +26,6 @@ import {
     ]),
   ],
   providers: [
-    ChatbotGateway,
-    CLIENT_PROXY_PROVIDER.AUTH_CLIENT,
-    CLIENT_PROXY_PROVIDER.RAG_CLIENT,
     CLIENT_PROXY_PROVIDER.INGESTION_CLIENT,
     ChatbotService,
     StorageService,

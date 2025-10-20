@@ -3,13 +3,11 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Aggregate, Model } from 'mongoose';
 import {
+    CHATBOT_PATTERN,
     Conversation,
     ConversationDocument,
-} from './schema/conversation.schema';
-import { Message } from './schema/message.schema';
-import {
-    CHATBOT_PATTERN,
     INGESTION_CLIENT,
+    Message,
     NotFoundException,
 } from '@app/contracts';
 
@@ -30,7 +28,6 @@ export class ChatbotService {
         role: 'user' | 'ai' = 'user',
     ): Promise<ConversationDocument> {
         let conversation: ConversationDocument;
-        console.log(message);
 
         if (conversationId) {
             conversation = (await this.conversationModel.findById(

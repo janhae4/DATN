@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role, User } from '@app/contracts';
+import { JwtDto, Role } from '@app/contracts';
 import { Request } from 'express';
 import { ROLES_KEY } from './role.decorator';
 import { firstValueFrom } from 'rxjs';
@@ -38,11 +38,10 @@ export class RoleGuard implements CanActivate {
       this.logger.log('[RoleGuard] Validating token...');
       const user = (await firstValueFrom(
         this.authService.validateToken(cookies.accessToken as string),
-      )) as Partial<User>;
-      this.logger.log('[RoleGuard] Token validated:', user);
+      )) as JwtDto;
+      this.logger.log('[RoleGuard] Token validated:', user.id);
       if (!user) throw new UnauthorizedException('Invalid token');
       contextRequest.user = user;
-
       if (!requiredRoles || requiredRoles.length === 0) {
         return true;
       }

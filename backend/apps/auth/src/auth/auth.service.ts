@@ -1,8 +1,7 @@
 import {
-  HttpStatus,
   Inject,
   Injectable,
-  Logger, // 1. Import Logger
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -10,9 +9,6 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import {
   firstValueFrom,
   map,
-  catchError,
-  throwError,
-  Observable,
   tap,
 } from 'rxjs';
 import {
@@ -23,7 +19,6 @@ import {
   USER_PATTERNS,
   GMAIL_PATTERNS,
   REDIS_PATTERN,
-  Error,
   User,
   CreateAuthDto,
   CreateAuthOAuthDto,
@@ -42,53 +37,33 @@ import {
   ChangePasswordDto,
   ForgotPasswordDto,
   NotFoundException,
+  SOCKET_CLIENT,
 } from '@app/contracts';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { ResetCodeDto } from './dto/reset-code.dto';
+import { handleRpc } from '@app/common/utils/handle-rpc';
 
 @Injectable()
 export class AuthService {
-  // 2. Instantiate Logger
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
     @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
-    @Inject(NOTIFICATION_CLIENT)
-    private readonly notificationClient: ClientProxy,
+    @Inject(SOCKET_CLIENT)
+    private readonly socketClient: ClientProxy,
     @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
     private jwtService: JwtService,
   ) { }
-
-  private handleRpc<T>(obs: Observable<T>): Observable<T> {
-    return obs.pipe(
-      catchError((e: any) => {
-        const err = e as Error;
-        const message = err?.message || 'Internal Server Error';
-        const statusCode = err?.statusCode || HttpStatus.INTERNAL_SERVER_ERROR;
-
-        this.logger.error(
-          `RPC Error: ${message} (Status: ${statusCode})`,
-          e.stack,
-        );
-
-        const rpcError = new RpcException({
-          message,
-          statusCode,
-        });
-        return throwError(() => rpcError);
-      }),
-    );
-  }
 
   async register(createAuthDto: CreateAuthDto) {
     this.logger.log(
       `Starting registration for user: ${createAuthDto.email}...`,
     );
     const user = await firstValueFrom<User>(
-      this.handleRpc(
+      handleRpc(
         this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createAuthDto),
       ),
     );
@@ -112,7 +87,7 @@ export class AuthService {
 
   verifyLocal(userId: string, code: string) {
     this.logger.log(`Verifying local account for user ${userId}...`);
-    return this.handleRpc(
+    return handleRpc(
       this.userClient.send(USER_PATTERNS.VERIFY_LOCAL, { userId, code }),
     );
   }
@@ -123,14 +98,14 @@ export class AuthService {
     if (!payload) throw new UnauthorizedException('Invalid token');
     const { userId, code } = payload;
     this.logger.log(`Token validated. Verifying user ${userId}...`);
-    return this.handleRpc(
+    return handleRpc(
       this.userClient.send(USER_PATTERNS.VERIFY_LOCAL, { userId, code }),
     );
   }
 
   verifyForgotPassword(userId: string, code: string, password: string) {
     this.logger.log(`Verifying forgot password for user ${userId}...`);
-    return this.handleRpc(
+    return handleRpc(
       this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
         userId,
         code,
@@ -146,7 +121,7 @@ export class AuthService {
     this.logger.log(
       `Token validated. Verifying forgot password for user ${payload.userId}...`,
     );
-    return this.handleRpc(
+    return handleRpc(
       this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
         userId: payload.userId,
         code: payload.code,
@@ -192,7 +167,7 @@ export class AuthService {
   async resetCode(id: string) {
     this.logger.log(`Resetting password code for user ${id}...`);
     const payload = await firstValueFrom<ResetCodeDto>(
-      this.handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, id)),
+      handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, id)),
     );
 
     this.logger.log(`Generating new reset code email for user ${payload.user.id}.`);
@@ -213,7 +188,7 @@ export class AuthService {
   async resetVerificationCode(userId: string) {
     this.logger.log(`Resetting verification code for user ${userId}...`);
     const payload = await firstValueFrom<ResetCodeDto>(
-      this.handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, userId)),
+      handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, userId)),
     );
 
     this.logger.log(
@@ -287,7 +262,7 @@ export class AuthService {
         },
       });
 
-      this.notificationClient.emit(NOTIFICATION_PATTERN.SEND, {
+      this.socketClient.emit(NOTIFICATION_PATTERN.SEND, {
         userId: id,
         title: 'Login Notification',
         message: 'Logged in successfully',
@@ -357,7 +332,7 @@ export class AuthService {
 
     this.logger.log(`Creating new account link for user ${user.id}.`);
     await firstValueFrom(
-      this.handleRpc(
+      handleRpc(
         this.userClient.send(USER_PATTERNS.CREATE_ACCOUNT, {
           providerId,
           provider,
@@ -405,7 +380,7 @@ export class AuthService {
     } = data;
 
     const user = await firstValueFrom<User>(
-      this.handleRpc(
+      handleRpc(
         this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
           provider,
           providerId,
@@ -529,7 +504,7 @@ export class AuthService {
     this.logger.log(
       `Processing password change for user ${changePasswordDto.id}...`,
     );
-    return this.handleRpc(
+    return handleRpc(
       this.userClient
         .send(USER_PATTERNS.UPDATE_PASSWORD, changePasswordDto)
         .pipe(
@@ -557,7 +532,7 @@ export class AuthService {
         resetCode: string;
         expiredCode: Date;
       }>(
-        this.handleRpc(
+        handleRpc(
           this.userClient.send(
             USER_PATTERNS.RESET_PASSWORD,
             forgotPasswordDto.email,
@@ -619,6 +594,7 @@ export class AuthService {
   async verifyToken<T extends object>(token: string): Promise<T> {
     try {
       this.logger.debug('Verifying token...');
+      console.log(await this.jwtService.verifyAsync(token));
       return await this.jwtService.verifyAsync<T>(token);
     } catch (error) {
       this.logger.warn(`Token verification failed: ${error.message}`);
@@ -628,6 +604,6 @@ export class AuthService {
 
   findUserById(id: string) {
     this.logger.log(`Finding user by ID: ${id}...`);
-    return this.handleRpc(this.userClient.send(USER_PATTERNS.FIND_ONE, id));
+    return handleRpc(this.userClient.send(USER_PATTERNS.FIND_ONE, id));
   }
 }
