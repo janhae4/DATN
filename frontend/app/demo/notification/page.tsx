@@ -1,5 +1,3 @@
-// app/notification/page.tsx
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -60,13 +58,13 @@ export default function NotificationPage() {
     // để lấy tất cả thông báo cũ từ DB
     async function fetchInitialNotifications() {
       const response = await fetch(
-        `${API_GATEWAY_URL}/notification?userId=${MOCK_USER_ID}`
+        `${API_GATEWAY_URL}/notifications`,
+        {
+          credentials: "include",
+        }
       );
       const data = await response.json();
       setNotifications(data);
-
-      // Tạm thời dùng mock data để demo
-      setNotifications([]); // Bắt đầu trống
     }
 
     fetchInitialNotifications();
@@ -75,9 +73,7 @@ export default function NotificationPage() {
   // --- KẾT NỐI WEBSOCKET ---
   useEffect(() => {
     const socket = io(NOTIFICATION_GATEWAY_URL, {
-      query: {
-        userId: MOCK_USER_ID,
-      },
+      withCredentials: true
     });
 
     socket.on("connect", () => {
@@ -119,7 +115,7 @@ export default function NotificationPage() {
   // Hàm (ví dụ) để đánh dấu đã đọc
   const markAsRead = (id: string) => {
     // TODO: Gọi API (HTTP PATCH) để cập nhật DB
-    fetch(`${API_GATEWAY_URL}/notification/${id}/read`, { method: "PATCH" });
+    fetch(`${API_GATEWAY_URL}/notifications/${id}/read`, { method: "PATCH" });
 
     // Cập nhật local state
     setNotifications((prev) =>
@@ -132,7 +128,7 @@ export default function NotificationPage() {
   // Hàm (ví dụ) để đánh dấu tất cả đã đọc
   const markAllAsRead = () => {
     // TODO: Gọi API (HTTP POST) để cập nhật DB
-    fetch(`${API_GATEWAY_URL}/notification/read-all`, { method: "POST" });
+    fetch(`${API_GATEWAY_URL}/notifications/read-all`, { method: "POST" });
 
     setNotifications((prev) =>
       prev.map((notif) => ({ ...notif, isRead: true }))
