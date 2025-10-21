@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, FindManyOptions, Repository } from 'typeorm';
+import { DataSource, FindManyOptions, In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
@@ -12,8 +12,13 @@ import {
   CreateAuthOAuthDto,
   LoginDto,
   Provider,
+  CHAT_PATTERN,
+  CHAT_CLIENT,
+  EVENT_CLIENT,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
+import { ClientProxy } from '@nestjs/microservices';
+import { EVENTS } from '@app/contracts/events/events.pattern';
 
 @Injectable()
 export class UserService {
@@ -27,6 +32,8 @@ export class UserService {
     private readonly accountRepo: Repository<Account>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
+    @Inject(EVENT_CLIENT)
+    private readonly eventClient: ClientProxy
   ) { }
 
   private async create(createUserDto: Partial<User>) {
@@ -152,6 +159,7 @@ export class UserService {
       expiredCode: null,
       isVerified: true,
     });
+
     this.logger.log(`Account for user ${userId} verified successfully.`);
     return { message: 'Account verified successfully' };
   }
@@ -307,15 +315,24 @@ export class UserService {
     });
   }
 
+  async findManyByIds(ids: string[]) {
+    return await this.userRepo.find({
+      where: { id: In(ids) },
+    });
+  }
+
   async validate(loginDto: LoginDto) {
     this.logger.log(`Validating credentials for username: ${loginDto.username}`);
+    
     const account = await this.accountRepo.findOne({
-      where: {
-        provider: Provider.LOCAL,
-        providerId: loginDto.username,
-      },
+      where: [
+        { provider: Provider.LOCAL, providerId: loginDto.username },
+        { provider: Provider.LOCAL, email: loginDto.username }
+      ],
       relations: ['user'],
     });
+
+    console.log(account);
 
     if (
       account &&
@@ -487,6 +504,11 @@ export class UserService {
 
     if (user) {
       this.logger.log(`Successfully updated user ${id}.`);
+      this.eventClient.send(EVENTS.UPDATED, {
+        id,
+        name: user.name,
+        avatar: user.avatar,
+      });
     } else {
       this.logger.warn(`Update operation did not return a user for ID: ${id}. It might not exist.`);
     }

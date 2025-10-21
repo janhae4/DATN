@@ -2,7 +2,7 @@ import { OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGa
 import { Server, Socket } from 'socket.io';
 import { Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { AskQuestionDto, AUTH_CLIENT, AUTH_PATTERN, CHATBOT_CLIENT, CHATBOT_PATTERN, ConversationDocument, JwtDto, MessageDto, NOTIFICATION_CLIENT, NOTIFICATION_PATTERN, NotificationEventDto, NotificationType, RAG_CLIENT, ResponseStreamDto, SummarizeDocumentDto } from '@app/contracts';
+import { AskQuestionDto, AUTH_CLIENT, AUTH_PATTERN, CHATBOT_CLIENT, CHATBOT_PATTERN, ConversationDocument, JwtDto, MessageDto, NOTIFICATION_CLIENT, NOTIFICATION_PATTERN, NotificationEventDto, NotificationType, RAG_CLIENT, ResponseStreamDto, SendMessageEventPayload, SummarizeDocumentDto } from '@app/contracts';
 import * as cookie from 'cookie';
 import { firstValueFrom } from 'rxjs';
 import { handleRpc } from '@app/common/utils/handle-rpc';
@@ -279,5 +279,35 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return this.notificationClient.emit(NOTIFICATION_PATTERN.CREATE, event);
   }
 
+  async handleNewMessage(payload: SendMessageEventPayload) {
+    const {  conversationId, participants, content, attachments, sender, createdAt} = payload;
+    this.logger.log(
+      `Received new message for conversation ${conversationId}`,
+    );
 
+
+    try {
+      const participantIds = participants.map((p) => p._id);
+
+      if (participants.length === 0) {
+        this.logger.warn(`No participants found for conversation ${conversationId}`);
+        return;
+      }
+
+      this.logger.log(`Broadcasting to participants: ${participantIds.join(', ')}`);
+      participantIds.forEach((userId) => {
+        this.server.to(userId).emit('new_message', {
+          conversationId,
+          content,
+          sender,
+          attachments,
+          createdAt
+        });
+      });
+
+    } catch (error) {
+      this.logger.error('Failed to handle new message event', error);
+    }
+  }
 }
+

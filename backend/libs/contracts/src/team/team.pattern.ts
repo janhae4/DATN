@@ -1,12 +1,16 @@
 export const TEAM_PATTERN = {
   CREATE: 'team.create',
   FIND_ALL: 'team.findAll',
-  FIND_BY_OWNER_ID: 'team.findByOwnerId',
   FIND_BY_ID: 'team.findById',
+  FIND_BY_USER_ID: 'team.findByUserId',
+  FIND_BY_OWNER_ID: 'team.findByOwnerId',
   UPDATE: 'team.update',
   REMOVE: 'team.remove',
   ADD_MEMBER: 'team.addMember',
   REMOVE_MEMBER: 'team.removeMember',
   PROMOTE_TO_ADMIN: 'team.promoteToAdmin',
   DEMOTE_FROM_ADMIN: 'team.demoteFromAdmin',
+  CHANGE_ROLE: 'team.changeRole',
+  LEAVE_TEAM: 'team.leaveTeam',
+  TRANSFER_OWNERSHIP: 'team.transferOwnership'
 };

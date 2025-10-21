@@ -28,6 +28,15 @@
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
+    "chat": {
+      "type": "application",
+      "root": "apps/chat",
+      "entryFile": "main",
+      "sourceRoot": "apps/chat/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/chat/tsconfig.app.json"
+      }
+    },
     "chatbot": {
       "type": "application",
       "root": "apps/chatbot",
@@ -80,6 +89,15 @@
       "sourceRoot": "apps/redis/src",
       "compilerOptions": {
         "tsConfigPath": "apps/redis/tsconfig.app.json"
+      }
+    },
+    "team": {
+      "type": "application",
+      "root": "apps/team",
+      "entryFile": "main",
+      "sourceRoot": "apps/team/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/team/tsconfig.app.json"
       }
     },
     "socket": {

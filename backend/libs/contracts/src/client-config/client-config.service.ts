@@ -3,7 +3,19 @@ import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 @Injectable()
 export class ClientConfigService {
-  constructor(private config: ConfigService) {}
+  constructor(private config: ConfigService) { }
+
+  get eventClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: "event_queue",
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
   /*  
   -------------------------
   --------- SMTP  ---------
@@ -47,12 +59,18 @@ export class ClientConfigService {
   getUserClientPort(): number {
     return this.config.get<number>('USER_CLIENT_PORT', 3001);
   }
+
+  getUserQueue(): string {
+    return this.config.get<string>('USER_QUEUE', 'user_service_queue');
+  }
   get userClientOptions(): any {
     console.log('User port: ', this.getUserClientPort());
     return {
-      transport: Transport.TCP,
+      transport: Transport.RMQ,
       options: {
-        port: this.getUserClientPort(),
+        urls: [this.getRMQUrl()],
+        queue: this.getUserQueue(),
+        queueOptions: { durable: true },
       },
     };
   }
@@ -369,6 +387,33 @@ export class ClientConfigService {
       options: {
         urls: [this.getRMQUrl()],
         queue: this.getSocketQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  --------------
+  ---- CHAT ----
+  --------------
+  */
+  getChatDatabaseUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_CHAT_URL',
+      'mongodb://localhost:27017/chat',
+    );
+  }
+
+  getChatQueue(): string {
+    return this.config.get<string>('CHAT_QUEUE', 'chat_queue');
+  }
+
+  get chatClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getChatQueue(),
         queueOptions: { durable: true },
       },
     };

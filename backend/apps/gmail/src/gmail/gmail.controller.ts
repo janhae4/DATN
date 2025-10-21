@@ -1,7 +1,8 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { GmailService } from './gmail.service';
 import {
+  EVENTS,
   GMAIL_PATTERNS,
   SendEmailVerificationDto,
   SendMailDto,
@@ -11,6 +12,16 @@ import {
 @Controller()
 export class GmailController {
   constructor(private readonly gmailService: GmailService) {}
+
+  @EventPattern(EVENTS.REGISTER)
+  register(@Payload() user: User) {
+    this.gmailService.sendRegisterEmail(user);
+  }
+
+  @EventPattern(EVENTS.LOGIN)
+  login(@Payload() user: User) {
+    this.gmailService.sendLoginEmail(user, '');
+  }
 
   @MessagePattern(GMAIL_PATTERNS.GET_UNREAD_MAILS)
   getUnreadEmails(@Payload('userId') userId: string) {

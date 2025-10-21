@@ -10,6 +10,7 @@ import { TeamModule } from '../team/team.module';
 import { VideoChatModule } from '../video-chat/video-chat.module';
 import { ChatbotModule } from '../chatbot/chatbot.module';
 import { NotificationModule } from '../notification/notification.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { NotificationModule } from '../notification/notification.module';
     TeamModule,
     VideoChatModule,
     ChatbotModule,
-    NotificationModule
+    NotificationModule,
+    ChatModule
   ],
   controllers: [ApiGatewayController],
   providers: [

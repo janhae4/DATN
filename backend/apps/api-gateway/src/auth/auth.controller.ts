@@ -30,6 +30,7 @@ import {
 import { Roles } from '../common/role/role.decorator';
 import { GoogleAuthGuard } from '../common/role/google-auth.guard';
 import { RoleGuard } from '../common/role/role.guard';
+import { CurrentUser } from '../common/role/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -38,9 +39,9 @@ export class AuthController {
   @Get('/info')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
-  info(@Req() request: Request) {
-    const user = request?.user as JwtDto;
-    return this.authService.getInfo(user.id);
+  info(@CurrentUser('id') id : string) {
+    console.log(id)
+    return this.authService.getInfo(id);
   }
 
   @Post('/login')

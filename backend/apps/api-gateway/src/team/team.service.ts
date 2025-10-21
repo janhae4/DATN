@@ -1,58 +1,59 @@
 import {
+  AddMember,
+  ChangeRoleMember,
   CreateTeamDto,
+  LeaveMember,
+  MEMBER_ROLE,
   MemberDto,
+  RemoveMember,
   TEAM_CLIENT,
   TEAM_PATTERN,
+  TransferOwnership,
 } from '@app/contracts';
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class TeamService {
-  constructor(@Inject(TEAM_CLIENT) private readonly client: ClientProxy) {}
+  constructor(@Inject(TEAM_CLIENT) private readonly client: ClientProxy) { }
 
   findAll() {
     return this.client.send(TEAM_PATTERN.FIND_ALL, {});
   }
 
-  findByOwnerId(ownerId: string) {
-    return this.client.send(TEAM_PATTERN.FIND_BY_OWNER_ID, ownerId);
+  findByUserId(id: string) {
+    return this.client.send(TEAM_PATTERN.FIND_BY_USER_ID, id);
   }
 
-  findById(id: string) {
-    return this.client.send(TEAM_PATTERN.FIND_BY_ID, id);
+  findById(id: string, userId: string) {
+    return this.client.send(TEAM_PATTERN.FIND_BY_ID, {id, userId});
   }
 
   create(createTeamDto: CreateTeamDto) {
     return this.client.send(TEAM_PATTERN.CREATE, createTeamDto);
   }
 
-  addMember(teamId: string, member: MemberDto) {
-    return this.client.send(TEAM_PATTERN.ADD_MEMBER, { teamId, member });
+  addMember(payload: AddMember) {
+    return this.client.send(TEAM_PATTERN.ADD_MEMBER, payload);
   }
 
-  removeMember(teamId: string, userId: string, requesterId: string) {
-    return this.client.send(TEAM_PATTERN.REMOVE_MEMBER, {
-      teamId,
-      userId,
-      requesterId,
-    });
+  removeMember(payload: RemoveMember) {
+    return this.client.send(TEAM_PATTERN.REMOVE_MEMBER, payload);
   }
 
-  promoteToAdmin(teamId: string, targetUserId: string, requesterId: string) {
-    return this.client.send(TEAM_PATTERN.PROMOTE_TO_ADMIN, {
-      teamId,
-      targetUserId,
-      requesterId,
-    });
+  leaveTeam(payload: LeaveMember) {
+    return this.client.send(TEAM_PATTERN.LEAVE_TEAM, payload);
   }
 
-  demoteFromAdmin(teamId: string, targetUserId: string, requesterId: string) {
-    return this.client.send(TEAM_PATTERN.DEMOTE_FROM_ADMIN, {
-      teamId,
-      targetUserId,
-      requesterId,
-    });
+  transferOwnership(payload: TransferOwnership) {
+    return this.client.send(TEAM_PATTERN.TRANSFER_OWNERSHIP, payload);
+  }
+
+  changeRole(payload: ChangeRoleMember) {
+    if (payload.newRole === MEMBER_ROLE.OWNER) {
+      throw new ForbiddenException('Please use route /ownership instead');
+    }
+    return this.client.send(TEAM_PATTERN.CHANGE_ROLE, payload);
   }
 }

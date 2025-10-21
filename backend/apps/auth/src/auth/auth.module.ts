@@ -4,12 +4,17 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
 import { JwtModule } from '@nestjs/jwt';
+import { RoleGuard } from 'apps/api-gateway/src/common/role/role.guard';
 
 @Module({
-  imports: [PassportModule, ClientConfigModule, JwtModule.register({
-    secret: process.env.JWT_ACCESS_SECRET,
-    signOptions: { expiresIn: '15m' },
-  })],
+  imports: [
+    PassportModule,
+    ClientConfigModule,
+    JwtModule.register({
+      secret: process.env.JWT_ACCESS_SECRET,
+      signOptions: { expiresIn: '15m' },
+    })
+  ],
   controllers: [AuthController],
   providers: [
     AuthService,
@@ -17,6 +22,7 @@ import { JwtModule } from '@nestjs/jwt';
     CLIENT_PROXY_PROVIDER.SOCKET_CLIENT,
     CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
     CLIENT_PROXY_PROVIDER.GMAIL_CLIENT,
+    CLIENT_PROXY_PROVIDER.EVENT_CLIENT
   ],
 })
-export class AuthModule {}
+export class AuthModule { }

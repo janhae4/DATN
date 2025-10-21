@@ -38,6 +38,8 @@ import {
   ForgotPasswordDto,
   NotFoundException,
   SOCKET_CLIENT,
+  EVENT_CLIENT,
+  EVENTS,
 } from '@app/contracts';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -56,6 +58,8 @@ export class AuthService {
     private readonly socketClient: ClientProxy,
     @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
     private jwtService: JwtService,
+    @Inject(EVENT_CLIENT)
+    private readonly eventClient: ClientProxy
   ) { }
 
   async register(createAuthDto: CreateAuthDto) {
@@ -68,7 +72,7 @@ export class AuthService {
       ),
     );
     this.logger.log(`User ${user.id} created. Emitting welcome email.`);
-    this.gmailClient.emit(GMAIL_PATTERNS.SEND_EMAIL_REGISTER, user);
+    this.eventClient.emit(EVENTS.REGISTER, user);
 
     this.logger.log(`Generating verification code for user ${user.id}.`);
     const { code, url } = await this.generateAndSendCode(
@@ -208,71 +212,32 @@ export class AuthService {
     };
   }
 
-  private async generateTokensAndSession(
-    payload: JwtDto | null = null,
-    user: User | null = null,
-    isRefresh = false,
-  ) {
+  private async _generateTokensAndSession(user: User | JwtDto) {
     const sessionId = randomUUID();
-    const id = payload?.id ?? user?.id;
-    const role = payload?.role ?? user?.role;
+    const payload = { id: user.id, role: user.role };
 
-    this.logger.log(`Generating tokens for user ${id}, session ${sessionId}...`);
+    this.logger.log(`Generating tokens for user ${user.id}, session ${sessionId}...`);
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync({ id, role }, { expiresIn: ACCESS_TTL }),
-      this.jwtService.signAsync(
-        { id, sessionId, role },
-        { expiresIn: REFRESH_TTL },
-      ),
+      this.jwtService.signAsync(payload, { expiresIn: ACCESS_TTL }),
+      this.jwtService.signAsync({ ...payload, sessionId }, { expiresIn: REFRESH_TTL }),
     ]);
 
-    this.logger.log(`Hashing refresh token for session ${sessionId}.`);
     const hashedRefresh = await bcrypt.hash(refreshToken, 10);
 
-    if (isRefresh) {
-      this.logger.log(
-        `Refresh flow: Deleting old refresh token for session ${sessionId}.`,
-      );
-      this.redisClient.emit(REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
-        userId: id,
-        sessionId,
-      });
-    }
-
-    this.logger.log(
-      `Storing new refresh token for user ${id}, session ${sessionId}.`,
-    );
     this.redisClient.emit(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
-      userId: id,
+      userId: user.id,
       sessionId,
       hashedRefresh,
       exp: REFRESH_TTL,
     });
 
-    if (!isRefresh) {
-      this.logger.log(
-        `Login flow: Emitting user activity and notifications for user ${id}.`,
-      );
-      this.userClient.emit(USER_PATTERNS.UPDATE, {
-        id,
-        updateUser: {
-          isActive: true,
-          lastLogin: new Date(),
-        },
-      });
-
-      this.socketClient.emit(NOTIFICATION_PATTERN.SEND, {
-        userId: id,
-        title: 'Login Notification',
-        message: 'Logged in successfully',
-        type: NotificationType.SUCCESS,
-      });
-
-      this.gmailClient.emit(GMAIL_PATTERNS.SEND_LOGIN_EMAIL, user);
-    }
-    this.logger.log(`Tokens generated successfully for user ${id}.`);
     return { accessToken, refreshToken };
+  }
+
+  private _handlePostLoginTasks(user: User) {
+    this.logger.log(`Emitting post-login events for user ${user.id}.`);
+    this.eventClient.emit(EVENTS.LOGIN, user);
   }
 
   async login(loginDto: LoginDto) {
@@ -285,7 +250,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
     this.logger.log(`User ${loginDto.username} validated. Generating session...`);
-    return await this.generateTokensAndSession(null, user);
+    const token = await this._generateTokensAndSession(user);
+    this._handlePostLoginTasks(user);
+    return token;
   }
 
   private async handleLinking(data: GoogleAccountDto, account: Account) {
@@ -362,7 +329,7 @@ export class AuthService {
       refreshToken,
     });
 
-    return await this.generateTokensAndSession(null, account.user, true);
+    await this._generateTokensAndSession(account.user);
   }
 
   private async handleRegisterGoogle(data: GoogleAccountDto) {
@@ -399,7 +366,7 @@ export class AuthService {
       refreshToken,
     });
 
-    return await this.generateTokensAndSession(null, user, true);
+    return await this._generateTokensAndSession(user);
   }
 
   async handleGoogleCallback(data: GoogleAccountDto) {
@@ -493,11 +460,12 @@ export class AuthService {
       `Refresh lock acquired. Generating new tokens for user ${payload.id}.`,
     );
 
-    return await this.generateTokensAndSession(
-      { id: payload.id, role: payload.role } as JwtDto,
-      null,
-      true,
-    );
+    this.redisClient.emit(REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
+      userId: payload.id,
+      sessionId: payload.sessionId,
+    });
+
+    return this._generateTokensAndSession({ id: payload.id, role: payload.role } as JwtDto);
   }
 
   changePassword(changePasswordDto: ChangePasswordDto) {

@@ -6,7 +6,9 @@ import {
 import { ClientConfigService } from './client-config.service';
 import {
   AUTH_CLIENT,
+  CHAT_CLIENT,
   CHATBOT_CLIENT,
+  EVENT_CLIENT,
   GMAIL_CLIENT,
   INGESTION_CLIENT,
   NOTIFICATION_CLIENT,
@@ -153,6 +155,20 @@ export const CLIENT_PROXY_PROVIDER = {
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientProxy =>
       ClientProxyFactory.create(cfg.socketClientOptions as ClientOptions),
+  },
+
+  CHAT_CLIENT: {
+    provide: CHAT_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.chatClientOptions as ClientOptions),
+  },
+
+  EVENT_CLIENT: {
+    provide: EVENT_CLIENT,
+    inject: [ClientConfigService],
+    useFactory: (cfg: ClientConfigService): ClientProxy =>
+      ClientProxyFactory.create(cfg.eventClientOptions as ClientOptions),
   }
 };
 

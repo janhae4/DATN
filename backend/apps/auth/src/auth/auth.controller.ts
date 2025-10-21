@@ -11,6 +11,7 @@ import {
   JwtDto,
   LoginDto,
 } from '@app/contracts';
+import { CurrentUser } from 'apps/api-gateway/src/common/role/current-user.decorator';
 
 @Controller()
 export class AuthController {
@@ -70,7 +71,7 @@ export class AuthController {
   }
 
   @MessagePattern(AUTH_PATTERN.INFO)
-  info(@Payload() id: string) {
+  info(@CurrentUser('id') id: string) {
     return this.authService.getInfo(id);
   }
 
