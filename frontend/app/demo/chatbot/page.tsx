@@ -83,7 +83,7 @@ interface SummarizeDocumentPayload {
 }
 
 // --- HẰNG SỐ ---
-const NESTJS_GATEWAY_URL = "http://localhost:3006";
+const NESTJS_GATEWAY_URL = "http://localhost:4001";
 const NESTJS_HTTP_URL = "http://localhost:3000";
 
 const CHATBOT_PATTERN = {
