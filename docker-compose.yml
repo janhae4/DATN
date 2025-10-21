@@ -118,11 +118,21 @@ services:
     container_name: minio_service
     ports:
       - "9000:9000"
+      - "9001:9001" 
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+    command: [ "server", "--console-address", ":9001", "/data" ]
     volumes:
-      - ./minio-data:/data
+      - minio-data:/data
+
+  mongo:
+    image: mongo:8.0
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
 
 volumes:
   postgres-data:
@@ -131,3 +141,4 @@ volumes:
   ollama-data:
   minio-data:
   chroma-data:
+  mongo-data:

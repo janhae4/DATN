@@ -15,7 +15,5 @@ MINIO_BUCKET =      os.environ.get("MINIO_BUCKET_NAME", "documents")
 
 INGESTION_QUEUE =       os.environ.get("INGESTION_QUEUE", "ingestion_queue")
 RAG_QUEUE =             os.environ.get("RAG_QUEUE", "rag_queue")
-NOTIFICATION_QUEUE =    os.environ.get("NOTIFICATION_QUEUE", "notifications_service_queue")
-RESPONSE_QUEUE =        os.environ.get("RESPONSE_QUEUE", "chatbot_service_queue")
-
+SOCKET_QUEUE =          os.environ.get("SOCKET_QUEUE", "socket_queue")
 THREADPOOL_MAX_WORKERS = int(os.environ.get("THREADPOOL_MAX_WORKERS", "6"))
