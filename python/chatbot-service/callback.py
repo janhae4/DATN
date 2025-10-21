@@ -5,8 +5,7 @@ from services.minio_service import MinioService
 from chains.rag_chain import RAGChain
 from chains.summarizer import Summarizer
 from config import (
-    RESPONSE_QUEUE,
-    NOTIFICATION_QUEUE
+    SOCKET_QUEUE
 )
 
 async def send_notification(channel, user_id, file_name, status, message):
@@ -21,7 +20,7 @@ async def send_notification(channel, user_id, file_name, status, message):
         }
         await channel.basic_publish(
             body=json.dumps(notification_body).encode(),
-            routing_key=NOTIFICATION_QUEUE
+            routing_key=SOCKET_QUEUE
         )
         print(f"--> Đã gửi thông báo '{status}' cho file: {file_name}")
     except Exception as e:
@@ -86,7 +85,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 
                 body = json.dumps(response_body).encode()
                 print(f"--> [RAG] Gửi phần trị: {content}")
-                await channel.basic_publish(body=body, routing_key=RESPONSE_QUEUE)
+                await channel.basic_publish(body=body, routing_key=SOCKET_QUEUE)
                 
             if pattern == 'ask_question':
                 question, chat_history = data.get('question'), data.get('chatHistory', [])
