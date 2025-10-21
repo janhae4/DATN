@@ -20,6 +20,17 @@ export * from './auth/dto/reset-password.dto';
 export * from './auth/dto/verify-account.dto';
 
 /*----
+CHAT
+-----*/
+export * from './chat/dto/create-chat.dto';
+export * from './chat/dto/create-message.dto';
+export * from './chat/dto/get-messages.dto'
+export * from './chat/dto/participant.dto'
+export * from './chat/dto/create-direct-chat.dto'
+export * from './chat/dto/send-message.dto'
+export * from './chat/chat.pattern.dto'
+
+/*----
 CHATBOT
 -----*/
 export * from './chatbot/chatbot.pattern';
@@ -96,10 +107,22 @@ export * from './team/team.pattern';
 export * from './team/dto/create-team.dto';
 export * from './team/dto/update-team.dto';
 export * from './team/dto/member.dto';
+export * from './team/dto/add-member.dto'
 export * from './team/entity/team.entity';
+export * from './team/dto/remove-member.dto';
+export * from './team/dto/change-role.dto';
+export * from './team/dto/leave-member.dto';
+export * from './team/dto/action-role.dto';
+export * from './team/dto/transfer-owner.dto';
 
 /*----
 VIDEO-CHAT
 -----*/
 export * from './video-chat/create-call.dto';
 export * from './video-chat/video-chat.patterns';
+
+
+/*----
+EVENT
+-----*/
+export * from './events/events.pattern'

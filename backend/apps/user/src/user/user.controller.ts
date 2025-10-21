@@ -1,11 +1,12 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import {
   Account,
   ChangePasswordDto,
   CreateAuthLocalDto,
   CreateAuthOAuthDto,
+  EVENTS,
   LoginDto,
   Provider,
   User,
@@ -15,6 +16,14 @@ import {
 @Controller()
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @EventPattern(EVENTS.LOGIN)
+  handleLogin(@Payload() payload: Partial<User>) {
+    this.userService.update( payload.id ?? "", {
+      lastLogin: new Date(),
+      isActive: true
+    });
+  }
 
   @MessagePattern(USER_PATTERNS.CREATE_LOCAL)
   create(@Payload() createUserDto: CreateAuthLocalDto) {
@@ -90,6 +99,11 @@ export class UserController {
     @Payload() data: { provider: Provider; providerId: string },
   ) {
     return await this.userService.findOneOAuth(data.provider, data.providerId);
+  }
+
+  @MessagePattern(USER_PATTERNS.FIND_MANY_BY_IDs)
+  async findManyByIds(@Payload() ids: string[]) {
+    return await this.userService.findManyByIds(ids);
   }
 
   @MessagePattern(USER_PATTERNS.VALIDATE)

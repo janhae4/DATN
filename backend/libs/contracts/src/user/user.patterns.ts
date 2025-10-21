@@ -13,6 +13,7 @@ export const USER_PATTERNS = {
   FIND_ONE_GOOGLE_BY_EMAIL: 'user.findOneGoogleByEmail',
   FIND_ONE_BY_EMAIL: 'user.findOneByEmail',
   FIND_ONE_OAUTH: 'user.findOneOAuth',
+  FIND_MANY_BY_IDs: 'user.findManyByIds',
   UPDATE: 'user.update',
   UPDATE_PASSWORD: 'user.updatePassword',
   REMOVE: 'user.remove',

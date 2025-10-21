@@ -6,7 +6,7 @@ import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
 import { GoogleStrategy } from '../common/google.strategy';
 
 @Module({
-  imports: [ClientConfigModule, UserModule],
+  imports: [ClientConfigModule, UserModule, AuthModule],
   controllers: [AuthController],
   providers: [
     AuthService,

@@ -1,4 +1,4 @@
-import { IsEnum, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum MEMBER_ROLE {
   OWNER = 'OWNER',
@@ -8,6 +8,13 @@ export enum MEMBER_ROLE {
 export class MemberDto {
   @IsString()
   id: string;
+
+  @IsString()
+  name: string;
+
+  @IsString()
+  @IsOptional()
+  avatar?: string;
 
   @IsEnum(MEMBER_ROLE)
   role: MEMBER_ROLE;

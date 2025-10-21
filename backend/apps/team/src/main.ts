@@ -4,12 +4,9 @@ import { TeamModule } from './team/team.module';
 import { ClientConfigService } from '@app/contracts';
 
 async function bootstrap() {
-  const appCtx = await NestFactory.createApplicationContext(TeamModule);
-  const cfg = appCtx.get(ClientConfigService);
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    TeamModule,
-    cfg.teamClientOptions as MicroserviceOptions,
-  );
-  await app.listen();
+  const app = await NestFactory.create(TeamModule);
+  const cfg = app.get(ClientConfigService)
+  app.connectMicroservice(cfg.teamClientOptions as MicroserviceOptions)
+  await app.startAllMicroservices();
 }
 bootstrap();

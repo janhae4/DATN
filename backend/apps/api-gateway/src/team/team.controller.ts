@@ -6,63 +6,145 @@ import {
   Param,
   Delete,
   Patch,
+  UseGuards,
 } from '@nestjs/common';
 import { TeamService } from './team.service';
-import { CreateTeamDto, MemberDto } from '@app/contracts';
+import { RoleGuard } from '../common/role/role.guard';
+import { CurrentUser } from '../common/role/current-user.decorator';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ChangeRoleMember } from './dto/change-role.dto';
+import { Roles } from '../common/role/role.decorator';
+import { Role } from '@app/contracts';
+import { CreateTeamDto } from './dto/create-team.dto';
+import { AddMember } from './dto/add-member.dto';
+import { RemoveMember } from './dto/remove-member.dto';
+import { TransferOwnership } from './dto/transfer-owner.dto';
 
 @Controller('team')
+@UseGuards(RoleGuard)
 export class TeamController {
-  constructor(private readonly teamService: TeamService) {}
+  constructor(private readonly teamService: TeamService) { }
 
   @Get()
+  @ApiOperation({ summary: 'Get all teams' })
   findAll() {
     return this.teamService.findAll();
   }
 
-  @Get('owner/:ownerId')
-  findByOwnerId(@Param('ownerId') ownerId: string) {
-    return this.teamService.findByOwnerId(ownerId);
+  @Get()
+  @ApiOperation({ summary: 'Get all teams by user id' })
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.USER)
+  find(@CurrentUser('id') id: string) {
+    return this.teamService.findByUserId(id);
   }
 
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.teamService.findById(id);
+  @ApiOperation({ summary: 'Get team by id' })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: 'Team id' })
+  findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.teamService.findById(id, userId);
   }
 
   @Post()
-  create(@Body() createTeamDto: CreateTeamDto) {
-    return this.teamService.create(createTeamDto);
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create team' })
+  @ApiBody({ type: CreateTeamDto })
+  @Roles(Role.ADMIN, Role.USER)
+  create(@Body() createTeamDto: CreateTeamDto, @CurrentUser('id') userId: string) {
+    return this.teamService.create({
+      ...createTeamDto,
+      ownerId: userId
+    });
   }
 
   @Post(':teamId/member')
-  addMember(@Param('teamId') teamId: string, @Body() member: MemberDto) {
-    return this.teamService.addMember(teamId, member);
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add member to team' })
+  @ApiParam({ name: 'teamId', description: 'Team id' })
+  @ApiBody({ type: AddMember })
+  @Roles(Role.ADMIN, Role.USER)
+  addMember(
+    @Param('teamId') teamId: string,
+    @CurrentUser('id') requesterId: string,
+    @Body() payload: AddMember
+  ) {
+    return this.teamService.addMember({
+      ...payload,
+      teamId,
+      requesterId
+    });
   }
 
-  @Delete(':teamId/member/:userId/:requesterId')
+  @Delete(':teamId/member/')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove member from team' })
+  @ApiParam({ name: 'teamId', description: 'Team id' })
+  @ApiBody({ type: RemoveMember })
+  @Roles(Role.ADMIN, Role.USER)
   removeMember(
     @Param('teamId') teamId: string,
-    @Param('userId') userId: string,
-    @Param('requesterId') requesterId: string,
+    @CurrentUser('id') requesterId: string,
+    @Body() body: RemoveMember
   ) {
-    return this.teamService.removeMember(teamId, userId, requesterId);
+    return this.teamService.removeMember({
+      ...body,
+      teamId,
+      requesterId
+    });
   }
 
-  @Patch(':teamId/admin/:userId/:requesterId/promote')
+  @Post('/:teamId/member/leave')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Leave team' })
+  @ApiParam({ name: 'teamId', description: 'Team id' })
+  @Roles(Role.ADMIN, Role.USER)
+  leaveTeam(
+    @Param('teamId') teamId: string,
+    @CurrentUser('id') requesterId: string) {
+    return this.teamService.leaveTeam({
+      teamId,
+      requesterId
+    });
+  }
+
+  @Patch(':teamId/member/ownership')
+  transferOwnership(
+    @Param('teamId') teamId: string,
+    @CurrentUser('id') requesterId: string,
+    @Body() body: TransferOwnership
+  ) {
+    return this.teamService.transferOwnership({
+      ...body,
+      teamId,
+      requesterId
+    });
+  }
+
+  @Patch(':teamId/member/role')
+  @ApiOperation({ summary: "Change a team member's role" })
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'teamId',
+    description: 'The unique identifier of the team to which the member belongs.',
+    example: '123123'
+  })
+  @ApiBody({
+    type: ChangeRoleMember
+  })
+  @ApiResponse({ status: 200, description: 'The member role was successfully updated.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. The requester does not have permission to change roles.' })
+  @ApiResponse({ status: 404, description: 'Not Found. The team or target member could not be found.' })
   promoteToAdmin(
     @Param('teamId') teamId: string,
-    @Param('userId') userId: string,
-    @Param('requesterId') requesterId: string,
+    @CurrentUser('id') requesterId: string,
+    @Body() body: ChangeRoleMember
   ) {
-    return this.teamService.promoteToAdmin(teamId, userId, requesterId);
-  }
-
-  @Patch(':teamId/admin/:userId/:requesterId/demote')
-  demoteFromAdmin(
-    @Param('teamId') teamId: string,
-    @Param('userId') userId: string,
-    @Param('requesterId') requesterId: string,
-  ) {
-    return this.teamService.demoteFromAdmin(teamId, userId, requesterId);
+    return this.teamService.changeRole({
+      ...body,
+      teamId,
+      requesterId
+    });
   }
 }

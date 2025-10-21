@@ -13,6 +13,7 @@ async function bootstrap() {
   app.useWebSocketAdapter(redisIoAdapter);
 
   app.connectMicroservice(cfg.socketClientOptions as MicroserviceOptions);
+  app.connectMicroservice(cfg.eventClientOptions as MicroserviceOptions);
   await app.startAllMicroservices();
 
   await app.listen(Number(cfg.getSocketPort()) || 4001);

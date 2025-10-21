@@ -1,6 +1,5 @@
-import { IsArray, IsString, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsOptional, IsString } from 'class-validator';
 import { MemberDto } from './member.dto';
-import { Type } from 'class-transformer';
 
 export class CreateTeamDto {
   @IsString()
@@ -10,7 +9,15 @@ export class CreateTeamDto {
   name: string;
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MemberDto)
-  members: MemberDto[];
+  @IsString({ each: true })
+  @ArrayMinSize(0)
+  @IsOptional()
+  memberIds?: string[];
+}
+
+export interface CreateTeamEventPayload {
+  ownerId: string;
+  ownerName: string
+  name: string;
+  members: MemberDto[]
 }

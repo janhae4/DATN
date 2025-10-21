@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { Account, ClientConfigModule, User } from '@app/contracts';
+import { Account, CLIENT_PROXY_PROVIDER, ClientConfigModule, User } from '@app/contracts';
 
 @Module({
   imports: [
@@ -19,6 +19,9 @@ import { Account, ClientConfigModule, User } from '@app/contracts';
     TypeOrmModule.forFeature([User, Account]),
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [
+    UserService,
+    CLIENT_PROXY_PROVIDER.EVENT_CLIENT
+  ],
 })
-export class UserModule {}
+export class UserModule { }
