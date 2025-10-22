@@ -180,12 +180,7 @@ export function EpicDataTable() {
             </Accordion>
 
             {/* --- THÊM: Modal để hiển thị chi tiết Epic --- */}
-            <EpicModal
-                epic={selectedEpic}
-                isOpen={!!selectedEpic}
-                onClose={() => setSelectedEpic(null)}
-            />
-
+       
         </div>
     )
 }
