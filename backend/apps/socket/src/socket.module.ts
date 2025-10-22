@@ -14,4 +14,4 @@ import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
     CLIENT_PROXY_PROVIDER.CHATBOT_CLIENT,
   ],
 })
-export class SocketModule { }
+export class SocketModule {}

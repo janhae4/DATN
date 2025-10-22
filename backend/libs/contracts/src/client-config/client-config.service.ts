@@ -3,15 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 @Injectable()
 export class ClientConfigService {
-  constructor(private config: ConfigService) { }
+  constructor(private config: ConfigService) {}
 
   get eventClientOptions(): any {
     return {
       transport: Transport.RMQ,
       options: {
         urls: [this.getRMQUrl()],
-        queue: "event_queue",
-        queueOptions: { durable: true },
+        queue: 'events_queue',
+        exchange: 'events',
+        exchangeType: 'fanout',
+        noAck: true,
+        queueOptions: { durable: false },
       },
     };
   }

@@ -10,7 +10,7 @@ export class ChatbotController {
   constructor(
     private readonly chatbotService: ChatbotService,
     private readonly storageService: StorageService,
-  ) { }
+  ) {}
 
   @MessagePattern(CHATBOT_PATTERN.PROCESS_DOCUMENT)
   processDocument(payload: { fileName: string; userId: string }) {
@@ -70,6 +70,11 @@ export class ChatbotController {
 
   @MessagePattern(CHATBOT_PATTERN.ASK_QUESTION)
   async handleMessage(payload: MessageDto) {
-    return await this.chatbotService.handleMessage(payload.userId, payload.message, payload.conversationId, payload.role);
+    return await this.chatbotService.handleMessage(
+      payload.userId,
+      payload.message,
+      payload.conversationId,
+      payload.role,
+    );
   }
 }

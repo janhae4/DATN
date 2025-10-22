@@ -6,7 +6,7 @@ import { ClientConfigService } from '@app/contracts';
 async function bootstrap() {
   const app = await NestFactory.create(NotificationModule);
   const cfg = app.get(ClientConfigService);
-  app.connectMicroservice(cfg.notificationClientOptions as MicroserviceOptions,);
+  app.connectMicroservice(cfg.notificationClientOptions as MicroserviceOptions);
   await app.startAllMicroservices();
 }
 bootstrap();

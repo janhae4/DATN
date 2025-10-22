@@ -4,7 +4,6 @@ import {
   CreateTeamDto,
   LeaveMember,
   MEMBER_ROLE,
-  MemberDto,
   RemoveMember,
   TEAM_CLIENT,
   TEAM_PATTERN,
@@ -16,7 +15,7 @@ import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class TeamService {
-  constructor(@Inject(TEAM_CLIENT) private readonly client: ClientProxy) { }
+  constructor(@Inject(TEAM_CLIENT) private readonly client: ClientProxy) {}
 
   findAll() {
     return this.client.send(TEAM_PATTERN.FIND_ALL, {});
@@ -27,7 +26,7 @@ export class TeamService {
   }
 
   findById(id: string, userId: string) {
-    return this.client.send(TEAM_PATTERN.FIND_BY_ID, {id, userId});
+    return this.client.send(TEAM_PATTERN.FIND_BY_ID, { id, userId });
   }
 
   create(createTeamDto: CreateTeamDto) {
@@ -44,6 +43,14 @@ export class TeamService {
 
   leaveTeam(payload: LeaveMember) {
     return this.client.send(TEAM_PATTERN.LEAVE_TEAM, payload);
+  }
+
+  kickMember(requesterId: string, targetId: string, teamId: string) {
+    return this.client.send(TEAM_PATTERN.KICK_MEMBER, {
+      requesterId,
+      targetId,
+      teamId,
+    });
   }
 
   transferOwnership(payload: TransferOwnership) {

@@ -1,28 +1,30 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types, Schema as MongooseSchema } from 'mongoose';
+import { Schema as MongooseSchema } from 'mongoose';
 import { Message } from './message.schema';
 import { Participant, ParticipantSchema } from './participant.schema';
 
 @Schema({ timestamps: true })
 export class Conversation {
-    @Prop({ trim: true })
-    name: string;
+  @Prop({ trim: true })
+  name: string;
 
-    @Prop()
-    ownerId: string;
+  @Prop()
+  ownerId: string;
 
-    @Prop({ default: false })
-    isGroupChat: boolean;
+  @Prop()
+  teamId: string;
 
-    @Prop({ type: [ParticipantSchema], default: [] })
-    participants: Participant[];
+  @Prop({ default: false })
+  isGroupChat: boolean;
 
-    @Prop({ type: [ParticipantSchema], default: [] })
-    groupAdmins: Participant[];
+  @Prop({ type: [ParticipantSchema], default: [] })
+  participants: Participant[];
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Message' })
-    latestMessage: Message | MongooseSchema.Types.ObjectId;
+  @Prop([])
+  groupAdmins: string[];
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Message' })
+  latestMessage: Message | MongooseSchema.Types.ObjectId;
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);
-

@@ -11,7 +11,13 @@ import {
 import { TeamService } from './team.service';
 import { RoleGuard } from '../common/role/role.guard';
 import { CurrentUser } from '../common/role/current-user.decorator';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { ChangeRoleMember } from './dto/change-role.dto';
 import { Roles } from '../common/role/role.decorator';
 import { Role } from '@app/contracts';
@@ -22,8 +28,9 @@ import { TransferOwnership } from './dto/transfer-owner.dto';
 
 @Controller('team')
 @UseGuards(RoleGuard)
+@Roles(Role.ADMIN, Role.USER)
 export class TeamController {
-  constructor(private readonly teamService: TeamService) { }
+  constructor(private readonly teamService: TeamService) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all teams' })
@@ -52,10 +59,13 @@ export class TeamController {
   @ApiOperation({ summary: 'Create team' })
   @ApiBody({ type: CreateTeamDto })
   @Roles(Role.ADMIN, Role.USER)
-  create(@Body() createTeamDto: CreateTeamDto, @CurrentUser('id') userId: string) {
+  create(
+    @Body() createTeamDto: CreateTeamDto,
+    @CurrentUser('id') userId: string,
+  ) {
     return this.teamService.create({
       ...createTeamDto,
-      ownerId: userId
+      ownerId: userId,
     });
   }
 
@@ -68,12 +78,12 @@ export class TeamController {
   addMember(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
-    @Body() payload: AddMember
+    @Body() payload: AddMember,
   ) {
     return this.teamService.addMember({
       ...payload,
       teamId,
-      requesterId
+      requesterId,
     });
   }
 
@@ -86,12 +96,12 @@ export class TeamController {
   removeMember(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
-    @Body() body: RemoveMember
+    @Body() body: RemoveMember,
   ) {
     return this.teamService.removeMember({
       ...body,
       teamId,
-      requesterId
+      requesterId,
     });
   }
 
@@ -102,23 +112,24 @@ export class TeamController {
   @Roles(Role.ADMIN, Role.USER)
   leaveTeam(
     @Param('teamId') teamId: string,
-    @CurrentUser('id') requesterId: string) {
+    @CurrentUser('id') requesterId: string,
+  ) {
     return this.teamService.leaveTeam({
       teamId,
-      requesterId
+      requesterId,
     });
   }
 
-  @Patch(':teamId/member/ownership')
+  @Post(':teamId/member/transfer-ownership')
   transferOwnership(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
-    @Body() body: TransferOwnership
+    @Body() body: TransferOwnership,
   ) {
     return this.teamService.transferOwnership({
       ...body,
       teamId,
-      requesterId
+      requesterId,
     });
   }
 
@@ -127,24 +138,35 @@ export class TeamController {
   @ApiBearerAuth()
   @ApiParam({
     name: 'teamId',
-    description: 'The unique identifier of the team to which the member belongs.',
-    example: '123123'
+    description:
+      'The unique identifier of the team to which the member belongs.',
+    example: '123123',
   })
   @ApiBody({
-    type: ChangeRoleMember
+    type: ChangeRoleMember,
   })
-  @ApiResponse({ status: 200, description: 'The member role was successfully updated.' })
-  @ApiResponse({ status: 403, description: 'Forbidden. The requester does not have permission to change roles.' })
-  @ApiResponse({ status: 404, description: 'Not Found. The team or target member could not be found.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The member role was successfully updated.',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden. The requester does not have permission to change roles.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found. The team or target member could not be found.',
+  })
   promoteToAdmin(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
-    @Body() body: ChangeRoleMember
+    @Body() body: ChangeRoleMember,
   ) {
     return this.teamService.changeRole({
       ...body,
       teamId,
-      requesterId
+      requesterId,
     });
   }
 }

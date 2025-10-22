@@ -30,7 +30,7 @@ export class TaskServiceService {
     private googleService: GoogleCalendarService,
     @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
     @Inject(TASK_NER_CLIENT) private readonly taskNerClient: ClientProxy,
-  ) { }
+  ) {}
 
   private async getTaskNer<T>(text: string): Promise<T> {
     this.logger.debug(`Sending text to NER service for parsing: "${text}"`);
@@ -57,7 +57,9 @@ export class TaskServiceService {
   async findByUserId(userId: string): Promise<Task[]> {
     this.logger.log(`Finding and sorting tasks for user ID: ${userId}`);
     // This is a complex query, adding a debug log to show it's being executed.
-    this.logger.debug(`Executing raw SQL query for prioritized tasks for user ${userId}.`);
+    this.logger.debug(
+      `Executing raw SQL query for prioritized tasks for user ${userId}.`,
+    );
     return await this.prisma.$queryRaw<Task[]>`
             WITH TaskPriority AS (
                 SELECT
@@ -115,7 +117,9 @@ export class TaskServiceService {
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
     const { userId, text } = createTaskDto;
-    this.logger.log(`Attempting to create task for user ${userId} from text: "${text}"`);
+    this.logger.log(
+      `Attempting to create task for user ${userId} from text: "${text}"`,
+    );
 
     const taskNer = await this.getTaskNer<{
       task: string;
@@ -137,17 +141,21 @@ export class TaskServiceService {
 
     try {
       const createdTask = await this.prisma.task.create({ data });
-      this.logger.log(`Successfully created task ${createdTask.taskId} for user ${userId}.`);
+      this.logger.log(
+        `Successfully created task ${createdTask.taskId} for user ${userId}.`,
+      );
       return createdTask;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        this.logger.warn(`Conflict error while creating task for user ${userId}. A similar task may already exist.`);
+        this.logger.warn(
+          `Conflict error while creating task for user ${userId}. A similar task may already exist.`,
+        );
         throw new ConflictException('Task already exists');
       }
-      this.logger.error(`Failed to create task for user ${userId}.`, error.stack);
+      this.logger.error(`Failed to create task for user ${userId}.`, error);
       throw new RpcException(error as Error);
     }
   }
@@ -169,7 +177,7 @@ export class TaskServiceService {
         this.logger.warn(`Update failed. Task with ID ${taskId} not found.`);
         throw new NotFoundException('Task not found');
       }
-      this.logger.error(`Failed to update task ${taskId}.`, error.stack);
+      this.logger.error(`Failed to update task ${taskId}.`, error);
       throw new RpcException(error as Error);
     }
   }
@@ -190,7 +198,7 @@ export class TaskServiceService {
         this.logger.warn(`Remove failed. Task with ID ${id} not found.`);
         throw new NotFoundException('Task not found');
       }
-      this.logger.error(`Failed to remove task ${id}.`, error.stack);
+      this.logger.error(`Failed to remove task ${id}.`, error);
       throw new RpcException(error as Error);
     }
   }
@@ -203,7 +211,9 @@ export class TaskServiceService {
       );
 
       if (!jwt) {
-        this.logger.warn(`No Google account linked for user: ${userId}. Tokens not found in Redis.`);
+        this.logger.warn(
+          `No Google account linked for user: ${userId}. Tokens not found in Redis.`,
+        );
         throw new BadRequestException('No Google account linked');
       }
 
@@ -213,7 +223,10 @@ export class TaskServiceService {
         userId,
       };
     } catch (error) {
-      this.logger.error(`Error fetching Google tokens for user ${userId}.`, error.stack);
+      this.logger.error(
+        `Error fetching Google tokens for user ${userId}.`,
+        error,
+      );
       if (error instanceof TokenExpiredError) {
         throw new UnauthorizedException('Access token expired');
       }

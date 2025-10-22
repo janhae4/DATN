@@ -6,13 +6,8 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { firstValueFrom, map, tap } from 'rxjs';
 import {
-  firstValueFrom,
-  map,
-  tap,
-} from 'rxjs';
-import {
-  NOTIFICATION_CLIENT,
   REDIS_CLIENT,
   USER_CLIENT,
   GMAIL_CLIENT,
@@ -28,8 +23,6 @@ import {
   JwtDto,
   REFRESH_TTL,
   ACCESS_TTL,
-  NOTIFICATION_PATTERN,
-  NotificationType,
   Account,
   BadRequestException,
   RefreshTokenDto,
@@ -40,6 +33,7 @@ import {
   SOCKET_CLIENT,
   EVENT_CLIENT,
   EVENTS,
+  Error,
 } from '@app/contracts';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -59,8 +53,8 @@ export class AuthService {
     @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
     private jwtService: JwtService,
     @Inject(EVENT_CLIENT)
-    private readonly eventClient: ClientProxy
-  ) { }
+    private readonly eventClient: ClientProxy,
+  ) {}
 
   async register(createAuthDto: CreateAuthDto) {
     this.logger.log(
@@ -174,7 +168,9 @@ export class AuthService {
       handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, id)),
     );
 
-    this.logger.log(`Generating new reset code email for user ${payload.user.id}.`);
+    this.logger.log(
+      `Generating new reset code email for user ${payload.user.id}.`,
+    );
     const { code, url } = await this.generateAndSendCode(
       payload.code,
       payload.expiredCode,
@@ -216,11 +212,16 @@ export class AuthService {
     const sessionId = randomUUID();
     const payload = { id: user.id, role: user.role };
 
-    this.logger.log(`Generating tokens for user ${user.id}, session ${sessionId}...`);
+    this.logger.log(
+      `Generating tokens for user ${user.id}, session ${sessionId}...`,
+    );
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, { expiresIn: ACCESS_TTL }),
-      this.jwtService.signAsync({ ...payload, sessionId }, { expiresIn: REFRESH_TTL }),
+      this.jwtService.signAsync(
+        { ...payload, sessionId },
+        { expiresIn: REFRESH_TTL },
+      ),
     ]);
 
     const hashedRefresh = await bcrypt.hash(refreshToken, 10);
@@ -249,7 +250,9 @@ export class AuthService {
       this.logger.warn(`Invalid credentials for ${loginDto.username}.`);
       throw new UnauthorizedException('Invalid credentials');
     }
-    this.logger.log(`User ${loginDto.username} validated. Generating session...`);
+    this.logger.log(
+      `User ${loginDto.username} validated. Generating session...`,
+    );
     const token = await this._generateTokensAndSession(user);
     this._handlePostLoginTasks(user);
     return token;
@@ -465,7 +468,10 @@ export class AuthService {
       sessionId: payload.sessionId,
     });
 
-    return this._generateTokensAndSession({ id: payload.id, role: payload.role } as JwtDto);
+    return this._generateTokensAndSession({
+      id: payload.id,
+      role: payload.role,
+    } as JwtDto);
   }
 
   changePassword(changePasswordDto: ChangePasswordDto) {
@@ -531,9 +537,9 @@ export class AuthService {
         resetCode: code,
       };
     } catch (error) {
+      const err = error as Error;
       this.logger.error(
-        `Failed to process forgot password for ${forgotPasswordDto.email}: ${error.message}`,
-        error.stack,
+        `Failed to process forgot password for ${forgotPasswordDto.email}: ${err.message}`,
       );
       throw error;
     }
@@ -565,7 +571,8 @@ export class AuthService {
       console.log(await this.jwtService.verifyAsync(token));
       return await this.jwtService.verifyAsync<T>(token);
     } catch (error) {
-      this.logger.warn(`Token verification failed: ${error.message}`);
+      const err = error as Error;
+      this.logger.warn(`Token verification failed: ${err.message}`);
       throw new UnauthorizedException('Invalid token');
     }
   }

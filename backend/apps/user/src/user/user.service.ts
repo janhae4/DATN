@@ -12,8 +12,6 @@ import {
   CreateAuthOAuthDto,
   LoginDto,
   Provider,
-  CHAT_PATTERN,
-  CHAT_CLIENT,
   EVENT_CLIENT,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
@@ -33,11 +31,13 @@ export class UserService {
     @InjectDataSource()
     private readonly dataSource: DataSource,
     @Inject(EVENT_CLIENT)
-    private readonly eventClient: ClientProxy
-  ) { }
+    private readonly eventClient: ClientProxy,
+  ) {}
 
   private async create(createUserDto: Partial<User>) {
-    this.logger.debug(`Creating a new user record with email: ${createUserDto.email}`);
+    this.logger.debug(
+      `Creating a new user record with email: ${createUserDto.email}`,
+    );
     const user = this.userRepo.create(createUserDto);
     return await this.userRepo.save(user);
   }
@@ -52,7 +52,9 @@ export class UserService {
       });
 
       if (emailExistInUser) {
-        this.logger.warn(`Registration failed: Email ${email} already exists in User table.`);
+        this.logger.warn(
+          `Registration failed: Email ${email} already exists in User table.`,
+        );
         throw new ConflictException('This email is already in use');
       }
 
@@ -61,7 +63,9 @@ export class UserService {
       });
 
       if (emailExistInAccount) {
-        this.logger.warn(`Registration failed: Email ${email} already exists in Account table.`);
+        this.logger.warn(
+          `Registration failed: Email ${email} already exists in Account table.`,
+        );
         throw new ConflictException('This email is already in use');
       }
 
@@ -73,7 +77,9 @@ export class UserService {
       });
 
       if (usernameExist) {
-        this.logger.warn(`Registration failed: Username ${username} already exists.`);
+        this.logger.warn(
+          `Registration failed: Username ${username} already exists.`,
+        );
         throw new ConflictException('This username is already in use');
       }
 
@@ -99,20 +105,26 @@ export class UserService {
       });
       await manager.save(account);
 
-      this.logger.log(`Successfully created local user ${savedUser.id} and account for email: ${email}`);
+      this.logger.log(
+        `Successfully created local user ${savedUser.id} and account for email: ${email}`,
+      );
       return savedUser;
     });
   }
 
   async createAccount(partial: Partial<Account>) {
-    this.logger.debug(`Creating a new account link for user ${partial.user?.id} with provider ${partial.provider}`);
+    this.logger.debug(
+      `Creating a new account link for user ${partial.user?.id} with provider ${partial.provider}`,
+    );
     const account = this.accountRepo.create(partial);
     return await this.accountRepo.save(account);
   }
 
   async createOAuth(data: CreateAuthOAuthDto) {
     const { provider, email } = data;
-    this.logger.log(`Starting OAuth registration for email: ${email} with provider: ${provider}`);
+    this.logger.log(
+      `Starting OAuth registration for email: ${email} with provider: ${provider}`,
+    );
 
     const user = await this.create({
       name: data.name ?? '',
@@ -135,22 +147,30 @@ export class UserService {
     this.logger.log(`Attempting to verify account for user ID: ${userId}`);
     const user = await this.findOne(userId);
     if (!user) {
-      this.logger.warn(`Verification failed for user ${userId}: User not found.`);
+      this.logger.warn(
+        `Verification failed for user ${userId}: User not found.`,
+      );
       throw new NotFoundException('User not found');
     }
 
     if (!user.verifiedCode) {
-      this.logger.warn(`Verification failed for user ${userId}: Account already verified.`);
+      this.logger.warn(
+        `Verification failed for user ${userId}: Account already verified.`,
+      );
       throw new BadRequestException('You have already verified your account');
     }
 
     if (user.verifiedCode !== code) {
-      this.logger.warn(`Verification failed for user ${userId}: Invalid verification code provided.`);
+      this.logger.warn(
+        `Verification failed for user ${userId}: Invalid verification code provided.`,
+      );
       throw new BadRequestException('Invalid verification code');
     }
 
     if (user.expiredCode && user.expiredCode < new Date()) {
-      this.logger.warn(`Verification failed for user ${userId}: Verification code has expired.`);
+      this.logger.warn(
+        `Verification failed for user ${userId}: Verification code has expired.`,
+      );
       throw new BadRequestException('Verification code expired');
     }
 
@@ -165,27 +185,37 @@ export class UserService {
   }
 
   async verifyForgotPassword(userId: string, code: string, password: string) {
-    this.logger.log(`Attempting to verify forgot password code for user ID: ${userId}`);
+    this.logger.log(
+      `Attempting to verify forgot password code for user ID: ${userId}`,
+    );
     const user = await this.findOne(userId);
     if (!user) {
-      this.logger.warn(`Forgot password verification failed for user ${userId}: User not found.`);
+      this.logger.warn(
+        `Forgot password verification failed for user ${userId}: User not found.`,
+      );
       throw new NotFoundException('User not found');
     }
 
     if (!password) throw new BadRequestException('Password is required');
 
     if (!user.resetCode) {
-      this.logger.warn(`Forgot password verification failed for user ${userId}: No reset code found.`);
+      this.logger.warn(
+        `Forgot password verification failed for user ${userId}: No reset code found.`,
+      );
       throw new BadRequestException('Invalid verification code');
     }
 
     if (user.resetCode && user.resetCode !== code) {
-      this.logger.warn(`Forgot password verification failed for user ${userId}: Invalid code provided.`);
+      this.logger.warn(
+        `Forgot password verification failed for user ${userId}: Invalid code provided.`,
+      );
       throw new BadRequestException('Invalid verification code');
     }
 
     if (user.expiredCode && user.expiredCode < new Date()) {
-      this.logger.warn(`Forgot password verification failed for user ${userId}: Code has expired.`);
+      this.logger.warn(
+        `Forgot password verification failed for user ${userId}: Code has expired.`,
+      );
       throw new BadRequestException('Verification code expired');
     }
 
@@ -193,7 +223,9 @@ export class UserService {
       (a) => a.provider === Provider.LOCAL,
     ) as Account;
     if (await bcrypt.compare(password, account.password ?? '')) {
-      this.logger.warn(`Forgot password failed for user ${userId}: New password is the same as the old one.`);
+      this.logger.warn(
+        `Forgot password failed for user ${userId}: New password is the same as the old one.`,
+      );
       throw new BadRequestException(
         'Password must be different from old password',
       );
@@ -210,32 +242,44 @@ export class UserService {
       }),
     ]);
 
-    this.logger.log(`Password for user ${userId} has been changed successfully via forgot password flow.`);
+    this.logger.log(
+      `Password for user ${userId} has been changed successfully via forgot password flow.`,
+    );
     return { message: 'Password changed successfully' };
   }
 
   async resetCode(userId: string, typeCode: 'verify' | 'reset') {
     return await this.dataSource.transaction(async (manager) => {
-      this.logger.log(`Attempting to reset ${typeCode} code for user ID: ${userId}`);
+      this.logger.log(
+        `Attempting to reset ${typeCode} code for user ID: ${userId}`,
+      );
       const user = await manager.findOne(User, {
         where: { id: userId },
         lock: { mode: 'pessimistic_write' },
       });
 
       if (!user) {
-        this.logger.warn(`Code reset failed for user ${userId}: User not found.`);
+        this.logger.warn(
+          `Code reset failed for user ${userId}: User not found.`,
+        );
         throw new NotFoundException('User not found');
       }
       if (user.isVerified && typeCode === 'verify') {
-        this.logger.warn(`Code reset failed for user ${userId}: User already verified.`);
+        this.logger.warn(
+          `Code reset failed for user ${userId}: User already verified.`,
+        );
         throw new BadRequestException('User already verified');
       }
       if (!user.resetCode && typeCode === 'reset') {
-        this.logger.warn(`Code reset failed for user ${userId}: No reset code exists.`);
+        this.logger.warn(
+          `Code reset failed for user ${userId}: No reset code exists.`,
+        );
         throw new BadRequestException('There is no reset code for this user');
       }
       if (user.expiredCode && user.expiredCode > new Date()) {
-        this.logger.warn(`Code reset failed for user ${userId}: Code not expired yet.`);
+        this.logger.warn(
+          `Code reset failed for user ${userId}: Code not expired yet.`,
+        );
         throw new BadRequestException(
           `${typeCode === 'verify' ? 'Verification' : 'Reset'} code not expired`,
         );
@@ -249,7 +293,9 @@ export class UserService {
           : { resetCode: code, expiredCode };
 
       await manager.update(User, { id: userId }, updateData);
-      this.logger.log(`Successfully generated new ${typeCode} code for user ${userId}`);
+      this.logger.log(
+        `Successfully generated new ${typeCode} code for user ${userId}`,
+      );
       return { user, code, expiredCode };
     });
   }
@@ -279,7 +325,9 @@ export class UserService {
     provider: Provider,
     providerId: string,
   ): Promise<Account | null> {
-    this.logger.log(`Finding OAuth account by provider: ${provider} and providerId: ${providerId}`);
+    this.logger.log(
+      `Finding OAuth account by provider: ${provider} and providerId: ${providerId}`,
+    );
     return await this.accountRepo.findOne({
       where: { provider, providerId },
       relations: ['user'],
@@ -322,12 +370,14 @@ export class UserService {
   }
 
   async validate(loginDto: LoginDto) {
-    this.logger.log(`Validating credentials for username: ${loginDto.username}`);
-    
+    this.logger.log(
+      `Validating credentials for username: ${loginDto.username}`,
+    );
+
     const account = await this.accountRepo.findOne({
       where: [
         { provider: Provider.LOCAL, providerId: loginDto.username },
-        { provider: Provider.LOCAL, email: loginDto.username }
+        { provider: Provider.LOCAL, email: loginDto.username },
       ],
       relations: ['user'],
     });
@@ -338,10 +388,14 @@ export class UserService {
       account &&
       (await bcrypt.compare(loginDto.password, account.password || ''))
     ) {
-      this.logger.log(`Credentials validated successfully for user: ${account.user.id}`);
+      this.logger.log(
+        `Credentials validated successfully for user: ${account.user.id}`,
+      );
       return account.user;
     }
-    this.logger.warn(`Validation failed for username: ${loginDto.username}. Invalid credentials or user not found.`);
+    this.logger.warn(
+      `Validation failed for username: ${loginDto.username}. Invalid credentials or user not found.`,
+    );
     return null;
   }
 
@@ -366,13 +420,17 @@ export class UserService {
       });
 
       if (!user) {
-        this.logger.warn(`Password reset failed: Account not found for identifier: ${email}`);
+        this.logger.warn(
+          `Password reset failed: Account not found for identifier: ${email}`,
+        );
         throw new NotFoundException('Account not found');
       }
 
       const account = user.accounts.find((a) => a.provider === Provider.LOCAL);
       if (!account) {
-        this.logger.warn(`Password reset failed: Local account not found for user ${user.id}.`);
+        this.logger.warn(
+          `Password reset failed: Local account not found for user ${user.id}.`,
+        );
         throw new NotFoundException('Local account not found');
       }
 
@@ -385,7 +443,9 @@ export class UserService {
         const timeRemaining = Math.ceil(
           (lastSentTime + this.MIN_WAIT_TIME_MS - now) / 1000,
         );
-        this.logger.warn(`Password reset failed for user ${user.id}: Request sent too soon.`);
+        this.logger.warn(
+          `Password reset failed for user ${user.id}: Request sent too soon.`,
+        );
         throw new BadRequestException(
           `Reset code already sent! Please wait ${timeRemaining} seconds`,
         );
@@ -402,7 +462,9 @@ export class UserService {
           expiredCode,
         },
       );
-      this.logger.log(`Password reset code generated and updated for user ${user.id}`);
+      this.logger.log(
+        `Password reset code generated and updated for user ${user.id}`,
+      );
       return { user, resetCode, expiredCode };
     });
   }
@@ -412,20 +474,28 @@ export class UserService {
     const user = await this.findOne(userId);
     const account = user?.accounts.find((a) => a.provider === Provider.LOCAL);
     if (!account) {
-      this.logger.warn(`Password reset confirmation failed: Account not found for user ${userId}.`);
+      this.logger.warn(
+        `Password reset confirmation failed: Account not found for user ${userId}.`,
+      );
       throw new NotFoundException('Account not found');
     }
     if (user?.resetCode !== code) {
-      this.logger.warn(`Password reset confirmation failed for user ${userId}: Invalid code.`);
+      this.logger.warn(
+        `Password reset confirmation failed for user ${userId}: Invalid code.`,
+      );
       throw new BadRequestException('Invalid code');
     }
     if (user.expiredCode && user.expiredCode < new Date()) {
-      this.logger.warn(`Password reset confirmation failed for user ${userId}: Code expired.`);
+      this.logger.warn(
+        `Password reset confirmation failed for user ${userId}: Code expired.`,
+      );
       throw new BadRequestException('Code expired');
     }
 
     if (await bcrypt.compare(password, account.password ?? '')) {
-      this.logger.warn(`Password reset confirmation failed for user ${userId}: New password is the same as old one.`);
+      this.logger.warn(
+        `Password reset confirmation failed for user ${userId}: New password is the same as old one.`,
+      );
       throw new BadRequestException(
         'Password must be different from old password',
       );
@@ -449,7 +519,9 @@ export class UserService {
     return await this.dataSource.transaction(async (manager) => {
       this.logger.log(`Attempting to change password for user ID: ${id}`);
       if (oldPassword === newPassword) {
-        this.logger.warn(`Password change failed for user ${id}: New password is the same as the old one.`);
+        this.logger.warn(
+          `Password change failed for user ${id}: New password is the same as the old one.`,
+        );
         throw new BadRequestException(
           'New password must be different from old password',
         );
@@ -469,12 +541,16 @@ export class UserService {
       }
       const account = user.accounts.find((a) => a.provider === Provider.LOCAL);
       if (!account) {
-        this.logger.warn(`Password change failed: Local account not found for user ${id}.`);
+        this.logger.warn(
+          `Password change failed: Local account not found for user ${id}.`,
+        );
         throw new NotFoundException('Local account not found');
       }
 
       if (!(await bcrypt.compare(oldPassword, account.password ?? ''))) {
-        this.logger.warn(`Password change failed for user ${id}: Old password is incorrect.`);
+        this.logger.warn(
+          `Password change failed for user ${id}: Old password is incorrect.`,
+        );
         throw new BadRequestException('Old password is incorrect');
       }
 
@@ -510,7 +586,9 @@ export class UserService {
         avatar: user.avatar,
       });
     } else {
-      this.logger.warn(`Update operation did not return a user for ID: ${id}. It might not exist.`);
+      this.logger.warn(
+        `Update operation did not return a user for ID: ${id}. It might not exist.`,
+      );
     }
 
     return user;
@@ -522,7 +600,9 @@ export class UserService {
     if (result.affected && result.affected > 0) {
       this.logger.log(`Successfully removed user ${id}.`);
     } else {
-      this.logger.warn(`Remove operation had no effect. User with ID ${id} may not exist.`);
+      this.logger.warn(
+        `Remove operation had no effect. User with ID ${id} may not exist.`,
+      );
     }
     return result;
   }

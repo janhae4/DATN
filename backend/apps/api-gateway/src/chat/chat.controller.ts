@@ -29,14 +29,17 @@ import { Role } from '@app/contracts';
 @Roles(Role.USER, Role.ADMIN)
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) { }
+  constructor(private readonly chatService: ChatService) {}
 
   @Get('conversations')
   @ApiOperation({ summary: 'Get conversations for user' })
   @ApiResponse({ status: 200, description: 'List of conversations.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  getConversationsForUser(@CurrentUser('id') userId: string) {
-    return this.chatService.getConversationsForUser(userId);
+  getConversationsForUser(
+    @CurrentUser('id') userId: string,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.chatService.getConversationsForUser(userId, paginationDto);
   }
 
   @Get('conversations/:conversationId/messages')
@@ -60,7 +63,7 @@ export class ChatController {
       userId,
       conversationId,
       page,
-      limit
+      limit,
     });
   }
 
@@ -99,5 +102,21 @@ export class ChatController {
       senderId,
       conversationId,
     });
+  }
+
+  @Get('conversations/:conversation')
+  @ApiOperation({ summary: 'Get conversation' })
+  @ApiParam({
+    name: 'conversation',
+    description: 'Conversation ID',
+    example: '6675b11a8b3a729e2e2a3b4c',
+  })
+  @ApiResponse({ status: 200, description: 'Get conversation success.' })
+  @ApiResponse({ status: 404, description: 'Conversation not found.' })
+  getConversationById(
+    @Param('conversation') conversationId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.chatService.getConversationById(conversationId, userId);
   }
 }

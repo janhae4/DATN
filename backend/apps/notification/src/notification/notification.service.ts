@@ -6,7 +6,7 @@ import { NotificationEventDto, NotificationUpdateDto } from '@app/contracts';
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async addNotification(notification: NotificationEventDto) {
     const notificationCreated = await this.prisma.notification.create({

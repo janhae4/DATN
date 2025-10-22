@@ -1,4 +1,4 @@
 export class SummarizeDocumentDto {
-    fileName: string
-    conversationId?: string
+  fileName: string;
+  conversationId?: string;
 }

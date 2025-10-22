@@ -13,9 +13,7 @@ import {
 
 @Controller()
 export class TeamController {
-  constructor(
-    private readonly teamService: TeamService,
-  ) { }
+  constructor(private readonly teamService: TeamService) {}
 
   @MessagePattern(TEAM_PATTERN.FIND_ALL)
   async findAll() {
@@ -28,13 +26,12 @@ export class TeamController {
   }
 
   @MessagePattern(TEAM_PATTERN.FIND_BY_ID)
-  async findById(@Payload() payload: { id: string, userId: string }) {
+  async findById(@Payload() payload: { id: string; userId: string }) {
     return await this.teamService.findById(payload.id, payload.userId);
   }
 
   @MessagePattern(TEAM_PATTERN.CREATE)
   async create(@Payload() createTeamDto: CreateTeamDto) {
-    
     return await this.teamService.create(createTeamDto);
   }
 

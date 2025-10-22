@@ -7,6 +7,12 @@ import {
 } from 'typeorm';
 import { MemberDto } from '../dto/member.dto';
 
+export enum TeamStatus {
+  ACTIVE = 'active',
+  ARCHIVED = 'archived',
+  DISBANDED = 'disbanded',
+}
+
 @Entity()
 export class Team {
   @PrimaryGeneratedColumn('uuid')
@@ -20,6 +26,13 @@ export class Team {
 
   @Column('jsonb', { default: [] })
   members: MemberDto[];
+
+  @Column({
+    type: 'enum',
+    enum: TeamStatus,
+    default: TeamStatus.ARCHIVED,
+  })
+  status: TeamStatus;
 
   @CreateDateColumn()
   createdAt: Date;
