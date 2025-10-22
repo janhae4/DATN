@@ -220,7 +220,6 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
   );
 };
 
-// --- Role Icon ---
 export const RoleIcon: React.FC<{ role?: UserRole }> = ({ role }) => {
   if (role === "OWNER")
     return (
@@ -341,7 +340,6 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   );
 };
 
-// --- Change Role Modal ---
 interface ChangeRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -445,7 +443,6 @@ export const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({
   );
 };
 
-// --- Confirmation Modal ---
 interface ConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -475,12 +472,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     setIsLoading(true);
     try {
       await onConfirm();
-      onClose(); // Đóng modal sau khi confirm thành công
+      onClose(); 
     } catch (err: any) {
-      alert(`Lỗi: ${err.message}`); // Nên thay bằng toast
-      setIsLoading(false); // Dừng loading nếu lỗi
+      alert(`Lỗi: ${err.message}`);
+      setIsLoading(false);
     }
-    // finally không cần setIsLoading(false) vì đã có trong try/catch
   };
 
   return (
@@ -516,7 +512,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   );
 };
 
-// --- Manage Members Modal ---
 interface ManageMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -542,7 +537,6 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
   );
   const optionsRef = useRef<HTMLDivElement>(null);
 
-  // Đóng menu options khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -562,7 +556,6 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
     };
   }, [optionsForMember]);
 
-  // Reset state khi modal chính đóng/mở
   useEffect(() => {
     if (!isOpen) {
       setOptionsForMember(null);
@@ -587,7 +580,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
     member: Participant
   ): { canKick: boolean; canChangeRole: boolean; canTransfer: boolean } => {
     if (member._id === currentUser.id)
-      return { canKick: false, canChangeRole: false, canTransfer: false }; // Không tự quản lý mình
+      return { canKick: false, canChangeRole: false, canTransfer: false };
     if (currentUserRole === "OWNER")
       return { canKick: true, canChangeRole: true, canTransfer: true };
     if (currentUserRole === "ADMIN") {
