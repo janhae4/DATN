@@ -12,5 +12,7 @@ export const TEAM_PATTERN = {
   DEMOTE_FROM_ADMIN: 'team.demoteFromAdmin',
   CHANGE_ROLE: 'team.changeRole',
   LEAVE_TEAM: 'team.leaveTeam',
-  TRANSFER_OWNERSHIP: 'team.transferOwnership'
+  TRANSFER_OWNERSHIP: 'team.transferOwnership',
+  JOIN_TEAM: 'team.joinTeam',
+  KICK_MEMBER: 'team.kickMember',
 };

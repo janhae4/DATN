@@ -24,11 +24,11 @@ CHAT
 -----*/
 export * from './chat/dto/create-chat.dto';
 export * from './chat/dto/create-message.dto';
-export * from './chat/dto/get-messages.dto'
-export * from './chat/dto/participant.dto'
-export * from './chat/dto/create-direct-chat.dto'
-export * from './chat/dto/send-message.dto'
-export * from './chat/chat.pattern.dto'
+export * from './chat/dto/get-messages.dto';
+export * from './chat/dto/participant.dto';
+export * from './chat/dto/create-direct-chat.dto';
+export * from './chat/dto/send-message.dto';
+export * from './chat/chat.pattern.dto';
 
 /*----
 CHATBOT
@@ -43,7 +43,7 @@ export * from './chatbot/dto/summarize-document.dto';
 export * from './chatbot/dto/ask-question.dto';
 export * from './chatbot/dto/message.dto';
 export * from './chatbot/schema/conversation.schema';
-export * from './chatbot/schema/message.schema'
+export * from './chatbot/schema/message.schema';
 
 /*----
 CLIENT-CONFIG
@@ -107,7 +107,7 @@ export * from './team/team.pattern';
 export * from './team/dto/create-team.dto';
 export * from './team/dto/update-team.dto';
 export * from './team/dto/member.dto';
-export * from './team/dto/add-member.dto'
+export * from './team/dto/add-member.dto';
 export * from './team/entity/team.entity';
 export * from './team/dto/remove-member.dto';
 export * from './team/dto/change-role.dto';
@@ -121,8 +121,7 @@ VIDEO-CHAT
 export * from './video-chat/create-call.dto';
 export * from './video-chat/video-chat.patterns';
 
-
 /*----
 EVENT
 -----*/
-export * from './events/events.pattern'
+export * from './events/events.pattern';

@@ -169,6 +169,5 @@ export const CLIENT_PROXY_PROVIDER = {
     inject: [ClientConfigService],
     useFactory: (cfg: ClientConfigService): ClientProxy =>
       ClientProxyFactory.create(cfg.eventClientOptions as ClientOptions),
-  }
+  },
 };
-

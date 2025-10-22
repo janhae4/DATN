@@ -19,9 +19,9 @@ export class UserController {
 
   @EventPattern(EVENTS.LOGIN)
   handleLogin(@Payload() payload: Partial<User>) {
-    this.userService.update( payload.id ?? "", {
+    this.userService.update(payload.id ?? '', {
       lastLogin: new Date(),
-      isActive: true
+      isActive: true,
     });
   }
 

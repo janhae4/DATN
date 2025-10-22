@@ -3,7 +3,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ChatbotController } from './chatbot.controller';
 import { ChatbotService } from './chatbot.service';
 import { StorageService } from './storage.service';
-import { Conversation, ConversationSchema } from '../../../libs/contracts/src/chatbot/schema/conversation.schema';
+import {
+  Conversation,
+  ConversationSchema,
+} from '../../../libs/contracts/src/chatbot/schema/conversation.schema';
 import {
   CLIENT_PROXY_PROVIDER,
   ClientConfigModule,

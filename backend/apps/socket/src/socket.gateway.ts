@@ -1,12 +1,34 @@
-import { OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import {
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { AskQuestionDto, AUTH_CLIENT, AUTH_PATTERN, CHATBOT_CLIENT, CHATBOT_PATTERN, ConversationDocument, JwtDto, MessageDto, NOTIFICATION_CLIENT, NOTIFICATION_PATTERN, NotificationEventDto, NotificationType, RAG_CLIENT, ResponseStreamDto, SendMessageEventPayload, SummarizeDocumentDto } from '@app/contracts';
+import {
+  AskQuestionDto,
+  AUTH_CLIENT,
+  AUTH_PATTERN,
+  CHATBOT_CLIENT,
+  CHATBOT_PATTERN,
+  ConversationDocument,
+  JwtDto,
+  MessageDto,
+  NOTIFICATION_CLIENT,
+  NOTIFICATION_PATTERN,
+  NotificationEventDto,
+  NotificationType,
+  RAG_CLIENT,
+  ResponseStreamDto,
+  SendMessageEventPayload,
+  SummarizeDocumentDto,
+} from '@app/contracts';
 import * as cookie from 'cookie';
 import { firstValueFrom } from 'rxjs';
 import { handleRpc } from '@app/common/utils/handle-rpc';
-
 
 interface AuthenticatedSocket extends Socket {
   data: {
@@ -16,7 +38,11 @@ interface AuthenticatedSocket extends Socket {
 }
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:5000', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: [
+      'http://localhost:5000',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ],
     credentials: true,
   },
 })
@@ -34,15 +60,19 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject(CHATBOT_CLIENT)
     private readonly chatbotClient: ClientProxy,
     @Inject(RAG_CLIENT)
-    private readonly ragClient: ClientProxy
-  ) { }
+    private readonly ragClient: ClientProxy,
+  ) {}
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      const accessToken = cookie.parse(client.handshake.headers.cookie || '').accessToken;
+      const accessToken = cookie.parse(
+        client.handshake.headers.cookie || '',
+      ).accessToken;
 
       if (!accessToken) {
-        this.logger.warn(`Client ${client.id} - Disconnected, accessToken not found.`);
+        this.logger.warn(
+          `Client ${client.id} - Disconnected, accessToken not found.`,
+        );
         client.disconnect();
         return;
       }
@@ -80,20 +110,21 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-
-  private async handleInteraction(client: AuthenticatedSocket, payload: MessageDto): Promise<ConversationDocument | null> {
+  private async handleInteraction(
+    client: AuthenticatedSocket,
+    payload: MessageDto,
+  ): Promise<ConversationDocument | null> {
     const { message, userId, conversationId, role } = payload;
     const savedConversation = await firstValueFrom<ConversationDocument>(
       handleRpc(
-        this.chatbotClient.send(
-          CHATBOT_PATTERN.HANDLE_MESSAGE, {
-            message,
-            conversationId,
-            role,
-            userId
-          } as MessageDto
-        )
-      ));
+        this.chatbotClient.send(CHATBOT_PATTERN.HANDLE_MESSAGE, {
+          message,
+          conversationId,
+          role,
+          userId,
+        } as MessageDto),
+      ),
+    );
 
     if (!savedConversation) {
       this.logger.error(
@@ -103,9 +134,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         type: NotificationType.FAILED,
         message: 'Failed to save your message.',
         title: 'Error',
-        userId: userId
-      } as NotificationEventDto
-      this.sendNotificationToUser(payload)
+        userId: userId,
+      } as NotificationEventDto;
+      this.sendNotificationToUser(payload);
       return null;
     }
 
@@ -141,14 +172,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       `Received ask_question from ${client.id} (User: ${user.id}): ${question}`,
     );
 
-    const savedConversation = await this.handleInteraction(
-      client,
-      {
-        message: question,
-        userId: user.id,
-        conversationId,
-        role: 'user',
-      } as MessageDto);
+    const savedConversation = await this.handleInteraction(client, {
+      message: question,
+      userId: user.id,
+      conversationId,
+      role: 'user',
+    } as MessageDto);
 
     if (!savedConversation) {
       return;
@@ -157,10 +186,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const chatHistory = savedConversation.messages
       .slice(-20)
       .map((message) => ({
-        role: message.role.replace("ai", "you").replace("user", "me"),
+        role: message.role.replace('ai', 'you').replace('user', 'me'),
         content: message.content,
       }));
-
 
     const requestPayload = {
       userId: user.id,
@@ -195,15 +223,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     const messageContent = `Yêu cầu tóm tắt tài liệu: ${fileName}`;
-    const savedConversation = await this.handleInteraction(
-      client,
-      {
-        message: messageContent,
-        userId: user.id,
-        conversationId,
-        role: 'user',
-      } as MessageDto
-    );
+    const savedConversation = await this.handleInteraction(client, {
+      message: messageContent,
+      userId: user.id,
+      conversationId,
+      role: 'user',
+    } as MessageDto);
 
     if (!savedConversation) {
       return;
@@ -247,15 +272,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = client.data.user;
         if (user) {
           try {
-            this.handleInteraction(
-              client,
-              {
-                userId: user.id,
-                message: fullMessage,
-                conversationId,
-                role: 'ai',
-              }
-            );
+            this.handleInteraction(client, {
+              userId: user.id,
+              message: fullMessage,
+              conversationId,
+              role: 'ai',
+            });
           } catch (error) {
             this.logger.error(error);
           }
@@ -279,35 +301,46 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return this.notificationClient.emit(NOTIFICATION_PATTERN.CREATE, event);
   }
 
-  async handleNewMessage(payload: SendMessageEventPayload) {
-    const {  conversationId, participants, content, attachments, sender, createdAt} = payload;
-    this.logger.log(
-      `Received new message for conversation ${conversationId}`,
-    );
-
+  handleNewMessage(payload: SendMessageEventPayload) {
+    const {
+      conversationId,
+      participants,
+      content,
+      attachments,
+      sender,
+      createdAt,
+    } = payload;
+    this.logger.log(`Received new message for conversation ${conversationId}`);
 
     try {
-      const participantIds = participants.map((p) => p._id);
+      const participantIds = participants.reduce((acc, participant) => {
+        if (participant._id !== sender._id) {
+          acc.push(participant._id);
+        }
+        return acc;
+      }, [] as string[]);
 
       if (participants.length === 0) {
-        this.logger.warn(`No participants found for conversation ${conversationId}`);
+        this.logger.warn(
+          `No participants found for conversation ${conversationId}`,
+        );
         return;
       }
 
-      this.logger.log(`Broadcasting to participants: ${participantIds.join(', ')}`);
+      this.logger.log(
+        `Broadcasting to participants: ${participantIds.join(', ')}`,
+      );
       participantIds.forEach((userId) => {
         this.server.to(userId).emit('new_message', {
           conversationId,
           content,
           sender,
           attachments,
-          createdAt
+          createdAt,
         });
       });
-
     } catch (error) {
       this.logger.error('Failed to handle new message event', error);
     }
   }
 }
-

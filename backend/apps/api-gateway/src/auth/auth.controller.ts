@@ -39,8 +39,8 @@ export class AuthController {
   @Get('/info')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
-  info(@CurrentUser('id') id : string) {
-    console.log(id)
+  info(@CurrentUser('id') id: string) {
+    console.log(id);
     return this.authService.getInfo(id);
   }
 

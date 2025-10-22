@@ -5,14 +5,8 @@ import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [
-    ClientConfigModule,
-    AuthModule
-  ],
+  imports: [ClientConfigModule, AuthModule],
   controllers: [NotificationController],
-  providers: [
-    NotificationService, 
-    CLIENT_PROXY_PROVIDER.NOTIFICATION_CLIENT
-  ],
+  providers: [NotificationService, CLIENT_PROXY_PROVIDER.NOTIFICATION_CLIENT],
 })
 export class NotificationModule {}

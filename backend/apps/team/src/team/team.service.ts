@@ -1,8 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, EntityManager } from 'typeorm';
 import {
@@ -44,8 +40,8 @@ export class TeamService {
     @Inject(USER_CLIENT)
     private readonly userClient: ClientProxy,
     @InjectDataSource()
-    private readonly dataSource: DataSource
-  ) { }
+    private readonly dataSource: DataSource,
+  ) {}
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
     const { name, memberIds = [], ownerId } = createTeamDto;
@@ -54,17 +50,24 @@ export class TeamService {
     const allUserIdsToValidate = Array.from(new Set([...memberIds, ownerId]));
     console.log(allUserIdsToValidate);
     const usersFromDb = await firstValueFrom<User[]>(
-      handleRpc(this.userClient.send(USER_PATTERNS.FIND_MANY_BY_IDs, allUserIdsToValidate))
+      handleRpc(
+        this.userClient.send(
+          USER_PATTERNS.FIND_MANY_BY_IDs,
+          allUserIdsToValidate,
+        ),
+      ),
     );
 
     if (usersFromDb.length !== allUserIdsToValidate.length) {
-      const foundIds = new Set(usersFromDb.map(u => u.id));
-      const missingIds = allUserIdsToValidate.filter(id => !foundIds.has(id));
-      throw new BadRequestException(`The following user IDs do not exist: ${missingIds.join(', ')}`);
+      const foundIds = new Set(usersFromDb.map((u) => u.id));
+      const missingIds = allUserIdsToValidate.filter((id) => !foundIds.has(id));
+      throw new BadRequestException(
+        `The following user IDs do not exist: ${missingIds.join(', ')}`,
+      );
     }
 
-    const userMap = new Map(usersFromDb.map(u => [u.id, u]));
-    const finalMembers: MemberDto[] = allUserIdsToValidate.map(id => {
+    const userMap = new Map(usersFromDb.map((u) => [u.id, u]));
+    const finalMembers: MemberDto[] = allUserIdsToValidate.map((id) => {
       const realUser = userMap.get(id)!;
       return {
         id: realUser.id,
@@ -88,12 +91,16 @@ export class TeamService {
       const newTeam = teamRepo.create(teamData);
       const savedTeam = await teamRepo.save(newTeam);
 
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
       this.logger.log(`Team [${savedTeam.id}] created. Emitting event.`);
       this.eventClient.emit(EVENTS.CREATE_TEAM, {
         ownerId: savedTeam.ownerId,
         ownerName: userMap.get(ownerId)?.name,
         members: finalMembers,
         name: savedTeam.name,
+        teamId: savedTeam.id,
+        createdAt: savedTeam.createdAt,
       } as CreateTeamEventPayload);
 
       return savedTeam;
@@ -103,7 +110,9 @@ export class TeamService {
   async addMembers(addMemberDto: AddMember): Promise<Team> {
     const { memberIds, requesterId, teamId } = addMemberDto;
 
-    this.logger.log(`User [${requesterId}] adding ${memberIds.length} members to team [${teamId}].`);
+    this.logger.log(
+      `User [${requesterId}] adding ${memberIds.length} members to team [${teamId}].`,
+    );
 
     return this.dataSource.transaction(async (manager) => {
       const teamRepo = manager.getRepository(Team);
@@ -116,11 +125,13 @@ export class TeamService {
         action: 'add_member',
       });
 
-      const existingMemberIds = new Set(team.members.map(m => m.id))
-      const newMemberIds = memberIds.filter(id => !existingMemberIds.has(id));
+      const existingMemberIds = new Set(team.members.map((m) => m.id));
+      const newMemberIds = memberIds.filter((id) => !existingMemberIds.has(id));
 
       if (newMemberIds.length === 0) {
-        this.logger.log(`No new members to add to team ${teamId}. All provided member IDs are already member`);
+        this.logger.log(
+          `No new members to add to team ${teamId}. All provided member IDs are already member`,
+        );
         return team;
       }
 
@@ -129,13 +140,15 @@ export class TeamService {
       );
 
       if (usersFromDb.length !== newMemberIds.length) {
-        const foundIds = new Set(usersFromDb.map(u => u.id));
-        const missingIds = memberIds.filter(id => !foundIds.has(id));
-        throw new BadRequestException(`The following user IDs do not exist: ${missingIds.join(', ')}`);
+        const foundIds = new Set(usersFromDb.map((u) => u.id));
+        const missingIds = memberIds.filter((id) => !foundIds.has(id));
+        throw new BadRequestException(
+          `The following user IDs do not exist: ${missingIds.join(', ')}`,
+        );
       }
 
-      const userMap = new Map(usersFromDb.map(u => [u.id, u]));
-      const finalMembers: MemberDto[] = newMemberIds.map(id => {
+      const userMap = new Map(usersFromDb.map((u) => [u.id, u]));
+      const finalMembers: MemberDto[] = newMemberIds.map((id) => {
         const realUser = userMap.get(id)!;
         return {
           id: realUser.id,
@@ -157,7 +170,7 @@ export class TeamService {
         requesterId,
         requesterName,
         teamId,
-        teamName: team.name
+        teamName: team.name,
       };
       this.eventClient.emit(EVENTS.ADD_MEMBER, eventPayload);
       return updatedTeam;
@@ -166,10 +179,14 @@ export class TeamService {
 
   async removeMember(payload: RemoveMember): Promise<Team> {
     const { teamId, memberIds, requesterId } = payload;
-    this.logger.log(`User [${requesterId}] removing ${memberIds.length} member from team [${teamId}].`);
+    this.logger.log(
+      `User [${requesterId}] removing ${memberIds.length} member from team [${teamId}].`,
+    );
 
     if (memberIds.includes(requesterId)) {
-      throw new BadRequestException("To leave the team, please use the 'leave team' endpoint.");
+      throw new BadRequestException(
+        "To leave the team, please use the 'leave team' endpoint.",
+      );
     }
 
     return this.dataSource.transaction(async (manager) => {
@@ -181,24 +198,34 @@ export class TeamService {
         requesterId,
         targetUserIds: memberIds,
         allowedRoles: [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER],
-        action: 'remove_member'
+        action: 'remove_member',
       });
 
       const requester = team.members.find((m) => m.id === requesterId);
       const requesterName = requester ? requester.name : 'Unknown';
 
-      const initialMemberIds = new Set(team.members.map(m => m.id));
+      const initialMemberIds = new Set(team.members.map((m) => m.id));
 
       team.members = team.members.filter((m) => !memberIds.includes(m.id));
 
-      const removedIds = team.members.filter(id => initialMemberIds.has(id.id));
+      const removedIds = team.members.filter((id) =>
+        initialMemberIds.has(id.id),
+      );
       if (removedIds.length === 0) {
-        throw new NotFoundException(`None of the provided member IDs were found in the team.`);
+        throw new NotFoundException(
+          `None of the provided member IDs were found in the team.`,
+        );
       }
 
       const updatedTeam = await teamRepo.save(team);
       this.logger.log(`Member removed from team [${teamId}]. Emitting event.`);
-      const eventPayload: RemoveMemberEventPayload = { teamId, teamName: team.name, requesterId, requesterName, memberIds };
+      const eventPayload: RemoveMemberEventPayload = {
+        teamId,
+        teamName: team.name,
+        requesterId,
+        requesterName,
+        memberIds,
+      };
       this.eventClient.emit(EVENTS.REMOVE_MEMBER, eventPayload);
 
       return updatedTeam;
@@ -207,7 +234,9 @@ export class TeamService {
 
   async changeMemberRole(payload: ChangeRoleMember): Promise<Team> {
     const { teamId, targetId, requesterId, newRole } = payload;
-    this.logger.log(`User [${requesterId}] changing role for [${targetId}] to ${newRole} in team [${teamId}].`);
+    this.logger.log(
+      `User [${requesterId}] changing role for [${targetId}] to ${newRole} in team [${teamId}].`,
+    );
 
     return this.dataSource.transaction(async (manager) => {
       const teamRepo = manager.getRepository(Team);
@@ -218,22 +247,34 @@ export class TeamService {
         requesterId,
         targetUserIds: [targetId],
         allowedRoles: [MEMBER_ROLE.OWNER, MEMBER_ROLE.ADMIN],
-        action: 'change_role'
+        action: 'change_role',
       });
 
-      const memberToUpdate = team.members.find(m => m.id === targetId);
+      const memberToUpdate = team.members.find((m) => m.id === targetId);
       if (!memberToUpdate) {
-        throw new NotFoundException(`Member with ID ${targetId} not found in team.`);
+        throw new NotFoundException(
+          `Member with ID ${targetId} not found in team.`,
+        );
       }
 
       memberToUpdate.role = newRole;
       const updatedTeam = await teamRepo.save(team);
 
-      const requester = team.members.find((m) => m.id === requesterId)
+      const requester = team.members.find((m) => m.id === requesterId);
 
       const requesterName = requester ? requester.name : 'Unknown';
-      this.logger.log(`Member role changed in team [${teamId}]. Emitting event.`);
-      const eventPayload: ChangeRoleMember = { teamId, teamName: team.name, newRole, requesterId, requesterName, targetId, targetName: memberToUpdate.name };
+      this.logger.log(
+        `Member role changed in team [${teamId}]. Emitting event.`,
+      );
+      const eventPayload: ChangeRoleMember = {
+        teamId,
+        teamName: team.name,
+        newRole,
+        requesterId,
+        requesterName,
+        targetId,
+        targetName: memberToUpdate.name,
+      };
       this.eventClient.emit(EVENTS.MEMBER_ROLE_CHANGED, eventPayload);
 
       return updatedTeam;
@@ -248,37 +289,47 @@ export class TeamService {
       const teamRepo = manager.getRepository(Team);
       const team = await this._getTeamForModification(teamId, manager);
 
-      const memberLeaving = team.members.find(m => m.id === requesterId);
+      const memberLeaving = team.members.find((m) => m.id === requesterId);
 
       if (!memberLeaving) {
         throw new NotFoundException(`You are not a member of this team.`);
       }
 
       if (memberLeaving.role === MEMBER_ROLE.OWNER) {
-        this.logger.warn(`Owner [${requesterId}] attempted to leave team [${teamId}].`);
+        this.logger.warn(
+          `Owner [${requesterId}] attempted to leave team [${teamId}].`,
+        );
         throw new ForbiddenException(
-          'As the team owner, you cannot leave. Please delete the team or transfer ownership.'
+          'As the team owner, you cannot leave. Please delete the team or transfer ownership.',
         );
       }
 
-      team.members = team.members.filter(m => m.id !== requesterId);
+      team.members = team.members.filter((m) => m.id !== requesterId);
       const memberIds = team.members.reduce((ids, member) => {
         if ([MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER].includes(member.role)) {
           ids.push(member.id);
         }
-        return ids
+        return ids;
       }, [] as string[]);
 
       const updatedTeam = await teamRepo.save(team);
-      const eventPayload: LeaveMember = { teamId, teamName: team.name, requesterId, requesterName: memberLeaving.name, memberIds };
+      const eventPayload: LeaveMember = {
+        teamId,
+        teamName: team.name,
+        requesterId,
+        requesterName: memberLeaving.name,
+        memberIds,
+      };
       this.eventClient.emit(EVENTS.LEAVE_TEAM, eventPayload);
       return updatedTeam;
-    })
+    });
   }
 
   async transferOwnership(payload: TransferOwnership): Promise<Team> {
     const { teamId, requesterId, newOwnerId } = payload;
-    this.logger.log(`Ownership transfer initiated by [${requesterId}] for team [${teamId}] to new owner [${newOwnerId}].`);
+    this.logger.log(
+      `Ownership transfer initiated by [${requesterId}] for team [${teamId}] to new owner [${newOwnerId}].`,
+    );
 
     if (requesterId === newOwnerId) {
       throw new BadRequestException('You are already the owner of this team.');
@@ -289,15 +340,21 @@ export class TeamService {
       const team = await this._getTeamForModification(teamId, manager);
 
       if (team.ownerId !== requesterId) {
-        this.logger.warn(`Permission denied: Non-owner [${requesterId}] attempted to transfer ownership.`);
-        throw new ForbiddenException('Only the current team owner can transfer ownership.');
+        this.logger.warn(
+          `Permission denied: Non-owner [${requesterId}] attempted to transfer ownership.`,
+        );
+        throw new ForbiddenException(
+          'Only the current team owner can transfer ownership.',
+        );
       }
 
-      const oldOwner = team.members.find(m => m.id === requesterId);
-      const newOwner = team.members.find(m => m.id === newOwnerId);
+      const oldOwner = team.members.find((m) => m.id === requesterId);
+      const newOwner = team.members.find((m) => m.id === newOwnerId);
 
       if (!newOwner) {
-        throw new NotFoundException(`User with ID [${newOwnerId}] is not a member of this team.`);
+        throw new NotFoundException(
+          `User with ID [${newOwnerId}] is not a member of this team.`,
+        );
       }
 
       if (oldOwner) {
@@ -308,7 +365,9 @@ export class TeamService {
 
       const updatedTeam = await teamRepo.save(team);
 
-      this.logger.log(`Ownership of team [${teamId}] successfully transferred to [${newOwnerId}]. Emitting event.`);
+      this.logger.log(
+        `Ownership of team [${teamId}] successfully transferred to [${newOwnerId}]. Emitting event.`,
+      );
 
       const newOwnerName = newOwner ? newOwner.name : 'Unknown';
       const requesterName = oldOwner ? oldOwner.name : 'Unknown';
@@ -318,17 +377,19 @@ export class TeamService {
         teamId,
         teamName: team.name,
         newOwnerName,
-        requesterName
+        requesterName,
       } as TransferOwnershipEventPayload);
 
       return updatedTeam;
     });
   }
 
-  private async _getTeamForModification(teamId: string, manager: EntityManager): Promise<Team> {
+  private async _getTeamForModification(
+    teamId: string,
+    manager: EntityManager,
+  ): Promise<Team> {
     const team = await manager.findOne(Team, {
       where: { id: teamId },
-      relations: ['members'],
       lock: { mode: 'pessimistic_write' },
     });
     if (!team) {
@@ -336,7 +397,6 @@ export class TeamService {
     }
     return team;
   }
-
 
   private _verifyPermission(options: {
     team: Team;
@@ -349,7 +409,9 @@ export class TeamService {
     const requester = team.members.find((m) => m.id === requesterId);
 
     if (!requester || !allowedRoles.includes(requester.role)) {
-      throw new ForbiddenException('You do not have permission to perform this action.');
+      throw new ForbiddenException(
+        'You do not have permission to perform this action.',
+      );
     }
 
     if (!targetUserIds || targetUserIds.length === 0) {
@@ -362,7 +424,9 @@ export class TeamService {
           throw new ForbiddenException('The team owner cannot be removed.');
         }
         if (action === 'change_role') {
-          throw new ForbiddenException("The team owner's role cannot be changed.");
+          throw new ForbiddenException(
+            "The team owner's role cannot be changed.",
+          );
         }
       }
     }
@@ -372,7 +436,9 @@ export class TeamService {
         if (requester.role === MEMBER_ROLE.ADMIN) {
           const targetUser = team.members.find((m) => m.id === targetId);
           if (!targetUser) {
-            this.logger.warn(`Verification check: Target user ${targetId} not found in team ${team.id}.`);
+            this.logger.warn(
+              `Verification check: Target user ${targetId} not found in team ${team.id}.`,
+            );
             continue;
           }
           if (targetUser.role === MEMBER_ROLE.ADMIN) {
@@ -386,7 +452,9 @@ export class TeamService {
       if (action === 'change_role') {
         const targetUser = team.members.find((m) => m.id === targetId);
         if (!targetUser) {
-          throw new NotFoundException(`User with ID ${targetId} is not a member of this team.`);
+          throw new NotFoundException(
+            `User with ID ${targetId} is not a member of this team.`,
+          );
         }
       }
     }
@@ -400,9 +468,9 @@ export class TeamService {
     return await this.teamRepo.findOne({
       where: {
         id,
-        members: { id: userId }
+        members: { id: userId },
       },
-      relations: ['members']
+      relations: ['members'],
     });
   }
 

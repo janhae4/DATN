@@ -1,0 +1,151 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Api gateway",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:api"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Auth",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:auth"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "User",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:user"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "redis",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:redis"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "notification",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:notification"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "team",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:team"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "chat",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:chat"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "socket",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:socket"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "All Service",
+            "dependsOn": [
+                "Api gateway",
+                "Auth",
+                "User",
+                "redis",
+                "notification",
+                "team",
+                "chat",
+                "socket"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

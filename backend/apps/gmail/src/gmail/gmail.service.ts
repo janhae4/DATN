@@ -28,7 +28,6 @@ import { SentMessageInfo } from 'nodemailer';
 
 @Injectable()
 export class GmailService {
-  // 2. Instantiate the logger
   private readonly logger = new Logger(GmailService.name);
   private oauth2Client: OAuth2Client = new OAuth2Client();
 
@@ -50,15 +49,15 @@ export class GmailService {
     );
 
     if (!tokens || !tokens.accessToken || !tokens.refreshToken) {
-      // 3. Replaced console with logger.warn
-      this.logger.warn(`No valid Google tokens found for user: ${userId}. Account may not be linked.`);
+      this.logger.warn(
+        `No valid Google tokens found for user: ${userId}. Account may not be linked.`,
+      );
       throw new NotFoundException('No Google account linked');
     }
     return tokens;
   }
 
   async getUnreadEmails(userId: string) {
-    // 4. Replaced console with logger.debug for entry point
     this.logger.debug(`Fetching unread emails for user ID: ${userId}`);
     const tokens = await this.getGoogleTokens(userId);
     this.oauth2Client.setCredentials({
@@ -71,13 +70,16 @@ export class GmailService {
       q: 'is:unread',
     });
     const messages = response.data.messages || [];
-    // 5. Replaced console with a more descriptive debug log
-    this.logger.debug(`Found ${messages.length} unread emails for user ${userId}.`);
+    this.logger.debug(
+      `Found ${messages.length} unread emails for user ${userId}.`,
+    );
     return messages;
   }
 
   async sendEmail(payload: SendMailDto): Promise<{ message: string }> {
-    this.logger.log(`Sending custom email via Gmail API to ${payload.to} for user ${payload.userId}...`);
+    this.logger.log(
+      `Sending custom email via Gmail API to ${payload.to} for user ${payload.userId}...`,
+    );
     const { userId, to, subject, messageText } = payload;
     const tokens: LoginResponseDto = await this.getGoogleTokens(userId);
     this.oauth2Client.setCredentials({
@@ -120,8 +122,10 @@ export class GmailService {
         html: content,
       });
     } catch (error) {
-      // 6. Replaced console.error with logger.error, including stack trace
-      this.logger.error(`Failed to send verification email to ${user?.email}`, error.stack);
+      this.logger.error(
+        `Failed to send verification email to ${user?.email}`,
+        error,
+      );
       throw new BadRequestException('Failed to send verification email');
     }
   }
@@ -146,7 +150,10 @@ export class GmailService {
         html: content,
       });
     } catch (error) {
-      this.logger.error(`Failed to send reset password email to ${user.email}`, error.stack);
+      this.logger.error(
+        `Failed to send reset password email to ${user.email}`,
+        error,
+      );
       throw new BadRequestException('Failed to send reset password email');
     }
   }
@@ -159,14 +166,19 @@ export class GmailService {
     );
 
     try {
-      this.logger.log(`Sending password change notification to ${user.email}...`);
+      this.logger.log(
+        `Sending password change notification to ${user.email}...`,
+      );
       return await this.gmailService.sendMail({
         to: user.email,
         subject,
         html: content,
       });
     } catch (error) {
-      this.logger.error(`Failed to send change password email to ${user.email}`, error.stack);
+      this.logger.error(
+        `Failed to send change password email to ${user.email}`,
+        error,
+      );
       throw new BadRequestException('Failed to send change password email');
     }
   }
@@ -183,7 +195,10 @@ export class GmailService {
         html: content,
       });
     } catch (error) {
-      this.logger.error(`Failed to send register email to ${user.email}`, error.stack);
+      this.logger.error(
+        `Failed to send register email to ${user.email}`,
+        error,
+      );
       throw new BadRequestException('Failed to send register email');
     }
   }
@@ -204,7 +219,7 @@ export class GmailService {
         html: content,
       });
     } catch (error) {
-      this.logger.error(`Failed to send login email to ${user.email}`, error.stack);
+      this.logger.error(`Failed to send login email to ${user.email}`, error);
       throw new BadRequestException('Failed to send login email');
     }
   }

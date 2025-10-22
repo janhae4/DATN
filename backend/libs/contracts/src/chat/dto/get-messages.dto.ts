@@ -1,6 +1,6 @@
 export class GetChatMessageConversationDto {
-    conversationId: string;
-    userId: string;
-    page = 1;
-    limit = 20
+  conversationId: string;
+  userId: string;
+  page = 1;
+  limit = 20;
 }

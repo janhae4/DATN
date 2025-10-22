@@ -16,8 +16,10 @@ export class CreateTeamDto {
 }
 
 export interface CreateTeamEventPayload {
+  teamId: string;
   ownerId: string;
-  ownerName: string
+  ownerName: string;
   name: string;
-  members: MemberDto[]
+  members: MemberDto[];
+  createdAt: Date;
 }

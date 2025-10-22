@@ -1,4 +1,4 @@
 export class AskQuestionDto {
-    question: string;
-    conversationId?: string;
+  question: string;
+  conversationId?: string;
 }
