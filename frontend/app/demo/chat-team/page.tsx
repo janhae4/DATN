@@ -21,7 +21,6 @@ export default function Page() {
       console.error("Logout failed", error);
     } finally {
       setCurrentUser(null);
-      // Reset store khi logout
       useChatStore.setState({
         visibleConversations: [],
         selectedConversation: null,
@@ -38,7 +37,7 @@ export default function Page() {
 
   useEffect(() => {
     const verifyUser = async () => {
-      setIsAuthenticating(true); // Bắt đầu xác thực
+      setIsAuthenticating(true);
       try {
         const userInfo = await ApiService.getInfo();
         if (!userInfo) {
@@ -72,12 +71,11 @@ export default function Page() {
           isLoadingConversations: false,
         })
       } finally {
-        setIsAuthenticating(false); // Kết thúc xác thực
+        setIsAuthenticating(false); 
       }
     };
     verifyUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Chỉ chạy 1 lần khi mount
+  }, []); 
 
   if (isAuthenticating) {
     return (
@@ -92,7 +90,7 @@ export default function Page() {
       <LoginPage
         onLoginSuccess={(user) => {
           setCurrentUser(user);
-          loadInitialConversations(); // Load lại khi đăng nhập thành công
+          loadInitialConversations();
         }}
       />
     );

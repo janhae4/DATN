@@ -77,7 +77,7 @@ export const NewChatModal: React.FC<NewChatModalProps> = ({
         try {
             const newConversation = await ApiService.createDirectChat(partnerId);
             onChatCreated(newConversation);
-            setPartnerId(""); // Reset
+            setPartnerId("");
         } catch (err: any) {
             setError(err.message || "Không thể tạo cuộc trò chuyện.");
         } finally {

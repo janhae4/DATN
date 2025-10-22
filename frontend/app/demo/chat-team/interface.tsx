@@ -37,27 +37,23 @@ interface PaginatedResponse<T> {
   total: number;
   page: number;
   totalPages: number;
-  // Hoặc bạn có thể dùng hasMore: boolean
 }
 
 interface ChatState {
-  // === Trạng thái chung ===
   selectedConversation: Conversation | null;
-  messages: { [conversationId: string]: MessageData[] }; // Map tin nhắn theo conversationId
-  messagePages: { [conversationId: string]: number }; // Trang hiện tại của tin nhắn cho mỗi convo
-  hasMoreMessages: { [conversationId: string]: boolean }; // Còn tin nhắn cũ hơn không
+  messages: { [conversationId: string]: MessageData[] }; 
+  messagePages: { [conversationId: string]: number }; 
+  hasMoreMessages: { [conversationId: string]: boolean };
 
-  // === Trạng thái cho Infinite Scroll ===
-  visibleConversations: Conversation[]; // Danh sách conversation đã load đầy đủ
-  metaMap: { [conversationId: string]: ConversationMeta }; // Lưu metadata, kể cả convo chưa load
+  visibleConversations: Conversation[];
+  metaMap: { [conversationId: string]: ConversationMeta };
   currentPage: number;
   totalPages: number;
   isLoadingConversations: boolean;
 
-  // === Actions ===
   setSelectedConversation: (conv: Conversation | null) => void;
   appendMessage: (conversationId: string, message: MessageData) => void;
-  prependMessages: (conversationId: string, messages: MessageData[]) => void; // Action thêm tin nhắn cũ
+  prependMessages: (conversationId: string, messages: MessageData[]) => void; 
   loadInitialConversations: () => Promise<void>;
   loadMoreConversations: () => Promise<void>;
   upsertConversationMeta: (meta: ConversationMeta) => void;
@@ -72,13 +68,13 @@ interface ChatState {
     messages: MessageData[],
     page: number,
     hasMore: boolean
-  ) => void; // Cập nhật action này
+  ) => void; 
   replaceTempMessage: (
     conversationId: string,
     tempId: string,
     finalMessage: MessageData
   ) => void;
   removeTempMessage: (conversationId: string, tempId: string) => void;
-  setMessagePage: (conversationId: string, page: number) => void; // Action set page
-  setHasMoreMessages: (conversationId: string, hasMore: boolean) => void; // Action set hasMore
+  setMessagePage: (conversationId: string, page: number) => void; 
+  setHasMoreMessages: (conversationId: string, hasMore: boolean) => void;
 }

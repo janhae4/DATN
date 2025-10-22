@@ -76,7 +76,6 @@ const ConversationItem: React.FC<ConversationItemProps> = React.memo(
 );
 ConversationItem.displayName = "ConversationItem";
 
-// --- Conversation List ---
 interface ConversationListProps {
   currentUser: User;
   onSelectConversation: (conversation: Conversation) => void;
@@ -85,7 +84,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   currentUser,
   onSelectConversation,
 }) => {
-  // ... (Giữ nguyên)
   const {
     visibleConversations,
     selectedConversation,
@@ -110,7 +108,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   useEffect(() => {
     const currentTrigger = loadingTriggerRef.current;
-    const currentList = listRef.current; // Lưu lại list root // Guard: Nếu hết trang hoặc trigger chưa render, dọn dẹp và thoát
+    const currentList = listRef.current; 
 
     if (!hasMore || !currentTrigger) {
       if (observerRef.current) observerRef.current.disconnect();
@@ -119,8 +117,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // Lấy state MỚI NHẤT trực tiếp từ store
-        // vì state `isLoadingConversations` từ closure có thể đã cũ
         const freshState = useChatStore.getState();
 
         if (entries[0].isIntersecting && !freshState.isLoadingConversations) {
@@ -129,7 +125,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         }
       },
       {
-        root: currentList, // Dùng biến đã lưu
+        root: currentList,
         threshold: 0.8,
       }
     );
@@ -138,14 +134,13 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     observerRef.current = observer;
 
     return () => {
-      // Dọn dẹp: ngắt observe và ngắt kết nối
       if (currentTrigger) {
         observer.unobserve(currentTrigger);
       }
-      observer.disconnect(); // Ngắt kết nối observer cũ khi effect chạy lại
+      observer.disconnect();
     };
-  }, [hasMore, loadMoreConversations]); // <-- BỎ `isLoadingConversations`
-  
+  }, [hasMore, loadMoreConversations]);
+
   const handleSelect = useCallback(
     (conv: Conversation) => {
       onSelectConversation(conv);
