@@ -19,6 +19,7 @@ export const initialData: Task[] = [
         assignees: [users[0], users[1], users[2]],
         subtasks: [{ id: "sub-1" }, { id: "sub-2" }],
         due_date: "2025-10-20",
+        epic: "Website Redesign",
     },
     {
         id: "TASK-7878",
@@ -30,6 +31,7 @@ export const initialData: Task[] = [
         assignees: [users[1]],
         subtasks: [],
         due_date: null,
+        epic: "Customer Outreach",
     },
     {
         id: "TASK-1234",
@@ -41,6 +43,7 @@ export const initialData: Task[] = [
         assignees: [],
         subtasks: [{ id: "sub-1"}],
         due_date: "2025-10-18",
+        epic: "Weekly Reports",
     },
     {
         id: "TASK-5678",
@@ -52,5 +55,6 @@ export const initialData: Task[] = [
         assignees: [users[3], users[2]],
         subtasks: [],
         due_date: "2025-10-18",
+        epic: "Weekly Reports",
     },
 ]

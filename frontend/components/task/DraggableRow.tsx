@@ -9,9 +9,10 @@ import { Task } from "@/lib/types/task.type"
 
 interface DraggableRowProps {
   row: Row<Task>
+  handleRowClick: (task: Task) => void
 }
 
-export function DraggableRow({ row }: DraggableRowProps) {
+export function DraggableRow({ row, handleRowClick }: DraggableRowProps) {
   const {
     attributes,
     listeners,
@@ -39,6 +40,7 @@ export function DraggableRow({ row }: DraggableRowProps) {
       {...listeners}
       data-state={row.getIsSelected() && "selected"}
       className="cursor-pointer"
+      onClick={() => !isDragging && handleRowClick(row.original)}
     >
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id} className="py-1">

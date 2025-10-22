@@ -11,5 +11,6 @@ export type Task = {
   assignees: User[]
   due_date?: string | null
   subtasks?: any[]
+  epic?: string | null
 }
 

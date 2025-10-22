@@ -39,7 +39,6 @@ export type TaskColumnHandlers = {
     handleUpdateCell: (taskId: string, columnId: "title", value: string) => void
     handleDateChange: (taskId: string, newDate: Date | undefined) => void
     handlePriorityChange: (taskId: string, priority: Task["priority"]) => void
-    handleToggleComplete: (taskId: string, isCompleted: boolean) => void
     handleStatusChange: (taskId: string, status: Task["status"]) => void
 }
 
@@ -49,7 +48,6 @@ export const getTaskColumns = ({
     handleUpdateCell,
     handleDateChange,
     handlePriorityChange,
-    handleToggleComplete,
     handleStatusChange,
 }: TaskColumnHandlers): ColumnDef<Task>[] => [
         {
@@ -57,21 +55,15 @@ export const getTaskColumns = ({
             header: "Name",
             cell: ({ row }) => {
                 const task = row.original
-                
-                // 2. Xóa hết logic edit inline, thay bằng onClick để mở modal
+
                 return (
                     <div className="flex justify-start items-center gap-2 flex-1">
-                        <Checkbox
-                            checked={task.isCompleted}
-                            onCheckedChange={(checked) => handleToggleComplete(task.id, !!checked)}
-                            onClick={(e) => e.stopPropagation()} // Ngăn việc click checkbox mở modal
-                        />
+
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <span
-                                        className="truncate cursor-pointer hover:underline px-1 rounded"
-                                        onClick={() => handleRowClick(task)} // 3. GỌI handleRowClick KHI CLICK
+                                        className="truncate hover:underline px-1 rounded"
                                     >
                                         {task.title}
                                     </span>
@@ -93,9 +85,24 @@ export const getTaskColumns = ({
             },
         },
         {
+            accessorKey: "epic",
+            header: "Epic",
+            size: 150,
+            cell: ({ row }) => {
+                const { epic } = row.original
+                return (
+                    <div className="flex justify-start">
+                        <span className="truncate text-sm text-muted-foreground">
+                            {epic || "-"}
+                        </span>
+                    </div>
+                )
+            },
+        },
+        {
             accessorKey: "status",
             header: "Status",
-            size: 140, 
+            size: 140,
             cell: ({ row }) => {
                 const { status, id } = row.original
                 const getStatusIcon = (status: Task["status"]) => {
@@ -108,7 +115,7 @@ export const getTaskColumns = ({
                     }
                 }
                 const getStatusText = (status: Task["status"]) => {
-                     switch (status) {
+                    switch (status) {
                         case "todo": return "Todo";
                         case "in_progress": return "In Progress";
                         case "done": return "Done";
@@ -118,7 +125,7 @@ export const getTaskColumns = ({
                 }
 
                 return (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
                         <Select
                             value={status}
                             onValueChange={(newStatus: Task["status"]) => handleStatusChange(id, newStatus)}
@@ -147,11 +154,11 @@ export const getTaskColumns = ({
             cell: ({ row }) => {
                 const { assignees } = row.original
                 if (!assignees || assignees.length === 0) {
-                    return <div className="flex justify-center"><UserIcon className="h-5 w-5 text-muted-foreground/50" /></div>
+                    return <div className="flex justify-center" onClick={(e) => e.stopPropagation()}><UserIcon className="h-5 w-5 text-muted-foreground/50" /></div>
                 }
                 return (
                     <TooltipProvider>
-                        <div className="flex justify-center items-center -space-x-2">
+                        <div className="flex justify-center items-center -space-x-2" onClick={(e) => e.stopPropagation()}>
                             {assignees.slice(0, 3).map((assignee) => (
                                 <Tooltip key={assignee.id}>
                                     <TooltipTrigger asChild><Avatar className="h-6 w-6 border-2 border-background"><AvatarFallback className="text-xs">{assignee.avatarFallback}</AvatarFallback></Avatar></TooltipTrigger>
@@ -166,11 +173,11 @@ export const getTaskColumns = ({
         {
             accessorKey: "due_date",
             header: "Due date",
-            size: 120, 
+            size: 120,
             cell: ({ row }) => {
                 const { due_date, id } = row.original
                 return (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
                         <DatePicker
                             date={due_date}
                             onDateSelect={(newDate) => handleDateChange(id, newDate)}
@@ -186,7 +193,7 @@ export const getTaskColumns = ({
             cell: ({ row }) => {
                 const { priority, id } = row.original
                 return (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
                         <PriorityPicker
                             priority={priority}
                             onPriorityChange={(newPriority) => handlePriorityChange(id, newPriority)}
