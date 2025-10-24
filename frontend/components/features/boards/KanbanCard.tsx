@@ -66,6 +66,7 @@ export function KanbanCard({ task, statuses }: KanbanCardProps) {
         // Gọi hàm mở modal của bạn ở đây nếu cần
         // handleRowClick?.(task) // Ví dụ
       }}
+      
     >
       <CardContent className="p-3 space-y-2">
         {/* Title */}
