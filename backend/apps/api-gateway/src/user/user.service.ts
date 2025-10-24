@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   CreateUserDto,
+  FindUserDto,
   LoginDto,
   UpdateUserDto,
   USER_CLIENT,
@@ -21,6 +22,10 @@ export class UserService {
 
   findOne(id: string) {
     return this.userClient.send(USER_PATTERNS.FIND_ONE, id);
+  }
+
+  findByName(findUser: FindUserDto) {
+    return this.userClient.send(USER_PATTERNS.FIND_MANY_BY_NAME, findUser);
   }
 
   validate(loginDto: LoginDto) {

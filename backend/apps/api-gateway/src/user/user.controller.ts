@@ -6,13 +6,14 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from '@app/contracts';
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
@@ -37,5 +38,14 @@ export class UserController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.userService.remove(+id);
+  }
+
+  @Post('/find')
+  findByName(
+    @Query('key') key: string,
+    @Query('limit') limit: number,
+    @Query('page') page: number
+  ) {
+    return this.userService.findByName({ key, options: { limit, page } });
   }
 }
