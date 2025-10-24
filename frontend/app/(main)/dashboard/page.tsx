@@ -1,4 +1,5 @@
 import { TabsNav } from "@/components/tabsNav"
+import { TaskManagementProvider } from "@/components/providers/TaskManagementContext"
 
 import {
   SidebarInset,
@@ -10,7 +11,9 @@ export default function Page() {
     <SidebarProvider>
       <SidebarInset>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <TabsNav />
+          <TaskManagementProvider>
+            <TabsNav />
+          </TaskManagementProvider>
         </div>
       </SidebarInset>
     </SidebarProvider>

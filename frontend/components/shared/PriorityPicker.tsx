@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Task } from "@/lib/types/task.type"
+import { Task } from "@/lib/dto/task.type"
 
 // Helper để lấy màu cờ
 const getPriorityColor = (priority: Task["priority"]) => {
@@ -38,6 +38,7 @@ const priorities: { value: Task["priority"]; label: string }[] = [
 interface PriorityPickerProps {
     priority: Task["priority"]
     onPriorityChange: (priority: Task["priority"]) => void
+    disabled?: boolean
 }
 
 // Helper để lấy label của priority
@@ -60,23 +61,32 @@ const getPriorityLabel = (priority: Task["priority"]) => {
 export function PriorityPicker({
     priority,
     onPriorityChange,
+    disabled = false,
 }: PriorityPickerProps) {
     const [open, setOpen] = React.useState(false)
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
+                {/* Use Button with asChild so the actual DOM element can be a non-button (div)
+                    - This prevents rendering a <button> inside another <button> (AccordionTrigger)
+                    - We also add explicit disabled styling since the child is not a native button */}
                 <Button
+                    asChild
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        "h-auto w-auto p-1 gap-1 flex items-center",
-                        getPriorityColor(priority)
+                        "h-auto w-auto p-1 gap-1",
+                        getPriorityColor(priority),
+                        disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
                     )}
                     onMouseDown={(e) => e.stopPropagation()}
+                    disabled={disabled}
                 >
-                    <FlagIcon className="h-4 w-4" />
-                    <span className="text-xs font-medium">{getPriorityLabel(priority)}</span>
+                    <div className="flex items-center gap-1">
+                        <FlagIcon className="h-4 w-4" />
+                        <span className="text-xs font-medium">{getPriorityLabel(priority)}</span>
+                    </div>
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-1" align="start">

@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/tabs"
 import Summary from "./features/summary/summary"
 import Backlogs from "./features/backlogs/backlogs"
+import { KanbanBoard } from "./features/boards/KanbanBoard"
 export function TabsNav() {
     return (
         <div className="flex w-full  flex-col gap-6">
@@ -18,13 +19,13 @@ export function TabsNav() {
                     <TabsTrigger value="pages">Pages</TabsTrigger>
                 </TabsList>
                 <TabsContent value="backlogs">
-                    <Backlogs/>
+                    <Backlogs />
                 </TabsContent>
                 <TabsContent value="summary">
-                    <Summary/>
+                    <Summary />
                 </TabsContent>
                 <TabsContent value="boards">
-                    content
+                    <KanbanBoard />
                 </TabsContent>
                 <TabsContent value="timeline">
                     content

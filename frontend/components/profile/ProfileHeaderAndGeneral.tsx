@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { SettingsSectionProps, Provider } from '../../lib/types/profile.type'
+import { SettingsSectionProps, Provider } from '../../lib/dto/user.interface'
 
 export function ProfileHeaderAndGeneral({ user }: SettingsSectionProps) {
     const [name, setName] = React.useState(user.name)

@@ -13,7 +13,7 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { SettingsSectionProps, Provider } from '../../lib/types/profile.type'
+import { SettingsSectionProps, Provider } from '../../lib/dto/user.interface'
 
 export function AccountSecurity({ user }: SettingsSectionProps) {
     const handleResetPassword = () => {

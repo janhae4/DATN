@@ -15,9 +15,10 @@ import { cn } from "@/lib/utils"
 interface DatePickerProps {
   date: Date | string | undefined | null
   onDateSelect: (date: Date | undefined) => void
+  disabled?: boolean
 }
 
-export function DatePicker({ date, onDateSelect }: DatePickerProps) {
+export function DatePicker({ date, onDateSelect, disabled = false }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
 
   // Xử lý date đầu vào - chuyển string thành Date object nếu cần
@@ -39,9 +40,13 @@ export function DatePicker({ date, onDateSelect }: DatePickerProps) {
           size={date ? "default" : "icon"}
           className={cn(
             "w-auto  text-left font-normal ",
-            !date && "text-muted-foreground/50 ml-3 hover:text-muted-foreground"
+            !date && "text-muted-foreground/50 ml-3 hover:text-muted-foreground",
+            disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
           )}
-          onMouseDown={(e) => e.stopPropagation()}
+          // Prevent the click/pointer from bubbling to parent row which opens the modal
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          disabled={disabled}
         >
           <CalendarIcon className="h-5 w-5" />
           {date && (
