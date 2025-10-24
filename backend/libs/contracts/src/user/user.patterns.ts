@@ -14,6 +14,7 @@ export const USER_PATTERNS = {
   FIND_ONE_BY_EMAIL: 'user.findOneByEmail',
   FIND_ONE_OAUTH: 'user.findOneOAuth',
   FIND_MANY_BY_IDs: 'user.findManyByIds',
+  FIND_MANY_BY_NAME: 'user.findManyByName',
   UPDATE: 'user.update',
   UPDATE_PASSWORD: 'user.updatePassword',
   REMOVE: 'user.remove',

@@ -7,6 +7,7 @@ import {
   CreateAuthLocalDto,
   CreateAuthOAuthDto,
   EVENTS,
+  FindUserDto,
   LoginDto,
   Provider,
   User,
@@ -128,5 +129,10 @@ export class UserController {
   @MessagePattern(USER_PATTERNS.REMOVE)
   remove(@Payload() id: string) {
     return this.userService.remove(id);
+  }
+
+  @MessagePattern(USER_PATTERNS.FIND_MANY_BY_NAME)
+  findByName(@Payload() payload: FindUserDto) {
+    return this.userService.findByName(payload.key, payload.options)
   }
 }

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, FindManyOptions, In, Repository } from 'typeorm';
+import { Brackets, DataSource, FindManyOptions, In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
@@ -13,6 +13,7 @@ import {
   LoginDto,
   Provider,
   EVENT_CLIENT,
+  PaginationDto,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { ClientProxy } from '@nestjs/microservices';
@@ -32,7 +33,7 @@ export class UserService {
     private readonly dataSource: DataSource,
     @Inject(EVENT_CLIENT)
     private readonly eventClient: ClientProxy,
-  ) {}
+  ) { }
 
   private async create(createUserDto: Partial<User>) {
     this.logger.debug(
@@ -605,5 +606,62 @@ export class UserService {
       );
     }
     return result;
+  }
+
+  async findByName(name: string, options: PaginationDto) {
+    this.logger.log(`Finding user by name or username or email: ${name}`);
+    const { page, limit } = options;
+    const skip = (page - 1) * limit;
+
+    const qb = this.userRepo.createQueryBuilder("user")
+      .leftJoin(
+        "user.accounts",
+        "account",
+        "account.provider = :provider",
+        { provider: Provider.LOCAL }
+      )
+      .where(new Brackets(sqb => {
+        const searchTerm = `%${name}%`;
+        sqb.where("user.name ILIKE :term", { term: searchTerm })
+          .orWhere("user.email ILIKE :term", { term: searchTerm })
+          .orWhere("account.providerId ILIKE :term", { term: searchTerm })
+          .orWhere("account.email ILIKE :term", { term: searchTerm });
+      }));
+
+    const userIdsWithExtra = await qb.clone()
+      .select("DISTINCT user.id")
+      .orderBy("user.id", "ASC")
+      .skip(skip)
+      .take(limit + 1)
+      .getRawMany()
+      .then(results => results.map(r => r.id));
+
+    console.log(userIdsWithExtra)
+    const hasNextPage = userIdsWithExtra.length > limit;
+    const userIds = userIdsWithExtra.slice(0, limit);
+
+    if (userIds.length === 0) {
+      return { data: [], hasNextPage: false };
+    }
+
+    const data = await this.userRepo.createQueryBuilder("user")
+      .leftJoinAndSelect(
+        "user.accounts",
+        "account",
+        "account.provider = :provider",
+        { provider: Provider.LOCAL }
+      )
+      .where("user.id IN (:...userIds)", { userIds })
+      .select([
+        "user.id",
+        "user.name",
+        "user.email",
+        "user.avatar",
+        "account.providerId"
+      ])
+      .orderBy("user.id", "ASC")
+      .getMany();
+
+    return { data, hasNextPage };
   }
 }

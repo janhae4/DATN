@@ -1,6 +1,8 @@
 export * from './error';
 export * from './rpc-exception.filter';
 export * from './constants';
+export * from './pagination.dto'
+
 /*----
 AUTH
 -----*/
@@ -99,6 +101,7 @@ export * from './user/dto/update-user.dto';
 export * from './user/dto/validate-user.dto';
 export * from './user/entity/account.entity';
 export * from './user/entity/user.entity';
+export * from './user/dto/find-user.dto'
 
 /*----
 TEAM
