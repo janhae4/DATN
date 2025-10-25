@@ -13,7 +13,16 @@ MINIO_SECRET_KEY =  os.environ.get("MINIO_SECRET_KEY", "minioadmin")
 MINIO_USE_SSL =     os.environ.get("MINIO_USE_SSL", "false").lower() in ("1","true","yes")
 MINIO_BUCKET =      os.environ.get("MINIO_BUCKET_NAME", "documents")
 
-INGESTION_QUEUE =       os.environ.get("INGESTION_QUEUE", "ingestion_queue")
-RAG_QUEUE =             os.environ.get("RAG_QUEUE", "rag_queue")
-SOCKET_QUEUE =          os.environ.get("SOCKET_QUEUE", "socket_queue")
 THREADPOOL_MAX_WORKERS = int(os.environ.get("THREADPOOL_MAX_WORKERS", "6"))
+
+INGESTION_QUEUE = "ingestion_queue"
+RAG_QUEUE = "rag_queue"
+
+CHATBOT_EXCHANGE = os.getenv("CHATBOT_EXCHANGE", "chatbot_exchange")
+ASK_QUESTION_ROUTING_KEY = os.getenv("ASK_QUESTION_ROUTING_KEY", "ask_question")
+SUMMARIZE_DOCUMENT_ROUTING_KEY = os.getenv("SUMMARIZE_DOCUMENT_ROUTING_KEY", "summarize_document")
+SOCKET_EXCHANGE = os.getenv("SOCKET_EXCHANGE", "socket_exchange")
+EVENTS_EXCHANGE = os.getenv("EVENTS_EXCHANGE", "events_exchange")
+STREAM_RESPONSE_ROUTING_KEY = os.getenv("STREAM_RESPONSE_ROUTING_KEY", "rag_response")
+SEND_NOTIFICATION_ROUTING_KEY = os.getenv("SEND_NOTIFICATION_ROUTING_KEY", "notification.send")
+PROCESS_DOCUMENT_ROUTING_KEY = os.getenv("PROCESS_DOCUMENT_ROUTING_KEY", "process_document")
