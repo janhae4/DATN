@@ -218,4 +218,22 @@ export class UserController {
   findByName(payload: FindUserDto) {
     return this.userService.findByName(payload.key, payload.options, payload.requesterId);
   }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FOLLOW,
+    queue: USER_PATTERNS.FOLLOW,
+  })
+  follow(requesterId: string, followingId: string) {
+    return this.userService.follow(requesterId, followingId);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.UNFOLLOW,
+    queue: USER_PATTERNS.UNFOLLOW,
+  })
+  unfollow(requesterId: string, followingId: string) {
+    return this.userService.unfollow(requesterId, followingId);
+  }
 }

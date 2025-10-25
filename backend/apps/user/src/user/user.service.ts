@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { Brackets, DataSource, FindManyOptions, In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -12,12 +12,11 @@ import {
   CreateAuthOAuthDto,
   LoginDto,
   Provider,
-  EVENT_CLIENT,
   PaginationDto,
   EVENTS_EXCHANGE,
+  Follow,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
-import { ClientProxy } from '@nestjs/microservices';
 import { EVENTS } from '@app/contracts/events/events.pattern';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
@@ -31,6 +30,8 @@ export class UserService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Account)
     private readonly accountRepo: Repository<Account>,
+    @InjectRepository(Follow)
+    private readonly followRepo: Repository<Follow>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
     private readonly amqp: AmqpConnection
@@ -660,5 +661,18 @@ export class UserService {
       .getMany();
 
     return { data, hasNextPage };
+  }
+
+  async follow(requesterId: string, followingId: string) {
+    this.logger.log(`Following user ${followingId} by ${requesterId}`);
+    const follow = new Follow();
+    follow.followerId = requesterId;
+    follow.followingId = followingId;
+    return await this.followRepo.save(follow);
+  }
+
+  async unfollow(requesterId: string, followingId: string) {
+    this.logger.log(`Unfollowing user ${followingId} by ${requesterId}`);
+    return await this.followRepo.delete({ followerId: requesterId, followingId });
   }
 }

@@ -40,6 +40,16 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d
 
+  meili-search:
+    image: getmeili/meilisearch:v1.16
+    container_name: meili_search
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_MASTER_KEY: "A7Uu1TlCVUtQRaUpFY9Z2sLoJeZMYVi0"
+    volumes:
+      - - ./meili-data:/meili_data
+
   chroma:
     image: chromadb/chroma
     command: run --host 0.0.0.0 --port 8000
@@ -142,3 +152,4 @@ volumes:
   minio-data:
   chroma-data:
   mongo-data:
+  meili-data:

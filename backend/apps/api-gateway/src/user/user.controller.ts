@@ -29,7 +29,7 @@ export class UserController {
     return this.userService.findAll();
   }
 
-  @Get('/find')
+  @Get('/search')
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN, Role.USER)
   findByName(
@@ -39,6 +39,26 @@ export class UserController {
     @CurrentUser('id') requesterId: string
   ) {
     return this.userService.findByName({ key, options: { limit, page }, requesterId });
+  }
+
+  @Post('/:id/follow')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  follow(
+    @CurrentUser('id') requesterId: string,
+    @Param('id') followingId: string
+  ) {
+    return this.userService.follow(requesterId, followingId);
+  }
+
+  @Delete('/:id/follow')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  unfollow(
+    @CurrentUser('id') requesterId: string,
+    @Param('id') followingId: string
+  ) {
+    return this.userService.unfollow(requesterId, followingId);
   }
 
   @Get(':id')
