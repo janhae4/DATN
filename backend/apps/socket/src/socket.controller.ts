@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 
 import {
   EVENTS,
@@ -10,11 +10,20 @@ import {
   NotificationEventDto,
   User,
   NotificationType,
+  SOCKET_EXCHANGE,
+  CHATBOT_EXCHANGE,
 } from '@app/contracts';
 
-import type { AddMemberEventPayload, ChangeRoleMember, CreateTeamEventPayload, LeaveMember, RemoveMemberEventPayload, SendMessageEventPayload } from '@app/contracts';
+import type { 
+  AddMemberEventPayload, 
+  ChangeRoleMember, 
+  CreateTeamEventPayload, 
+  LeaveMember, 
+  RemoveMemberEventPayload, 
+  SendMessageEventPayload 
+} from '@app/contracts';
+
 import { SocketGateway } from './socket.gateway';
-import { Payload } from '@nestjs/microservices';
 
 @Controller()
 export class SocketController {
@@ -127,16 +136,17 @@ export class SocketController {
   }
 
   @RabbitSubscribe({
-    exchange: EVENTS_EXCHANGE,
+    exchange: SOCKET_EXCHANGE,
     routingKey: NOTIFICATION_PATTERN.SEND,
     queue: "events_socket_send_notification",
   })
   handleSendNotification(event: NotificationEventDto) {
+    console.log(event)
     this.socketGateway.sendNotificationToUser(event);
   }
 
   @RabbitSubscribe({
-    exchange: EVENTS_EXCHANGE,
+    exchange: CHATBOT_EXCHANGE,
     routingKey: NOTIFICATION_PATTERN.PROCESS_DOCUMENT,
     queue: NOTIFICATION_PATTERN.PROCESS_DOCUMENT,
   })

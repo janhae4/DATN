@@ -100,5 +100,5 @@ export class StorageService {
       this.logger.error(`Error deleting file ${fileName}: ${err}`);
       throw new BadRequestException('Error deleting file');
     }
-  }
+  } 
 }

@@ -4,10 +4,9 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
-  Inject,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Conversation } from './schema/conversation.schema';
 import { Message } from './schema/message.schema';
 import {

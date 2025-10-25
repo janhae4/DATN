@@ -1,4 +1,3 @@
-// ./schema/message.dto.ts
 import { Type } from 'class-transformer';
 import {
   IsIn,

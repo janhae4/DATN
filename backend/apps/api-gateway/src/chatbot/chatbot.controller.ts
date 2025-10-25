@@ -22,6 +22,7 @@ import multer from 'multer';
 import type { Request } from 'express';
 import { Payload } from '@nestjs/microservices';
 import { RoleGuard } from '../common/role/role.guard';
+import { CurrentUser } from '../common/role/current-user.decorator';
 
 @Controller('chatbot')
 export class ChatbotController {
@@ -52,20 +53,14 @@ export class ChatbotController {
       }),
     )
     file: Express.Multer.File,
-    @Req() request: Request,
+    @CurrentUser('id') userId: string
   ) {
-    console.log(file);
     if (file.buffer.length === 0 || !file) {
       throw new BadRequestException('File is empty.');
     }
-    const user = request.user as JwtDto;
-    console.log(user);
-    if (!user.id) {
-      throw new BadRequestException('User not found');
-    }
 
-    const fileName = await this.chatbotService.uploadFile(file, user.id);
-    this.chatbotService.processDocument(fileName, user.id);
+    const fileName = await this.chatbotService.uploadFile(file, userId);
+    this.chatbotService.processDocument(fileName, userId);
     return {
       message: 'File is processing',
       fileName,
