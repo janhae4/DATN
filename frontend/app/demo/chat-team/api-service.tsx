@@ -119,4 +119,21 @@ export const ApiService = {
       method: "POST",
       body: JSON.stringify({ newOwnerId }),
     }),
+
+  findByName: (
+    query: string,
+    page: number = 1,
+    limit: number = 5
+  ): Promise<{ data: User[]; hasNextPage: boolean }> =>
+    ApiService.request(`/user/find?query=${query}&page=${page}&limit=${limit}`),
+
+  searchMessages: (
+    query: string,
+    conversationId: string,
+    page: number = 1,
+    limit: number = 5
+  ): Promise<SearchResponse> =>
+    ApiService.request(
+      `/chat/conversations/${conversationId}/messages/search?query=${query}&page=${page}&limit=${limit}`
+    ),
 };

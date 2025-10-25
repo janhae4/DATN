@@ -31,7 +31,7 @@ export default function Page() {
         currentPage: 0,
         totalPages: 1,
         isLoadingConversations: false,
-      }); 
+      });
     }
   };
 
@@ -53,9 +53,9 @@ export default function Page() {
             totalPages: 1,
             isLoadingConversations: false,
           });
-            setCurrentUser(userInfo);
-            loadInitialConversations();
-          }
+        }
+        setCurrentUser(userInfo);
+        loadInitialConversations();
       } catch (error) {
         console.error("Verification failed:", error);
         setCurrentUser(null);
@@ -69,13 +69,13 @@ export default function Page() {
           currentPage: 0,
           totalPages: 1,
           isLoadingConversations: false,
-        })
+        });
       } finally {
-        setIsAuthenticating(false); 
+        setIsAuthenticating(false);
       }
     };
     verifyUser();
-  }, []); 
+  }, []);
 
   if (isAuthenticating) {
     return (

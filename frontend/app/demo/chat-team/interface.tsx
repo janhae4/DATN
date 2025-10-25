@@ -4,6 +4,8 @@ interface User {
   id: string;
   name: string;
   avatar: string;
+  providerId?: string;
+  email?: string;
 }
 
 interface Participant {
@@ -20,6 +22,14 @@ interface MessageData {
   createdAt: string;
   conversationId: string;
 }
+
+interface SearchResponse {
+  hits: MessageData[];
+  totalHits: number;
+  totalPages: number;
+  currentPage: number;
+}
+
 interface ConversationMeta {
   _id: string;
   latestMessage?: MessageData;
@@ -41,8 +51,8 @@ interface PaginatedResponse<T> {
 
 interface ChatState {
   selectedConversation: Conversation | null;
-  messages: { [conversationId: string]: MessageData[] }; 
-  messagePages: { [conversationId: string]: number }; 
+  messages: { [conversationId: string]: MessageData[] };
+  messagePages: { [conversationId: string]: number };
   hasMoreMessages: { [conversationId: string]: boolean };
 
   visibleConversations: Conversation[];
@@ -53,7 +63,7 @@ interface ChatState {
 
   setSelectedConversation: (conv: Conversation | null) => void;
   appendMessage: (conversationId: string, message: MessageData) => void;
-  prependMessages: (conversationId: string, messages: MessageData[]) => void; 
+  prependMessages: (conversationId: string, messages: MessageData[]) => void;
   loadInitialConversations: () => Promise<void>;
   loadMoreConversations: () => Promise<void>;
   upsertConversationMeta: (meta: ConversationMeta) => void;
@@ -68,13 +78,13 @@ interface ChatState {
     messages: MessageData[],
     page: number,
     hasMore: boolean
-  ) => void; 
+  ) => void;
   replaceTempMessage: (
     conversationId: string,
     tempId: string,
     finalMessage: MessageData
   ) => void;
   removeTempMessage: (conversationId: string, tempId: string) => void;
-  setMessagePage: (conversationId: string, page: number) => void; 
+  setMessagePage: (conversationId: string, page: number) => void;
   setHasMoreMessages: (conversationId: string, hasMore: boolean) => void;
 }

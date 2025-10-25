@@ -20,6 +20,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     appendMessage: (convId, message) =>
         set((state) => {
+            console.log(message)
             const currentMessages = state.messages[convId] || [];
             const isTemp = message._id.startsWith("temp-");
             const messageExists =
@@ -40,12 +41,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
             };
         }),
 
-    // Action thêm tin nhắn cũ vào ĐẦU danh sách
     prependMessages: (conversationId, messagesToPrepend) =>
         set((state) => {
             if (messagesToPrepend.length === 0) return {}; // Không làm gì nếu không có tin nhắn mới
             const currentMessages = state.messages[conversationId] || [];
-            // Tạo Set các ID hiện có để tránh trùng lặp
             const existingIds = new Set(currentMessages.map((m) => m._id));
             const uniqueNewMessages = messagesToPrepend.filter(
                 (m) => !existingIds.has(m._id)
@@ -64,7 +63,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
             };
         }),
 
-    // Cập nhật action này để nhận thêm page và hasMore
     setMessagesForConversation: (conversationId, messages, page, hasMore) =>
         set((state) => ({
             messages: {
@@ -73,11 +71,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
             },
             messagePages: {
                 ...state.messagePages,
-                [conversationId]: page, // Lưu lại trang vừa load
+                [conversationId]: page,
             },
             hasMoreMessages: {
                 ...state.hasMoreMessages,
-                [conversationId]: hasMore, // Lưu lại trạng thái hasMore
+                [conversationId]: hasMore,
             },
         })),
 
@@ -155,7 +153,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     },
 
     loadMoreConversations: async () => {
-        // ... (Giữ nguyên)
         const state = get();
         if (state.isLoadingConversations || state.currentPage >= state.totalPages) {
             return;
