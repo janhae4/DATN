@@ -196,7 +196,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(
       `Emitting to RAG_CLIENT (ask_question) for user ${user.id}`,
     );
-    this.amqpConnection.publish(
+    
+    await this.amqpConnection.publish(
       CHATBOT_EXCHANGE,
       CHATBOT_PATTERN.ASK_QUESTION,
       requestPayload

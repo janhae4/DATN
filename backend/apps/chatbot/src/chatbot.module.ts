@@ -3,15 +3,15 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ChatbotController } from './chatbot.controller';
 import { ChatbotService } from './chatbot.service';
 import { StorageService } from './storage.service';
+
 import {
-  Conversation,
-  ConversationSchema,
-} from '../../../libs/contracts/src/chatbot/schema/conversation.schema';
-import {
-  CLIENT_PROXY_PROVIDER,
+  CHATBOT_EXCHANGE,
   ClientConfigModule,
   ClientConfigService,
+  Conversation,
+  ConversationSchema,
 } from '@app/contracts';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 @Module({
   imports: [
     ClientConfigModule,
@@ -27,12 +27,26 @@ import {
         schema: ConversationSchema,
       },
     ]),
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
+        exchanges: [
+          {
+            name: CHATBOT_EXCHANGE,
+            type: 'direct',
+          },
+        ],
+        uri: config.getRMQUrl(),
+        connectionInitOptions: { wait: false },
+      })
+    })
   ],
   providers: [
-    CLIENT_PROXY_PROVIDER.INGESTION_CLIENT,
     ChatbotService,
     StorageService,
+    ChatbotController
   ],
   controllers: [ChatbotController],
 })
-export class ChatbotModule {}
+export class ChatbotModule { }

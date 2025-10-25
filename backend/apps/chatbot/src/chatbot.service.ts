@@ -3,6 +3,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Aggregate, Model } from 'mongoose';
 import {
+  CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
   Conversation,
   ConversationDocument,
@@ -10,16 +11,16 @@ import {
   Message,
   NotFoundException,
 } from '@app/contracts';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class ChatbotService {
   private readonly logger = new Logger(ChatbotService.name);
   constructor(
-    @Inject(INGESTION_CLIENT)
-    private readonly ingestionClient: ClientProxy,
+    private readonly amqp: AmqpConnection,
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<ConversationDocument>,
-  ) {}
+  ) { }
 
   async handleMessage(
     userId: string,
@@ -53,13 +54,6 @@ export class ChatbotService {
       `Message ${messageDoc.content.substring(0, 5) + '...'} added to conversation ${String(conversation._id)}`,
     );
     return conversation;
-  }
-
-  processDocument(fileName: string, userId: string) {
-    this.ingestionClient.emit(CHATBOT_PATTERN.PROCESS_DOCUMENT, {
-      fileName,
-      userId,
-    });
   }
 
   async findAllConversation(

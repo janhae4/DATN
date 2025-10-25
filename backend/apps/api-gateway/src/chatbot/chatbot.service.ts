@@ -1,25 +1,28 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+
 import {
-  CHATBOT_CLIENT,
+  CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
   ConversationResponseDto,
 } from '@app/contracts';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class ChatbotService {
   constructor(
-    @Inject(CHATBOT_CLIENT) private readonly chatbotClient: ClientProxy,
-  ) {}
+    private readonly amqp: AmqpConnection,
+  ) { }
 
-  askQuestion(question: string) {
-    return this.chatbotClient.send(CHATBOT_PATTERN.ASK_QUESTION, { question });
+  async askQuestion(question: string) {
+    return await this.amqp.request<ConversationResponseDto>({
+      exchange: CHATBOT_EXCHANGE,
+      routingKey: CHATBOT_PATTERN.ASK_QUESTION,
+      payload: question,
+    });
   }
 
   processDocument(fileName: string, userId: string) {
-    console.log(`${fileName} \t ${userId}`);
-    this.chatbotClient.emit(CHATBOT_PATTERN.PROCESS_DOCUMENT, {
+    this.amqp.publish(CHATBOT_EXCHANGE, CHATBOT_PATTERN.PROCESS_DOCUMENT, {
       fileName,
       userId,
     });
@@ -30,9 +33,11 @@ export class ChatbotService {
 
   async uploadFile(file: Express.Multer.File, userId: string) {
     try {
-      const fileName = await firstValueFrom<string>(
-        this.chatbotClient.send(CHATBOT_PATTERN.UPLOAD_FILE, { file, userId }),
-      );
+      const fileName = await this.amqp.request<string>({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.UPLOAD_FILE,
+        payload: { file, userId }
+      })
       return fileName;
     } catch (err) {
       const e = err as Error;
@@ -42,9 +47,11 @@ export class ChatbotService {
 
   async getFilesByUserId(userId: string) {
     try {
-      const files = await firstValueFrom<string[]>(
-        this.chatbotClient.send(CHATBOT_PATTERN.GET_FILES_BY_USER_ID, userId),
-      );
+      const files = await this.amqp.request<string[]>({
+          exchange: CHATBOT_EXCHANGE,
+          routingKey: CHATBOT_PATTERN.GET_FILES_BY_USER_ID,
+          payload: userId
+        })
       return files;
     } catch (err) {
       const e = err as Error;
@@ -54,10 +61,11 @@ export class ChatbotService {
 
   async deleteFile(fileId: string) {
     try {
-      const files = await firstValueFrom<string[]>(
-        this.chatbotClient.send(CHATBOT_PATTERN.DELETE_FILE, { fileId }),
-      );
-      return files;
+      return await this.amqp.request<string>({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.DELETE_FILE,
+        payload: fileId
+      })
     } catch (err) {
       const e = err as Error;
       throw new BadRequestException(e.message);
@@ -70,14 +78,11 @@ export class ChatbotService {
     limit: number = 15,
   ) {
     try {
-      const conversations = await firstValueFrom<ConversationResponseDto>(
-        this.chatbotClient.send(CHATBOT_PATTERN.FIND_CONVERSATIONS, {
-          userId,
-          page,
-          limit,
-        }),
-      );
-      return conversations;
+      return await this.amqp.request<ConversationResponseDto>({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.FIND_CONVERSATIONS,
+        payload: { userId, page, limit },
+      })
     } catch (err) {
       const e = err as Error;
       throw new BadRequestException(e.message);
@@ -91,15 +96,11 @@ export class ChatbotService {
     limit: number = 15,
   ) {
     try {
-      const conversations = await firstValueFrom<ConversationResponseDto>(
-        this.chatbotClient.send(CHATBOT_PATTERN.FIND_CONVERSATION, {
-          userId,
-          conversationId,
-          page,
-          limit,
-        }),
-      );
-      return conversations;
+      return await this.amqp.request<ConversationResponseDto>({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.FIND_CONVERSATION,
+        payload: { userId, conversationId, page, limit },
+      })
     } catch (err) {
       const e = err as Error;
       throw new BadRequestException(e.message);
@@ -108,12 +109,11 @@ export class ChatbotService {
 
   async deleteConversation(conversationId: string) {
     try {
-      const conversations = await firstValueFrom<ConversationResponseDto>(
-        this.chatbotClient.send(CHATBOT_PATTERN.DELETE_CONVERSATION, {
-          conversationId,
-        }),
-      );
-      return conversations;
+      return await this.amqp.request<string>({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.DELETE_CONVERSATION,
+        payload: conversationId
+      })
     } catch (err) {
       const e = err as Error;
       throw new BadRequestException(e.message);
