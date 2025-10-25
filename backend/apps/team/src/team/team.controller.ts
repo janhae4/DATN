@@ -1,62 +1,99 @@
 import { Controller } from '@nestjs/common';
 import { TeamService } from './team.service';
-import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   AddMember,
   ChangeRoleMember,
   CreateTeamDto,
   LeaveMember,
   RemoveMember,
+  TEAM_EXCHANGE,
   TEAM_PATTERN,
   TransferOwnership,
 } from '@app/contracts';
+import { RabbitPayload, RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 
 @Controller()
 export class TeamController {
-  constructor(private readonly teamService: TeamService) {}
+  constructor(private readonly teamService: TeamService) { }
 
-  @MessagePattern(TEAM_PATTERN.FIND_ALL)
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.FIND_ALL,
+    queue: TEAM_PATTERN.FIND_ALL,
+  })
   async findAll() {
     return await this.teamService.findAll();
   }
 
-  @MessagePattern(TEAM_PATTERN.FIND_BY_USER_ID)
-  async findByUserId(@Payload() userId: string) {
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.FIND_BY_USER_ID,
+    queue: TEAM_PATTERN.FIND_BY_USER_ID,
+  })
+  async findByUserId(@RabbitPayload() userId: string) {
     return await this.teamService.findByUserId(userId);
   }
 
-  @MessagePattern(TEAM_PATTERN.FIND_BY_ID)
-  async findById(@Payload() payload: { id: string; userId: string }) {
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.FIND_BY_ID,
+    queue: TEAM_PATTERN.FIND_BY_ID,
+  })
+  async findById(@RabbitPayload() payload: { id: string; userId: string }) {
     return await this.teamService.findById(payload.id, payload.userId);
   }
 
-  @MessagePattern(TEAM_PATTERN.CREATE)
-  async create(@Payload() createTeamDto: CreateTeamDto) {
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.CREATE,
+    queue: TEAM_PATTERN.CREATE,
+  })
+  async create(@RabbitPayload() createTeamDto: CreateTeamDto) {
     return await this.teamService.create(createTeamDto);
   }
 
-  @MessagePattern(TEAM_PATTERN.ADD_MEMBER)
-  async addMember(@Payload() addMemberDto: AddMember) {
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.ADD_MEMBER,
+    queue: TEAM_PATTERN.ADD_MEMBER,
+  })
+  async addMember(@RabbitPayload() addMemberDto: AddMember) {
     return await this.teamService.addMembers(addMemberDto);
   }
 
-  @MessagePattern(TEAM_PATTERN.REMOVE_MEMBER)
-  async removeMember(@Payload() payload: RemoveMember) {
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.REMOVE_MEMBER,
+    queue: TEAM_PATTERN.REMOVE_MEMBER,
+  })
+  async removeMember(@RabbitPayload() payload: RemoveMember) {
     return await this.teamService.removeMember(payload);
   }
 
-  @MessagePattern(TEAM_PATTERN.LEAVE_TEAM)
-  async leaveTeam(@Payload() payload: LeaveMember) {
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.LEAVE_TEAM,
+    queue: TEAM_PATTERN.LEAVE_TEAM,
+  })
+  async leaveTeam(@RabbitPayload() payload: LeaveMember) {
     return await this.teamService.leaveTeam(payload);
   }
 
-  @MessagePattern(TEAM_PATTERN.TRANSFER_OWNERSHIP)
-  async transferOwnership(@Payload() payload: TransferOwnership) {
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.TRANSFER_OWNERSHIP,
+    queue: TEAM_PATTERN.TRANSFER_OWNERSHIP,
+  })
+  async transferOwnership(@RabbitPayload() payload: TransferOwnership) {
     return await this.teamService.transferOwnership(payload);
   }
 
-  @MessagePattern(TEAM_PATTERN.CHANGE_ROLE)
-  async changeRole(@Payload() payload: ChangeRoleMember) {
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.CHANGE_ROLE,
+    queue: TEAM_PATTERN.CHANGE_ROLE,
+  })
+  async changeRole(@RabbitPayload() payload: ChangeRoleMember) {
     return await this.teamService.changeMemberRole(payload);
   }
 }

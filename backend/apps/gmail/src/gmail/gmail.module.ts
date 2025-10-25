@@ -21,9 +21,9 @@ import {
       }),
       inject: [ClientConfigService],
       imports: [ClientConfigModule],
-    }),
+    })
   ],
   controllers: [GmailController],
-  providers: [GmailService, CLIENT_PROXY_PROVIDER.REDIS_CLIENT],
+  providers: [GmailService, GmailController],
 })
-export class GmailModule {}
+export class GmailModule { }

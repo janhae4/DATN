@@ -1,45 +1,73 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import {
-  CHAT_CLIENT,
+  CHAT_EXCHANGE,
   CHAT_PATTERN,
   CreateChatMessageDto,
   CreateDirectChatDto,
   GetChatMessageConversationDto,
 } from '@app/contracts';
 import { PaginationDto } from './dto/pagination.dto';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class ChatService {
-  constructor(
-    @Inject(CHAT_CLIENT)
-    private readonly chatClient: ClientProxy,
-  ) {}
+  private readonly rpcTimeout = 10000;
+
+  constructor(private readonly amqp: AmqpConnection) { }
 
   createDirectChat(payload: CreateDirectChatDto) {
-    return this.chatClient.send(CHAT_PATTERN.CREATE_DIRECT_MESSAGE, payload);
+    return this.amqp.request({
+      exchange: CHAT_EXCHANGE,
+      routingKey: CHAT_PATTERN.CREATE_DIRECT_MESSAGE,
+      payload,
+      timeout: this.rpcTimeout,
+    })
   }
 
   createChatMessage(payload: CreateChatMessageDto) {
-    return this.chatClient.send(CHAT_PATTERN.CREATE_MESSAGE, payload);
+    console.log(payload)
+    return this.amqp.request({
+      exchange: CHAT_EXCHANGE,
+      routingKey: CHAT_PATTERN.CREATE_MESSAGE,
+      payload,
+      timeout: this.rpcTimeout,
+    })
   }
 
   getConversationsForUser(userId: string, paginationDto: PaginationDto) {
-    return this.chatClient.send(CHAT_PATTERN.GET, {
-      userId,
-      page: paginationDto.page,
-      limit: paginationDto.limit,
-    });
+    return this.amqp.request({
+      exchange: CHAT_EXCHANGE,
+      routingKey: CHAT_PATTERN.GET,
+      payload: { userId, paginationDto },
+      timeout: this.rpcTimeout,
+    })
   }
 
   getMessagesForConversation(payload: GetChatMessageConversationDto) {
-    return this.chatClient.send(CHAT_PATTERN.GET_MESSAGES, payload);
+    return this.amqp.request({
+      exchange: CHAT_EXCHANGE,
+      routingKey: CHAT_PATTERN.GET_MESSAGES,
+      payload,
+      timeout: this.rpcTimeout,
+    })
   }
 
   getConversationById(conversationId: string, userId: string) {
-    return this.chatClient.send(CHAT_PATTERN.GET_CONVERSATION_BY_ID, {
-      conversationId,
-      userId,
-    });
+    return this.amqp.request({
+      exchange: CHAT_EXCHANGE,
+      routingKey: CHAT_PATTERN.GET_CONVERSATION_BY_ID,
+      payload: { conversationId, userId },
+      timeout: this.rpcTimeout,
+    })
+  }
+
+  searchMessages(query: string, conversationId: string, userId: string, page: number, limit: number) {
+    const options = { page, limit };
+    return this.amqp.request({
+      exchange: CHAT_EXCHANGE,
+      routingKey: CHAT_PATTERN.SEARCH_MESSAGES,
+      payload: { query, conversationId, userId, options},
+      timeout: this.rpcTimeout,
+    })
   }
 }

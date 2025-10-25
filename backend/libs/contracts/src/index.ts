@@ -128,3 +128,10 @@ export * from './video-chat/video-chat.patterns';
 EVENT
 -----*/
 export * from './events/events.pattern';
+
+
+/*----
+SEARCH
+-----*/
+export * from './search/search.pattern';
+export * from './search/dto/search-message.dto';

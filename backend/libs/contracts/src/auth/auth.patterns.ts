@@ -5,6 +5,7 @@ export const AUTH_PATTERN = {
   VERIFY_LOCAL_TOKEN: 'auth.verifyToken',
   VERIFY_FORGOT_PASSWORD: 'auth.verifyForgotPassword',
   VERIFY_FORGOT_PASSWORD_TOKEN: 'auth.verifyForgotPasswordToken',
+  VERIFY_EMAIL: 'auth.verifyEmail',
   RESET_VERIFICATION_CODE: 'auth.resetVerificationCode',
   RESET_CODE: 'auth.resetCode',
   FORGET_PASSWORD: 'auth.forgetPassword',

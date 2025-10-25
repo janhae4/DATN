@@ -1,19 +1,46 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
-import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
+import { AUTH_EXCHANGE, CLIENT_PROXY_PROVIDER, ClientConfigModule, ClientConfigService } from '@app/contracts';
 import { GoogleStrategy } from '../common/google.strategy';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
-  imports: [ClientConfigModule, UserModule, AuthModule],
+  imports: [
+    ClientConfigModule,
+    forwardRef(() => UserModule),
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
+        exchanges: [
+          {
+            name: AUTH_EXCHANGE,
+            type: 'direct',
+          },
+        ],
+        uri: config.getRMQUrl(),
+        connectionInitOptions: { wait: false },
+        logger: {
+          error: (str: string) => {
+            console.error(str);
+          },
+          log: (str: string) => {
+            console.log(str);
+          },
+          warn: (str: string) => {
+            console.warn(str);
+          },
+        }
+      })
+    }),
+  ],
   controllers: [AuthController],
   providers: [
     AuthService,
-    CLIENT_PROXY_PROVIDER.AUTH_CLIENT,
-    CLIENT_PROXY_PROVIDER.USER_CLIENT,
     GoogleStrategy,
   ],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import { RabbitPayload, RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { UserService } from './user.service';
 import {
   Account,
@@ -7,18 +7,29 @@ import {
   CreateAuthLocalDto,
   CreateAuthOAuthDto,
   EVENTS,
+  EVENTS_EXCHANGE,
+  EVENTS_USER_QUEUE,
   FindUserDto,
   LoginDto,
   Provider,
   User,
+  USER_EXCHANGE,
   USER_PATTERNS,
 } from '@app/contracts';
+import { Payload } from '@nestjs/microservices';
 
 @Controller()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
-  @EventPattern(EVENTS.LOGIN)
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.LOGIN,
+    queue: EVENTS_USER_QUEUE,
+    queueOptions: {
+      durable: true,
+    },
+  })
   handleLogin(@Payload() payload: Partial<User>) {
     this.userService.update(payload.id ?? '', {
       lastLogin: new Date(),
@@ -26,30 +37,48 @@ export class UserController {
     });
   }
 
-  @MessagePattern(USER_PATTERNS.CREATE_LOCAL)
-  create(@Payload() createUserDto: CreateAuthLocalDto) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.CREATE_LOCAL,
+    queue: USER_PATTERNS.CREATE_LOCAL,
+  })
+  create(createUserDto: CreateAuthLocalDto) {
     return this.userService.createLocal(createUserDto);
   }
 
-  @MessagePattern(USER_PATTERNS.CREATE_OAUTH)
-  createOAuth(@Payload() data: CreateAuthOAuthDto) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.CREATE_OAUTH,
+    queue: USER_PATTERNS.CREATE_OAUTH,
+  })
+  createOAuth(data: CreateAuthOAuthDto) {
     return this.userService.createOAuth(data);
   }
 
-  @MessagePattern(USER_PATTERNS.CREATE_ACCOUNT)
-  createAccount(@Payload() partial: Partial<Account>) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.CREATE_ACCOUNT,
+    queue: USER_PATTERNS.CREATE_ACCOUNT,
+  })
+  createAccount(partial: Partial<Account>) {
     return this.userService.createAccount(partial);
   }
 
-  @MessagePattern(USER_PATTERNS.VERIFY_LOCAL)
-  verifyLocal(@Payload() data: { userId: string; code: string }) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.VERIFY_LOCAL,
+    queue: USER_PATTERNS.VERIFY_LOCAL,
+  })
+  verifyLocal(data: { userId: string; code: string }) {
     return this.userService.verifyLocal(data.userId, data.code);
   }
 
-  @MessagePattern(USER_PATTERNS.VERIFY_FORGET_PASSWORD)
-  verifyForgotPassword(
-    @Payload() data: { userId: string; code: string; password: string },
-  ) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
+    queue: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
+  })
+  verifyForgotPassword(data: { userId: string; code: string; password: string }) {
     return this.userService.verifyForgotPassword(
       data.userId,
       data.code,
@@ -57,63 +86,105 @@ export class UserController {
     );
   }
 
-  @MessagePattern(USER_PATTERNS.RESET_CODE)
-  resetCode(@Payload() data: { userId: string; typeCode: 'verify' | 'reset' }) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.RESET_CODE,
+    queue: USER_PATTERNS.RESET_CODE,
+  })
+  resetCode(data: { userId: string; typeCode: 'verify' | 'reset' }) {
     const { userId, typeCode } = data;
     console.log(data);
     return this.userService.resetCode(userId, typeCode);
   }
 
-  @MessagePattern(USER_PATTERNS.RESET_PASSWORD)
-  resetPassword(@Payload() email: string) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.RESET_PASSWORD,
+    queue: USER_PATTERNS.RESET_PASSWORD,
+  })
+  resetPassword(email: string) {
     console.log(email);
     return this.userService.resetPassword(email);
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_ALL)
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ALL,
+    queue: USER_PATTERNS.FIND_ALL,
+  })
   findAll() {
     return this.userService.findAll({});
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_ONE)
-  async findOne(@Payload() id: string) {
-    return await this.userService.findOne(id);
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE,
+    queue: USER_PATTERNS.FIND_ONE,
+  })
+  findOne(id: string) {
+    return this.userService.findOne(id);
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_ONE_WITH_PASSWORD)
-  async findOneWithPassword(@Payload() id: string) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE_WITH_PASSWORD,
+    queue: USER_PATTERNS.FIND_ONE_WITH_PASSWORD,
+  })
+  async findOneWithPassword(@RabbitPayload('id') id: string) {
     return await this.userService.findOneWithPassword(id);
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL)
-  async findOneGoogle(@Payload() email: string) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL,
+    queue: USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL,
+  })
+  async findOneGoogle(email: string) {
     return await this.userService.findOneGoogle(email);
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_ONE_BY_EMAIL)
-  async findOneByEmail(@Payload() email: string) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE_BY_EMAIL,
+    queue: USER_PATTERNS.FIND_ONE_BY_EMAIL,
+  })
+  async findOneByEmail(email: string) {
     return await this.userService.findOneByEmail(email);
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_ONE_OAUTH)
-  async findOneOAuth(
-    @Payload() data: { provider: Provider; providerId: string },
-  ) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE_OAUTH,
+    queue: USER_PATTERNS.FIND_ONE_OAUTH,
+  })
+  async findOneOAuth(data: { provider: Provider; providerId: string }) {
     return await this.userService.findOneOAuth(data.provider, data.providerId);
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_MANY_BY_IDs)
-  async findManyByIds(@Payload() ids: string[]) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+    queue: USER_PATTERNS.FIND_MANY_BY_IDs,
+  })
+  async findManyByIds(ids: string[]) {
     return await this.userService.findManyByIds(ids);
   }
 
-  @MessagePattern(USER_PATTERNS.VALIDATE)
-  async validate(@Payload() loginDto: LoginDto) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.VALIDATE,
+    queue: USER_PATTERNS.VALIDATE,
+  })
+  async validate(loginDto: LoginDto) {
     return await this.userService.validate(loginDto);
   }
 
-  @MessagePattern(USER_PATTERNS.UPDATE_PASSWORD)
-  async updatePassword(@Payload() updatePasswordDto: ChangePasswordDto) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.UPDATE_PASSWORD,
+    queue: USER_PATTERNS.UPDATE_PASSWORD,
+  })
+  async updatePassword(updatePasswordDto: ChangePasswordDto) {
     return await this.userService.updatePassword(
       updatePasswordDto.id ?? '',
       updatePasswordDto.oldPassword,
@@ -121,18 +192,30 @@ export class UserController {
     );
   }
 
-  @MessagePattern(USER_PATTERNS.UPDATE)
-  update(@Payload() data: { id: string; updateUser: Partial<User> }) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.UPDATE,
+    queue: USER_PATTERNS.UPDATE,
+  })
+  update(data: { id: string; updateUser: Partial<User> }) {
     return this.userService.update(data.id, data.updateUser);
   }
 
-  @MessagePattern(USER_PATTERNS.REMOVE)
-  remove(@Payload() id: string) {
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.REMOVE,
+    queue: USER_PATTERNS.REMOVE,
+  })
+  remove(@RabbitPayload('id') id: string) {
     return this.userService.remove(id);
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_MANY_BY_NAME)
-  findByName(@Payload() payload: FindUserDto) {
-    return this.userService.findByName(payload.key, payload.options)
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_MANY_BY_NAME,
+    queue: USER_PATTERNS.FIND_MANY_BY_NAME,
+  })
+  findByName(payload: FindUserDto) {
+    return this.userService.findByName(payload.key, payload.options, payload.requesterId);
   }
 }

@@ -5,6 +5,10 @@ export const CHAT_PATTERN = {
   GET: 'chat.getConversation',
   GET_CONVERSATION_BY_ID: 'chat.getConversationById',
   GET_MESSAGES: 'chat.getMessagesFromConversation',
+  GET_ALL_MESSAGES: 'chat.getAllMessages',
   UPDATE_USER: 'chat.updateUser',
+  LEAVE_TEAM: 'chat.leaveTeam',
+  REMOVE_MEMBER: 'chat.removeMember',
   ADD_MEMBER: 'chat.addMember',
+  SEARCH_MESSAGES: 'chat.searchMessages',
 };

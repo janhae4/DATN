@@ -91,13 +91,13 @@
         "tsConfigPath": "apps/redis/tsconfig.app.json"
       }
     },
-    "team": {
+    "search": {
       "type": "application",
-      "root": "apps/team",
+      "root": "apps/search",
       "entryFile": "main",
-      "sourceRoot": "apps/team/src",
+      "sourceRoot": "apps/search/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/team/tsconfig.app.json"
+        "tsConfigPath": "apps/search/tsconfig.app.json"
       }
     },
     "socket": {
@@ -116,6 +116,15 @@
       "sourceRoot": "apps/task-service/src",
       "compilerOptions": {
         "tsConfigPath": "apps/task-service/tsconfig.app.json"
+      }
+    },
+    "team": {
+      "type": "application",
+      "root": "apps/team",
+      "entryFile": "main",
+      "sourceRoot": "apps/team/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/team/tsconfig.app.json"
       }
     },
     "user": {

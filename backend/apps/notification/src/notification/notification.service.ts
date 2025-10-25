@@ -90,6 +90,9 @@ export class NotificationService {
       where: {
         userId,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 }

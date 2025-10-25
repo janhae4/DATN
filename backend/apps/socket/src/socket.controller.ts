@@ -1,30 +1,31 @@
 import { Controller } from '@nestjs/common';
-import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+
 import {
-  ChangeRoleMember,
-  CHATBOT_PATTERN,
   EVENTS,
-  LeaveMember,
+  EVENTS_EXCHANGE,
   NOTIFICATION_PATTERN,
-  NotificationEventDto,
-  NotificationType,
+  CHATBOT_PATTERN,
   ResponseStreamDto,
+  NotificationEventDto,
   User,
+  NotificationType,
 } from '@app/contracts';
-import type {
-  AddMemberEventPayload,
-  CreateTeamEventPayload,
-  RemoveMemberEventPayload,
-  SendMessageEventPayload,
-} from '@app/contracts';
+
+import type { AddMemberEventPayload, ChangeRoleMember, CreateTeamEventPayload, LeaveMember, RemoveMemberEventPayload, SendMessageEventPayload } from '@app/contracts';
 import { SocketGateway } from './socket.gateway';
+import { Payload } from '@nestjs/microservices';
 
 @Controller()
 export class SocketController {
-  constructor(private readonly socketGateway: SocketGateway) {}
+  constructor(private readonly socketGateway: SocketGateway) { }
 
-  @EventPattern(EVENTS.LOGIN)
-  handleLogin(@Payload() payload: Partial<User>) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.LOGIN,
+    queue: EVENTS.LOGIN,
+  })
+  handleLogin(payload: Partial<User>) {
     this.socketGateway.sendNotificationToUser({
       userId: payload.id ?? '',
       title: 'Login Notification',
@@ -33,14 +34,21 @@ export class SocketController {
     });
   }
 
-  @EventPattern(EVENTS.NEW_MESSAGE)
-  handleNewMessage(@Payload() payload: SendMessageEventPayload) {
-    console.log(payload.content);
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.NEW_MESSAGE,
+    queue: EVENTS.NEW_MESSAGE,
+  })
+  handleNewMessage(payload: SendMessageEventPayload) {
     this.socketGateway.handleNewMessage(payload);
   }
 
-  @EventPattern(EVENTS.CREATE_TEAM)
-  handleCreateTeam(@Payload() payload: CreateTeamEventPayload) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.CREATE_TEAM,
+    queue: "events_socket_create_team",
+  })
+  handleCreateTeam(payload: CreateTeamEventPayload) {
     const { members, name, createdAt, ownerName } = payload;
     members.map((m) =>
       this.socketGateway.sendNotificationToUser({
@@ -52,8 +60,12 @@ export class SocketController {
     );
   }
 
-  @EventPattern(EVENTS.ADD_MEMBER)
-  handleAddMember(@Payload() payload: AddMemberEventPayload) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.ADD_MEMBER,
+    queue: "events_socket_add_member",
+  })
+  handleAddMember(payload: AddMemberEventPayload) {
     const { members, requesterName, teamName } = payload;
     members.map((m) =>
       this.socketGateway.sendNotificationToUser({
@@ -65,8 +77,12 @@ export class SocketController {
     );
   }
 
-  @EventPattern(EVENTS.MEMBER_ROLE_CHANGED)
-  handleMemberRoleChanged(@Payload() payload: ChangeRoleMember) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.MEMBER_ROLE_CHANGED,
+    queue: "events_socket_member_role_changed",
+  })
+  handleMemberRoleChanged(payload: ChangeRoleMember) {
     const { requesterId, teamName, requesterName, newRole } = payload;
     this.socketGateway.sendNotificationToUser({
       userId: requesterId,
@@ -76,8 +92,12 @@ export class SocketController {
     });
   }
 
-  @EventPattern(EVENTS.REMOVE_MEMBER)
-  handleRemoveMember(@Payload() payload: RemoveMemberEventPayload) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.REMOVE_MEMBER,
+    queue: "events_socket_remove_member",
+  })
+  handleRemoveMember(payload: RemoveMemberEventPayload) {
     const { requesterName, teamName, memberIds } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
@@ -89,8 +109,12 @@ export class SocketController {
     );
   }
 
-  @EventPattern(EVENTS.LEAVE_TEAM)
-  handleLeaveTeam(@Payload() payload: LeaveMember) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.LEAVE_TEAM,
+    queue: "events_socket_leave_team",
+  })
+  handleLeaveTeam(payload: LeaveMember) {
     const { requesterName, teamName, memberIds = [] } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
@@ -102,23 +126,30 @@ export class SocketController {
     );
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.SEND)
-  handleSendNotification(@Payload() event: NotificationEventDto) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.SEND,
+    queue: "events_socket_send_notification",
+  })
+  handleSendNotification(event: NotificationEventDto) {
     this.socketGateway.sendNotificationToUser(event);
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.PROCESS_DOCUMENT)
-  handleGetProcessDocument(@Payload() event: NotificationEventDto) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.PROCESS_DOCUMENT,
+    queue: NOTIFICATION_PATTERN.PROCESS_DOCUMENT,
+  })
+  handleGetProcessDocument(event: NotificationEventDto) {
     this.socketGateway.sendNotificationToUser(event);
   }
 
-  @EventPattern(CHATBOT_PATTERN.STREAM_RESPONSE)
-  handleStreamResponse(@Payload() response: ResponseStreamDto) {
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: CHATBOT_PATTERN.STREAM_RESPONSE,
+    queue: CHATBOT_PATTERN.STREAM_RESPONSE,
+  })
+  handleStreamResponse(response: ResponseStreamDto) {
     this.socketGateway.handleStreamResponse(response);
-  }
-
-  @MessagePattern(EVENTS.NEW_MESSAGE)
-  handleNewMessages(@Payload() payload: SendMessageEventPayload) {
-    this.socketGateway.handleNewMessage(payload);
   }
 }

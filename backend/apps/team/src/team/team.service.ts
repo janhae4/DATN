@@ -1,13 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, EntityManager } from 'typeorm';
 import {
   Team,
   MEMBER_ROLE,
-  EVENT_CLIENT,
   USER_PATTERNS,
   EVENTS,
-  USER_CLIENT,
   User,
   MemberDto,
   CreateTeamDto,
@@ -23,10 +21,10 @@ import {
   RemoveMemberEventPayload,
   TransferOwnershipEventPayload,
   CreateTeamEventPayload,
+  USER_EXCHANGE,
+  EVENTS_EXCHANGE,
 } from '@app/contracts';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { handleRpc } from '@app/common/utils/handle-rpc';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class TeamService {
@@ -35,13 +33,10 @@ export class TeamService {
   constructor(
     @InjectRepository(Team)
     private teamRepo: Repository<Team>,
-    @Inject(EVENT_CLIENT)
-    private readonly eventClient: ClientProxy,
-    @Inject(USER_CLIENT)
-    private readonly userClient: ClientProxy,
+    private readonly amqp: AmqpConnection,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
     const { name, memberIds = [], ownerId } = createTeamDto;
@@ -49,14 +44,11 @@ export class TeamService {
 
     const allUserIdsToValidate = Array.from(new Set([...memberIds, ownerId]));
     console.log(allUserIdsToValidate);
-    const usersFromDb = await firstValueFrom<User[]>(
-      handleRpc(
-        this.userClient.send(
-          USER_PATTERNS.FIND_MANY_BY_IDs,
-          allUserIdsToValidate,
-        ),
-      ),
-    );
+    const usersFromDb = await this.amqp.request<User[]>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+      payload: allUserIdsToValidate,
+    })
 
     if (usersFromDb.length !== allUserIdsToValidate.length) {
       const foundIds = new Set(usersFromDb.map((u) => u.id));
@@ -94,7 +86,7 @@ export class TeamService {
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
       this.logger.log(`Team [${savedTeam.id}] created. Emitting event.`);
-      this.eventClient.emit(EVENTS.CREATE_TEAM, {
+      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.CREATE_TEAM, {
         ownerId: savedTeam.ownerId,
         ownerName: userMap.get(ownerId)?.name,
         members: finalMembers,
@@ -135,9 +127,11 @@ export class TeamService {
         return team;
       }
 
-      const usersFromDb = await firstValueFrom<User[]>(
-        this.userClient.send(USER_PATTERNS.FIND_MANY_BY_IDs, newMemberIds),
-      );
+      const usersFromDb = await this.amqp.request<User[]>({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+        payload: newMemberIds,
+      })
 
       if (usersFromDb.length !== newMemberIds.length) {
         const foundIds = new Set(usersFromDb.map((u) => u.id));
@@ -172,7 +166,7 @@ export class TeamService {
         teamId,
         teamName: team.name,
       };
-      this.eventClient.emit(EVENTS.ADD_MEMBER, eventPayload);
+      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.ADD_MEMBER, eventPayload);
       return updatedTeam;
     });
   }
@@ -226,7 +220,7 @@ export class TeamService {
         requesterName,
         memberIds,
       };
-      this.eventClient.emit(EVENTS.REMOVE_MEMBER, eventPayload);
+      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.REMOVE_MEMBER, eventPayload);
 
       return updatedTeam;
     });
@@ -275,7 +269,7 @@ export class TeamService {
         targetId,
         targetName: memberToUpdate.name,
       };
-      this.eventClient.emit(EVENTS.MEMBER_ROLE_CHANGED, eventPayload);
+      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.MEMBER_ROLE_CHANGED, eventPayload);
 
       return updatedTeam;
     });
@@ -320,7 +314,7 @@ export class TeamService {
         requesterName: memberLeaving.name,
         memberIds,
       };
-      this.eventClient.emit(EVENTS.LEAVE_TEAM, eventPayload);
+      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.LEAVE_TEAM, eventPayload);
       return updatedTeam;
     });
   }
@@ -371,7 +365,7 @@ export class TeamService {
 
       const newOwnerName = newOwner ? newOwner.name : 'Unknown';
       const requesterName = oldOwner ? oldOwner.name : 'Unknown';
-      this.eventClient.emit(EVENTS.OWNERSHIP_TRANSFERRED, {
+      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.OWNERSHIP_TRANSFERRED, {
         newOwnerId,
         requesterId,
         teamId,

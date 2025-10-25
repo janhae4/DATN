@@ -6,8 +6,11 @@ import {
   Account,
   CLIENT_PROXY_PROVIDER,
   ClientConfigModule,
+  ClientConfigService,
   User,
+  USER_EXCHANGE,
 } from '@app/contracts';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
   imports: [
@@ -22,8 +25,22 @@ import {
       }),
     }),
     TypeOrmModule.forFeature([User, Account]),
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
+        exchanges: [
+          {
+            name: USER_EXCHANGE,
+            type: 'direct',
+          },
+        ],
+        uri: config.getRMQUrl(),
+        connectionInitOptions: { wait: false }
+      }),
+    })
   ],
   controllers: [UserController],
-  providers: [UserService, CLIENT_PROXY_PROVIDER.EVENT_CLIENT],
+  providers: [UserService, UserController],
 })
-export class UserModule {}
+export class UserModule { }

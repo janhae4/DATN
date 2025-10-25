@@ -12,10 +12,6 @@ async function bootstrap() {
   await redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);
 
-  app.connectMicroservice(cfg.socketClientOptions as MicroserviceOptions);
-  app.connectMicroservice(cfg.eventClientOptions as MicroserviceOptions);
-  await app.startAllMicroservices();
-
   await app.listen(Number(cfg.getSocketPort()) || 4001);
   console.log(`API Gateway running on http://localhost:4001`);
 }

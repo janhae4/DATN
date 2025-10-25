@@ -1,7 +1,7 @@
 export const EVENTS = {
   REGISTER: 'events.register',
   LOGIN: 'events.login',
-  UPDATED: 'events.updated',
+  USER_UPDATED: 'events.user.updated',
   CREATE_TEAM: 'events.create.team',
   ADD_MEMBER: 'events.add.member',
   REMOVE_MEMBER: 'events.remove.member',

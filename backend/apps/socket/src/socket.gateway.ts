@@ -6,29 +6,27 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Inject, Logger } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Logger } from '@nestjs/common';
 import {
   AskQuestionDto,
-  AUTH_CLIENT,
+  AUTH_EXCHANGE,
   AUTH_PATTERN,
-  CHATBOT_CLIENT,
+  CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
   ConversationDocument,
   JwtDto,
   MessageDto,
-  NOTIFICATION_CLIENT,
+  NOTIFICATION_EXCHANGE,
   NOTIFICATION_PATTERN,
   NotificationEventDto,
   NotificationType,
-  RAG_CLIENT,
   ResponseStreamDto,
+  RPC_TIMEOUT,
   SendMessageEventPayload,
   SummarizeDocumentDto,
 } from '@app/contracts';
 import * as cookie from 'cookie';
-import { firstValueFrom } from 'rxjs';
-import { handleRpc } from '@app/common/utils/handle-rpc';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 interface AuthenticatedSocket extends Socket {
   data: {
@@ -52,16 +50,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   protected readonly logger = new Logger(SocketGateway.name);
 
-  constructor(
-    @Inject(AUTH_CLIENT)
-    private readonly authClient: ClientProxy,
-    @Inject(NOTIFICATION_CLIENT)
-    private readonly notificationClient: ClientProxy,
-    @Inject(CHATBOT_CLIENT)
-    private readonly chatbotClient: ClientProxy,
-    @Inject(RAG_CLIENT)
-    private readonly ragClient: ClientProxy,
-  ) {}
+  constructor(private readonly amqpConnection: AmqpConnection) { }
+
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
@@ -79,9 +69,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.logger.log(`Client ${client.id} - Access token found!`);
 
-      const user = await firstValueFrom<JwtDto>(
-        this.authClient.send(AUTH_PATTERN.VALIDATE_TOKEN, accessToken),
-      );
+      const user = await this.amqpConnection.request<JwtDto>({
+        exchange: AUTH_EXCHANGE,
+        routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
+        payload: accessToken,
+        timeout: RPC_TIMEOUT,
+      });
 
       if (!user) {
         this.logger.warn(`Client ${client.id} - Disconnected, invalid token.`);
@@ -115,21 +108,23 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     payload: MessageDto,
   ): Promise<ConversationDocument | null> {
     const { message, userId, conversationId, role } = payload;
-    const savedConversation = await firstValueFrom<ConversationDocument>(
-      handleRpc(
-        this.chatbotClient.send(CHATBOT_PATTERN.HANDLE_MESSAGE, {
-          message,
-          conversationId,
-          role,
-          userId,
-        } as MessageDto),
-      ),
-    );
+    const savedConversation = await this.amqpConnection.request<ConversationDocument>({
+      exchange: CHATBOT_EXCHANGE,
+      routingKey: CHATBOT_PATTERN.HANDLE_MESSAGE,
+      payload: {
+        message,
+        conversationId,
+        role,
+        userId,
+      } as MessageDto,
+      timeout: RPC_TIMEOUT,
+    });
 
     if (!savedConversation) {
       this.logger.error(
         `Client ${userId} - Saved conversation is null or undefined after handleUserMessage for user ${userId}`,
       );
+
       const payload = {
         type: NotificationType.FAILED,
         message: 'Failed to save your message.',
@@ -201,7 +196,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(
       `Emitting to RAG_CLIENT (ask_question) for user ${user.id}`,
     );
-    this.ragClient.emit(CHATBOT_PATTERN.ASK_QUESTION, requestPayload);
+    this.amqpConnection.publish(
+      CHATBOT_EXCHANGE,
+      CHATBOT_PATTERN.ASK_QUESTION,
+      requestPayload
+    );
   }
 
   @SubscribeMessage(CHATBOT_PATTERN.SUMMARIZE_DOCUMENT)
@@ -244,7 +243,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(
       `Emitting to RAG_CLIENT (summarize_document) for user ${user.id}`,
     );
-    this.ragClient.emit(CHATBOT_PATTERN.SUMMARIZE_DOCUMENT, requestPayload);
+    this.amqpConnection.publish(
+      CHATBOT_EXCHANGE,
+      CHATBOT_PATTERN.SUMMARIZE_DOCUMENT,
+      requestPayload
+    );
   }
 
   handleStreamResponse(response: ResponseStreamDto) {
@@ -298,11 +301,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       type: event.type,
     });
 
-    return this.notificationClient.emit(NOTIFICATION_PATTERN.CREATE, event);
+    this.amqpConnection.publish(
+      NOTIFICATION_EXCHANGE,
+      NOTIFICATION_PATTERN.CREATE,
+      event
+    );
   }
 
   handleNewMessage(payload: SendMessageEventPayload) {
     const {
+      id,
       conversationId,
       participants,
       content,
@@ -320,6 +328,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return acc;
       }, [] as string[]);
 
+      console.log(participantIds)
+
       if (participants.length === 0) {
         this.logger.warn(
           `No participants found for conversation ${conversationId}`,
@@ -332,6 +342,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
       participantIds.forEach((userId) => {
         this.server.to(userId).emit('new_message', {
+          _id: id,
           conversationId,
           content,
           sender,

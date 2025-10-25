@@ -38,6 +38,7 @@ export class AuthController {
 
   @Get('/info')
   @UseGuards(RoleGuard)
+  @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.USER)
   info(@CurrentUser('id') id: string) {
     console.log(id);
@@ -46,12 +47,12 @@ export class AuthController {
 
   @Post('/login')
   @ApiBody({ type: LoginDto })
-  login(
+  async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
     console.log(loginDto);
-    return this.authService.login(loginDto, response);
+    return await this.authService.login(loginDto, response);
   }
 
   @Post('/register')

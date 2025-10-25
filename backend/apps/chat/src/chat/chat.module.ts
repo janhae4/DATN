@@ -2,14 +2,16 @@ import { Module } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import {
-  CLIENT_PROXY_PROVIDER,
+  CHAT_EXCHANGE,
   ClientConfigModule,
   ClientConfigService,
+  EVENTS_EXCHANGE,
+  USER_EXCHANGE,
 } from '@app/contracts';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Conversation, ConversationSchema } from './schema/conversation.schema';
 import { Message, MessageSchema } from './schema/message.schema';
-
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 @Module({
   imports: [
     ClientConfigModule,
@@ -29,13 +31,34 @@ import { Message, MessageSchema } from './schema/message.schema';
         schema: MessageSchema,
       },
     ]),
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (cfg: ClientConfigService) => ({
+        exchanges: [
+          {
+            name: EVENTS_EXCHANGE,
+            type: 'topic',
+          },
+          {
+            name: CHAT_EXCHANGE,
+            type: 'direct'
+          },
+          {
+            name: USER_EXCHANGE,
+            type: 'direct'
+          }
+        ],
+        uri: cfg.getRMQUrl(),
+        connectionInitOptions: { wait: false },
+        connectionManagerOptions: {
+          heartbeatIntervalInSeconds: 5,
+          reconnectTimeInSeconds: 10,
+        },
+      })
+    }),
   ],
   controllers: [ChatController],
-  providers: [
-    ChatService,
-    CLIENT_PROXY_PROVIDER.USER_CLIENT,
-    CLIENT_PROXY_PROVIDER.EVENT_CLIENT,
-    CLIENT_PROXY_PROVIDER.SOCKET_CLIENT,
-  ],
+  providers: [ChatService, ChatController]
 })
-export class ChatModule {}
+export class ChatModule { }

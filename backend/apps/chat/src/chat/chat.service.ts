@@ -7,7 +7,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import mongoose, { Model, Types } from 'mongoose';
 import { Conversation } from './schema/conversation.schema';
 import { Message } from './schema/message.schema';
 import {
@@ -28,9 +28,18 @@ import {
   SendMessageEventPayload,
   SOCKET_CLIENT,
   ConversationDocument,
+  USER_EXCHANGE,
+  EVENTS_EXCHANGE,
+  CHAT_EXCHANGE,
+  CHAT_PATTERN,
+  RPC_TIMEOUT,
+  PaginationDto,
+  SEARCH_EXCHANGE,
+  SEARCH_PATTERN,
 } from '@app/contracts';
 import { firstValueFrom } from 'rxjs';
 import { ClientProxy } from '@nestjs/microservices';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class ChatService {
@@ -41,13 +50,8 @@ export class ChatService {
     private readonly conversationModel: Model<Conversation>,
     @InjectModel(Message.name)
     private readonly messageModel: Model<Message>,
-    @Inject(USER_CLIENT)
-    private readonly userClient: ClientProxy,
-    @Inject(EVENT_CLIENT)
-    private readonly eventClient: ClientProxy,
-    @Inject(SOCKET_CLIENT)
-    private readonly socketClient: ClientProxy,
-  ) {}
+    private readonly amqp: AmqpConnection
+  ) { }
 
   async createChat(createTeam: CreateTeamEventPayload): Promise<Conversation> {
     const { ownerId, members, name, teamId } = createTeam;
@@ -96,9 +100,11 @@ export class ChatService {
     }
 
     this.logger.log(`Fetching user data for IDs: ${participantIds.join(', ')}`);
-    const usersFromDb = await firstValueFrom<User[]>(
-      this.userClient.send(USER_PATTERNS.FIND_MANY_BY_IDs, participantIds),
-    );
+    const usersFromDb = await this.amqp.request<Partial<User>[]>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+      payload: participantIds,
+    })
 
     if (usersFromDb.length !== 2) {
       const foundIds = new Set(usersFromDb.map((u) => u.id));
@@ -392,6 +398,7 @@ export class ChatService {
     const sender = conversation.participants.find(
       (p) => p._id.toString() === senderId,
     );
+    console.log(sender)
     if (!sender) {
       throw new ForbiddenException(
         `Conversation not found or you are not a participant.`,
@@ -406,7 +413,8 @@ export class ChatService {
     const savedMessage = await newMessage.save();
     conversation.latestMessage = savedMessage;
     await conversation.save();
-    this.socketClient.emit(EVENTS.NEW_MESSAGE, {
+    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.NEW_MESSAGE, {
+      id: savedMessage._id.toString(),
       conversationId,
       attachments,
       sender,
@@ -574,4 +582,30 @@ export class ChatService {
       );
     }
   }
+
+  async getAllMessages() {
+    return await this.messageModel.find().exec();
+  }
+
+  async searchMessages(query: string, conversationId: string, userId: string, options: PaginationDto) {
+    console.log(query, conversationId, userId, options);
+    const isParticipant = await this.conversationModel.findOne({
+      _id: conversationId,
+      'participants._id': userId,
+    })
+
+    if (!isParticipant) {
+      throw new ForbiddenException(
+        'You are not authorized to access this conversation.',
+      );
+    }
+
+    return await this.amqp.request<Message[]>({
+      exchange: SEARCH_EXCHANGE,
+      routingKey: SEARCH_PATTERN.SEARCH_MESSAGE,
+      payload: { query, conversationId, options },
+      timeout: RPC_TIMEOUT
+    })
+  }
+
 }
