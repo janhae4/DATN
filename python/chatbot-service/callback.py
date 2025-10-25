@@ -1,119 +1,146 @@
 import json
-from aio_pika import IncomingMessage
+from aio_pika import IncomingMessage, Channel, Message
 from services.vectorstore_service import VectorStoreService
 from services.minio_service import MinioService
 from chains.rag_chain import RAGChain
 from chains.summarizer import Summarizer
 from config import (
-    SOCKET_QUEUE
+    EVENTS_EXCHANGE,
+    ASK_QUESTION_ROUTING_KEY,
+    SEND_NOTIFICATION_ROUTING_KEY,
+    SUMMARIZE_DOCUMENT_ROUTING_KEY,
+    STREAM_RESPONSE_ROUTING_KEY,
+    SOCKET_EXCHANGE
 )
 
-async def send_notification(channel, user_id, file_name, status, message):
+async def send_notification(channel: Channel, user_id, file_name, status, message):
     """
     Hàm trợ giúp để gửi tin nhắn thông báo (thành công/thất bại) về NestJS.
     """
     try:
         title = f"Process document {status}"
-        notification_body = {
-            "pattern": "notification.processDocument",
-            "data": { "userId": user_id, "title": title, "message": message, "type": "SUCCESS" if status == "success" else "FAILED" }
+        notification_body = { 
+            "userId": user_id, 
+            "title": title, 
+            "message": message, 
+            "type": "SUCCESS" if status == "success" else "FAILED" 
         }
-        await channel.basic_publish(
-            body=json.dumps(notification_body).encode(),
-            routing_key=SOCKET_QUEUE
+        socket = await channel.get_exchange(SOCKET_EXCHANGE)
+        await socket.publish(
+            message=Message(json.dumps(notification_body).encode()),
+            routing_key=SEND_NOTIFICATION_ROUTING_KEY
         )
         print(f"--> Đã gửi thông báo '{status}' cho file: {file_name}")
     except Exception as e:
         print(f"Lỗi khi gửi thông báo: {e}")
 
-async def ingestion_callback(message: IncomingMessage, vectorstore_service: VectorStoreService):
+async def ingestion_callback(message: IncomingMessage, vectorstore_service: VectorStoreService, channel: Channel):
     """
     Callback xử lý các tác vụ nạp dữ liệu (ingestion).
     """
     print(f"\n[INGESTION] Nhận được yêu cầu xử lý tài liệu mới...")
     user_id, file_name = None, None
-    channel = message.channel
+    
     async with message.process():
         try:
-            payload = json.loads(message.body.decode())
-            pattern = payload.get('pattern')
-            if pattern != 'process_document':
-                raise ValueError(f"Message pattern mismatch: expected 'process_document', got {pattern}")
+            payload_dto = json.loads(message.body.decode())
+            print(f"--> Payload DTO nhận được: {payload_dto}")
 
-            data = payload.get('data', {})
-            user_id, file_name = data.get('userId'), data.get('fileName')
-
+            user_id = payload_dto.get('userId')
+            file_name = payload_dto.get('fileName')
+        
             if user_id and file_name:
                 print(f"--> Bắt đầu xử lý file '{file_name}' cho user '{user_id}'.")
                 await vectorstore_service.process_and_store(user_id, file_name)
                 print(f"--> Xử lý file thành công!")
-                
+
                 original_name = file_name.split('-', 1)[1] if '-' in file_name else file_name
-                await send_notification(channel, user_id, file_name, "success", f"Tài liệu '{original_name}' của bạn đã được xử lý thành công.")
+                await send_notification(channel, user_id, file_name, "success", f"File '{original_name}' had been processed successfully.")
             else:
-                raise ValueError("Tin nhắn thiếu 'userId' hoặc 'fileName'.")
+                raise ValueError("Missing user_id or file_name.")
         except Exception as e:
             error_message = str(e)
-            print(f"Lỗi khi xử lý tài liệu {file_name}: {error_message}")
+            print(f"Error processing '{file_name}': {error_message}")
             if user_id and file_name:
                 await send_notification(channel, user_id, file_name, "failed", error_message)
 
-async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService):
+async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, channel: Channel):
     """
     Callback xử lý các tác vụ tương tác (RAG, Summarize).
     """
     print(f"\n[ACTION] Nhận được yêu cầu tương tác mới...")
-    socket_id, pattern, conversation_id = None, "unknown", None
+    socket_id, user_id, conversation_id = None, None, None
+    pattern_from_key = "unknown"
+    print(message)
+    
+    actual_routing_key = message.routing_key
+    print(f"--> Nhận message với routing key: {actual_routing_key}")
 
-    channel = message.channel
+    if actual_routing_key == ASK_QUESTION_ROUTING_KEY:
+        pattern_from_key = "ask_question"
+    elif actual_routing_key == SUMMARIZE_DOCUMENT_ROUTING_KEY:
+        pattern_from_key = "summarize_document"
     
     async with message.process():
         try:
-            payload = json.loads(message.body.decode())
-            pattern = payload.get('pattern')
-            data = payload.get('data', {})
-            socket_id, user_id, conversation_id = data.get('socketId'), data.get('userId'), data.get('conversationId')
+            payload_dto = json.loads(message.body.decode())
+            print(f"--> Payload DTO nhận được: {payload_dto}")
+
+            socket_id = payload_dto.get('socketId')
+            user_id = payload_dto.get('userId')
+            conversation_id = payload_dto.get('conversationId')
 
             if not all([socket_id, user_id, conversation_id]):
                 raise ValueError("Tin nhắn thiếu socketId, userId, hoặc conversationId.")
 
             async def publish_response(content, type):
-                response_body = {
-                    "pattern": "rag_response",
-                    "data": {"socketId": socket_id, "content": content, "type": type, "conversationId": conversation_id}
+                response_dto = {
+                    "socketId": socket_id,
+                    "content": content,
+                    "type": type,
+                    "conversationId": conversation_id
                 }
+                message_body = Message(
+                    body=json.dumps(response_dto).encode()
+                )
                 
-                body = json.dumps(response_body).encode()
-                print(f"--> [RAG] Gửi phần trị: {content}")
-                await channel.basic_publish(body=body, routing_key=SOCKET_QUEUE)
+                print(f"--> [Py->Nest] Gửi về ({type}): {content[:50]}...")
                 
-            if pattern == 'ask_question':
-                question, chat_history = data.get('question'), data.get('chatHistory', [])
-                if not question: raise ValueError("Tin nhắn thiếu 'question'.")
+                events_exchange = await channel.get_exchange(EVENTS_EXCHANGE)
+                await events_exchange.publish(
+                    message_body,
+                    routing_key=STREAM_RESPONSE_ROUTING_KEY
+                )
                 
-                print(f"--> [RAG] Câu hỏi từ user '{user_id}': {question}")
-                async for chunk in rag_chain.ask_question_for_user(question, user_id, chat_history):
-                    await publish_response(chunk, "chunk")
+            if pattern_from_key == 'ask_question':
+                    question = payload_dto.get('question')
+                    chat_history = payload_dto.get('chatHistory', [])
+                    if not question: raise ValueError("Tin nhắn thiếu 'question'.")
 
-            elif pattern == 'summarize_document':
-                file_name = data.get('fileName')
+                    print(f"--> [RAG] Câu hỏi từ user '{user_id}': {question}")
+                    async for chunk in rag_chain.ask_question_for_user(question, user_id, chat_history):
+                        await publish_response(chunk, "chunk")
+
+            elif pattern_from_key == 'summarize_document':
+                file_name = payload_dto.get('fileName')
                 if not file_name: raise ValueError("Tin nhắn thiếu 'fileName'.")
 
                 print(f"--> [SUMMARIZE] Bắt đầu tóm tắt file '{file_name}' cho user '{user_id}'.")
-                documents = await minio_service.load_documents(file_name)
+                documents = await minio_service.load_documents(file_name) # Giả định hàm này tồn tại
                 async for chunk in summarizer.summarize(documents):
                     await publish_response(chunk, "chunk")
-            
+                    
             else:
-                raise ValueError(f"Message pattern không xác định: '{pattern}'")
+                raise ValueError(f"Routing key không xác định: '{actual_routing_key}'")
 
         except Exception as e:
-            error_message = f"Error during processing '{pattern}': {e}"
+            error_message = f"Lỗi khi xử lý '{pattern_from_key}': {e}"
             print(error_message)
             if socket_id:
                 await publish_response(str(error_message), "error")
-        
+
         finally:
+            # Gửi tín hiệu kết thúc
             if socket_id:
                 await publish_response("Stream has ended.", "end")
-                print(f"--> Đã gửi tín hiệu kết thúc stream cho tác vụ '{pattern}'.")
+                print(f"--> Đã gửi tín hiệu kết thúc stream cho tác vụ '{pattern_from_key}'.")

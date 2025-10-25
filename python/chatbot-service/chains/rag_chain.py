@@ -51,11 +51,6 @@ class RAGChain:
         base_retriever = vectorstore.as_retriever()
         
         retriever = await self.retriever_service.build_compression_retriever(base_retriever)
-        docs = retriever.invoke(question)
-
-        if self.retriever_service.use_reranker:
-            reranker = SentenceTransformerRerank(self.retriever_service.reranker_model, top_n=3)
-            docs = reranker.compress_documents(docs, question)    
 
         prompt_template = """
         ### VAI TRÒ CỦA BẠN ###
