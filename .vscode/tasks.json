@@ -114,6 +114,22 @@
             }
         },
         {
+            "label": "search",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:search"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
             "label": "socket",
             "command": "npm",
             "args": [
@@ -139,6 +155,7 @@
                 "notification",
                 "team",
                 "chat",
+                "search",
                 "socket"
             ],
             "problemMatcher": [],

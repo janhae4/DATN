@@ -102,6 +102,7 @@ export * from './user/dto/validate-user.dto';
 export * from './user/entity/account.entity';
 export * from './user/entity/user.entity';
 export * from './user/dto/find-user.dto'
+export * from './user/entity/follow.entity'
 
 /*----
 TEAM

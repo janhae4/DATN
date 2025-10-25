@@ -21,4 +21,6 @@ export const USER_PATTERNS = {
   VALIDATE: 'user.validate',
   VERIFY_EMAIL: 'user.verifyEmail',
   SEND_VERIFICATION_EMAIL: 'user.sendVerificationEmail',
+  FOLLOW: 'user.follow',
+  UNFOLLOW: 'user.unfollow',
 };

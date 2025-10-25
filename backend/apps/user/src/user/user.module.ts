@@ -7,6 +7,7 @@ import {
   CLIENT_PROXY_PROVIDER,
   ClientConfigModule,
   ClientConfigService,
+  Follow,
   User,
   USER_EXCHANGE,
 } from '@app/contracts';
@@ -19,12 +20,12 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       useFactory: () => ({
         type: 'postgres',
         url: process.env.DATABASE_USER_URL,
-        entities: [User, Account],
+        entities: [User, Account, Follow],
         synchronize: true,
         logging: true,
       }),
     }),
-    TypeOrmModule.forFeature([User, Account]),
+    TypeOrmModule.forFeature([User, Account, Follow]),
     RabbitMQModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],

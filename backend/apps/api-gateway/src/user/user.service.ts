@@ -60,6 +60,22 @@ export class UserService {
     });
   }
 
+  follow(requesterId: string, followingId: string) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FOLLOW,
+      payload: { requesterId, followingId },
+    });
+  }
+
+  unfollow(requesterId: string, followingId: string) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.UNFOLLOW,
+      payload: { requesterId, followingId },
+    });
+  }
+
   remove(id: string) {
     return this.amqpConnection.request({
       exchange: USER_EXCHANGE,
