@@ -34,39 +34,39 @@ import {
   EVENT_CLIENT,
   EVENTS,
   Error,
+  USER_EXCHANGE,
+  EVENTS_EXCHANGE,
+  GMAIL_EXCHANGE,
+  REDIS_EXCHANGE,
 } from '@app/contracts';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { ResetCodeDto } from './dto/reset-code.dto';
 import { handleRpc } from '@app/common/utils/handle-rpc';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    @Inject(USER_CLIENT) private readonly userClient: ClientProxy,
-    @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
-    @Inject(SOCKET_CLIENT)
-    private readonly socketClient: ClientProxy,
-    @Inject(GMAIL_CLIENT) private readonly gmailClient: ClientProxy,
     private jwtService: JwtService,
-    @Inject(EVENT_CLIENT)
-    private readonly eventClient: ClientProxy,
-  ) {}
+    private readonly amqp: AmqpConnection
+  ) { }
 
   async register(createAuthDto: CreateAuthDto) {
     this.logger.log(
       `Starting registration for user: ${createAuthDto.email}...`,
     );
-    const user = await firstValueFrom<User>(
-      handleRpc(
-        this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createAuthDto),
-      ),
-    );
+    const user = await this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.CREATE,
+      payload: createAuthDto,
+    })
+
     this.logger.log(`User ${user.id} created. Emitting welcome email.`);
-    this.eventClient.emit(EVENTS.REGISTER, user);
+    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.REGISTER, user);
 
     this.logger.log(`Generating verification code for user ${user.id}.`);
     const { code, url } = await this.generateAndSendCode(
@@ -83,11 +83,13 @@ export class AuthService {
     };
   }
 
-  verifyLocal(userId: string, code: string) {
+  async verifyLocal(userId: string, code: string) {
     this.logger.log(`Verifying local account for user ${userId}...`);
-    return handleRpc(
-      this.userClient.send(USER_PATTERNS.VERIFY_LOCAL, { userId, code }),
-    );
+    return await this.amqp.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.VERIFY_LOCAL,
+      payload: { userId, code },
+    })
   }
 
   async verifyLocalToken(token: string) {
@@ -96,20 +98,20 @@ export class AuthService {
     if (!payload) throw new UnauthorizedException('Invalid token');
     const { userId, code } = payload;
     this.logger.log(`Token validated. Verifying user ${userId}...`);
-    return handleRpc(
-      this.userClient.send(USER_PATTERNS.VERIFY_LOCAL, { userId, code }),
-    );
+    return await this.amqp.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.VERIFY_LOCAL,
+      payload: { userId, code },
+    })
   }
 
   verifyForgotPassword(userId: string, code: string, password: string) {
     this.logger.log(`Verifying forgot password for user ${userId}...`);
-    return handleRpc(
-      this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
-        userId,
-        code,
-        password,
-      }),
-    );
+    return this.amqp.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
+      payload: { userId, code, password },
+    })
   }
 
   async verifyForgotPasswordToken(token: string, password: string) {
@@ -119,13 +121,12 @@ export class AuthService {
     this.logger.log(
       `Token validated. Verifying forgot password for user ${payload.userId}...`,
     );
-    return handleRpc(
-      this.userClient.send(USER_PATTERNS.VERIFY_FORGET_PASSWORD, {
-        userId: payload.userId,
-        code: payload.code,
-        password,
-      }),
-    );
+    const { userId, code } = payload;
+    return await this.amqp.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
+      payload: { userId, code, password },
+    })
   }
 
   private async generateAndSendCode(
@@ -157,16 +158,18 @@ export class AuthService {
       code,
       url,
     } as SendEmailVerificationDto;
-    this.gmailClient.emit(pattern, emailPayload);
+    this.amqp.publish(GMAIL_EXCHANGE, pattern, emailPayload);
 
     return { code, url };
   }
 
   async resetCode(id: string) {
     this.logger.log(`Resetting password code for user ${id}...`);
-    const payload = await firstValueFrom<ResetCodeDto>(
-      handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, id)),
-    );
+    const payload = await this.amqp.request<ResetCodeDto>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.RESET_CODE,
+      payload: id,
+    })
 
     this.logger.log(
       `Generating new reset code email for user ${payload.user.id}.`,
@@ -187,9 +190,11 @@ export class AuthService {
 
   async resetVerificationCode(userId: string) {
     this.logger.log(`Resetting verification code for user ${userId}...`);
-    const payload = await firstValueFrom<ResetCodeDto>(
-      handleRpc(this.userClient.send(USER_PATTERNS.RESET_CODE, userId)),
-    );
+    const payload = await this.amqp.request<ResetCodeDto>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.RESET_CODE,
+      payload: userId,
+    })
 
     this.logger.log(
       `Generating new verification code email for user ${payload.user.id}.`,
@@ -226,7 +231,7 @@ export class AuthService {
 
     const hashedRefresh = await bcrypt.hash(refreshToken, 10);
 
-    this.redisClient.emit(REDIS_PATTERN.STORE_REFRESH_TOKEN, {
+    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_REFRESH_TOKEN, {
       userId: user.id,
       sessionId,
       hashedRefresh,
@@ -238,14 +243,17 @@ export class AuthService {
 
   private _handlePostLoginTasks(user: User) {
     this.logger.log(`Emitting post-login events for user ${user.id}.`);
-    this.eventClient.emit(EVENTS.LOGIN, user);
+    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.LOGIN, user);
   }
 
   async login(loginDto: LoginDto) {
     this.logger.log(`Login attempt for ${loginDto.username}...`);
-    const user = await firstValueFrom<User>(
-      this.userClient.send(USER_PATTERNS.VALIDATE, loginDto),
-    );
+    const user = await this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.VALIDATE,
+      payload: loginDto,
+    })
+
     if (!user) {
       this.logger.warn(`Invalid credentials for ${loginDto.username}.`);
       throw new UnauthorizedException('Invalid credentials');
@@ -289,30 +297,32 @@ export class AuthService {
       throw new BadRequestException('Google account already linked');
     }
 
-    const currentUser = await firstValueFrom<User>(
-      this.userClient.send(USER_PATTERNS.FIND_ONE, user.id),
-    );
+    const currentUser = await this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_ONE,
+      payload: user,
+    })
 
     this.logger.log(`Storing Google tokens for user ${user.id}.`);
-    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
       userId: user.id,
       accessToken,
       refreshToken,
     });
 
     this.logger.log(`Creating new account link for user ${user.id}.`);
-    await firstValueFrom(
-      handleRpc(
-        this.userClient.send(USER_PATTERNS.CREATE_ACCOUNT, {
-          providerId,
-          provider,
-          name,
-          avatar,
-          email,
-          user: currentUser,
-        } as Partial<Account>),
-      ),
-    );
+    await this.amqp.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.CREATE_ACCOUNT,
+      payload: {
+        userId: user.id,
+        provider,
+        providerId,
+        email,
+        name,
+        avatar,
+      },
+    })
 
     this.logger.log(
       `Google account ${email} linked successfully to user ${user.id}.`,
@@ -326,7 +336,7 @@ export class AuthService {
     );
     const { accessToken, refreshToken } = data;
 
-    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
       userId: account.user.id,
       accessToken,
       refreshToken,
@@ -349,21 +359,20 @@ export class AuthService {
       avatar,
     } = data;
 
-    const user = await firstValueFrom<User>(
-      handleRpc(
-        this.userClient.send(USER_PATTERNS.CREATE_OAUTH, {
-          provider,
-          providerId,
-          name,
-          email,
-          avatar,
-        } as CreateAuthOAuthDto),
-      ),
-    );
+    const user = await this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.CREATE_OAUTH,
+      payload: {
+        name,
+        email,
+        avatar,
+        isVerified: true,
+      },
+    })
 
     this.logger.log(`New user ${user.id} created via Google registration.`);
 
-    this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
       userId: user.id,
       accessToken,
       refreshToken,
@@ -381,12 +390,11 @@ export class AuthService {
       throw new BadRequestException('Google account missing email');
     }
 
-    const account = await firstValueFrom<Account>(
-      this.userClient.send(USER_PATTERNS.FIND_ONE_OAUTH, {
-        provider: data.provider,
-        providerId: data.providerId,
-      }),
-    );
+    const account = await this.amqp.request<Account>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_ONE_OAUTH,
+      payload: data.email,
+    })
 
     if (data.isLinking && data.linkedUser) {
       this.logger.log(`Routing to handleLinking for ${data.email}.`);
@@ -404,7 +412,11 @@ export class AuthService {
 
   getInfo(id: string) {
     this.logger.log(`Fetching info for user ${id}.`);
-    return this.userClient.send(USER_PATTERNS.FIND_ONE, id);
+    return this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_ONE,
+      payload: id,
+    });
   }
 
   async refresh(token: string) {
@@ -414,14 +426,17 @@ export class AuthService {
       `Refresh payload validated for user ${payload.id}, session ${payload.sessionId}.`,
     );
 
-    const stored = await firstValueFrom(
-      this.redisClient
-        .send(REDIS_PATTERN.GET_STORED_REFRESH_TOKEN, {
-          userId: payload.id,
-          sessionId: payload.sessionId,
-        })
-        .pipe(map((s) => s as StoredRefreshTokenDto)),
-    );
+    const stored = await this.amqp.request<StoredRefreshTokenDto>({
+      exchange: REDIS_EXCHANGE,
+      routingKey: REDIS_PATTERN.GET_STORED_REFRESH_TOKEN,
+      payload: {
+        userId: payload.id,
+        sessionId: payload.sessionId,
+      },
+    })
+
+    console.log(stored)
+
     if (!stored) {
       this.logger.warn(
         `No stored refresh token found for user ${payload.id}, session ${payload.sessionId}.`,
@@ -441,14 +456,14 @@ export class AuthService {
     this.logger.log(
       `Attempting to acquire refresh lock for user ${payload.id}, session ${payload.sessionId}...`,
     );
-    const lockKey = await firstValueFrom(
-      this.redisClient
-        .send(REDIS_PATTERN.SET_LOCK_KEY, {
-          userId: payload.id,
-          sessionId: payload.sessionId,
-        })
-        .pipe(map((l) => l as string)),
-    );
+    const lockKey = await this.amqp.request<string>({
+      exchange: REDIS_EXCHANGE,
+      routingKey: REDIS_PATTERN.SET_LOCK_KEY,
+      payload: {
+        userId: payload.id,
+        sessionId: payload.sessionId,
+      },
+    })
     if (!lockKey) {
       this.logger.warn(
         `Refresh lock failed (already in progress) for user ${payload.id}, session ${payload.sessionId}.`,
@@ -463,7 +478,7 @@ export class AuthService {
       `Refresh lock acquired. Generating new tokens for user ${payload.id}.`,
     );
 
-    this.redisClient.emit(REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
+    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
       userId: payload.id,
       sessionId: payload.sessionId,
     });
@@ -478,22 +493,17 @@ export class AuthService {
     this.logger.log(
       `Processing password change for user ${changePasswordDto.id}...`,
     );
-    return handleRpc(
-      this.userClient
-        .send(USER_PATTERNS.UPDATE_PASSWORD, changePasswordDto)
-        .pipe(
-          tap((user: User) => {
-            this.logger.log(
-              `Password changed successfully for user ${user.id}. Emitting notification email.`,
-            );
-            this.gmailClient.emit(
-              GMAIL_PATTERNS.SEND_EMAIL_PASSWORD_CHANGE,
-              user,
-            );
-          }),
-          map(() => ({ message: 'Password changed successfully' })),
-        ),
-    );
+    const user = this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.UPDATE_PASSWORD,
+      payload: changePasswordDto.id,
+    })
+    if (!user) {
+      this.logger.warn(`User ${changePasswordDto.id} not found.`);
+      throw new NotFoundException(`User ${changePasswordDto.id} not found.`);
+    }
+    this.amqp.publish(GMAIL_EXCHANGE, GMAIL_PATTERNS.SEND_EMAIL_PASSWORD_CHANGE, user)
+    return { message: 'Password changed successfully' }
   }
 
   async forgetPassword(forgotPasswordDto: ForgotPasswordDto) {
@@ -501,18 +511,11 @@ export class AuthService {
       `Processing forgot password request for email: ${forgotPasswordDto.email}...`,
     );
     try {
-      const payload = await firstValueFrom<{
-        user: User;
-        resetCode: string;
-        expiredCode: Date;
-      }>(
-        handleRpc(
-          this.userClient.send(
-            USER_PATTERNS.RESET_PASSWORD,
-            forgotPasswordDto.email,
-          ),
-        ),
-      );
+      const payload = await this.amqp.request<{ user: User, resetCode: string, expiredCode: Date }>({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.RESET_PASSWORD,
+        payload: forgotPasswordDto.email
+      })
 
       if (!payload.user) {
         this.logger.warn(
@@ -547,7 +550,7 @@ export class AuthService {
 
   logoutAll(userId: string) {
     this.logger.log(`Logging out all sessions for user ${userId}...`);
-    return this.redisClient.send(REDIS_PATTERN.CLEAR_REFRESH_TOKENS, {
+    return this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.CLEAR_REFRESH_TOKENS, {
       userId,
     });
   }
@@ -559,7 +562,7 @@ export class AuthService {
     this.logger.log(
       `Deleting refresh token for user ${userId}, session ${sessionId}.`,
     );
-    this.redisClient.emit(REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
+    return this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
       userId,
       sessionId,
     });
@@ -567,8 +570,6 @@ export class AuthService {
 
   async verifyToken<T extends object>(token: string): Promise<T> {
     try {
-      this.logger.debug('Verifying token...');
-      console.log(await this.jwtService.verifyAsync(token));
       return await this.jwtService.verifyAsync<T>(token);
     } catch (error) {
       const err = error as Error;
@@ -577,8 +578,12 @@ export class AuthService {
     }
   }
 
-  findUserById(id: string) {
+  async findUserById(id: string) {
     this.logger.log(`Finding user by ID: ${id}...`);
-    return handleRpc(this.userClient.send(USER_PATTERNS.FIND_ONE, id));
+    return await this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_ONE,
+      payload: id,
+    })
   }
 }

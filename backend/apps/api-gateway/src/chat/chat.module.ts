@@ -1,12 +1,33 @@
 import { Module } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
-import { CLIENT_PROXY_PROVIDER, ClientConfigModule } from '@app/contracts';
+import { CHAT_EXCHANGE, ClientConfigModule, ClientConfigService } from '@app/contracts';
 import { AuthModule } from '../auth/auth.module';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
-  imports: [ClientConfigModule, AuthModule],
+  imports: [
+    ClientConfigModule,
+    AuthModule,
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
+        exchanges: [
+          {
+            name: CHAT_EXCHANGE,
+            type: 'direct',
+            options: {
+              durable: true,
+            },
+          },
+        ],
+        uri: config.getRMQUrl(),
+        connectionInitOptions: { wait: false },
+      })
+    })
+  ],
   controllers: [ChatController],
-  providers: [ChatService, CLIENT_PROXY_PROVIDER.CHAT_CLIENT],
+  providers: [ChatService],
 })
-export class ChatModule {}
+export class ChatModule { }

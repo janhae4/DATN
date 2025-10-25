@@ -4,7 +4,6 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ApiGatewayModule } from './api-gateway/api-gateway.module';
 import cookieParser from 'cookie-parser';
 import { RoleGuard } from './common/role/role.guard';
-import { RefreshTokenFilter } from './common/filter/refresh-token.filter';
 import { RpcToHttpExceptionFilter } from './common/filter/rpc-to-http.filter';
 
 async function bootstrap() {
@@ -37,10 +36,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalGuards(app.get(RoleGuard));
-  app.useGlobalFilters(
-    app.get(RefreshTokenFilter),
-    app.get(RpcToHttpExceptionFilter),
-  );
+  app.useGlobalFilters(app.get(RpcToHttpExceptionFilter));
   await app.listen(process.env.port ?? 3000);
 }
 bootstrap();

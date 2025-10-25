@@ -1,7 +1,8 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices'; // Payload vẫn được import nhưng không được dùng
 import { AuthService } from './auth.service';
 import {
+  AUTH_EXCHANGE,
   AUTH_PATTERN,
   ChangePasswordDto,
   ConfirmResetPasswordDto,
@@ -11,34 +12,56 @@ import {
   JwtDto,
   LoginDto,
 } from '@app/contracts';
-import { CurrentUser } from 'apps/api-gateway/src/common/role/current-user.decorator';
+import { MessageHandlerErrorBehavior, RabbitRPC } from '@golevelup/nestjs-rabbitmq';
+import { RabbitPayload } from '@golevelup/nestjs-rabbitmq/lib/rabbitmq.decorators';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
-  @MessagePattern(AUTH_PATTERN.REGISTER)
-  register(@Payload() createAuthDto: CreateAuthDto) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.REGISTER,
+    queue: AUTH_PATTERN.REGISTER
+  })
+  register(createAuthDto: CreateAuthDto) {
     return this.authService.register(createAuthDto);
   }
 
-  @MessagePattern(AUTH_PATTERN.VALIDATE_TOKEN)
-  validateToken(@Payload() token: string) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
+    queue: AUTH_PATTERN.VALIDATE_TOKEN
+  })
+  validateToken(token: string) {
     return this.authService.verifyToken<JwtDto>(token);
   }
 
-  @MessagePattern(AUTH_PATTERN.VERIFY_LOCAL)
-  verifyLocal(@Payload() data: { userId: string; code: string }) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.VERIFY_LOCAL,
+    queue: AUTH_PATTERN.VERIFY_LOCAL
+  })
+  verifyLocal(data: { userId: string; code: string }) {
     return this.authService.verifyLocal(data.userId, data.code);
   }
 
-  @MessagePattern(AUTH_PATTERN.VERIFY_LOCAL_TOKEN)
-  verifyLocalToken(@Payload() token: string) {
+
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.VERIFY_LOCAL_TOKEN,
+    queue: AUTH_PATTERN.VERIFY_LOCAL_TOKEN
+  })
+  verifyLocalToken(token: string) {
     return this.authService.verifyLocalToken(token);
   }
 
-  @MessagePattern(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD)
-  verifyForgotPassword(@Payload() data: ConfirmResetPasswordDto) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.VERIFY_FORGOT_PASSWORD,
+    queue: AUTH_PATTERN.VERIFY_FORGOT_PASSWORD
+  })
+  verifyForgotPassword(data: ConfirmResetPasswordDto) {
     return this.authService.verifyForgotPassword(
       data.userId ?? '',
       data.code ?? '',
@@ -46,65 +69,109 @@ export class AuthController {
     );
   }
 
-  @MessagePattern(AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN)
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN,
+    queue: AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN
+  })
   verifyForgotPasswordToken(
-    @Payload() data: { token: string; password: string },
+    data: { token: string; password: string },
   ) {
     const { token, password } = data;
     return this.authService.verifyForgotPasswordToken(token, password);
   }
 
-  @MessagePattern(AUTH_PATTERN.RESET_CODE)
-  resetCode(@Payload() userId: string) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.RESET_CODE,
+    queue: AUTH_PATTERN.RESET_CODE
+  })
+  resetCode(userId: string) {
     return this.authService.resetCode(userId);
   }
 
-  @MessagePattern(AUTH_PATTERN.RESET_VERIFICATION_CODE)
-  resetVerificationCode(@Payload() userId: string) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.RESET_VERIFICATION_CODE,
+    queue: AUTH_PATTERN.RESET_VERIFICATION_CODE, // Giữ nguyên (đã đúng)
+  })
+  resetVerificationCode(userId: string) {
     return this.authService.resetVerificationCode(userId);
   }
 
-  @MessagePattern(AUTH_PATTERN.LOGIN)
-  async login(@Payload() loginDto: LoginDto) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.LOGIN,
+    queue: AUTH_PATTERN.LOGIN,
+  })
+  async login(@RabbitPayload() loginDto: LoginDto) {
     console.log(loginDto);
     return await this.authService.login(loginDto);
   }
 
-  @MessagePattern(AUTH_PATTERN.INFO)
-  info(@CurrentUser('id') id: string) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.INFO,
+    queue: AUTH_PATTERN.INFO
+  })
+  info(id: string) {
     return this.authService.getInfo(id);
   }
 
-  @MessagePattern(AUTH_PATTERN.CHANGE_PASSWORD)
-  changePassword(@Payload() changePasswordDto: ChangePasswordDto) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.CHANGE_PASSWORD,
+    queue: AUTH_PATTERN.CHANGE_PASSWORD
+  })
+  changePassword(changePasswordDto: ChangePasswordDto) {
     return this.authService.changePassword(changePasswordDto);
   }
 
-  @MessagePattern(AUTH_PATTERN.GOOGLE_CALLBACK)
-  googleCallback(@Payload() user: GoogleAccountDto) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.GOOGLE_CALLBACK,
+    queue: AUTH_PATTERN.GOOGLE_CALLBACK
+  })
+  googleCallback(user: GoogleAccountDto) {
     console.log('GOOGLE CALLBACK');
     console.log(user);
     return this.authService.handleGoogleCallback(user);
   }
 
-  @MessagePattern(AUTH_PATTERN.REFRESH)
-  async getRefreshToken(@Payload() token: string) {
-    console.log('REFRESH TOKEN');
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.REFRESH,
+    queue: AUTH_PATTERN.REFRESH
+  })
+  async getRefreshToken(token: string) {
+    console.log(token);
     return await this.authService.refresh(token);
   }
 
-  @MessagePattern(AUTH_PATTERN.LOGOUT)
-  async logout(@Payload() refreshToken: string) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.LOGOUT,
+    queue: AUTH_PATTERN.LOGOUT
+  })
+  async logout(@RabbitPayload() refreshToken: string) {
     return await this.authService.logout(refreshToken);
   }
 
-  @MessagePattern(AUTH_PATTERN.LOGOUT_ALL)
-  logoutAll(@Payload() refreshToken: string) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.LOGOUT_ALL,
+    queue: AUTH_PATTERN.LOGOUT_ALL
+  })
+  logoutAll(refreshToken: string) {
     return this.authService.logoutAll(refreshToken);
   }
 
-  @MessagePattern(AUTH_PATTERN.FORGET_PASSWORD)
-  async forgetPassword(@Payload() payload: ForgotPasswordDto) {
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.FORGET_PASSWORD,
+    queue: AUTH_PATTERN.FORGET_PASSWORD
+  })
+  async forgetPassword(payload: ForgotPasswordDto) {
     return await this.authService.forgetPassword(payload);
   }
 }

@@ -15,13 +15,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
-import { RoleGuard } from '../common/role/role.guard';
-import { Roles } from '../common/role/role.decorator';
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { PaginationDto } from './dto/pagination.dto';
 import { CreateDirectChatDto } from './dto/create-direct-chat.dto';
 import { CreateChatMessageDto } from './dto/create-chat-message.dto';
 import { Role } from '@app/contracts';
+import { RoleGuard } from '../common/role/role.guard';
+import { Roles } from '../common/role/role.decorator';
 
 @ApiTags('Chat')
 @ApiBearerAuth()
@@ -29,7 +29,7 @@ import { Role } from '@app/contracts';
 @Roles(Role.USER, Role.ADMIN)
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly chatService: ChatService) { }
 
   @Get('conversations')
   @ApiOperation({ summary: 'Get conversations for user' })
@@ -40,6 +40,25 @@ export class ChatController {
     @Query() paginationDto: PaginationDto,
   ) {
     return this.chatService.getConversationsForUser(userId, paginationDto);
+  }
+
+  @Get('conversations/:conversationId/messages/search')
+  @ApiOperation({ summary: 'Get message' })
+  @ApiParam({
+    name: 'conversationId',
+    description: 'Conversation ID',
+    example: '6675b11a8b3a729e2e2a3b4c',
+  })
+  @ApiResponse({ status: 200, description: 'Get message success.' })
+  @ApiResponse({ status: 404, description: 'Message not found.' })
+  getMessageById(
+    @Param('conversationId') conversationId: string,
+    @Query('query') query: string,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @CurrentUser('id') userId: string
+  ) {
+    return this.chatService.searchMessages(query, conversationId, userId, page, limit);
   }
 
   @Get('conversations/:conversationId/messages')

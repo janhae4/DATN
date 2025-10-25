@@ -14,10 +14,12 @@ import {
   Provider,
   EVENT_CLIENT,
   PaginationDto,
+  EVENTS_EXCHANGE,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { ClientProxy } from '@nestjs/microservices';
 import { EVENTS } from '@app/contracts/events/events.pattern';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class UserService {
@@ -31,8 +33,7 @@ export class UserService {
     private readonly accountRepo: Repository<Account>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    @Inject(EVENT_CLIENT)
-    private readonly eventClient: ClientProxy,
+    private readonly amqp: AmqpConnection
   ) { }
 
   private async create(createUserDto: Partial<User>) {
@@ -581,11 +582,7 @@ export class UserService {
 
     if (user) {
       this.logger.log(`Successfully updated user ${id}.`);
-      this.eventClient.send(EVENTS.UPDATED, {
-        id,
-        name: user.name,
-        avatar: user.avatar,
-      });
+      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.USER_UPDATED, user);
     } else {
       this.logger.warn(
         `Update operation did not return a user for ID: ${id}. It might not exist.`,
@@ -608,7 +605,7 @@ export class UserService {
     return result;
   }
 
-  async findByName(name: string, options: PaginationDto) {
+  async findByName(name: string, options: PaginationDto, requesterId: string) {
     this.logger.log(`Finding user by name or username or email: ${name}`);
     const { page, limit } = options;
     const skip = (page - 1) * limit;
@@ -626,7 +623,8 @@ export class UserService {
           .orWhere("user.email ILIKE :term", { term: searchTerm })
           .orWhere("account.providerId ILIKE :term", { term: searchTerm })
           .orWhere("account.email ILIKE :term", { term: searchTerm });
-      }));
+      }))
+      .andWhere("user.id != :requesterId", { requesterId })
 
     const userIdsWithExtra = await qb.clone()
       .select("DISTINCT user.id")
@@ -636,7 +634,6 @@ export class UserService {
       .getRawMany()
       .then(results => results.map(r => r.id));
 
-    console.log(userIdsWithExtra)
     const hasNextPage = userIdsWithExtra.length > limit;
     const userIds = userIdsWithExtra.slice(0, limit);
 

@@ -1,42 +1,70 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import {
   CreateUserDto,
   FindUserDto,
   LoginDto,
   UpdateUserDto,
-  USER_CLIENT,
+  USER_EXCHANGE,
   USER_PATTERNS,
 } from '@app/contracts';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class UserService {
-  constructor(@Inject(USER_CLIENT) private readonly userClient: ClientProxy) {}
+  constructor(private readonly amqpConnection: AmqpConnection) { }
   create(createUserDto: CreateUserDto) {
-    return this.userClient.send(USER_PATTERNS.CREATE_LOCAL, createUserDto);
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.CREATE_LOCAL,
+      payload: createUserDto,
+    });
   }
 
   findAll() {
-    return this.userClient.send(USER_PATTERNS.FIND_ALL, {});
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_ALL,
+      payload: {},
+    });
   }
 
   findOne(id: string) {
-    return this.userClient.send(USER_PATTERNS.FIND_ONE, id);
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_ONE,
+      payload: id,
+    });
   }
 
   findByName(findUser: FindUserDto) {
-    return this.userClient.send(USER_PATTERNS.FIND_MANY_BY_NAME, findUser);
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_MANY_BY_NAME,
+      payload: findUser,
+    });
   }
 
   validate(loginDto: LoginDto) {
-    return this.userClient.send(USER_PATTERNS.VALIDATE, loginDto);
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.VALIDATE,
+      payload: loginDto,
+    });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return this.userClient.send(USER_PATTERNS.UPDATE, { updateUserDto, id });
+  update(id: string, updateUserDto: UpdateUserDto) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.UPDATE,
+      payload: { id, updateUser: updateUserDto },
+    });
   }
 
-  remove(id: number) {
-    return this.userClient.send(USER_PATTERNS.REMOVE, id);
+  remove(id: string) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.REMOVE,
+      payload: id,
+    });
   }
 }

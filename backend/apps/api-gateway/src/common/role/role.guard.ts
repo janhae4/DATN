@@ -36,9 +36,8 @@ export class RoleGuard implements CanActivate {
     if (!cookies.accessToken) throw new UnauthorizedException('No token found');
     try {
       this.logger.log('[RoleGuard] Validating token...');
-      const user = (await firstValueFrom(
-        this.authService.validateToken(cookies.accessToken as string),
-      )) as JwtDto;
+      const user = await this.authService.validateToken(cookies.accessToken as string)
+      console.log(user)
       this.logger.log('[RoleGuard] Token validated:', user.id);
       if (!user) throw new UnauthorizedException('Invalid token');
       contextRequest.user = user;

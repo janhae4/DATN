@@ -12,6 +12,7 @@ export class ReactionDto {
 }
 
 export interface SendMessageEventPayload {
+  id: string;
   conversationId: string;
   content: string;
   sender: ParticipantDto;

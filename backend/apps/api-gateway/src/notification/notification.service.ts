@@ -2,53 +2,57 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   NOTIFICATION_CLIENT,
+  NOTIFICATION_EXCHANGE,
   NOTIFICATION_PATTERN,
   NotificationEventDto,
   NotificationUpdateDto,
 } from '@app/contracts';
 import { firstValueFrom } from 'rxjs';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class NotificationService {
   constructor(
-    @Inject(NOTIFICATION_CLIENT)
-    private readonly notificationClient: ClientProxy,
-  ) {}
+    private readonly amqp: AmqpConnection,
+  ) { }
 
   createNotification(createDto: NotificationEventDto) {
-    this.notificationClient.emit(NOTIFICATION_PATTERN.CREATE, createDto);
+    this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.CREATE, createDto);
   }
 
-  getNotifications(userId: string) {
-    console.log(userId);
-    return firstValueFrom(
-      this.notificationClient.send(NOTIFICATION_PATTERN.FIND, userId),
-    );
+  async getNotifications(userId: string) {
+      return await this.amqp.request<Notification[]>({
+      exchange: NOTIFICATION_EXCHANGE,
+      routingKey: NOTIFICATION_PATTERN.FIND,
+      payload: userId
+    })
   }
 
-  updateNotification(id: string, updateDto: NotificationUpdateDto) {
-    return firstValueFrom(
-      this.notificationClient.send(NOTIFICATION_PATTERN.UPDATE, {
+  async updateNotification(id: string, updateDto: NotificationUpdateDto) {
+    return await this.amqp.request<Notification>({
+      exchange: NOTIFICATION_EXCHANGE,
+      routingKey: NOTIFICATION_PATTERN.UPDATE,
+      payload: {
+        ...updateDto,
         id,
-        data: updateDto,
-      }),
-    );
+      },
+    })
   }
 
   deleteNotification(id: string) {
-    this.notificationClient.emit(NOTIFICATION_PATTERN.DELETE, id);
+    this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.DELETE, id);
   }
 
   markAsRead(id: string) {
-    this.notificationClient.emit(NOTIFICATION_PATTERN.MARK_AS_READ, id);
+    this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.MARK_AS_READ, id);
   }
 
   markAsUnread(id: string) {
-    this.notificationClient.emit(NOTIFICATION_PATTERN.MARK_AS_UNREAD, id);
+    this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.MARK_AS_UNREAD, id);
   }
 
   markAllAsRead(userId: string) {
-    this.notificationClient.emit(NOTIFICATION_PATTERN.MARK_ALL_AS_READ, {
+    this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.MARK_ALL_AS_READ, {
       userId,
     });
   }

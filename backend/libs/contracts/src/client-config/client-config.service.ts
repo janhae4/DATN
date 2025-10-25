@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Transport } from '@nestjs/microservices';
+import { RmqOptions, Transport } from '@nestjs/microservices';
 @Injectable()
 export class ClientConfigService {
-  constructor(private config: ConfigService) {}
+  constructor(private config: ConfigService) { }
 
-  get eventClientOptions(): any {
+  get eventClientOptions(): RmqOptions {
     return {
       transport: Transport.RMQ,
       options: {
@@ -14,7 +14,8 @@ export class ClientConfigService {
         exchange: 'events',
         exchangeType: 'fanout',
         noAck: true,
-        queueOptions: { durable: false },
+        queueOptions: { durable: true },
+        routingKey: "events.*"
       },
     };
   }
@@ -421,4 +422,35 @@ export class ClientConfigService {
       },
     };
   }
+
+  /*
+--------------
+--- SEARCH ---
+--------------
+*/
+  getSearchHost(): string {
+    return this.config.get<string>(
+      'SEARCH_HOST_URL',
+      'http://localhost:7700/',
+    );
+  }
+
+  getSearchApiKey(): string {
+    return this.config.get<string>(
+      'SEARCH_API_KEY',
+      'masterkey',
+    );
+  }
+
+  get searchClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: 'search_queue',
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
 }

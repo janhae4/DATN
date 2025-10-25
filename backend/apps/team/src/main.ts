@@ -5,8 +5,6 @@ import { ClientConfigService } from '@app/contracts';
 
 async function bootstrap() {
   const app = await NestFactory.create(TeamModule);
-  const cfg = app.get(ClientConfigService);
-  app.connectMicroservice(cfg.teamClientOptions as MicroserviceOptions);
-  await app.startAllMicroservices();
+  await app.init();
 }
 bootstrap();
