@@ -15,6 +15,8 @@ import {
   PaginationDto,
   EVENTS_EXCHANGE,
   Follow,
+  Role,
+  ForbiddenException,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { EVENTS } from '@app/contracts/events/events.pattern';
@@ -674,5 +676,57 @@ export class UserService {
   async unfollow(requesterId: string, followingId: string) {
     this.logger.log(`Unfollowing user ${followingId} by ${requesterId}`);
     return await this.followRepo.delete({ followerId: requesterId, followingId });
+  }
+
+  async ban(userId: string) {
+    const updateResult = await this.userRepo
+      .createQueryBuilder()
+      .update()
+      .set({ isBan: true })
+      .where('id = :userId', { userId })
+      .andWhere('role != :adminRole', { adminRole: Role.ADMIN })
+      .execute();
+
+    if (updateResult.affected && updateResult.affected > 0) {
+      return updateResult;
+    }
+
+    const userToBan = await this.userRepo.findOneBy({ id: userId });
+
+    if (!userToBan) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (userToBan.role === Role.ADMIN) {
+      throw new ForbiddenException('You cannot ban an admin');
+    }
+
+    throw new BadRequestException('User not found or not banable');
+  }
+
+  async unban(userId: string) {
+    const updateResult = await this.userRepo
+      .createQueryBuilder()
+      .update()
+      .set({ isBan: false })
+      .where('id = :userId', { userId })
+      .andWhere('role != :adminRole', { adminRole: Role.ADMIN })
+      .execute();
+
+    if (updateResult.affected && updateResult.affected > 0) {
+      return updateResult;
+    }
+
+    const userToUnban = await this.userRepo.findOneBy({ id: userId });
+
+    if (!userToUnban) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (userToUnban.role === Role.ADMIN) {
+      throw new ForbiddenException('You cannot unban an admin');
+    }
+
+    throw new BadRequestException('User not found or not unbanable');
   }
 }

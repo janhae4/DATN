@@ -7,6 +7,8 @@ import {
   Get,
   UseGuards,
   Query,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
@@ -34,18 +36,44 @@ import { CurrentUser } from '../common/role/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
-  @Get('/info')
+  @Post('/account')
+  @ApiOperation({ summary: 'Register a new account' })
+  @ApiBody({ type: CreateAuthDto })
+  register(@Body() createAuthDto: CreateAuthDto) {
+    return this.authService.register(createAuthDto);
+  }
+
+
+  @Get('/me')
   @UseGuards(RoleGuard)
   @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.USER)
-  info(@CurrentUser('id') id: string) {
+  @ApiOperation({ summary: 'Get current user info' })
+  getMyInfo(@CurrentUser('id') id: string) {
     console.log(id);
     return this.authService.getInfo(id);
   }
 
-  @Post('/login')
+  @Patch('/account/password')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change password (when logged in)' })
+  @ApiBody({ type: ChangePasswordDto })
+  changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.authService.changePassword({
+      ...changePasswordDto,
+      id: userId,
+    });
+  }
+
+  @Post('/session')
+  @ApiOperation({ summary: 'Login (Create a new session)' })
   @ApiBody({ type: LoginDto })
   async login(
     @Body() loginDto: LoginDto,
@@ -55,86 +83,79 @@ export class AuthController {
     return await this.authService.login(loginDto, response);
   }
 
-  @Post('/register')
-  @ApiBody({ type: CreateAuthDto })
-  register(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.register(createAuthDto);
-  }
-
-  @Post('/verify/code')
+  @Post('/session/refresh')
   @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBody({ type: VerifyAccountDto })
-  verifyLocal(@Req() request: Request, @Body() data: VerifyAccountDto) {
-    const user = request.user as JwtDto;
-    return this.authService.verifyLocal(user.id, data.code);
-  }
-
-  @Get('/verify/token')
-  @ApiQuery({
-    name: 'token',
-    type: String,
-    required: true,
-    description: 'Verify token from email',
-    example: 'eyJH...',
-  })
-  verifyToken(@Query('token') token: string) {
-    return this.authService.verifyToken(token);
-  }
-
-  @Post('/verify/reset')
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Resend verification code',
-    description: 'Resend verification code to email',
-  })
-  resetCode(@Req() request: Request) {
-    const payload = request.user as JwtDto;
-    return this.authService.resetVerificationCode(payload.id);
-  }
-
-  @Post('/changePassword')
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBearerAuth()
-  @ApiBody({ type: ChangePasswordDto })
-  changePassword(
-    @Body() changePasswordDto: ChangePasswordDto,
+  @ApiOperation({ summary: 'Refresh access token' })
+  refresh(
     @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
   ) {
-    const user = request?.user as JwtDto;
-    return this.authService.changePassword({
-      ...changePasswordDto,
-      id: user.id,
-    });
+    return this.authService.refresh(request, response);
   }
 
-  @Post('/forgotPassword')
+  @Delete('/session')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout (Delete current session)' })
+  logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.authService.logout(request, response);
+  }
+
+  @Delete('/sessions')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout all (Delete all sessions)' })
+  logoutAll(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.authService.logoutAll(request, response);
+  }
+
+
+  @Post('/account/verification-code')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verify account using a code (when logged in)' })
+  @ApiBody({ type: VerifyAccountDto })
+  verifyLocal(
+    @CurrentUser('id') userId: string,
+    @Body() data: VerifyAccountDto,
+  ) {
+    return this.authService.verifyLocal(userId, data.code);
+  }
+  @Post('/account/verification-code/resend')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN, Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resend verification code (when logged in)' })
+  resetCode(@CurrentUser('id') userId: string) {
+    return this.authService.resetVerificationCode(userId);
+  }
+
+  @Post('/verify-email')
+  @ApiOperation({ summary: 'Verify account using email token' })
+  @ApiQuery({ name: 'token', type: String, required: true })
+  verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  @Post('/password-reset/request')
+  @ApiOperation({ summary: 'Request a password reset email' })
   @ApiBody({ type: ForgotPasswordDto })
   forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
-  @Post('/forgotPassword/confirm/code')
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBearerAuth()
-  @ApiBody({ type: ConfirmResetPasswordDto })
-  forgotPasswordConfirm(
-    @Req() request: Request,
-    @Body() data: ConfirmResetPasswordDto,
-  ) {
-    const payload = request.user as JwtDto;
-    return this.authService.verifyForgetPasswordCode(
-      payload.id,
-      data.code ?? '',
-      data.password ?? '',
-    );
-  }
-
-  @Post('/reset-password')
+  @Post('/password-reset/confirm')
+  @ApiOperation({ summary: 'Confirm new password using token' })
   @ApiBody({ type: ConfirmResetPasswordDto })
   forgotPasswordConfirmToken(@Body() data: ConfirmResetPasswordDto) {
     return this.authService.verifyForgetPasswordToken(
@@ -143,78 +164,22 @@ export class AuthController {
     );
   }
 
-  @Post('/refresh')
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Refresh token',
-    description: 'Refresh token',
-  })
-  refresh(
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
-  ) {
-    return this.authService.refresh(request, response);
-  }
-
-  @Post('/logout')
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Logout',
-    description: 'Logout',
-  })
-  logout(
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
-  ) {
-    return this.authService.logout(request, response);
-  }
-
-  @Post('/logoutAll')
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Logout all',
-    description: 'Logout all',
-  })
-  logoutAll(
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
-  ) {
-    return this.authService.logoutAll(request, response);
-  }
-
-  @Post('/findAllUser')
-  findAllUser() {
-    return this.authService.findAllUser();
-  }
-
-  @Get('/google/')
+  @Get('/google')
   @UseGuards(GoogleAuthGuard)
-  @ApiQuery({
-    name: 'type',
-    type: String,
-    required: true,
-    description: 'login or link',
-    example: 'login',
-  })
+  @ApiOperation({ summary: 'Initiate Google OAuth login' })
+  @ApiQuery({ name: 'type', type: String, required: true, example: 'login' })
   googleLogin(@Query('type') type: 'link' | 'login') {
     void type;
   }
 
   @Get('/google/callback')
   @UseGuards(GoogleAuthGuard)
-  @ApiOperation({
-    summary: 'Google callback',
-    description: 'Google callback',
-  })
+  @ApiOperation({ summary: 'Google OAuth callback' })
   googleCallback(@Req() request: Request) {
     return this.authService.handleGoogleCallback(
       request.user as GoogleAccountDto,
     );
   }
+
+
 }

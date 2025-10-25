@@ -61,6 +61,20 @@ export class UserController {
     return this.userService.unfollow(requesterId, followingId);
   }
 
+  @Post('/:id/ban')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
+  ban(@Param('id') id: string) {
+    return this.userService.ban(id);
+  }
+
+  @Delete('/:id/ban')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
+  unban(@Param('id') id: string) {
+    return this.userService.unban(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.userService.findOne(id);

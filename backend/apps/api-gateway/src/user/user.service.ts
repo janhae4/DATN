@@ -83,4 +83,20 @@ export class UserService {
       payload: id,
     });
   }
+
+  ban(id: string) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.BAN,
+      payload: id,
+    });
+  }
+
+  unban(id: string) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.UNBAN,
+      payload: id,
+    });
+  }
 }

@@ -23,4 +23,6 @@ export const USER_PATTERNS = {
   SEND_VERIFICATION_EMAIL: 'user.sendVerificationEmail',
   FOLLOW: 'user.follow',
   UNFOLLOW: 'user.unfollow',
+  BAN: 'user.ban',
+  UNBAN: 'user.unban',
 };
