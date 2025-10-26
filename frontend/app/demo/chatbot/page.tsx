@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import {
   User,
@@ -16,7 +16,22 @@ import {
   MessageSquare,
   ChevronUp,
   X,
+  FileIcon,
+  Edit,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+import { CreateTextFileModal } from "./createFileModal";
+
+const FileViewerModal = dynamic(
+  () => import("./fileViewModal").then((mod) => mod.FileViewerModal),
+  {
+    loading: () => (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <Loader2 className="animate-spin text-white h-10 w-10" />
+      </div>
+    ),
+  }
+);
 
 // --- ĐỊNH NGHĨA CÁC KIỂU DỮ LIỆU ---
 interface ChatMessage {
@@ -33,8 +48,8 @@ interface UserInfo {
 interface Document {
   id: string;
   name: string;
+  fileType?: "pdf" | "txt" | "other";
 }
-
 interface ConversationPreview {
   _id: string;
   title: string;
@@ -139,6 +154,15 @@ export default function ChatPage() {
 
   const chatboxRef = useRef<HTMLDivElement>(null);
 
+  const [conversationListPage, setConversationListPage] = useState(1);
+  const [conversationListTotalPages, setConversationListTotalPages] =
+    useState(1);
+  const [isConvListLoading, setIsConvListLoading] = useState(false);
+
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [viewingFile, setViewingFile] = useState<Document | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
   // --- EFFECTS ---
 
   // Tự động cuộn chatbox xuống dưới
@@ -158,14 +182,11 @@ export default function ChatPage() {
     if (storedToken) setToken(storedToken);
   }, []);
 
-  // Fetch dữ liệu user, tài liệu, và lịch sử chat sau khi có token
   useEffect(() => {
-    if (!token) return;
-
     const fetchInitialData = async () => {
       try {
-        // 1. Fetch User
-        const userRes = await fetch(`${NESTJS_HTTP_URL}/auth/info`, {
+        // 1. Fetch User (Giữ nguyên)
+        const userRes = await fetch(`${NESTJS_HTTP_URL}/auth/me`, {
           credentials: "include",
         });
         if (!userRes.ok)
@@ -173,40 +194,43 @@ export default function ChatPage() {
         const userData = await userRes.json();
         setUser(userData);
 
-        // 2. Fetch Documents
-        const docsRes = await fetch(`${NESTJS_HTTP_URL}/chatbot/get-files`, {
-          method: "POST",
+        // 2. Fetch Documents (Giữ nguyên, chỉ thêm logic xác định fileType)
+        const docsRes = await fetch(`${NESTJS_HTTP_URL}/chatbot/files/user`, {
+          // Sửa URL nếu cần
+          method: "GET", // Sửa thành GET
           credentials: "include",
         });
         if (docsRes.ok) {
-          const docsData = await docsRes.json();
+          const docsData: string[] = await docsRes.json(); // API trả về mảng string
           setDocuments(
             docsData.map((fullFileName: string) => {
               const underscoreIndex = fullFileName.indexOf("_");
-              const dashIndex = fullFileName.indexOf("-", underscoreIndex);
+              const dashIndex = fullFileName.indexOf("_", underscoreIndex + 1);
               const displayName =
                 dashIndex !== -1
                   ? fullFileName.substring(dashIndex + 1)
                   : fullFileName;
-              return { id: fullFileName, name: displayName };
+
+              const extension = displayName.split(".").pop()?.toLowerCase();
+              let fileType: "pdf" | "txt" | "other" = "other";
+              if (extension === "pdf") fileType = "pdf";
+              else if (extension === "txt") fileType = "txt";
+              return { id: fullFileName, name: displayName, fileType };
             })
           );
         } else {
           console.error("Không thể tải danh sách tài liệu.");
         }
-
-        // 3. Fetch Conversation History
-        fetchConversationList(1);
+        fetchConversationList(1, true); // true để reset list
       } catch (error: any) {
         console.error("Lỗi khi fetch data:", error);
-        handleLogout();
+        handleLogout(); // Logout nếu có lỗi
       }
     };
-
     fetchInitialData();
-  }, [token]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Khởi tạo và quản lý Socket connection
   useEffect(() => {
     if (!user) return;
 
@@ -237,18 +261,15 @@ export default function ChatPage() {
       setIsStreaming(false);
     };
 
-    // [SỬA] handleEnd sẽ fetch list để cập nhật title
     const handleEnd = (message: string) => {
       console.log("Stream ended:", message);
       setIsStreaming(false);
-      fetchConversationList(1); // Cập nhật danh sách (lấy title mới)
+      fetchConversationList(1);
     };
 
-    // [SỬA] handleConversationStarted chỉ cập nhật UI tạm thời
     const handleConversationStarted = (data: { newConversationId: string }) => {
       console.log("Conversation started, new ID:", data.newConversationId);
       setActiveConversationId(data.newConversationId);
-      // Cập nhật UI tạm thời
       setConversationList((prev) => [
         {
           _id: data.newConversationId,
@@ -269,7 +290,6 @@ export default function ChatPage() {
       handleConversationStarted
     );
 
-    // --- CLEANUP ---
     return () => {
       newSocket.off("connect");
       newSocket.off(CHATBOT_PATTERN.RESPONSE_CHUNK, handleChunk);
@@ -286,26 +306,35 @@ export default function ChatPage() {
 
   // --- CÁC HÀM XỬ LÝ (API & ACTIONS) ---
 
-  const fetchConversationList = async (page = 1, limit = 50) => {
-    try {
-      const url = new URL(`${NESTJS_HTTP_URL}/chatbot/conversations`);
-      url.searchParams.append("page", String(page));
-      url.searchParams.append("limit", String(limit));
+  const fetchConversationList = useCallback(
+    async (page = 1, reset = false) => {
+      if (isConvListLoading) return;
+      setIsConvListLoading(true);
+      try {
+        const url = new URL(`${NESTJS_HTTP_URL}/chatbot/conversations`);
+        url.searchParams.append("page", String(page));
+        url.searchParams.append("limit", "50");
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Không thể tải lịch sử chat.");
 
-      const res = await fetch(url.toString(), {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Không thể tải lịch sử chat.");
+        const data: ConversationListResponse = await res.json();
 
-      const data: ConversationListResponse = await res.json();
-
-      // Chỉ set data (chưa làm "Load more" cho list)
-      setConversationList(data.data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+        setConversationList((prev) =>
+          reset ? data.data : [...prev, ...data.data]
+        );
+        setConversationListPage(data.page);
+        setConversationListTotalPages(data.totalPages);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsConvListLoading(false);
+      }
+    },
+    [isConvListLoading]
+  );
 
   const handleSelectConversation = async (conversationId: string) => {
     if (isStreaming && activeConversationId === conversationId) return;
@@ -331,7 +360,7 @@ export default function ChatPage() {
       if (!res.ok) throw new Error("Không thể tải tin nhắn.");
 
       const data = await res.json();
-      const messages: MessageResponse = data.data
+      const messages: MessageResponse = data.data;
 
       setChatMessages(
         messages.messages.map((msg) => ({
@@ -385,7 +414,7 @@ export default function ChatPage() {
       if (!res.ok) throw new Error("Không thể tải thêm tin nhắn.");
 
       const data = await res.json();
-      const messages: MessageResponse = data.data
+      const messages: MessageResponse = data.data;
       setChatMessages((prev) => [
         ...messages.messages.map((msg) => ({
           id: msg._id,
@@ -450,11 +479,30 @@ export default function ChatPage() {
     }
   };
 
+  const getInfo = async () => {
+    try {
+      const res = await fetch(`${NESTJS_HTTP_URL}/auth/me`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Không thể tải thống tin người dung.");
+
+      const data = await res.json();
+      setUser(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    getInfo();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
     try {
-      const response = await fetch(`${NESTJS_HTTP_URL}/auth/login`, {
+      const response = await fetch(`${NESTJS_HTTP_URL}/auth/session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -464,9 +512,7 @@ export default function ChatPage() {
         const errorData = await response.json();
         throw new Error(errorData.message || "Sai thông tin đăng nhập.");
       }
-      const data = await response.json();
-      localStorage.setItem("auth_token", data.access_token || "true");
-      setToken(data.access_token || "true");
+      await getInfo();
     } catch (error: any) {
       setLoginError(error.message);
     }
@@ -483,35 +529,82 @@ export default function ChatPage() {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !user) return;
     setUploadStatus(`Đang tải lên '${selectedFile.name}'...`);
     const formData = new FormData();
     formData.append("file", selectedFile);
+    // formData.append("userId", user.id); // Không cần nếu dùng CurrentUser
     try {
-      const response = await fetch(
-        `${NESTJS_HTTP_URL}/chatbot/process-document`,
-        {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`${NESTJS_HTTP_URL}/chatbot/files`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Không thể tải lên file.");
+
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Lỗi server");
+
+      // Xác định fileType khi thêm vào state
+      const extension = result.originalName.split(".").pop()?.toLowerCase();
+      let fileType: "pdf" | "txt" | "other" = "other";
+      if (extension === "pdf") fileType = "pdf";
+      else if (extension === "txt") fileType = "txt";
 
       setDocuments((prev) => [
         ...prev,
-        { id: result.fileName, name: result.originalName },
+        { id: result.fileName, name: result.originalName, fileType },
       ]);
-      setUploadStatus(`Tải lên thành công!`);
+      setUploadStatus(`Tải lên thành công! File đang được xử lý...`);
     } catch (error: any) {
       setUploadStatus(`Lỗi: ${error.message}`);
     } finally {
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      setTimeout(() => setUploadStatus(""), 3000);
+      setTimeout(() => setUploadStatus(""), 5000); // Tăng thời gian hiển thị status
     }
   };
+
+  const handleDeleteDocument = async (file: Document) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa file "${file.name}"?`)) return;
+    try {
+      const res = await fetch(`${NESTJS_HTTP_URL}/chatbot/files/${file.id}`, {
+        // Sửa URL
+        method: "DELETE", // Sửa method
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Không thể xóa file.");
+      setDocuments((prev) => prev.filter((doc) => doc.id !== file.id));
+    } catch (error) {
+      console.error(error);
+      alert("Lỗi: Không thể xóa file.");
+    }
+  };
+
+  const handleOpenFileViewer = (file: Document) => {
+    if (file.fileType !== "pdf" && file.fileType !== "txt") {
+      alert("Chỉ có thể xem/sửa file PDF và TXT.");
+      return;
+    }
+    setViewingFile(file);
+    setIsViewerOpen(true);
+  };
+
+  const handleRenameSuccess = useCallback(
+    (oldId: string, newId: string, newName: string) => {
+      setDocuments((prevDocs) =>
+        prevDocs.map((doc) =>
+          doc.id === oldId ? { ...doc, id: newId, name: newName } : doc
+        )
+      );
+      // Cập nhật lại viewingFile nếu đang mở file đó
+      if (viewingFile?.id === oldId) {
+        setViewingFile((prev) =>
+          prev ? { ...prev, id: newId, name: newName } : null
+        );
+      }
+    },
+    [viewingFile]
+  );
 
   const handleSendMessage = () => {
     if (!prompt.trim() || !socket || isStreaming) return;
@@ -556,358 +649,429 @@ export default function ChatPage() {
     socket.emit(CHATBOT_PATTERN.SUMMARIZE_DOCUMENT, payload);
   };
 
-  const handleDeleteDocument = async (file: Document) => {
-    try {
-      await fetch(`${NESTJS_HTTP_URL}/chatbot/delete-file`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileId: file.id }),
-        credentials: "include",
-      });
-      setDocuments((prev) => prev.filter((doc) => doc.id !== file.id));
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   // --- GIAO DIỆN (RENDER) ---
 
-  if (!token) {
+  if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-100">
-        <form
-          onSubmit={handleLogin}
-          className="p-8 bg-white rounded-lg shadow-xl w-full max-w-sm"
-        >
-          <h1 className="text-3xl font-bold mb-6 text-center text-slate-800">
-            Đăng nhập
-          </h1>
-          <div className="space-y-4">
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Tên đăng nhập"
-              required
-              className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mật khẩu"
-              required
-              className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-          {loginError && (
-            <p className="text-red-500 text-sm mt-4 text-center">
-              {loginError}
-            </p>
-          )}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white p-3 mt-6 rounded-md font-semibold hover:bg-blue-700 transition-colors"
+      <>
+        <div className="flex items-center justify-center min-h-screen bg-slate-100">
+          <form
+            onSubmit={handleLogin}
+            className="p-8 bg-white rounded-lg shadow-xl w-full max-w-sm"
           >
-            Đăng nhập
-          </button>
-        </form>
-      </div>
+            <h1 className="text-3xl font-bold mb-6 text-center text-slate-800">
+              Đăng nhập
+            </h1>
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Tên đăng nhập"
+                required
+                className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mật khẩu"
+                required
+                className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            {loginError && (
+              <p className="text-red-500 text-sm mt-4 text-center">
+                {loginError}
+              </p>
+            )}
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white p-3 mt-6 rounded-md font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Đăng nhập
+            </button>
+          </form>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-800">
-      {/* Sidebar */}
-      <aside className="w-80 bg-white p-4 flex flex-col border-r border-slate-200 h-full">
-        {/* 1. Nút New Chat */}
-        <div className="px-2 mb-4">
-          <button
-            onClick={handleNewChat}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white p-2.5 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            <PlusCircle size={16} />
-            Cuộc trò chuyện mới
-          </button>
-        </div>
-
-        {/* 2. Tabs (History / Documents) */}
-        <div className="flex border-b border-slate-200 mb-2">
-          <button
-            onClick={() => setSidebarTab("history")}
-            className={`flex-1 p-2 text-sm font-medium ${
-              sidebarTab === "history"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-slate-500 hover:bg-slate-100"
-            }`}
-          >
-            Lịch sử
-          </button>
-          <button
-            onClick={() => setSidebarTab("documents")}
-            className={`flex-1 p-2 text-sm font-medium ${
-              sidebarTab === "documents"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-slate-500 hover:bg-slate-100"
-            }`}
-          >
-            Tài liệu
-          </button>
-        </div>
-
-        {/* 3. Nội dung Tab (Scrollable) */}
-        <div className="flex-1 overflow-y-auto space-y-1 pr-2">
-          {/* --- Tab Lịch sử --- */}
-          {sidebarTab === "history" && (
-            <>
-              {conversationList.map((convo) => (
-                <div
-                  key={convo._id}
-                  onClick={() => handleSelectConversation(convo._id)}
-                  className={`p-2 rounded-md hover:bg-slate-100 group flex items-center justify-between cursor-pointer ${
-                    activeConversationId === convo._id ? "bg-slate-100" : ""
-                  }`}
-                >
-                  <div className="flex items-center space-x-2 overflow-hidden">
-                    <MessageSquare
-                      size={16}
-                      className="text-slate-500 flex-shrink-0"
-                    />
-                    <span
-                      className="text-sm text-slate-700 truncate"
-                      title={convo.title}
-                    >
-                      {convo.title}
-                    </span>
-                  </div>
-                  <button
-                    onClick={(e) => handleDeleteConversation(e, convo._id)}
-                    title="Xóa cuộc hội thoại"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0 p-1 hover:bg-red-100 rounded"
-                  >
-                    <X size={16} className="text-red-500" />
-                  </button>
-                </div>
-              ))}
-              {/* (Có thể thêm nút "Tải thêm lịch sử" ở đây) */}
-            </>
-          )}
-
-          {/* --- Tab Tài liệu --- */}
-          {sidebarTab === "documents" && (
-            <>
-              {/* Nút Upload (chỉ hiển thị ở tab doc) */}
-              <div className="px-2 mb-4">
-                <label
-                  htmlFor="file-upload"
-                  className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-600 p-2.5 rounded-md text-sm font-medium cursor-pointer hover:bg-blue-100 transition-colors"
-                >
-                  <UploadCloud size={16} />
-                  Tải file mới
-                </label>
-                <input
-                  id="file-upload"
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={(e) =>
-                    setSelectedFile(e.target.files ? e.target.files[0] : null)
-                  }
-                  className="hidden"
-                />
-                {selectedFile && (
-                  <div className="mt-2 text-sm flex items-center justify-between">
-                    <span className="truncate text-slate-600">
-                      {selectedFile.name}
-                    </span>
-                    <button
-                      onClick={handleUpload}
-                      className="text-blue-600 font-semibold"
-                    >
-                      Tải lên
-                    </button>
-                  </div>
-                )}
-                {uploadStatus && (
-                  <p className="text-xs text-center mt-2 text-slate-500">
-                    {uploadStatus}
-                  </p>
-                )}
-              </div>
-              {/* Danh sách tài liệu */}
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="p-2 rounded-md hover:bg-slate-100 group flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-2 overflow-hidden">
-                    <FileText
-                      size={16}
-                      className="text-slate-500 flex-shrink-0"
-                    />
-                    <span
-                      className="text-sm text-slate-700 truncate"
-                      title={doc.name}
-                    >
-                      {doc.name}
-                    </span>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <button
-                      onClick={() => handleSummarize(doc)}
-                      title="Tóm tắt file này"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 hover:bg-blue-100 rounded"
-                    >
-                      <Sparkles size={16} className="text-blue-500" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDocument(doc)}
-                      title="Xóa file"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 hover:bg-red-100 rounded"
-                    >
-                      <Trash2 size={16} className="text-red-500" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-
-        {/* 4. User Profile (Ghim ở dưới) */}
-        <div className="border-t border-slate-200 pt-4 mt-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                <User size={16} />
-              </div>
-              <span className="text-sm font-semibold">{user?.username}</span>
-            </div>
+    <>
+      <div className="flex h-screen bg-slate-50 text-slate-800">
+        {/* Sidebar */}
+        <aside className="w-80 bg-white p-4 flex flex-col border-r border-slate-200 h-full">
+          {/* 1. Nút New Chat */}
+          <div className="px-2 mb-4">
             <button
-              onClick={handleLogout}
-              title="Đăng xuất"
-              className="p-2 rounded-md hover:bg-slate-100"
+              onClick={handleNewChat}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white p-2.5 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
             >
-              <LogOut size={16} className="text-red-500" />
+              <PlusCircle size={16} />
+              Cuộc trò chuyện mới
             </button>
           </div>
-        </div>
-      </aside>
 
-      {/* Main Chat Window */}
-      <main className="flex-1 flex flex-col h-screen">
-        <div ref={chatboxRef} className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* --- [MỚI] Trạng thái Loading / Empty --- */}
-          {isLoadingMessages ? (
-            <div className="flex justify-center items-center h-full">
-              <Loader2 className="animate-spin text-blue-600" size={48} />
-            </div>
-          ) : chatMessages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-500">
-              <Sparkles size={64} className="mb-4 text-blue-500" />
-              <h2 className="text-2xl font-semibold text-slate-700">
-                Chào bạn, tôi là trợ lý AI
-              </h2>
-              <p>
-                {activeConversationId
-                  ? "Cuộc hội thoại này trống."
-                  : "Hỏi tôi bất cứ điều gì hoặc chọn một tài liệu để bắt đầu."}
-              </p>
-            </div>
-          ) : (
-            // --- Hiển thị tin nhắn ---
-            <>
-              {/* Nút "Tải thêm" */}
-              {messagePagination.page < messagePagination.totalPages && (
-                <div className="flex justify-center">
-                  <button
-                    onClick={handleLoadMoreMessages}
-                    disabled={isHistoryLoading}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 disabled:opacity-50"
-                  >
-                    {isHistoryLoading ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : (
-                      <ChevronUp size={16} />
-                    )}
-                    Tải tin nhắn cũ hơn
-                  </button>
-                </div>
-              )}
+          {/* 2. Tabs (History / Documents) */}
+          <div className="flex border-b border-slate-200 mb-2">
+            <button
+              onClick={() => setSidebarTab("history")}
+              className={`flex-1 p-2 text-sm font-medium ${
+                sidebarTab === "history"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              Lịch sử
+            </button>
+            <button
+              onClick={() => setSidebarTab("documents")}
+              className={`flex-1 p-2 text-sm font-medium ${
+                sidebarTab === "documents"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              Tài liệu
+            </button>
+          </div>
 
-              {/* Danh sách tin nhắn */}
-              {chatMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex items-start gap-4 ${
-                    msg.role === "user" ? "justify-end" : ""
-                  }`}
-                >
-                  {msg.role === "ai" && (
-                    <div className="w-8 h-8 bg-blue-600 p-2 rounded-full text-white flex-shrink-0 flex items-center justify-center">
-                      <Bot size={16} />
-                    </div>
-                  )}
-
+          {/* 3. Nội dung Tab (Scrollable) */}
+          <div className="flex-1 overflow-y-auto space-y-1 pr-2">
+            {/* --- Tab Lịch sử --- */}
+            {sidebarTab === "history" && (
+              <>
+                {conversationList.map((convo) => (
                   <div
-                    className={`px-4 py-3 rounded-lg max-w-2xl shadow-sm ${
-                      msg.role === "user"
-                        ? "bg-blue-500 text-white"
-                        : msg.role === "ai"
-                        ? "bg-white text-slate-800"
-                        : "bg-red-100 text-red-800"
+                    key={convo._id}
+                    onClick={() => handleSelectConversation(convo._id)}
+                    className={`p-2 rounded-md hover:bg-slate-100 group flex items-center justify-between cursor-pointer ${
+                      activeConversationId === convo._id ? "bg-slate-100" : ""
                     }`}
                   >
-                    <p className="whitespace-pre-wrap leading-relaxed">
-                      {msg.content}
-                    </p>
+                    <div className="flex items-center space-x-2 overflow-hidden">
+                      <MessageSquare
+                        size={16}
+                        className="text-slate-500 flex-shrink-0"
+                      />
+                      <span
+                        className="text-sm text-slate-700 truncate"
+                        title={convo.title}
+                      >
+                        {convo.title}
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteConversation(e, convo._id)}
+                      title="Xóa cuộc hội thoại"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0 p-1 hover:bg-red-100 rounded"
+                    >
+                      <X size={16} className="text-red-500" />
+                    </button>
                   </div>
+                ))}
+                {/* (Có thể thêm nút "Tải thêm lịch sử" ở đây) */}
+                {conversationListPage < conversationListTotalPages && (
+                  <div className="flex justify-center mt-2">
+                    <button
+                      onClick={() =>
+                        fetchConversationList(conversationListPage + 1)
+                      }
+                      disabled={isConvListLoading}
+                      className="text-sm text-blue-600 hover:underline disabled:opacity-50"
+                    >
+                      {isConvListLoading ? "Đang tải..." : "Tải thêm lịch sử"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
 
-                  {msg.role === "user" && (
-                    <div className="w-8 h-8 bg-slate-200 p-2 rounded-full text-slate-700 flex-shrink-0 flex items-center justify-center">
-                      <User size={16} />
+            {/* --- Tab Tài liệu --- */}
+            {sidebarTab === "documents" && (
+              <>
+                {/* Nút Upload (chỉ hiển thị ở tab doc) */}
+                <div className="px-2 mb-4">
+                  <label
+                    htmlFor="file-upload"
+                    className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-600 p-2.5 rounded-md text-sm font-medium cursor-pointer hover:bg-blue-100 transition-colors"
+                  >
+                    <UploadCloud size={16} />
+                    Tải file mới
+                  </label>
+                  <input
+                    id="file-upload"
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={(e) =>
+                      setSelectedFile(e.target.files ? e.target.files[0] : null)
+                    }
+                    className="hidden"
+                  />
+                  {selectedFile && (
+                    <div className="mt-2 text-sm flex items-center justify-between">
+                      <span className="truncate text-slate-600">
+                        {selectedFile.name}
+                      </span>
+                      <button
+                        onClick={handleUpload}
+                        className="text-blue-600 font-semibold"
+                      >
+                        Tải lên
+                      </button>
                     </div>
                   )}
+                  {uploadStatus && (
+                    <p className="text-xs text-center mt-2 text-slate-500">
+                      {uploadStatus}
+                    </p>
+                  )}
                 </div>
-              ))}
-            </>
-          )}
 
-          {/* --- Biểu tượng "AI đang gõ" --- */}
-          {isStreaming &&
-            chatMessages[chatMessages.length - 1]?.role === "ai" && (
-              <div className="flex items-center gap-4">
-                <div className="w-8 h-8 bg-blue-600 p-2 rounded-full text-white flex-shrink-0 flex items-center justify-center">
-                  <Bot size={16} />
+                <div className="px-2 mb-4">
+                  <button
+                    onClick={() => setIsCreateOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-600 p-2.5 rounded-md text-sm font-medium cursor-pointer hover:bg-blue-100 transition-colors"
+                  >
+                    <FileText size={16} /> Tạo tài liệu
+                  </button>
                 </div>
-                <Loader2 className="animate-spin text-slate-500" />
-              </div>
+                {/* Danh sách tài liệu */}
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="p-2 rounded-md hover:bg-slate-100 group flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-2 overflow-hidden flex-grow mr-2">
+                      {doc.fileType === "pdf" ? (
+                        <FileIcon
+                          size={16}
+                          className="text-red-500 flex-shrink-0"
+                        />
+                      ) : doc.fileType === "txt" ? (
+                        <FileText
+                          size={16}
+                          className="text-blue-500 flex-shrink-0"
+                        />
+                      ) : (
+                        <FileText
+                          size={16}
+                          className="text-slate-500 flex-shrink-0"
+                        />
+                      )}
+                      <span
+                        className="text-sm text-slate-700 truncate"
+                        title={doc.name}
+                      >
+                        {doc.name}
+                      </span>
+                    </div>
+                    <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                      {/* [MỚI] Nút View/Edit */}
+                      {(doc.fileType === "pdf" || doc.fileType === "txt") && (
+                        <button
+                          onClick={() => handleOpenFileViewer(doc)}
+                          title={doc.fileType === "txt" ? "Xem/Sửa" : "Xem"}
+                          className="p-1 hover:bg-gray-200 rounded"
+                        >
+                          <Edit size={16} className="text-gray-600" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleSummarize(doc)}
+                        title="Tóm tắt file này"
+                        className="p-1 hover:bg-blue-100 rounded"
+                      >
+                        <Sparkles size={16} className="text-blue-500" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDocument(doc)}
+                        title="Xóa file"
+                        className="p-1 hover:bg-red-100 rounded"
+                      >
+                        <Trash2 size={16} className="text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
             )}
-        </div>
+          </div>
 
-        {/* --- Input Bar --- */}
-        <div className="border-t border-slate-200 p-4 bg-white">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-center bg-slate-100 rounded-lg p-2 border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500">
-              <input
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder="Hỏi AI về tài liệu của bạn hoặc bắt đầu một cuộc trò chuyện..."
-                disabled={isStreaming}
-                className="flex-grow bg-transparent outline-none px-2 text-slate-800"
-              />
+          {/* 4. User Profile (Ghim ở dưới) */}
+          <div className="border-t border-slate-200 pt-4 mt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+                  <User size={16} />
+                </div>
+                <span className="text-sm font-semibold">{user?.username}</span>
+              </div>
               <button
-                onClick={handleSendMessage}
-                disabled={isStreaming || !prompt.trim()}
-                className="p-2 rounded-md bg-blue-600 text-white disabled:bg-slate-300 transition-colors"
+                onClick={handleLogout}
+                title="Đăng xuất"
+                className="p-2 rounded-md hover:bg-slate-100"
               >
-                <Send size={20} />
+                <LogOut size={16} className="text-red-500" />
               </button>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </aside>
+
+        {/* Main Chat Window */}
+        <main className="flex-1 flex flex-col h-screen">
+          <div
+            ref={chatboxRef}
+            className="flex-1 overflow-y-auto p-6 space-y-6"
+          >
+            {/* --- [MỚI] Trạng thái Loading / Empty --- */}
+            {isLoadingMessages ? (
+              <div className="flex justify-center items-center h-full">
+                <Loader2 className="animate-spin text-blue-600" size={48} />
+              </div>
+            ) : chatMessages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                <Sparkles size={64} className="mb-4 text-blue-500" />
+                <h2 className="text-2xl font-semibold text-slate-700">
+                  Chào bạn, tôi là trợ lý AI
+                </h2>
+                <p>
+                  {activeConversationId
+                    ? "Cuộc hội thoại này trống."
+                    : "Hỏi tôi bất cứ điều gì hoặc chọn một tài liệu để bắt đầu."}
+                </p>
+              </div>
+            ) : (
+              // --- Hiển thị tin nhắn ---
+              <>
+                {/* Nút "Tải thêm" */}
+                {messagePagination.page < messagePagination.totalPages && (
+                  <div className="flex justify-center">
+                    <button
+                      onClick={handleLoadMoreMessages}
+                      disabled={isHistoryLoading}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 disabled:opacity-50"
+                    >
+                      {isHistoryLoading ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <ChevronUp size={16} />
+                      )}
+                      Tải tin nhắn cũ hơn
+                    </button>
+                  </div>
+                )}
+
+                {/* Danh sách tin nhắn */}
+                {chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex items-start gap-4 ${
+                      msg.role === "user" ? "justify-end" : ""
+                    }`}
+                  >
+                    {msg.role === "ai" && (
+                      <div className="w-8 h-8 bg-blue-600 p-2 rounded-full text-white flex-shrink-0 flex items-center justify-center">
+                        <Bot size={16} />
+                      </div>
+                    )}
+
+                    <div
+                      className={`px-4 py-3 rounded-lg max-w-2xl shadow-sm ${
+                        msg.role === "user"
+                          ? "bg-blue-500 text-white"
+                          : msg.role === "ai"
+                          ? "bg-white text-slate-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap leading-relaxed">
+                        {msg.content}
+                      </p>
+                    </div>
+
+                    {msg.role === "user" && (
+                      <div className="w-8 h-8 bg-slate-200 p-2 rounded-full text-slate-700 flex-shrink-0 flex items-center justify-center">
+                        <User size={16} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* --- Biểu tượng "AI đang gõ" --- */}
+            {isStreaming &&
+              chatMessages[chatMessages.length - 1]?.role === "ai" && (
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 bg-blue-600 p-2 rounded-full text-white flex-shrink-0 flex items-center justify-center">
+                    <Bot size={16} />
+                  </div>
+                  <Loader2 className="animate-spin text-slate-500" />
+                </div>
+              )}
+          </div>
+
+          {/* --- Input Bar --- */}
+          <div className="border-t border-slate-200 p-4 bg-white">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex items-center bg-slate-100 rounded-lg p-2 border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500">
+                <input
+                  type="text"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                  placeholder="Hỏi AI về tài liệu của bạn hoặc bắt đầu một cuộc trò chuyện..."
+                  disabled={isStreaming}
+                  className="flex-grow bg-transparent outline-none px-2 text-slate-800"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isStreaming || !prompt.trim()}
+                  className="p-2 rounded-md bg-blue-600 text-white disabled:bg-slate-300 transition-colors"
+                >
+                  <Send size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+        {viewingFile && (
+          <FileViewerModal
+            isOpen={isViewerOpen}
+            onClose={() => {
+              setIsViewerOpen(false);
+              setViewingFile(null); // Reset khi đóng
+            }}
+            fileId={viewingFile.id}
+            originalName={viewingFile.name}
+            fileType={viewingFile.fileType || "other"}
+            onRenameSuccess={handleRenameSuccess}
+          />
+        )}
+
+        {isCreateOpen && (
+          <CreateTextFileModal
+            isOpen={isCreateOpen}
+            onClose={() => setIsCreateOpen(false)}
+            onUploadSuccess={(file: {
+              fileName: string;
+              originalName: string;
+            }) => {
+              const newDocument = {
+                id: file.fileName,
+                name: file.originalName,
+                fileType: "txt" as const,
+              };
+
+              setDocuments((prevDocuments) => [...prevDocuments, newDocument]);
+
+              setIsCreateOpen(false);
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 }

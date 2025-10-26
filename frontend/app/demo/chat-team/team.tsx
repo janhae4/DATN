@@ -8,7 +8,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ApiService } from "./api-service";
+import { ApiService } from "../api-service";
 
 interface NewChatModalProps {
   isOpen: boolean;
