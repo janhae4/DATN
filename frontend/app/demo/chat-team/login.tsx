@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { ApiService } from "./api-service";
+import { ApiService } from "../api-service";
 
 interface LoginPageProps {
   onLoginSuccess: (user: User) => void;

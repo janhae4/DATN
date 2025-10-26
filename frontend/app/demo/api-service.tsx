@@ -21,6 +21,58 @@ export const ApiService = {
     return response.json();
   },
 
+  requestFile: async (endpoint: string, options: RequestInit = {}) => {
+    const config: RequestInit = {
+      ...options,
+      headers: {
+        ...options.headers,
+      },
+      credentials: "include",
+    };
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: response.statusText }));
+      throw new Error(errorData.message || "Something went wrong");
+    }
+
+    return response;
+  },
+
+  upload: async (
+    endpoint: string,
+    file: File,
+    options: RequestInit = {}
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const config: RequestInit = {
+      ...options,
+      method: options.method || "POST",
+      body: formData,
+      headers: {
+        ...options.headers,
+      },
+      credentials: "include",
+    };
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: response.statusText }));
+      throw new Error(errorData.message || "Something went wrong");
+    }
+
+    if (response.status === 204) return null;
+
+    return response.json();
+  },
+
   login: (username: string, password: string) =>
     ApiService.request("/auth/login", {
       method: "POST",
@@ -136,4 +188,23 @@ export const ApiService = {
     ApiService.request(
       `/chat/conversations/${conversationId}/messages/search?query=${query}&page=${page}&limit=${limit}`
     ),
+
+  getFile: (fileId: string) =>
+    ApiService.requestFile(`/chatbot/files/${fileId}`),
+
+  renameFile: (fileId: string, newName: string) =>
+    ApiService.request(`/chatbot/files/${fileId}/rename`, {
+      method: "PATCH",
+      body: JSON.stringify({ newName }),
+    }),
+
+  updateFileContent: (file: File, fileId: string) => {
+    return ApiService.upload(`/chatbot/files/${fileId}/content`, file, {
+      method: "PATCH"
+    });
+  },
+
+  uploadNewFile: (file: File) => {
+    return ApiService.upload("/chatbot/files", file);
+  },
 };

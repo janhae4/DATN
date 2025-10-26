@@ -12,7 +12,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useChatStore } from "./useChatStore";
-import { ApiService } from "./api-service";
+import { ApiService } from "../api-service";
 import { CreateTeamModal } from "./modal";
 import { ManageMembersModal } from "./team";
 import { Message, NewChatModal } from "./message";

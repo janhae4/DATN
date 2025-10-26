@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { LoginPage } from "./login";
 import { ChatComponent } from "./chat";
-import { ApiService } from "./api-service";
+import { ApiService } from "../api-service";
 import { useChatStore } from "./useChatStore";
 
 export default function Page() {

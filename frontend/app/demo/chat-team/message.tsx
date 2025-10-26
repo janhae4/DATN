@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Spinner } from "./components";
-import { ApiService } from "./api-service";
+import { ApiService } from "../api-service";
 
 interface MessageProps {
   message: MessageData;
