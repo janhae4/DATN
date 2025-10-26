@@ -13,4 +13,7 @@ export const CHATBOT_PATTERN = {
   FIND_CONVERSATION: 'chatbot.find_conversation',
   DELETE_CONVERSATION: 'chatbot.delete_conversation',
   HANDLE_MESSAGE: 'chatbot.handle_message',
+  GET_FILE_BY_ID: 'chatbot.get_file_by_id',
+  UPDATE_FILE: 'chatbot.update_file',
+  RENAME_FILE: 'chatbot.rename_file',
 };

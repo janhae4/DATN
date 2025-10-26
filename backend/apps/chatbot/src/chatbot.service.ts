@@ -3,6 +3,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Aggregate, Model } from 'mongoose';
 import {
+  BadRequestException,
   CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
   Conversation,
@@ -123,7 +124,14 @@ export class ChatbotService {
     };
   }
 
-  async deleteConversation(conversationId: string) {
-    return await this.conversationModel.findByIdAndDelete(conversationId);
+  async deleteConversation(conversationId: string, userId: string) {
+    try {
+      return await this.conversationModel.findOneAndDelete({
+        _id: conversationId,
+        user_id: userId,
+      })
+    } catch (error) {
+      throw new BadRequestException("Conversation not found or unauthorized");
+    }
   }
 }

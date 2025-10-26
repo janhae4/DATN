@@ -48,10 +48,10 @@ export class ChatbotService {
   async getFilesByUserId(userId: string) {
     try {
       const files = await this.amqp.request<string[]>({
-          exchange: CHATBOT_EXCHANGE,
-          routingKey: CHATBOT_PATTERN.GET_FILES_BY_USER_ID,
-          payload: userId
-        })
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.GET_FILES_BY_USER_ID,
+        payload: userId
+      })
       return files;
     } catch (err) {
       const e = err as Error;
@@ -59,12 +59,12 @@ export class ChatbotService {
     }
   }
 
-  async deleteFile(fileId: string) {
+  async deleteFile(userId: string, fileId: string) {
     try {
       return await this.amqp.request<string>({
         exchange: CHATBOT_EXCHANGE,
         routingKey: CHATBOT_PATTERN.DELETE_FILE,
-        payload: fileId
+        payload: { userId, fileId }
       })
     } catch (err) {
       const e = err as Error;
@@ -107,13 +107,69 @@ export class ChatbotService {
     }
   }
 
-  async deleteConversation(conversationId: string) {
+  async deleteConversation(userId: string, conversationId: string) {
     try {
       return await this.amqp.request<string>({
         exchange: CHATBOT_EXCHANGE,
         routingKey: CHATBOT_PATTERN.DELETE_CONVERSATION,
-        payload: conversationId
+        payload: { conversationId, userId }
       })
+    } catch (err) {
+      const e = err as Error;
+      throw new BadRequestException(e.message);
+    }
+  }
+
+  async getFile(userId: string, fileId: string) {
+    try {
+      const base64Data = await this.amqp.request<string>({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.GET_FILE_BY_ID,
+        payload: { userId, fileId },
+      });
+
+      const fileBuffer = Buffer.from(base64Data, 'base64');
+      console.log(fileBuffer)
+      let contentType = 'application/octet-stream';
+
+      if (fileId.endsWith('.pdf')) {
+        contentType = 'application/pdf';
+      } else {
+        contentType = 'text/plain; charset=utf-8';
+      }
+
+      return {
+        data: fileBuffer,
+        contentType
+      }
+
+    } catch (err) {
+      const e = err as Error;
+      throw new BadRequestException(e.message);
+    }
+  }
+
+  async updateFile(file: Express.Multer.File, userId: string, fileId: string) {
+    try {
+      return await this.amqp.request<string>({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.UPDATE_FILE,
+        payload: { file, userId, fileId }
+      })
+    } catch (err) {
+      const e = err as Error;
+      throw new BadRequestException(e.message);
+    }
+  }
+
+  async renameFile(userId: string, fileId: string, newName: string) {
+    try {
+      const result = await this.amqp.request<string>({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.RENAME_FILE,
+        payload: { userId, fileId, newName }
+      })
+      return {newFileId: result}
     } catch (err) {
       const e = err as Error;
       throw new BadRequestException(e.message);
