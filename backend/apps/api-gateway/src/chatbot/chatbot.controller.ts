@@ -1,14 +1,17 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
   MaxFileSizeValidator,
   Param,
   ParseFilePipe,
+  Patch,
   Post,
   Query,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -19,16 +22,16 @@ import { JwtDto, Role } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { Payload } from '@nestjs/microservices';
 import { RoleGuard } from '../common/role/role.guard';
 import { CurrentUser } from '../common/role/current-user.decorator';
 
 @Controller('chatbot')
 export class ChatbotController {
-  constructor(private readonly chatbotService: ChatbotService) {}
+  constructor(private readonly chatbotService: ChatbotService) { }
 
-  @Post('process-document')
+  @Post('files')
   @UseGuards(RoleGuard)
   @Roles(Role.USER)
   @ApiConsumes('multipart/form-data')
@@ -68,7 +71,7 @@ export class ChatbotController {
     };
   }
 
-  @Post('get-files')
+  @Get('files/user')
   @UseGuards(RoleGuard)
   @Roles(Role.USER, Role.ADMIN)
   @ApiBearerAuth()
@@ -80,27 +83,81 @@ export class ChatbotController {
     return await this.chatbotService.getFilesByUserId(user.id);
   }
 
-  @Delete('delete-file')
+  @Get('files/:id')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'file id',
+    type: 'string'
+  })
+  async getFile(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Res() res: Response
+  ) {
+    const payload = await this.chatbotService.getFile(userId, id);
+    const { data, contentType } = payload;
+    res.set({
+      'Content-Type': contentType,
+      'Content-Disposition': `inline; filename="${id}"`,
+    });
+    res.send(data);
+  }
+
+  @Delete('files/:id')
   @UseGuards(RoleGuard)
   @Roles(Role.USER, Role.ADMIN)
   @ApiBearerAuth()
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        fileId: { type: 'string' },
-      },
-    },
-    examples: {
-      'application/json': {
-        value: {
-          fileId: 'fileId',
-        },
-      },
-    },
+  @ApiParam({
+    name: 'file id',
+    type: 'string'
   })
-  async deleteFile(@Payload() payload: { fileId: string }) {
-    return await this.chatbotService.deleteFile(payload.fileId);
+  async deleteFile(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return await this.chatbotService.deleteFile(userId, id);
+  }
+
+  @Patch('files/:id/content')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'file id',
+    type: 'string'
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multer.memoryStorage(),
+    }),
+  )
+  async updateFile(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: 10000000 })],
+      }),
+    )
+    file: Express.Multer.File,
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string
+  ) {
+    console.log(id)
+    return await this.chatbotService.updateFile(file, userId, id);
+  }
+
+  @Patch('files/:id/rename')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'file id',
+    type: 'string'
+  })
+  async renameFile(
+    @Param('id') id: string,
+    @Body('newName') newName: string,
+    @CurrentUser('id') userId: string
+  ) {
+    return await this.chatbotService.renameFile(userId, id, newName);
   }
 
   @Post('conversations')
@@ -134,26 +191,15 @@ export class ChatbotController {
     return await this.chatbotService.findConversation(user.id, id, page, limit);
   }
 
-  @Delete('conversations')
+  @Delete('conversations/:id')
   @UseGuards(RoleGuard)
   @Roles(Role.USER)
   @ApiBearerAuth()
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        conversationId: { type: 'string' },
-      },
-    },
-    examples: {
-      'application/json': {
-        value: {
-          conversationId: 'conversationId',
-        },
-      },
-    },
+  @ApiParam({
+    name: 'id',
+    type: 'string',
   })
-  async deleteConversation(@Payload() payload: { conversationId: string }) {
-    return await this.chatbotService.deleteConversation(payload.conversationId);
+  async deleteConversation(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return await this.chatbotService.deleteConversation(userId, id);
   }
 }

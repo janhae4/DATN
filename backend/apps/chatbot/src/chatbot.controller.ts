@@ -54,8 +54,8 @@ export class ChatbotController {
     routingKey: CHATBOT_PATTERN.DELETE_CONVERSATION,
     queue: CHATBOT_PATTERN.DELETE_CONVERSATION,
   })
-  async deleteConversation(conversationId: string) {
-    return await this.chatbotService.deleteConversation(conversationId);
+  async deleteConversation(payload: { conversationId: string; userId: string }) {
+    return await this.chatbotService.deleteConversation(payload.conversationId, payload.userId);
   }
 
   @RabbitRPC({
@@ -81,8 +81,9 @@ export class ChatbotController {
     routingKey: CHATBOT_PATTERN.DELETE_FILE,
     queue: CHATBOT_PATTERN.DELETE_FILE,
   })
-  async deleteFile(fileId: string ) {
-    return await this.storageService.deleteFile(fileId);
+  async deleteFile(payload: {userId: string, fileId: string}) {
+    const { userId, fileId } = payload;
+    return await this.storageService.deleteFile(userId, fileId);
   }
 
   @RabbitRPC({
@@ -97,5 +98,40 @@ export class ChatbotController {
       payload.conversationId,
       payload.role,
     );
+  }
+
+  @RabbitRPC({
+    exchange: CHATBOT_EXCHANGE,
+    routingKey: CHATBOT_PATTERN.GET_FILE_BY_ID,
+    queue: CHATBOT_PATTERN.GET_FILE_BY_ID,
+  })
+  async getFileById(payload: { fileId: string, userId: string }) {
+    const fileStream = await this.storageService.getFile(payload.userId, payload.fileId);
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of fileStream) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+
+    return buffer.toString('base64');
+  }
+
+  @RabbitRPC({
+    exchange: CHATBOT_EXCHANGE,
+    routingKey: CHATBOT_PATTERN.UPDATE_FILE,
+    queue: CHATBOT_PATTERN.UPDATE_FILE,
+  })
+  async updateFile(payload: { fileId: string; file: Express.Multer.File, userId: string }) {
+    return await this.storageService.updateFile(payload.file, payload.userId, payload.fileId);
+  }
+
+  @RabbitRPC({
+    exchange: CHATBOT_EXCHANGE,
+    routingKey: CHATBOT_PATTERN.RENAME_FILE,
+    queue: CHATBOT_PATTERN.RENAME_FILE,
+  })
+  async renameFile(payload: { fileId: string; newName: string, userId: string }) {
+    return await this.storageService.renameFile(payload.userId, payload.fileId, payload.newName);
   }
 }
