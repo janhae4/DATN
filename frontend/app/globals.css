@@ -146,3 +146,54 @@
     --sidebar-ring: oklch(0.439 0 0);
   }
 }
+.sx-theme-shadcn {
+  /* Biến cơ bản (lấy từ theme shadcn) */
+  --sx-color-primary: var(--primary);
+  --sx-color-background: var(--background);
+  --sx-color-surface: var(--card);
+  --sx-color-on-surface: var(--card-foreground);
+  --sx-color-border: var(--border);
+  --sx-color-text-primary: var(--foreground);
+  --sx-color-text-secondary: var(--muted-foreground);
+
+  /* --- ĐỊNH NGHĨA MÀU TƯƠNG ỨNG VỚI initialCalendars --- */
+  
+  /* 'personal' (Màu đỏ từ code của bạn) */
+  --sx-color-personal-main: lightgreen;
+  --sx-color-personal-container: lightgreen;
+  --sx-color-personal-on-container: #FFFFFF; /* Tự thêm: Chữ trắng */
+
+  /* 'work' (Màu đỏ từ code của bạn) */
+  --sx-color-work-main: lightblue;
+  --sx-color-work-container: lightblue;
+  --sx-color-work-on-container: #FFFFFF; /* Tự thêm: Chữ trắng */
+  
+  /* 'leisure' (Màu xanh lá từ code của bạn) */
+  --sx-color-leisure-main: #1cf9b0;
+  --sx-color-leisure-container: #1cf9b0;
+  --sx-color-leisure-on-container: #004d3d; /* Lấy từ ví dụ: Chữ đen */
+
+  /* 'school' (Màu xanh dương từ code của bạn) */
+  --sx-color-school-main: #1c7df9;
+  --sx-color-school-container: #d2e7ff;
+  --sx-color-school-on-container: #002859; /* Lấy từ ví dụ: Chữ đen */
+}
+
+/* Định nghĩa màu dark mode (lấy từ code của bạn) */
+.dark .sx-theme-shadcn {
+  --sx-color-personal-main: #FF0000;
+  --sx-color-personal-container: #FF0000;
+  --sx-color-personal-on-container: #FFFFFF;
+
+  --sx-color-work-main: #FF0000;
+  --sx-color-work-container: #FF0000;
+  --sx-color-work-on-container: #FFFFFF;
+  
+  --sx-color-leisure-main: #c0fff5;
+  --sx-color-leisure-container: #42a297;
+  --sx-color-leisure-on-container: #e6fff5;
+
+  --sx-color-school-main: #c0dfff;
+  --sx-color-school-container: #426aa2;
+  --sx-color-school-on-container: #dee6ff;
+}

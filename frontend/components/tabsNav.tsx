@@ -7,6 +7,7 @@ import {
 import Summary from "./features/summary/summary"
 import Backlogs from "./features/backlogs/backlogs"
 import { KanbanBoard } from "./features/boards/KanbanBoard"
+import TimelineView from "./features/timeline/TimelineView"
 export function TabsNav() {
     return (
         <div className="flex w-full  flex-col gap-6">
@@ -28,7 +29,7 @@ export function TabsNav() {
                     <KanbanBoard />
                 </TabsContent>
                 <TabsContent value="timeline">
-                    content
+                    <TimelineView/>
                 </TabsContent>
                 <TabsContent value="pages">
                     content
