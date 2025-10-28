@@ -1,6 +1,6 @@
 import React, { useState, useEffect, JSX } from "react";
 import { Loader2, X, FilePlus } from "lucide-react";
-import { ApiService } from "../chat-team/services/api-service";
+import { ApiService } from "../../services/api-service";
 
 interface CreateTextFileModalProps {
   isOpen: boolean;

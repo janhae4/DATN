@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ApiService } from "../api-service";
+import { ApiService } from "../services/api-service";
 
 
 
@@ -216,7 +216,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }),
 
     ensureConversationVisible: async (convId, fetchIfMissing) => {
-        // ... (Giữ nguyên)
         const state = get();
         const isVisible = state.visibleConversations.some((c) => c._id === convId);
 

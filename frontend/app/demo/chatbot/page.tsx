@@ -23,7 +23,7 @@ import dynamic from "next/dynamic";
 import { CreateTextFileModal } from "./createFileModal";
 
 const FileViewerModal = dynamic(
-  () => import("./fileViewModal").then((mod) => mod.FileViewerModal),
+  () => import("../chat-team/components/fileViewModal").then((mod) => mod.FileViewerModal),
   {
     loading: () => (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

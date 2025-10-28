@@ -21,6 +21,7 @@ interface MessageData {
   sender: Participant;
   createdAt: string;
   conversationId: string;
+  teamId?: string
 }
 
 interface SearchResponse {
@@ -39,6 +40,7 @@ interface Conversation extends ConversationMeta {
   participants?: Participant[];
   isGroupChat: boolean;
   name?: string;
+  teamId?: string
   avatar?: string;
 }
 
@@ -87,4 +89,9 @@ interface ChatState {
   removeTempMessage: (conversationId: string, tempId: string) => void;
   setMessagePage: (conversationId: string, page: number) => void;
   setHasMoreMessages: (conversationId: string, hasMore: boolean) => void;
+}
+
+interface CreateTeam {
+  id: string;
+  name: string;
 }

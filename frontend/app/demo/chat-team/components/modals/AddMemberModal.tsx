@@ -1,18 +1,19 @@
+import { Loader2 } from "lucide-react";
+import { ApiService } from "../../services/api-service";
 import { useEffect, useState } from "react";
-import { Spinner } from "./components";
-import { ApiService } from "../api-service";
 
-interface CreateTeamModalProps {
+interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onChatCreated: (conversation: Conversation) => void;
+  onMembersAdded: (updatedConversation: Conversation) => void;
+  teamId: string;
 }
-export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
+export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   isOpen,
   onClose,
-  onChatCreated,
+  onMembersAdded,
+  teamId,
 }) => {
-  const [teamName, setTeamName] = useState("");
   const [participantIds, setParticipantIds] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,62 +55,41 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
     setSearchQuery("");
     setSearchResults([]);
   };
-  if (!isOpen) return null;
 
   const handleRemoveUser = (userId: string) => {
     setSelectedUsers((prev) => prev.filter((u) => u.id !== userId));
   };
 
+  useEffect(() => {
+    if (!isOpen) {
+      setParticipantIds("");
+      setError("");
+      setIsLoading(false);
+    }
+  }, [isOpen]);
+  if (!isOpen) return null;
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     const ids = selectedUsers.map((u) => u.id);
-
-    if (!teamName.trim() || ids.length === 0) {
-      setError("Vui lòng nhập tên team và chọn ít nhất một thành viên.");
-      return;
-    }
-
     setIsLoading(true);
     setError("");
     try {
-      const newTeamConversation = await ApiService.createTeam(teamName, ids);
-      setTeamName("");
-      setSelectedUsers([]);
-      setSearchQuery("");
-      onChatCreated(newTeamConversation);
+      const updatedConversation = await ApiService.addMembers(teamId, ids);
+      onMembersAdded(updatedConversation);
     } catch (err: any) {
-      setError(err.message || "Không thể tạo team.");
+      setError(err.message || "Không thể thêm thành viên.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                <h2 className="text-xl font-bold mb-4">Tạo Team mới</h2>
+        <h2 className="text-xl font-bold mb-4">Thêm thành viên mới</h2>
         <form onSubmit={handleSubmit}>
-                    {/* Tên Team */}
-          <div className="mb-4">
-             
-            <label
-              htmlFor="teamName"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-                            Tên Team  
-            </label>
-             
-            <input
-              type="text"
-              id="teamName"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              placeholder="Tên team của bạn..."
-              className="w-full p-2 border border-gray-300 rounded"
-              required
-            />
-          </div>
-                    {/* Khu vực chọn thành viên */}
           <div className="mb-4 relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
                  Thêm Thành viên  
@@ -174,30 +154,27 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
               </div>
             )}
           </div>
-                   
-          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}       
-            {/* Nút Bấm */}
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           <div className="flex justify-end gap-4 mt-6">
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                setTeamName("");
-                setSelectedUsers([]);
-                setSearchQuery("");
-                setError("");
-              }}
+              onClick={onClose}
               className="px-4 py-2 rounded text-gray-600 bg-gray-100 hover:bg-gray-200"
             >
-                            Hủy  
-            </button>{" "}
-             
+              {" "}
+              Hủy{" "}
+            </button>
             <button
               type="submit"
               disabled={isLoading}
               className="px-4 py-2 rounded text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 flex items-center"
             >
-                            {isLoading ? <Spinner /> : "Tạo Team"} 
+              {" "}
+              {isLoading ? (
+                <Loader2 className="animate-spin h-5 w-5 text-white" />
+              ) : (
+                "Thêm"
+              )}{" "}
             </button>
           </div>
         </form>
