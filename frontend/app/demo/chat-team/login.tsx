@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { ApiService } from "../api-service";
+import { ApiService } from "./services/api-service";
 
 interface LoginPageProps {
   onLoginSuccess: (user: User) => void;
@@ -17,6 +17,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setIsLoading(true);
     try {
       await ApiService.login(email, password);
+      setTimeout(() => {}, 2000);
       const userInfo = await ApiService.getInfo();
       onLoginSuccess(userInfo);
     } catch (err: any) {

@@ -1,11 +1,11 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { LoginPage } from "./login";
-import { ChatComponent } from "./chat";
-import { ApiService } from "../api-service";
-import { useChatStore } from "./useChatStore";
+import { ApiService } from "./services/api-service";
+import { useChatStore } from "./store/useChatStore";
+import { ChatPage } from "./chat";
 
 export default function Page() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -96,5 +96,5 @@ export default function Page() {
     );
   }
 
-  return <ChatComponent currentUser={currentUser} onLogout={handleLogout} />;
+  return <ChatPage currentUser={currentUser} onLogout={handleLogout} />;
 }

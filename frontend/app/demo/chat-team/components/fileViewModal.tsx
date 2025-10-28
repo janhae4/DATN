@@ -10,7 +10,7 @@ import {
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { ApiService } from "../api-service";
+import { ApiService } from "../services/api-service";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -23,7 +23,8 @@ interface FileViewerModalProps {
   fileId: string;
   originalName: string;
   fileType: "pdf" | "txt" | "other";
-  onRenameSuccess: (oldId: string, newId: string, newName: string) => void;
+  onRenameSuccess: (newFileId: string) => void;
+  teamId?: string;
 }
 
 export const FileViewerModal = ({
@@ -33,6 +34,7 @@ export const FileViewerModal = ({
   originalName,
   fileType,
   onRenameSuccess,
+  teamId
 }: FileViewerModalProps): JSX.Element | null => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export const FileViewerModal = ({
     setNumPages(null);
     setPageNumber(1);
     try {
-      const response = await ApiService.getFile(fileId);
+      const response = await ApiService.getFile(fileId, teamId);
       if (isPdfFile) {
         const blob = await response.blob();
         const pdfFile = new File([blob], originalName, { type: blob.type });
@@ -108,8 +110,8 @@ export const FileViewerModal = ({
     setError(null);
     try {
       const extension = originalName.split(".").pop()?.toLowerCase();
-      const { newFileId } = await ApiService.renameFile(fileId, currentName);
-      onRenameSuccess(fileId, newFileId, `${currentName}.${extension}`);
+      const { newFileId } = await ApiService.renameFile(fileId, currentName, teamId);
+      onRenameSuccess(newFileId);
       onClose();
     } catch (err: any) {
       console.error("Error renaming file:", err);
