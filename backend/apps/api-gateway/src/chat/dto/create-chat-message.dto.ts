@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateChatMessageDto {
   @ApiProperty({
@@ -11,4 +11,12 @@ export class CreateChatMessageDto {
   @IsNotEmpty()
   @MaxLength(2000)
   content: string;
+
+  @ApiProperty({
+    description: 'ID team',
+    example: '',
+  })
+  @IsString()
+  @IsOptional()
+  teamId?: string
 }

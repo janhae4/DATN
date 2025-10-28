@@ -3,4 +3,6 @@ export class ResponseStreamDto {
   type: string;
   content: string;
   conversationId: string;
+  metadata: any;
+  teamId?: string;
 }

@@ -20,4 +20,5 @@ export interface SendMessageEventPayload {
   attachments: AttachmentDto[];
   reactions: ReactionDto[];
   createdAt: Date;
+  teamId?: string
 }

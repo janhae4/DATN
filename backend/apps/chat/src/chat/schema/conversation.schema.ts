@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Schema as MongooseSchema } from 'mongoose';
+import { Document, Schema as MongooseSchema } from 'mongoose';
 import { Message } from './message.schema';
 import { Participant, ParticipantSchema } from './participant.schema';
 
 @Schema({ timestamps: true })
-export class Conversation {
+export class Conversation extends Document{
   @Prop({ trim: true })
   name: string;
 

@@ -5,12 +5,14 @@ import {
   ChangeRoleMember,
   CreateTeamDto,
   LeaveMember,
+  NotificationEventDto,
   RemoveMember,
   TEAM_EXCHANGE,
   TEAM_PATTERN,
   TransferOwnership,
 } from '@app/contracts';
 import { RabbitPayload, RabbitRPC } from '@golevelup/nestjs-rabbitmq';
+import { customErrorHandler } from '@app/common';
 
 @Controller()
 export class TeamController {
@@ -20,6 +22,7 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_ALL,
     queue: TEAM_PATTERN.FIND_ALL,
+    errorHandler: customErrorHandler
   })
   async findAll() {
     return await this.teamService.findAll();
@@ -29,8 +32,9 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_BY_USER_ID,
     queue: TEAM_PATTERN.FIND_BY_USER_ID,
+    errorHandler: customErrorHandler
   })
-  async findByUserId(@RabbitPayload() userId: string) {
+  async findByUserId(userId: string) {
     return await this.teamService.findByUserId(userId);
   }
 
@@ -38,17 +42,29 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_BY_ID,
     queue: TEAM_PATTERN.FIND_BY_ID,
+    errorHandler: customErrorHandler
   })
-  async findById(@RabbitPayload() payload: { id: string; userId: string }) {
+  async findById(payload: { id: string; userId: string }) {
     return await this.teamService.findById(payload.id, payload.userId);
+  }
+
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.FIND_ROOMS_BY_USER_ID,
+    queue: TEAM_PATTERN.FIND_ROOMS_BY_USER_ID,
+    errorHandler: customErrorHandler
+  })
+  async findByName(userId: string) {
+    return await this.teamService.findRoomsByUserId(userId);
   }
 
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.CREATE,
     queue: TEAM_PATTERN.CREATE,
+    errorHandler: customErrorHandler
   })
-  async create(@RabbitPayload() createTeamDto: CreateTeamDto) {
+  async create(createTeamDto: CreateTeamDto) {
     return await this.teamService.create(createTeamDto);
   }
 
@@ -56,8 +72,9 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.ADD_MEMBER,
     queue: TEAM_PATTERN.ADD_MEMBER,
+    errorHandler: customErrorHandler
   })
-  async addMember(@RabbitPayload() addMemberDto: AddMember) {
+  async addMember(addMemberDto: AddMember) {
     return await this.teamService.addMembers(addMemberDto);
   }
 
@@ -65,17 +82,30 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.REMOVE_MEMBER,
     queue: TEAM_PATTERN.REMOVE_MEMBER,
+    errorHandler: customErrorHandler
   })
-  async removeMember(@RabbitPayload() payload: RemoveMember) {
+  async removeMember(payload: RemoveMember) {
     return await this.teamService.removeMember(payload);
   }
 
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.REMOVE_TEAM,
+    queue: TEAM_PATTERN.REMOVE_TEAM,
+    errorHandler: customErrorHandler
+  })
+  async removeTeam(payload: { userId: string; teamId: string }) {
+    return await this.teamService.removeTeam(payload.userId, payload.teamId);
+  }
+
+
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.LEAVE_TEAM,
     queue: TEAM_PATTERN.LEAVE_TEAM,
+    errorHandler: customErrorHandler
   })
-  async leaveTeam(@RabbitPayload() payload: LeaveMember) {
+  async leaveTeam(payload: LeaveMember) {
     return await this.teamService.leaveTeam(payload);
   }
 
@@ -83,8 +113,9 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.TRANSFER_OWNERSHIP,
     queue: TEAM_PATTERN.TRANSFER_OWNERSHIP,
+    errorHandler: customErrorHandler
   })
-  async transferOwnership(@RabbitPayload() payload: TransferOwnership) {
+  async transferOwnership(payload: TransferOwnership) {
     return await this.teamService.transferOwnership(payload);
   }
 
@@ -92,8 +123,19 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.CHANGE_ROLE,
     queue: TEAM_PATTERN.CHANGE_ROLE,
+    errorHandler: customErrorHandler
   })
-  async changeRole(@RabbitPayload() payload: ChangeRoleMember) {
+  async changeRole(payload: ChangeRoleMember) {
     return await this.teamService.changeMemberRole(payload);
+  }
+
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.SEND_NOTIFICATION,
+    queue: TEAM_PATTERN.SEND_NOTIFICATION,
+    errorHandler: customErrorHandler
+  })
+  async sendNotification(payload: { userId: string, teamId: string; message: NotificationEventDto }) {
+    return await this.teamService.sendNotification(payload.userId, payload.teamId, payload.message);
   }
 }

@@ -4,10 +4,12 @@ export const TEAM_PATTERN = {
   FIND_BY_ID: 'team.findById',
   FIND_BY_USER_ID: 'team.findByUserId',
   FIND_BY_OWNER_ID: 'team.findByOwnerId',
+  FIND_ROOMS_BY_USER_ID: 'team.findRoomsByUserId',
   UPDATE: 'team.update',
   REMOVE: 'team.remove',
   ADD_MEMBER: 'team.addMember',
   REMOVE_MEMBER: 'team.removeMember',
+  REMOVE_TEAM: 'team.removeTeam',
   PROMOTE_TO_ADMIN: 'team.promoteToAdmin',
   DEMOTE_FROM_ADMIN: 'team.demoteFromAdmin',
   CHANGE_ROLE: 'team.changeRole',
@@ -15,4 +17,5 @@ export const TEAM_PATTERN = {
   TRANSFER_OWNERSHIP: 'team.transferOwnership',
   JOIN_TEAM: 'team.joinTeam',
   KICK_MEMBER: 'team.kickMember',
+  SEND_NOTIFICATION: 'team.sendNotification',
 };

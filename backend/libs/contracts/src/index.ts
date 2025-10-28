@@ -118,6 +118,8 @@ export * from './team/dto/change-role.dto';
 export * from './team/dto/leave-member.dto';
 export * from './team/dto/action-role.dto';
 export * from './team/dto/transfer-owner.dto';
+export * from './team/dto/send-notification.dto'
+export * from './team/dto/remove-team.dto'
 
 /*----
 VIDEO-CHAT

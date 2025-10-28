@@ -4,24 +4,25 @@ import {
   ChangeRoleMember,
   CHAT_EXCHANGE,
   CHAT_PATTERN,
-  CHAT_QUEUE,
   CreateChatMessageDto,
   CreateDirectChatDto,
   EVENTS,
-  EVENTS_CHAT_QUEUE,
   EVENTS_EXCHANGE,
   GetChatMessageConversationDto,
   LeaveMember,
   User,
 } from '@app/contracts';
+
 import type {
   AddMemberEventPayload,
   CreateTeamEventPayload,
   PaginationDto,
   RemoveMemberEventPayload,
+  RemoveTeamEventPayload,
   TransferOwnershipEventPayload,
 } from '@app/contracts';
 import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { customErrorHandler } from '@app/common';
 
 @Controller('chat')
 export class ChatController {
@@ -30,16 +31,18 @@ export class ChatController {
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.CREATE_TEAM,
-    queue: EVENTS.CREATE_TEAM,
+    queue: "events.create.team.chat",
+    errorHandler: customErrorHandler,
   })
-  handleCreateTeam(payload: CreateTeamEventPayload) {
-    return this.chatService.createChat(payload);
+  async handleCreateTeam(payload: CreateTeamEventPayload) {
+    return await this.chatService.createChat(payload);
   }
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.USER_UPDATED,
-    queue: EVENTS.USER_UPDATED,
+    queue: 'events.user.updated.chat',
+    errorHandler: customErrorHandler,
   })
   updateUser(user: Partial<User>) {
     return this.chatService.updateUser(user);
@@ -48,7 +51,8 @@ export class ChatController {
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.ADD_MEMBER,
-    queue: EVENTS.ADD_MEMBER,
+    queue: 'events.add.member.chat',
+    errorHandler: customErrorHandler,
   })
   addMember(payload: AddMemberEventPayload) {
     return this.chatService.addMember(payload);
@@ -57,7 +61,8 @@ export class ChatController {
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.REMOVE_MEMBER,
-    queue: EVENTS.REMOVE_MEMBER,
+    queue: 'events.remove.member.chat',
+    errorHandler: customErrorHandler,
   })
   removeMember(payload: RemoveMemberEventPayload) {
     return this.chatService.removeMember(payload);
@@ -66,7 +71,8 @@ export class ChatController {
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.LEAVE_TEAM,
-    queue: EVENTS.LEAVE_TEAM,
+    queue: 'events.leave.team.chat',
+    errorHandler: customErrorHandler,
   })
   leaveTeam(payload: LeaveMember) {
     return this.chatService.leaveTeam(payload);
@@ -74,8 +80,19 @@ export class ChatController {
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.REMOVE_TEAM,
+    queue: 'events.remove.team.chat',
+    errorHandler: customErrorHandler,
+  })
+  removeTeam(payload: RemoveTeamEventPayload) {
+    return this.chatService.removeTeam(payload);
+  }
+
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.MEMBER_ROLE_CHANGED,
-    queue: EVENTS.MEMBER_ROLE_CHANGED,
+    queue: 'events.member.role.changed.chat',
+    errorHandler: customErrorHandler,
   })
   memberRoleChanged(payload: ChangeRoleMember) {
     return this.chatService.changeRole(payload);
@@ -84,7 +101,8 @@ export class ChatController {
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.OWNERSHIP_TRANSFERRED,
-    queue: EVENTS.OWNERSHIP_TRANSFERRED,
+    queue: 'events.ownership.transferred.chat',
+    errorHandler: customErrorHandler,
   })
   ownershipTransferred(payload: TransferOwnershipEventPayload) {
     return this.chatService.transferOwnership(payload);
@@ -94,6 +112,7 @@ export class ChatController {
     exchange: CHAT_EXCHANGE,
     routingKey: CHAT_PATTERN.CREATE_DIRECT_MESSAGE,
     queue: CHAT_PATTERN.CREATE_DIRECT_MESSAGE,
+    errorHandler: customErrorHandler,
   })
   createDirectChat(createDirectChat: CreateDirectChatDto) {
     return this.chatService.createDirectChat(createDirectChat);
@@ -103,6 +122,7 @@ export class ChatController {
     exchange: CHAT_EXCHANGE,
     routingKey: CHAT_PATTERN.CREATE_MESSAGE,
     queue: CHAT_PATTERN.CREATE_MESSAGE,
+    errorHandler: customErrorHandler,
   })
   createChatMessage(createChatMessageDto: CreateChatMessageDto) {
     console.log(createChatMessageDto);
@@ -113,6 +133,7 @@ export class ChatController {
     exchange: CHAT_EXCHANGE,
     routingKey: CHAT_PATTERN.GET,
     queue: CHAT_PATTERN.GET,
+    errorHandler: customErrorHandler,
   })
   getConversationsForUser(
     payload: { userId: string; page: number; limit: number },
@@ -123,8 +144,20 @@ export class ChatController {
 
   @RabbitRPC({
     exchange: CHAT_EXCHANGE,
+    routingKey: CHAT_PATTERN.GET_CONVERSATION_BY_TEAM_ID,
+    queue: CHAT_PATTERN.GET_CONVERSATION_BY_TEAM_ID,
+    errorHandler: customErrorHandler,
+  })
+  getConversationByTeamId(payload: { teamId: string; userId: string }) {
+    const { teamId, userId } = payload;
+    return this.chatService.getConversationByTeamId(userId, teamId);
+  }
+
+  @RabbitRPC({
+    exchange: CHAT_EXCHANGE,
     routingKey: CHAT_PATTERN.GET_MESSAGES,
     queue: CHAT_PATTERN.GET_MESSAGES,
+    errorHandler: customErrorHandler,
   })
   getMessagesForConversation(payload: GetChatMessageConversationDto) {
     const { conversationId, limit, page, userId } = payload;
@@ -140,6 +173,7 @@ export class ChatController {
     exchange: CHAT_EXCHANGE,
     routingKey: CHAT_PATTERN.GET_CONVERSATION_BY_ID,
     queue: CHAT_PATTERN.GET_CONVERSATION_BY_ID,
+    errorHandler: customErrorHandler,
   })
   getConversationById(
     payload: { conversationId: string; userId: string },
@@ -152,6 +186,7 @@ export class ChatController {
     exchange: CHAT_EXCHANGE,
     routingKey: CHAT_PATTERN.GET_ALL_MESSAGES,
     queue: CHAT_PATTERN.GET_ALL_MESSAGES,
+    errorHandler: customErrorHandler,
   })
   async getAllMessages() {
     return await this.chatService.getAllMessages();
@@ -161,6 +196,7 @@ export class ChatController {
     exchange: CHAT_EXCHANGE,
     routingKey: CHAT_PATTERN.SEARCH_MESSAGES,
     queue: CHAT_PATTERN.SEARCH_MESSAGES,
+    errorHandler: customErrorHandler,
   })
   searchMessages(payload: { query: string; conversationId: string; userId: string, options: PaginationDto }) {
     console.log(payload);

@@ -1,7 +1,8 @@
 import { BadRequestException, ClientConfigService, ForbiddenException, NotFoundException } from '@app/contracts';
 import { Injectable, Logger } from '@nestjs/common';
 import * as Minio from 'minio';
-import path from 'path';
+import * as path from 'path';
+
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
@@ -33,8 +34,13 @@ export class StorageService {
     }
   }
 
-  public async uploadFile(file: Express.Multer.File, userId: string) {
-    const fileName = `${userId}_${Date.now()}_${file.originalname}`;
+  public async uploadFile(file: Express.Multer.File, userId: string, teamId?: string) {
+    let fileName: string
+    if (!teamId) {
+      fileName = `${userId}_${Date.now()}_${file.originalname}`;
+    } else {
+      fileName = `${teamId}@${userId}_${Date.now()}_${file.originalname}`
+    }
 
     const metaData = {
       'Content-Type': file.mimetype,
@@ -57,9 +63,9 @@ export class StorageService {
     }
   }
 
-  public async getFilesByUserId(userId: string): Promise<string[]> {
+  async getFilesByPrefix(prefix: string): Promise<string[]> {
     const files: string[] = [];
-    const prefix = `${userId}_`;
+    console.log(prefix)
     try {
       const stream = this.minioClient.listObjectsV2(
         this.bucketName,
@@ -75,12 +81,12 @@ export class StorageService {
         });
 
         stream.on('error', (err) => {
-          this.logger.error(`Lỗi khi liệt kê file cho user ${userId}: ${err}`);
+          this.logger.error(`Lỗi khi liệt kê file cho prefix ${prefix}: ${err}`);
           reject(new BadRequestException('Lỗi khi lấy danh sách file'));
         });
 
         stream.on('end', () => {
-          this.logger.log(`Tìm thấy ${files.length} file cho user ${userId}`);
+          this.logger.log(`Tìm thấy ${files.length} file cho prefix ${prefix}`);
           resolve(files);
         });
       });
@@ -90,9 +96,19 @@ export class StorageService {
     }
   }
 
-  public async deleteFile(userId: string, fileName: string) {
-    this.logger.log(`Attempting to delete file...`);
-    if (!fileName || !fileName.startsWith(`${userId}_`)) {
+  private isFileAuthorized(fileId: string, userId: string, teamId?: string): boolean {
+    if (teamId) {
+      return fileId.startsWith(`${teamId}@`);
+    } else {
+      return fileId.startsWith(`${userId}_`);
+    }
+  }
+
+
+  public async deleteFile(fileName: string, userId: string, teamId?: string) {
+    this.logger.log(`Attempting to delete file ${fileName}`);
+  
+    if (!this.isFileAuthorized(fileName, userId, teamId)) {
       this.logger.warn(
         `User ${userId} attempted to delete unauthorized file ${fileName}`,
       );
@@ -109,8 +125,8 @@ export class StorageService {
     }
   }
 
-  async getFile(userId: string, fileId: string) {
-    if (!fileId || !fileId.startsWith(`${userId}_`)) {
+  async getFile(fileId: string, userId: string, teamId?: string) {
+    if (!this.isFileAuthorized(fileId, userId, teamId)) {
       this.logger.warn(
         `User ${userId} attempted to access unauthorized file ${fileId}`,
       );
@@ -138,10 +154,11 @@ export class StorageService {
 
   async updateFile(
     file: Express.Multer.File,
-    userId: string,
     fileId: string,
+    userId: string,
+    teamId?: string,
   ): Promise<{ fileId: string; etag: string }> {
-    if (!fileId || !fileId.startsWith(`${userId}_`)) {
+    if (!this.isFileAuthorized(fileId, userId, teamId)) {
       this.logger.warn(
         `User ${userId} attempted to update unauthorized file ${fileId}`,
       );
@@ -179,22 +196,35 @@ export class StorageService {
     }
   }
 
-  async renameFile(userId: string, oldFileId: string, newName: string) {
-    if (!oldFileId || !oldFileId.startsWith(`${userId}_`)) {
+  async renameFile(oldFileId: string, newName: string, userId: string, teamId?: string) {
+    if (!this.isFileAuthorized(oldFileId, userId, teamId)) {
       this.logger.warn(`User ${userId} attempted to rename unauthorized file ${oldFileId}`);
       throw new ForbiddenException('Access denied');
     }
 
     const extension = path.extname(oldFileId);
-    const firstUnderscore = oldFileId.indexOf('_');
-    const secondUnderscore = oldFileId.indexOf('_', firstUnderscore + 1);
+    let prefix = '';
 
-    if (secondUnderscore === -1) {
-      this.logger.error(`Invalid file ID format for rename: ${oldFileId}`);
-      throw new BadRequestException('Invalid original file ID format');
+    if (teamId) {
+      const firstAt = oldFileId.indexOf('@');
+      const firstUnderscore = oldFileId.indexOf('_', firstAt + 1);
+      const secondUnderscore = oldFileId.indexOf('_', firstUnderscore + 1);
+
+      if (firstAt === -1 || firstUnderscore === -1 || secondUnderscore === -1) {
+        this.logger.error(`Invalid team file ID format for rename: ${oldFileId}`);
+        throw new BadRequestException('Invalid original file ID format');
+      }
+      prefix = oldFileId.substring(0, secondUnderscore + 1);
+    } else {
+      const firstUnderscore = oldFileId.indexOf('_');
+      const secondUnderscore = oldFileId.indexOf('_', firstUnderscore + 1);
+
+      if (firstUnderscore === -1 || secondUnderscore === -1) {
+        this.logger.error(`Invalid user file ID format for rename: ${oldFileId}`);
+        throw new BadRequestException('Invalid original file ID format');
+      }
+      prefix = oldFileId.substring(0, secondUnderscore + 1); // "userId_timestamp_"
     }
-
-    const prefix = oldFileId.substring(0, secondUnderscore + 1);
 
     const newBaseName = path.basename(newName, path.extname(newName));
 
@@ -208,7 +238,7 @@ export class StorageService {
 
     if (newFileId === oldFileId) {
       this.logger.log(`New name is the same as the old name for ${oldFileId}. No rename needed.`);
-      return oldFileId;
+      return newFileId;
     }
     try {
       await this.minioClient.copyObject(
@@ -235,6 +265,13 @@ export class StorageService {
         }
       }
       throw new BadRequestException('Error renaming file');
+    }
+  }
+
+  async deleteFilesByTeamId(teamId: string) {
+    const files = await this.getFilesByPrefix(`${teamId}@`);
+    for (const file of files) {
+      await this.deleteFile(file, '', teamId);
     }
   }
 }

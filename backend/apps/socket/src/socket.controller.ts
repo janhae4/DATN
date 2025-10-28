@@ -12,15 +12,18 @@ import {
   NotificationType,
   SOCKET_EXCHANGE,
   CHATBOT_EXCHANGE,
+  TEAM_PATTERN,
 } from '@app/contracts';
 
-import type { 
-  AddMemberEventPayload, 
-  ChangeRoleMember, 
-  CreateTeamEventPayload, 
-  LeaveMember, 
-  RemoveMemberEventPayload, 
-  SendMessageEventPayload 
+import type {
+  AddMemberEventPayload,
+  ChangeRoleMember,
+  CreateTeamEventPayload,
+  LeaveMember,
+  RemoveMemberEventPayload,
+  RemoveTeamEventPayload,
+  SendMessageEventPayload,
+  SendTeamNotificationDto
 } from '@app/contracts';
 
 import { SocketGateway } from './socket.gateway';
@@ -55,15 +58,16 @@ export class SocketController {
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.CREATE_TEAM,
-    queue: "events_socket_create_team",
+    queue: "events.create.team.socket",
   })
   handleCreateTeam(payload: CreateTeamEventPayload) {
     const { members, name, createdAt, ownerName } = payload;
+    const createAtDate = new Date(createdAt);
     members.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m.id,
         title: `You have been added to team ${name}`,
-        message: `User ${ownerName} created team ${name} at ${createdAt.toISOString()}`,
+        message: `User ${ownerName} created team ${name} at ${createAtDate.toISOString()}`,
         type: NotificationType.SUCCESS,
       }),
     );
@@ -120,6 +124,23 @@ export class SocketController {
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.REMOVE_MEMBER,
+    queue: "events_socket_team_deleted",
+  })
+  handleTeamDeleted(payload: LeaveMember) {
+    const { requesterName, requesterId, teamName, memberIds = [] } = payload;
+    memberIds.map((m) =>
+      this.socketGateway.sendNotificationToUser({
+        userId: m,
+        title: `Team ${teamName} has been deleted`,
+        message: `${m === requesterId ? 'You' : requesterName} deleted team ${teamName}`,
+        type: NotificationType.SUCCESS,
+      }),
+    );
+  }
+
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.LEAVE_TEAM,
     queue: "events_socket_leave_team",
   })
@@ -136,13 +157,47 @@ export class SocketController {
   }
 
   @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.REMOVE_TEAM,
+    queue: "events_socket_remove_team",
+  })
+  handleRemoveTeam(payload: RemoveTeamEventPayload) {
+    const { requesterName, teamName, memberIds = [] } = payload;
+    memberIds.map((m) =>
+      this.socketGateway.sendNotificationToUser({
+        userId: m,
+        title: `Team ${teamName} has been deleted`,
+        message: `${m === requesterName ? 'You' : requesterName} deleted team ${teamName}`,
+        type: NotificationType.FAILED,
+      }),
+    );
+  }
+
+  @RabbitSubscribe({
     exchange: SOCKET_EXCHANGE,
     routingKey: NOTIFICATION_PATTERN.SEND,
     queue: "events_socket_send_notification",
   })
   handleSendNotification(event: NotificationEventDto) {
-    console.log(event)
     this.socketGateway.sendNotificationToUser(event);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: TEAM_PATTERN.SEND_NOTIFICATION,
+    queue: TEAM_PATTERN.SEND_NOTIFICATION,
+  })
+  handleTeamSendNotification(event: SendTeamNotificationDto) {
+    const { members, message } = event;
+
+    members.map((m) =>
+      this.socketGateway.sendNotificationToUser({
+        userId: m,
+        title: message.title,
+        message: message.message,
+        type: message.type,
+      }),
+    );
   }
 
   @RabbitSubscribe({

@@ -4,6 +4,7 @@ export const CHAT_PATTERN = {
   CREATE_DIRECT_MESSAGE: 'chat.createDirectMessage',
   GET: 'chat.getConversation',
   GET_CONVERSATION_BY_ID: 'chat.getConversationById',
+  GET_CONVERSATION_BY_TEAM_ID: 'chat.getConversationByTeamId',
   GET_MESSAGES: 'chat.getMessagesFromConversation',
   GET_ALL_MESSAGES: 'chat.getAllMessages',
   UPDATE_USER: 'chat.updateUser',

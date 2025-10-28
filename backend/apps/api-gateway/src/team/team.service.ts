@@ -11,69 +11,78 @@ import {
 } from '@app/contracts';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Injectable()
 export class TeamService {
   constructor(private readonly amqpConnection: AmqpConnection) { }
 
-  findAll() {
-    return this.amqpConnection.request({
+  async findAll() {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_ALL,
       payload: {},
-    });
+    }))
   }
 
-  findByUserId(id: string) {
-    return this.amqpConnection.request({
+  async findByUserId(id: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_BY_USER_ID,
       payload: id,
-    });
+    }));
   }
 
-  findById(id: string, userId: string) {
-    return this.amqpConnection.request({
+  async findById(id: string, userId: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_BY_ID,
       payload: { id, userId },
-    });
+    }));
   }
 
-  create(createTeamDto: CreateTeamDto) {
-    return this.amqpConnection.request({
+  async create(createTeamDto: CreateTeamDto) {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.CREATE,
       payload: createTeamDto,
-    });
+    }));
   }
 
-  addMember(payload: AddMember) {
-    return this.amqpConnection.request({
+  async addMember(payload: AddMember) {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.ADD_MEMBER,
       payload: payload,
-    });
+    }));
   }
 
-  removeMember(payload: RemoveMember) {
-    return this.amqpConnection.request({
+  async removeMember(payload: RemoveMember) {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.REMOVE_MEMBER,
-      payload: payload,
-    });
+      payload
+    }));
   }
 
-  leaveTeam(payload: LeaveMember) {
-    return this.amqpConnection.request({
+  async removeTeam(userId: string, teamId: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.REMOVE_TEAM,
+      payload: { userId, teamId },
+    }));
+  }
+
+  async leaveTeam(payload: LeaveMember) {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.LEAVE_TEAM,
       payload: payload,
-    });
+    }));
   }
 
-  kickMember(requesterId: string, targetId: string, teamId: string) {
-    return this.amqpConnection.request({
+  async kickMember(requesterId: string, targetId: string, teamId: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.KICK_MEMBER, // Giả sử PATTERN này tồn tại
       payload: {
@@ -81,25 +90,25 @@ export class TeamService {
         targetId,
         teamId,
       },
-    });
+    }));
   }
 
-  transferOwnership(payload: TransferOwnership) {
-    return this.amqpConnection.request({
+  async transferOwnership(payload: TransferOwnership) {
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.TRANSFER_OWNERSHIP,
       payload: payload,
-    });
+    }));
   }
 
-  changeRole(payload: ChangeRoleMember) {
+  async changeRole(payload: ChangeRoleMember) {
     if (payload.newRole === MEMBER_ROLE.OWNER) {
       throw new ForbiddenException('Please use route /ownership instead');
     }
-    return this.amqpConnection.request({
+    return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.CHANGE_ROLE,
       payload: payload,
-    });
+    }));
   }
 }
