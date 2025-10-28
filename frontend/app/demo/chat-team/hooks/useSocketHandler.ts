@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { ApiService } from "../services/api-service";
 import { io, Socket } from "socket.io-client";
+import { MessageData } from "../types/type";
 
 export function useSocketHandler() {
     const socketRef = useRef<Socket | null>(null);

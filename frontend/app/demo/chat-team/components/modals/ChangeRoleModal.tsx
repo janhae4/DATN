@@ -1,11 +1,12 @@
 import { Loader2 } from "lucide-react";
 import { ApiService } from "../../services/api-service";
 import { useEffect, useState } from "react";
+import { Conversation, Participant, Team, UserRole } from "../../types/type";
 
 interface ChangeRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRoleChanged: (updatedConversation: Conversation) => void;
+  onRoleChanged: (updatedConversation: Team) => void;
   conversationId: string;
   member: Participant;
 }
@@ -16,12 +17,12 @@ export const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({
   conversationId,
   member,
 }) => {
-  const [newRole, setNewRole] = useState<UserRole>(member.role || "MEMBER");
+  const [newRole, setNewRole] = useState<UserRole>(member.role as UserRole || "MEMBER");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isOpen) setNewRole(member.role || "MEMBER");
+    if (isOpen) setNewRole(member.role as UserRole || "MEMBER");
     else {
       setError("");
       setIsLoading(false);
@@ -43,6 +44,7 @@ export const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({
         member._id,
         newRole
       );
+      console.log("Updated conversation:", updatedConversation);
       onRoleChanged(updatedConversation);
     } catch (err: any) {
       setError(err.message || "Không thể thay đổi vai trò.");

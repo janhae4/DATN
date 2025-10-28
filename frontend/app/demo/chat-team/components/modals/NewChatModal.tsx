@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { ApiService } from "../../services/api-service";
 import { Loader2 } from "lucide-react";
+import { Conversation, CreateTeam, User } from "../../types/type";
+import { CreateReadStreamOptions } from "fs/promises";
 
 interface NewChatModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onChatCreated: (conversation: Conversation & CreateTeam) => void;
+  onChatCreated: (conversation: Conversation & CreateReadStreamOptions) => void;
 }
 export const NewChatModal: React.FC<NewChatModalProps> = ({
   isOpen,

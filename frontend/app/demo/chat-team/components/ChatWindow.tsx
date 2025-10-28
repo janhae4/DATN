@@ -3,17 +3,18 @@ import React, { useState, useCallback } from "react";
 import { Users as UsersIcon } from "lucide-react";
 import { ChatHeader } from "./ChatHeader";
 import { MessageInput } from "./MessageInput";
-import { TeamAiKnowledgePage } from "./AiKnowledge";
 import { SearchPanel } from "./SearchPanel";
 import { useChatStore } from "../store/useChatStore";
 import { ManageMembersModal } from "./modals/ManageMemberModal";
 import { MessageList } from "./MessageList";
+import { AiKnowledgePage } from "./AiKnowledge";
+import { Conversation, CurrentUser, Team, User } from "../types/type";
 
 export function ChatWindow({
   currentUser,
   selectedConversation,
 }: {
-  currentUser: User;
+  currentUser: CurrentUser;
   selectedConversation: Conversation;
 }) {
   const [activeTab, setActiveTab] = useState<"discussion" | "ai">("discussion");
@@ -29,7 +30,8 @@ export function ChatWindow({
   } = useChatStore();
 
   const onConversationUpdated = useCallback(
-    (updatedConversation: Conversation) => {
+    (updatedConversation: Team) => {
+      console.log("Updated conversation:", updatedConversation);
       updateConversationInList(updatedConversation);
       setIsManageMembersModalOpen(false);
     },
@@ -109,10 +111,10 @@ export function ChatWindow({
           </div>
         )
       ) : (
-        <TeamAiKnowledgePage
+        <AiKnowledgePage
           key={selectedConversation._id}
-          teamId={selectedConversation.teamId || ""}
           currentUser={currentUser}
+          teamId={selectedConversation.teamId || ""}
         />
       )}
     </>

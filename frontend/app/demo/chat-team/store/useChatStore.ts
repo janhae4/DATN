@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { ApiService } from "../services/api-service";
+import { ChatState, Conversation, ConversationMeta } from "../types/type";
 
 
 
@@ -20,7 +21,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     appendMessage: (convId, message) =>
         set((state) => {
-            console.log(message)
             const currentMessages = state.messages[convId] || [];
             const isTemp = message._id.startsWith("temp-");
             const messageExists =
@@ -323,22 +323,46 @@ export const useChatStore = create<ChatState>((set, get) => ({
             return {};
         }),
 
-    updateConversationInList: (updatedConversation) =>
+    updateConversationInList: (updatedTeam) =>
         set((state) => {
-            // ... (Giữ nguyên)
-            console.log("Updating conversation in list:", updatedConversation._id);
-            const newVisible = state.visibleConversations.map((c) =>
-                c._id === updatedConversation._id ? updatedConversation : c
+            const convoToUpdate = state.visibleConversations.find(
+                (c) => c.teamId === updatedTeam.id
             );
+
+            if (!convoToUpdate) {
+                console.warn("Không tìm thấy conversation cho teamId:", updatedTeam.id);
+                return state;
+            }
+
+            const convoIdToUpdate = convoToUpdate._id;
+            const members = updatedTeam.members.map((m) => ({
+                _id: m.id,
+                name: m.name,
+                avatar: m.avatar,
+                role: m.role,
+            }))
+
+            const newVisible = state.visibleConversations.map((c) =>
+                c._id === convoIdToUpdate
+                    ? {
+                        ...c,
+                        name: updatedTeam.name,
+                        participants: members,
+                    }
+                    : c
+            );
+
             const newSelected =
-                state.selectedConversation?._id === updatedConversation._id
-                    ? updatedConversation
+                state.selectedConversation?._id === convoIdToUpdate
+                    ? newVisible.find(c => c._id === convoIdToUpdate)
                     : state.selectedConversation;
+
             const newMeta = {
                 ...state.metaMap,
-                [updatedConversation._id]: {
-                    _id: updatedConversation._id,
-                    latestMessage: updatedConversation.latestMessage,
+                [convoIdToUpdate]: {
+                    ...state.metaMap[convoIdToUpdate],
+                    _id: convoIdToUpdate,
+                    latestMessage: convoToUpdate.latestMessage,
                 },
             };
 

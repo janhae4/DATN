@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { ApiService } from "../services/api-service";
 import { shallow } from "zustand/shallow";
+import { useChatScroll } from "./useChatScroll";
 
 const MESSAGE_LIMIT = 20;
 
@@ -32,7 +33,6 @@ export function useMessageLoader(
             if (!selectedConversationId) return;
             if (messages[selectedConversationId]) {
                 setIsLoadingMessages(false);
-                // Đã có tin nhắn, cuộn xuống dưới
                 setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 100);
                 return;
             }
@@ -97,20 +97,13 @@ export function useMessageLoader(
         chatContainerRef,
     ]);
 
-    useEffect(() => {
-        const container = chatContainerRef.current;
-        if (!container) return;
-
-        const scrollThreshold = 100;
-        const isScrolledToBottom =
-            container.scrollHeight - container.scrollTop - container.clientHeight < scrollThreshold;
-
-        if (isScrolledToBottom) {
-            setTimeout(() => {
-                messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-            }, 100);
-        }
-    }, [currentMessages.length, chatContainerRef]);
+    useChatScroll({
+        chatContainerRef,
+        messagesEndRef,
+        loadOlderMessages,
+        messageCount: currentMessages.length,
+        isLoadingOlderMessages: isLoadingOlderMessages
+    });
 
     return {
         messagesEndRef,

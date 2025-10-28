@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useChatStore } from "../../store/useChatStore";
 import { ApiService } from "../../services/api-service";
 import { Loader2 } from "lucide-react";
+import { Conversation, CreateTeam, User } from "../../types/type";
 interface CreateTeamModalProps {
   isOpen: boolean;
   onClose: () => void;

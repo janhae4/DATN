@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { ApiService } from "../../services/api-service";
 import { useEffect, useState } from "react";
+import { Conversation, CreateTeam } from "../../types/type";
 
 
 interface NewChatModalProps {
