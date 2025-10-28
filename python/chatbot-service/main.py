@@ -7,14 +7,15 @@ from config import (
     RABBITMQ_URL, 
     THREADPOOL_MAX_WORKERS,
     INGESTION_QUEUE,
+    REMOVE_QUEUE,
     RAG_QUEUE,
     CHATBOT_EXCHANGE,
-    EVENTS_EXCHANGE,
     ASK_QUESTION_ROUTING_KEY,
     SUMMARIZE_DOCUMENT_ROUTING_KEY,
-    PROCESS_DOCUMENT_ROUTING_KEY
+    PROCESS_DOCUMENT_ROUTING_KEY,
+    REMOVE_COLLECTION_ROUTING_KEY
 )
-from callback import ingestion_callback, action_callback
+from callback import ingestion_callback, action_callback, on_team_deleted
 from services.llm_service import LLMService
 from services.minio_service import MinioService
 from services.vectorstore_service import VectorStoreService
@@ -63,6 +64,9 @@ async def main():
         ingestion_queue = await channel.declare_queue(INGESTION_QUEUE, durable=True)
         await ingestion_queue.bind(chatbot_exchange, routing_key=PROCESS_DOCUMENT_ROUTING_KEY)
 
+        delete_queue = await channel.declare_queue(REMOVE_QUEUE, durable=True)
+        await delete_queue.bind(chatbot_exchange, routing_key=REMOVE_COLLECTION_ROUTING_KEY)
+
         rag_queue = await channel.declare_queue(RAG_QUEUE, durable=True)
         await rag_queue.bind(chatbot_exchange, routing_key=ASK_QUESTION_ROUTING_KEY)
         await rag_queue.bind(chatbot_exchange, routing_key=SUMMARIZE_DOCUMENT_ROUTING_KEY)
@@ -80,13 +84,19 @@ async def main():
             minio_service=minio_service,
             channel=channel
         )
+        remove_consumer = partial(
+            on_team_deleted, 
+            vector_store=vectorstore_service,
+        )
 
         await ingestion_queue.consume(ingestion_consumer)
         await rag_queue.consume(action_consumer)
+        await delete_queue.consume(remove_consumer)
         
         print(f"[*] Đã kết nối tới RabbitMQ. Đang lắng nghe trên các hàng đợi:")
         print(f"  - {INGESTION_QUEUE} (Xử lý tài liệu)")
         print(f"  - {RAG_QUEUE} (Hỏi đáp & Tóm tắt)")
+        print(f"  - {REMOVE_QUEUE} (Xóa collection)")
         print(" [*] Bắt đầu lắng nghe. Để thoát, nhấn CTRL+C")
         await asyncio.Future()
 

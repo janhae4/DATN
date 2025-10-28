@@ -18,6 +18,9 @@ class VectorStoreService:
             collection_name=collection_name,
             embedding_function=embed_func
         )
+    
+    async def delete_collection(self, collection_name: str):
+        self.client.delete_collection(collection_name)
 
     async def persist_documents(self, collection_name: str, documents):
         def _persist():
@@ -29,7 +32,7 @@ class VectorStoreService:
             )
         await asyncio.to_thread(_persist)
         
-    async def process_and_store(self, user_id: str, file_path: str):
+    async def process_and_store(self, user_id: str, file_path: str, team_id: str | None = None):
         print(f"[VectorStore] Đang tải file: {file_path}")
         raw_docs = await self.minio.load_documents(file_path)
         if not raw_docs:
@@ -44,8 +47,10 @@ class VectorStoreService:
         for doc in docs:
             doc.metadata["user_id"] = user_id
             doc.metadata["source"] = file_path 
+            if team_id:
+                doc.metadata["team_id"] = team_id
             
-        collection_name = f"user_{user_id}"
+        collection_name = f"user_{user_id}" if team_id is None else f"team_{team_id}"
         print(f"[VectorStore] Đang lưu {len(docs)} phần vào collection: {collection_name}")
         await self.persist_documents(collection_name, docs)
         print(f"[VectorStore] Đã lưu thành công.")

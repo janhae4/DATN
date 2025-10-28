@@ -11,3 +11,4 @@ class MinioService:
     async def load_documents(self, file_name: str):
         docs = await asyncio.to_thread(load_from_minio, self.client, self.bucket, file_name)
         return docs
+    
