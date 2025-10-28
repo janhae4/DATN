@@ -39,9 +39,33 @@ class RAGChain:
         self.vectorstore_service = vectorstore_service
         self.retriever_service = retriever_service
         self.threadpool = threadpool or ThreadPoolExecutor(max_workers=THREADPOOL_MAX_WORKERS)
+        self.last_retrieved_context = None
+    
+    def clear_last_context(self):
+        self.last_retrieved_context = None
 
-    async def ask_question_for_user(self, question: str, user_id: str, chat_history: list):
-        collection_name = f"user_{user_id}"
+    def get_last_retrieved_context(self):
+        return self.last_retrieved_context
+
+    def _format_context(self, context_documents: list) -> list:
+        formatted_context = []
+        if not context_documents:
+            return []
+            
+        for doc in context_documents:
+            metadata = doc.metadata or {}
+            formatted_context.append({
+                "source_id": metadata.get("source_id", "unknown"),
+                "source_name": metadata.get("source_name", metadata.get("source", "unknown")),
+                "chunk_id": metadata.get("chunk_id", 0),
+                "page_number": metadata.get("page", metadata.get("page_number", 0)),
+                "score": metadata.get("relevance_score", 0), 
+                "snippet": doc.page_content[:150] + "..."
+            })
+        return formatted_context
+
+    async def ask_question_for_user(self, question: str, user_id: str, team_id: str | None ,chat_history: list):
+        collection_name = f"user_{user_id}" if team_id is None else f"team_{team_id}"
         
         embeddings = self.llm_service.get_embeddings()
         vectorstore = await self.vectorstore_service.get_collection(
@@ -90,13 +114,19 @@ class RAGChain:
 
         def _blocking_stream(params):
             return rag_chain.stream(params)
+        
+        self.clear_last_context()
 
         gen = functools.partial(_blocking_stream, {"input": question, "chat_history": formatted_history})
         async for chunk in _stream_blocking_generator(gen):
             if isinstance(chunk, dict):
+                if ("context" in chunk and chunk["context"]):
+                    self.last_retrieved_context = self._format_context(chunk["context"])
+                    print(f"[RAG_CHAIN] Context: {self.last_retrieved_context}")
                 if "answer" in chunk and chunk["answer"]:
                     yield chunk["answer"]
                 continue
+            
             content = getattr(chunk, "content", None)
             
             if content:
