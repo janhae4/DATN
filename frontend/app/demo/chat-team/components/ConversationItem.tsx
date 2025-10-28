@@ -1,10 +1,11 @@
 import React from "react";
+import { Conversation, CurrentUser, User } from "../types/type";
 
 interface ConversationItemProps {
   conversation: Conversation;
   selected: boolean;
   onClick: () => void;
-  currentUser: User;
+  currentUser: CurrentUser;
 }
 export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
   ({ conversation, selected, onClick, currentUser }) => {

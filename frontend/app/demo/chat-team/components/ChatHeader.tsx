@@ -1,6 +1,7 @@
 "use client";
 import React, { useMemo } from "react";
 import { Users as UsersIcon, SearchIcon } from "lucide-react";
+import { Conversation, CurrentUser, User } from "../types/type";
 
 export function ChatHeader({
   currentUser,
@@ -8,12 +9,11 @@ export function ChatHeader({
   onManageMembers,
   onSearch,
 }: {
-  currentUser: User;
+  currentUser: CurrentUser;
   selectedConversation: Conversation;
   onManageMembers: () => void;
   onSearch: () => void;
 }) {
-  // Logic tính toán headerData được đưa vào đây
   const headerData = useMemo(() => {
     if (selectedConversation.isGroupChat) {
       return {

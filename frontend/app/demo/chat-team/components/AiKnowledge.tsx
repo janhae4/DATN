@@ -5,11 +5,10 @@ import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 
 import { CurrentUser } from "../types/type";
-import { useTeamKnowledgeSocket } from "../hooks/useTeamAiSocket";
-import { useTeamKnowledgeFiles } from "../hooks/useTeamKnowledgeFile";
-import { useTeamAiChat } from "../hooks/useTeamAiChat";
+import { useAiChat } from "../hooks/useAiChat";
 import { AiChatWindow } from "./AiChatWindow";
 import { KnowledgeSidebar } from "./KnowledgeSidebar";
+import { useKnowledgeFiles } from "../hooks/useKnowledgeFile";
 
 const FileViewerModal = dynamic(
   () => import("./fileViewModal").then((mod) => mod.FileViewerModal),
@@ -22,15 +21,13 @@ const FileViewerModal = dynamic(
   }
 );
 
-export function TeamAiKnowledgePage({
-  teamId,
+export function AiKnowledgePage({
   currentUser,
+  teamId,
 }: {
-  teamId: string;
   currentUser: CurrentUser;
+  teamId?: string;
 }) {
-  const socket = useTeamKnowledgeSocket(teamId);
-
   const {
     files,
     isLoadingFiles,
@@ -44,7 +41,7 @@ export function TeamAiKnowledgePage({
     handleOpenFileViewer,
     handleCloseFileViewer,
     handleRenameSuccess,
-  } = useTeamKnowledgeFiles(teamId);
+  } = useKnowledgeFiles(teamId);
 
   const {
     aiMessages,
@@ -55,10 +52,11 @@ export function TeamAiKnowledgePage({
     isHistoryLoading,
     messagePagination,
     chatboxRef,
+    messagesEndRef,
     handleSendAiMessage,
     handleSummarize,
     handleLoadMoreMessages,
-  } = useTeamAiChat(socket, teamId, currentUser);
+  } = useAiChat(currentUser, teamId);
 
   return (
     <>
@@ -72,14 +70,14 @@ export function TeamAiKnowledgePage({
           isHistoryLoading={isHistoryLoading}
           messagePagination={messagePagination}
           chatboxRef={chatboxRef}
+          messagesEndRef={messagesEndRef}
           currentUser={currentUser}
           activeConversationId={null}
-          teamId={teamId}
           handleSendAiMessage={handleSendAiMessage}
           handleLoadMoreMessages={handleLoadMoreMessages}
+          teamId={teamId || ""}
         />
 
-        {/* Sidebar Knowledge Base */}
         <KnowledgeSidebar
           files={files || []}
           isLoadingFiles={isLoadingFiles}

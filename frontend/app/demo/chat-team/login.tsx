@@ -1,9 +1,10 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { ApiService } from "./services/api-service";
+import { CurrentUser, User } from "./types/type";
 
 interface LoginPageProps {
-  onLoginSuccess: (user: User) => void;
+  onLoginSuccess: (user: CurrentUser) => void;
 }
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [email, setEmail] = useState("chanhhy");

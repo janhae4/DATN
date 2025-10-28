@@ -1,44 +1,60 @@
 "use client";
 
+import { useState } from "react";
 import { ChatSidebar } from "./components/ChatSideBar";
 import { ChatWindow } from "./components/ChatWindow";
 import { useSocketHandler } from "./hooks/useSocketHandler";
 import { useChatStore } from "./store/useChatStore";
-
-
+import { PersonalAiChat } from "./components/PersonalAiChat";
+import { CurrentUser, User } from "./types/type";
 
 export function ChatPage({
   currentUser,
   onLogout,
 }: {
-  currentUser: User;
+  currentUser: CurrentUser;
   onLogout: () => void;
 }) {
   useSocketHandler();
+
+  const [chatMode, setChatMode] = useState<"team" | "ai">("team");
 
   const selectedConversation = useChatStore(
     (state) => state.selectedConversation
   );
 
+  const teamChatPlaceholder = (
+    <div className="flex-1 flex items-center justify-center">
+      <p className="text-gray-500 text-center px-4">
+        {useChatStore.getState().visibleConversations.length > 0
+          ? "Chọn một cuộc hội thoại để bắt đầu trò chuyện."
+          : "Bạn chưa có cuộc trò chuyện nào. Hãy tạo mới!"}
+      </p>
+    </div>
+  );
+
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans antialiased">
-      <ChatSidebar currentUser={currentUser} onLogout={onLogout} />
+      <ChatSidebar
+        currentUser={currentUser}
+        onLogout={onLogout}
+        chatMode={chatMode}
+        setChatMode={setChatMode}
+      />
 
       <main className="flex-1 flex flex-col bg-gray-100">
-        {selectedConversation ? (
-          <ChatWindow
-            key={selectedConversation._id}
-            currentUser={currentUser}
-            selectedConversation={selectedConversation}
-          />
+        {chatMode === "team" ? (
+          selectedConversation ? (
+            <ChatWindow
+              key={selectedConversation._id} 
+              currentUser={currentUser}
+              selectedConversation={selectedConversation}
+            />
+          ) : (
+            teamChatPlaceholder
+          )
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-500 text-center px-4">
-              {useChatStore.getState().visibleConversations.length > 0
-                ? "Chọn một cuộc hội thoại để bắt đầu trò chuyện."
-                : "Bạn chưa có cuộc trò chuyện nào. Hãy tạo mới!"}
-            </p>
-          </div>
+          <PersonalAiChat currentUser={currentUser} />
         )}
       </main>
     </div>

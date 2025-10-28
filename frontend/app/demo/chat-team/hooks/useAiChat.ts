@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Socket } from "socket.io-client";
 import { ApiService } from "../services/api-service";
-import { CHATBOT_PATTERN } from "@/app/SocketContext";
+import { CHATBOT_PATTERN, useSocket } from "@/app/SocketContext";
 import { AiMessage, AskQuestionPayload, CurrentUser, KnowledgeFile, SummarizeDocumentPayload } from "../types/type";
-// (Import các type AiMessage, CurrentUser, KnowledgeFile, CHATBOT_PATTERN, ...)
+import { useChatScroll } from "./useChatScroll";
 
-export function useTeamAiChat(
-    socket: Socket | null,
-    teamId: string,
-    currentUser: CurrentUser
+export function useAiChat(
+    currentUser: CurrentUser,
+    teamId?: string,
 ) {
+    const {socket} = useSocket()
     const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
     const [prompt, setPrompt] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
@@ -17,37 +16,31 @@ export function useTeamAiChat(
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [messagePagination, setMessagePagination] = useState({ page: 1, totalPages: 1 });
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-    const chatboxRef = useRef<HTMLDivElement>(null);
+    const chatboxRef = useRef<HTMLDivElement | null>(null);
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-    // 1. Tải lịch sử chat lần đầu
     useEffect(() => {
-        if (!teamId) return;
-
         const fetchHistory = async () => {
             setIsLoadingMessages(true);
             try {
-                const historyResponse = await ApiService.getAiChatHistory(teamId, 1, 30);
-                console.log("History response:", historyResponse.data._id)
+                console.log("Fetching AI chat history...");
+                const historyResponse = await ApiService.getAiChatHistory(1, 30, teamId);
                 setActiveConversationId(historyResponse.data._id);
                 setAiMessages(historyResponse.data.messages || []);
                 setMessagePagination({
                     page: historyResponse.page,
                     totalPages: historyResponse.totalPages,
                 });
+                setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 100);
             } catch (error) {
                 console.error("Failed to load AI chat history:", error);
-                // (Thêm tin nhắn lỗi vào state)
             } finally {
                 setIsLoadingMessages(false);
             }
         };
         fetchHistory();
-    }, [teamId]);
+    }, [teamId, currentUser]);
 
-    useEffect(() => { console.log("ACTIVE", activeConversationId) }, [activeConversationId])
-
-
-    // 2. Lắng nghe các sự kiện Socket
     useEffect(() => {
         if (!socket) return;
 
@@ -141,19 +134,8 @@ export function useTeamAiChat(
             socket.off(CHATBOT_PATTERN.CONVERSATION_STARTED, handleConversationStarted);
             socket.off("new_ai_message", handleNewMessage);
         };
-    }, [socket, activeConversationId]); // Chỉ re-bind khi socket thay đổi
+    }, [socket, activeConversationId]);
 
-    // 3. Tự động cuộn
-    useEffect(() => {
-        if (!isHistoryLoading) {
-            chatboxRef.current?.scrollTo({
-                top: chatboxRef.current.scrollHeight,
-                behavior: "smooth",
-            });
-        }
-    }, [aiMessages.length, isHistoryLoading]); // Kích hoạt khi có tin nhắn mới
-
-    // 4. Các hàm xử lý chat
     const createOptimisticMessage = (content: string): AiMessage => ({
         _id: `user-${Date.now()}`,
         role: "user",
@@ -216,19 +198,38 @@ export function useTeamAiChat(
         setIsHistoryLoading(true);
         const nextPage = messagePagination.page + 1;
 
+        const container = chatboxRef.current;
+        const oldScrollHeight = container?.scrollHeight || 0;
+        const oldScrollTop = container?.scrollTop || 0;
+
         try {
-            const historyResponse = await ApiService.getAiChatHistory(teamId, nextPage, 30);
+            const historyResponse = await ApiService.getAiChatHistory(nextPage, 30, teamId);
             setAiMessages((prev) => [...(historyResponse.data.messages || []), ...prev]);
             setMessagePagination({
                 page: historyResponse.page,
                 totalPages: historyResponse.totalPages,
             });
+
+            requestAnimationFrame(() => {
+                if (container) {
+                    container.scrollTop = container.scrollHeight - oldScrollHeight + oldScrollTop;
+                }
+            });
+
         } catch (error) {
             console.error("Failed to load more AI messages:", error);
         } finally {
             setIsHistoryLoading(false);
         }
-    }, [isHistoryLoading, messagePagination, teamId]);
+    }, [isHistoryLoading, messagePagination, teamId, chatboxRef]);
+
+    useChatScroll({
+        chatContainerRef: chatboxRef,
+        messagesEndRef,
+        loadOlderMessages: handleLoadMoreMessages,
+        messageCount: aiMessages.length,
+        isLoadingOlderMessages: isHistoryLoading
+    });
 
     return {
         aiMessages,
@@ -237,8 +238,9 @@ export function useTeamAiChat(
         isStreaming,
         isLoadingMessages,
         isHistoryLoading,
-        messagePagination,
         chatboxRef,
+        messagesEndRef,
+        messagePagination,
         handleSendAiMessage,
         handleSummarize,
         handleLoadMoreMessages,

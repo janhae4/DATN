@@ -3,20 +3,19 @@ import { AiPromptInput } from "./AiPromptInput";
 import { AiMessageList } from "./AiMessageList";
 
 interface AiChatWindowProps {
-    aiMessages: any[];
-    prompt: string;
-    setPrompt: (value: string) => void;
-    isStreaming: boolean;
-    isLoadingMessages: boolean;
-    isHistoryLoading: boolean;
-    messagePagination: any;
-    chatboxRef: any;
-    messagesEndRef: any;
-    currentUser: any;
-    activeConversationId: string | null;
-    handleSendAiMessage: () => void;
-    handleLoadMoreMessages: () => void;
-    teamId?: string;
+  aiMessages: any[];
+  prompt: string;
+  setPrompt: (value: string) => void;
+  isStreaming: boolean;
+  isLoadingMessages: boolean;
+  isHistoryLoading: boolean;
+  messagePagination: any;
+  chatboxRef: any;
+  messagesEndRef: any;
+  currentUser: any;
+  activeConversationId: string | null;
+  handleSendAiMessage: () => void;
+  handleLoadMoreMessages: () => void;
 }
 
 export function AiChatWindow({
@@ -31,7 +30,6 @@ export function AiChatWindow({
   messagesEndRef,
   currentUser,
   activeConversationId,
-  teamId,
   handleSendAiMessage,
   handleLoadMoreMessages,
 }: AiChatWindowProps) {
@@ -47,7 +45,6 @@ export function AiChatWindow({
         isHistoryLoading={isHistoryLoading}
         messagePagination={messagePagination}
         activeConversationId={activeConversationId}
-        teamId={teamId}
         handleLoadMoreMessages={handleLoadMoreMessages}
       />
       <AiPromptInput

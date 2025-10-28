@@ -1,4 +1,5 @@
 import { CrownIcon, UserPlusIcon } from "lucide-react";
+import { UserRole } from "../types/type";
 
 export const RoleIcon: React.FC<{ role?: UserRole }> = ({ role }) => {
   if (role === "OWNER")

@@ -1,31 +1,43 @@
-import { Bot, Loader2 } from "lucide-react";
+import { Bot, Loader2, Info } from "lucide-react";
 import Markdown from "react-markdown";
+import { MessageData } from "../types/type";
 
 interface MessageProps {
   message: MessageData;
   isCurrentUser: boolean;
   isStreaming?: boolean;
 }
+
 export const Message: React.FC<MessageProps> = ({
   message,
   isCurrentUser,
   isStreaming,
 }) => {
-  console.log(isStreaming);
+  console.log(message)
+  if (message.sender?._id === "SYSTEM") {
+    return (
+      <div className="flex justify-center items-center my-3 w-full">
+        <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-100 rounded-full px-3 py-1.5">
+          <Info size={14} className="flex-shrink-0" />
+          <span>{message.content}</span>
+        </div>
+      </div>
+    );
+  }
+
   if (isStreaming) {
     return (
-      <div className="flex items-start gap-4">
-        {/* Avatar AI */}
-        <div className="w-8 h-8 bg-indigo-600 p-2 rounded-full text-white flex-shrink-0 flex items-center justify-center">
-          <Bot size={16} />
+      <div className="flex items-start gap-4 my-4">
+        <div className="w-10 h-10 bg-indigo-600 p-2.5 rounded-full text-white flex-shrink-0 flex items-center justify-center">
+          <Bot size={20} />
         </div>
-        {/* Bong bóng chat chứa Spinner */}
-        <div className="bg-white text-gray-800 border border-gray-200 rounded-lg p-3 max-w-lg">
+        <div className="bg-white text-gray-800 border border-gray-200 rounded-2xl rounded-bl-none p-3 max-w-lg shadow-sm">
           <Loader2 className="animate-spin text-slate-500" />
         </div>
       </div>
     );
   }
+
   return (
     <div
       key={message._id}
@@ -33,16 +45,22 @@ export const Message: React.FC<MessageProps> = ({
         isCurrentUser ? "justify-end" : "justify-start"
       }`}
     >
-      {!isCurrentUser && (
-        <img
-          src={
-            message.sender.avatar ||
-            `https://i.pravatar.cc/150?u=${message.sender._id}`
-          }
-          alt={message.sender.name}
-          className="w-10 h-10 rounded-full object-cover"
-        />
-      )}
+      {!isCurrentUser &&
+        (message.sender._id === "ai-system-id" ? (
+          <div className="w-10 h-10 bg-indigo-600 p-2.5 rounded-full text-white flex-shrink-0 flex items-center justify-center">
+            <Bot size={20} />
+          </div>
+        ) : (
+          <img
+            src={
+              message.sender.avatar ||
+              `https://i.pravatar.cc/150?u=${message.sender._id}`
+            }
+            alt={message.sender.name}
+            className="w-10 h-10 rounded-full object-cover"
+          />
+        ))}
+
       <div
         className={`flex flex-col ${
           isCurrentUser ? "items-end" : "items-start"
@@ -67,6 +85,7 @@ export const Message: React.FC<MessageProps> = ({
           })}
         </p>
       </div>
+
       {isCurrentUser && (
         <img
           src={message.sender.avatar}

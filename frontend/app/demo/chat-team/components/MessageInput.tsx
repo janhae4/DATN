@@ -2,12 +2,13 @@
 import React from "react";
 import { Send as SendIcon } from "lucide-react";
 import { useMessageSender } from "../hooks/useMessageSender";
+import { Conversation, CurrentUser, User } from "../types/type";
 
 export function MessageInput({
   currentUser,
   selectedConversation,
 }: {
-  currentUser: User;
+  currentUser: CurrentUser;
   selectedConversation: Conversation;
 }) {
   const { newMessage, setNewMessage, handleSendMessage } = useMessageSender(

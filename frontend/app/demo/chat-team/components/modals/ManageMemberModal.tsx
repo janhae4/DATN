@@ -11,13 +11,14 @@ import { ConfirmationModal } from "./ConfirmationModal";
 import { RoleIcon } from "../RoleIcon";
 import { ApiService } from "../../services/api-service";
 import { useEffect, useRef, useState } from "react";
+import { Conversation, CurrentUser, Participant, Team, User, UserRole } from "../../types/type";
 
 interface ManageMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
   conversation: Conversation;
-  currentUser: User;
-  onConversationUpdated: (updatedConversation: Conversation) => void;
+  currentUser: CurrentUser;
+  onConversationUpdated: (updatedConversation: Team) => void;
   onUserLeave: () => void;
 }
 export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
@@ -112,7 +113,8 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
     setModalState(null);
     setSelectedMember(null);
   };
-  const onConfirmAndUpdate = (updatedConversation: Conversation) => {
+  const onConfirmAndUpdate = (updatedConversation: Team) => {
+    console.log("Updated conversation:", updatedConversation);
     onConversationUpdated(updatedConversation);
     onModalClose();
   };
@@ -201,7 +203,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RoleIcon role={member.role} />
+                    <RoleIcon role={member.role as UserRole} />
                     {!isCurrentUser &&
                       (permissions.canKick ||
                         permissions.canChangeRole ||
@@ -304,7 +306,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
         <ChangeRoleModal
           isOpen={modalState === "role"}
           onClose={onModalClose}
-          conversationId={conversation._id}
+          conversationId={conversation.teamId || ""}
           member={selectedMember}
           onRoleChanged={onConfirmAndUpdate}
         />

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { Loader2 } from "lucide-react";
 import { ConversationItem } from "./ConversationItem";
+import { Conversation, CurrentUser, User } from "../types/type";
 
 interface ConversationListProps {
-  currentUser: User;
+  currentUser: CurrentUser;
   onSelectConversation: (conversation: Conversation) => void;
 }
 export const ConversationList: React.FC<ConversationListProps> = ({
@@ -87,8 +88,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         />
       ))}
 
-      {/* Phần tử trigger */}
-      {/* Chỉ render trigger nếu có thể load thêm và không đang load */}
       {hasMore && (
         <div
           ref={loadingTriggerRef}

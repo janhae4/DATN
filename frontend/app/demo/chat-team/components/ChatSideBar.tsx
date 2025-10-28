@@ -10,13 +10,18 @@ import { useChatStore } from "../store/useChatStore";
 import { NewChatModal } from "./modals/CreateChatModal";
 import { ConversationList } from "./ConversationList";
 import { CreateTeamModal } from "./modals/CreateTeamModal";
+import { Conversation, CreateTeam, CurrentUser, User } from "../types/type";
 
 export function ChatSidebar({
   currentUser,
   onLogout,
+  chatMode,
+  setChatMode,
 }: {
-  currentUser: User;
+  currentUser: CurrentUser;
   onLogout: () => void;
+  chatMode: "team" | "ai";
+  setChatMode: (mode: "team" | "ai") => void;
 }) {
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
@@ -65,10 +70,45 @@ export function ChatSidebar({
           </button>
         </div>
 
-        <ConversationList
-          currentUser={currentUser}
-          onSelectConversation={setSelectedConversation}
-        />
+        <div className="p-4">
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setChatMode("team")}
+              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${
+                chatMode === "team"
+                  ? "bg-white shadow text-indigo-600"
+                  : "text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Team Chat
+            </button>
+            <button
+              onClick={() => setChatMode("ai")}
+              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${
+                chatMode === "ai"
+                  ? "bg-white shadow text-indigo-600"
+                  : "text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              AI Cá nhân
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {chatMode === "team" ? (
+            <ConversationList
+              currentUser={currentUser}
+              onSelectConversation={setSelectedConversation}
+            />
+          ) : (
+            <div className="p-4 text-sm text-gray-500 text-center">
+              <p>
+                Trò chuyện riêng tư với AI. Lịch sử của bạn sẽ được lưu ở đây.
+              </p>
+            </div>
+          )}
+        </div>
 
         <div className="p-4 border-t border-gray-200 space-y-2">
           <button

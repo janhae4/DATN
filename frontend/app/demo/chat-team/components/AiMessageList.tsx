@@ -2,11 +2,12 @@
 
 import React from "react";
 import { Loader2, Sparkles, ChevronUp, Bot } from "lucide-react";
-import { AiMessage, CurrentUser } from "../types/type";
+import { AiMessage, CurrentUser, MessageData } from "../types/type";
 import { Message } from "./Message";
 
 interface AiMessageListProps {
-  chatboxRef: React.RefObject<HTMLDivElement>;
+  chatboxRef: React.RefObject<HTMLDivElement | null>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
   aiMessages: AiMessage[];
   currentUser: CurrentUser;
   isLoadingMessages: boolean;
@@ -14,12 +15,13 @@ interface AiMessageListProps {
   isHistoryLoading: boolean;
   messagePagination: { page: number; totalPages: number };
   activeConversationId: string | null;
-  teamId: string;
   handleLoadMoreMessages: () => void;
+  teamId?: string;
 }
 
 export function AiMessageList({
   chatboxRef,
+  messagesEndRef,
   aiMessages,
   currentUser,
   isLoadingMessages,
@@ -27,8 +29,8 @@ export function AiMessageList({
   isHistoryLoading,
   messagePagination,
   activeConversationId,
-  teamId,
   handleLoadMoreMessages,
+  teamId,
 }: AiMessageListProps) {
   return (
     <div
@@ -36,7 +38,6 @@ export function AiMessageList({
       className="flex-1 p-6 overflow-y-auto space-y-6"
       style={{ scrollBehavior: "auto" }}
     >
-      {/* 1. Trạng thái Tải lần đầu */}
       {isLoadingMessages && aiMessages.length === 0 ? (
         <div className="flex justify-center items-center h-full">
           <Loader2 className="animate-spin text-indigo-600 h-10 w-10" />
@@ -86,8 +87,8 @@ export function AiMessageList({
 
             const isThisMessageStreaming =
               isStreaming &&
-              index === aiMessages.length - 1 && // Là tin nhắn cuối
-              msg.role === "ai"; // Và là của AI
+              index === aiMessages.length - 1 &&
+              msg.role === "ai";
             return (
               <Message
                 key={msg._id}
@@ -100,7 +101,7 @@ export function AiMessageList({
         </>
       )}
 
-      <div style={{ height: "1px" }} />
+      <div ref={messagesEndRef} style={{ height: "1px" }} />
     </div>
-  );
+  );    
 }

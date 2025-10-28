@@ -1,11 +1,12 @@
 import { Loader2 } from "lucide-react";
 import { ApiService } from "../../services/api-service";
 import { useEffect, useState } from "react";
+import { Conversation, Team, User } from "../../types/type";
 
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onMembersAdded: (updatedConversation: Conversation) => void;
+  onMembersAdded: (updatedConversation: Team) => void;
   teamId: string;
 }
 export const AddMemberModal: React.FC<AddMemberModalProps> = ({

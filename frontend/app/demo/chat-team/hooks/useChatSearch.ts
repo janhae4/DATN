@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ApiService } from "../services/api-service";
+import { MessageData } from "../types/type";
 
 const MESSAGE_LIMIT = 20;
 

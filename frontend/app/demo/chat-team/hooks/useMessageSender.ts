@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { ApiService } from "../services/api-service";
+import { Conversation, CurrentUser, MessageData, User } from "../types/type";
 
 export function useMessageSender(
     selectedConversation: Conversation,
-    currentUser: User
+    currentUser: CurrentUser
 ) {
     const [newMessage, setNewMessage] = useState("");
     const {
@@ -22,7 +23,7 @@ export function useMessageSender(
 
             const convoId = selectedConversation._id;
             const tempMessageId = `temp-${Date.now()}`;
-            const tempMessage: MessageData = {
+            const tempMessage: MessageData= {
                 _id: tempMessageId,
                 content: newMessage,
                 sender: {

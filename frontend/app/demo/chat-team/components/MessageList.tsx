@@ -3,12 +3,13 @@ import React, { useRef, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import { useMessageLoader } from "../hooks/useMessageLoader";
 import { Message } from "./Message"; // (Component Message cũ của bạn)
+import { CurrentUser, User } from "../types/type";
 
 export function MessageList({
   currentUser,
   selectedConversationId,
 }: {
-  currentUser: User;
+  currentUser: CurrentUser;
   selectedConversationId: string;
 }) {
   const chatContainerRef = useRef<HTMLDivElement | null>(null);

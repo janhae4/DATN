@@ -19,7 +19,7 @@ const determineFileName = (fileId: string) => {
     return fileId.split("_").pop() || "other";
 };
 
-export function useTeamKnowledgeFiles(teamId: string) {
+export function useKnowledgeFiles(teamId?: string) {
     const [files, setFiles] = useState<KnowledgeFile[]>([]);
     const [isLoadingFiles, setIsLoadingFiles] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
@@ -30,10 +30,7 @@ export function useTeamKnowledgeFiles(teamId: string) {
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [viewingFile, setViewingFile] = useState<KnowledgeFile | null>(null);
 
-    // 1. Tải file lần đầu
     useEffect(() => {
-        if (!teamId) return;
-
         const fetchFiles = async () => {
             setIsLoadingFiles(true);
             try {
@@ -54,7 +51,6 @@ export function useTeamKnowledgeFiles(teamId: string) {
         fetchFiles();
     }, [teamId]);
 
-    // 2. Các hàm xử lý file
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -62,7 +58,7 @@ export function useTeamKnowledgeFiles(teamId: string) {
         setIsUploading(true);
         setUploadStatus(`Đang tải lên '${file.name}'...`);
         try {
-            const newFile = await ApiService.uploadKnowledgeFile(teamId, file);
+            const newFile = await ApiService.uploadKnowledgeFile(file, teamId);
             setFiles((prev) => [
                 {
                     ...newFile,
@@ -86,7 +82,7 @@ export function useTeamKnowledgeFiles(teamId: string) {
         if (!confirm(`Bạn có chắc muốn xóa file "${file.fileName}"?`)) return;
 
         try {
-            await ApiService.deleteKnowledgeFile(teamId, file.fileId);
+            await ApiService.deleteKnowledgeFile(file.fileId, teamId);
             setFiles((prev) => prev.filter((f) => f.fileId !== file.fileId));
         } catch (error) {
             console.error("Failed to delete file:", error);

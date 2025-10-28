@@ -1,3 +1,5 @@
+import { Conversation, CreateTeam, CurrentUser, MessageData, PaginatedResponse, SearchResponse, Team, User, UserRole } from "../types/type";
+
 const API_BASE_URL = "http://localhost:3000";
 
 export const ApiService = {
@@ -75,7 +77,7 @@ export const ApiService = {
       body: JSON.stringify({ username, password }),
     }),
 
-  getInfo: (): Promise<User> => ApiService.request("/auth/me"),
+  getInfo: (): Promise<CurrentUser> => ApiService.request("/auth/me"),
 
   logout: () => ApiService.request("/auth/logout", { method: "POST" }),
 
@@ -120,7 +122,7 @@ export const ApiService = {
     name: string,
     participantIds: string[]
   ): Promise<CreateTeam & Conversation> =>
-    ApiService.request("/team", {
+    ApiService.request("/teams", {
       method: "POST",
       body: JSON.stringify({ name, memberIds: participantIds }),
     }),
@@ -128,35 +130,35 @@ export const ApiService = {
   addMembers: (
     teamId: string,
     participantIds: string[]
-  ): Promise<Conversation> =>
-    ApiService.request(`/team/${teamId}/member`, {
+  ): Promise<Team> =>
+    ApiService.request(`/teams/${teamId}/member`, {
       method: "POST",
       body: JSON.stringify({ memberIds: participantIds }),
     }),
 
-  removeMember: (teamId: string, memberId: string): Promise<Conversation> =>
-    ApiService.request(`/team/${teamId}/member`, {
+  removeMember: (teamId: string, memberId: string): Promise<Team> =>
+    ApiService.request(`/teams/${teamId}/member`, {
       method: "DELETE",
       body: JSON.stringify({ memberIds: [memberId] }),
     }),
 
   deleteTeam: (teamId: string) =>
-    ApiService.request(`/team/${teamId}`, {
+    ApiService.request(`/teams/${teamId}`, {
       method: "DELETE",
     }),
 
   leaveConversation: (conversationId: string): Promise<void> =>
-    ApiService.request(`/chat/conversations/${conversationId}/leave`, {
+    ApiService.request(`teams/${conversationId}/leave`, {
       method: "POST",
     }),
 
   changeMemberRole: (
     conversationId: string,
     memberId: string,
-    role: UserRole // Đảm bảo UserRole được định nghĩa
-  ): Promise<Conversation> =>
+    role: UserRole = "MEMBER"
+  ): Promise<Team> =>
     ApiService.request(
-      `/chat/conversations/${conversationId}/members/${memberId}/role`,
+      `/teams/${conversationId}/member/${memberId}/role`,
       {
         method: "PATCH",
         body: JSON.stringify({ role }),
@@ -166,9 +168,8 @@ export const ApiService = {
   transferOwnership: (
     conversationId: string,
     newOwnerId: string
-  ): Promise<Conversation> =>
+  ): Promise<Team> =>
     ApiService.request(`/team/${conversationId}/member/transfer-ownership`, {
-      // Giả sử endpoint team service
       method: "POST",
       body: JSON.stringify({ newOwnerId }),
     }),
@@ -193,10 +194,10 @@ export const ApiService = {
     ),
 
   getFile: (fileId: string, teamId?: string) =>
-    ApiService.requestFile(`/chatbot/files/${fileId}${teamId && `?teamId=${teamId}`}`),
+    ApiService.requestFile(`/chatbot/files/${fileId}${teamId ? `?teamId=${teamId}` : ""}`),
 
   renameFile: (fileId: string, newName: string, teamId?: string) =>
-    ApiService.request(`/chatbot/files/${fileId}/rename${teamId && `?teamId=${teamId}`}`, {
+    ApiService.request(`/chatbot/files/${fileId}/rename${teamId ? `?teamId=${teamId}` : ""}`, {
       method: "PATCH",
       body: JSON.stringify({ newName }),
     }),
@@ -211,28 +212,29 @@ export const ApiService = {
     return ApiService.upload("/chatbot/files", file);
   },
 
-  getAiChatHistory: (teamId: string, page: number, limit: number) => {
+  getAiChatHistory: (page: number, limit: number, teamId?: string) => {
     return ApiService.request(
-      `/chatbot/conversations/teams/${teamId}?page=${page}&limit=${limit}`
+      `/chatbot/conversations/${teamId ? `teams/${teamId}` : ""}?page=${page}&limit=${limit}`
     );
   },
 
-  getKnowledgeFiles(teamId: string) {
-    return ApiService.request(`/chatbot/files?teamId=${teamId}`);
+  getKnowledgeFiles(teamId?: string) {
+    console.log(teamId)
+    return ApiService.request(`/chatbot/files${teamId ? `?teamId=${teamId}` : ""}`);
   },
 
-  uploadKnowledgeFile(teamId: string, file: File) {
-    return ApiService.upload(`/chatbot/files?teamId=${teamId}`, file);
+  uploadKnowledgeFile(file: File, teamId?: string) {
+    return ApiService.upload(`/chatbot/files${teamId ? `?teamId=${teamId}` : ""}`, file);
   },
 
-  deleteKnowledgeFile(teamId: string, fileId: string) {
-    return ApiService.request(`/chatbot/files/${fileId}?teamId=${teamId}`, {
+  deleteKnowledgeFile(fileId: string, teamId?: string) {
+    return ApiService.request(`/chatbot/files/${fileId}${teamId ? `?teamId=${teamId}` : ""}`, {
       method: "DELETE",
     });
   },
 
-  sendTeamAiChatMessage: (teamId: string, message: string) => {
-    return ApiService.request(`/chatbot/conversations/teams/${teamId}`, {
+  sendTeamAiChatMessage: (message: string, teamId?: string) => {
+    return ApiService.request(`/chatbot/conversations/${teamId ? `teams/${teamId}` : ""}`, {
       method: "POST",
       body: JSON.stringify({ message }),
     });
