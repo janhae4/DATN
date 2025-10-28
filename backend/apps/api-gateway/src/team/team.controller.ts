@@ -20,13 +20,13 @@ import {
 } from '@nestjs/swagger';
 import { ChangeRoleMember } from './dto/change-role.dto';
 import { Roles } from '../common/role/role.decorator';
-import { Role } from '@app/contracts';
+import { MEMBER_ROLE, Role } from '@app/contracts';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { AddMember } from './dto/add-member.dto';
 import { RemoveMember } from './dto/remove-member.dto';
 import { TransferOwnership } from './dto/transfer-owner.dto';
 
-@Controller('team')
+@Controller('teams')
 @UseGuards(RoleGuard)
 @Roles(Role.ADMIN, Role.USER)
 export class TeamController {
@@ -142,14 +142,20 @@ export class TeamController {
     });
   }
 
-  @Patch(':teamId/member/role')
+  @Patch(':teamId/member/:memberId/role')
   @ApiOperation({ summary: "Change a team member's role" })
   @ApiBearerAuth()
   @ApiParam({
     name: 'teamId',
     description:
       'The unique identifier of the team to which the member belongs.',
-    example: '123123',
+    example: '',
+  })
+  @ApiParam({
+    name: 'memberId',
+    description:
+      'The unique identifier of the member whose role is being changed.',
+    example: '',
   })
   @ApiBody({
     type: ChangeRoleMember,
@@ -167,13 +173,15 @@ export class TeamController {
     status: 404,
     description: 'Not Found. The team or target member could not be found.',
   })
-  promoteToAdmin(
+  changeRole(
     @Param('teamId') teamId: string,
+    @Param('memberId') memberId: string,
     @CurrentUser('id') requesterId: string,
-    @Body() body: ChangeRoleMember,
+    @Body('role') role: string,
   ) {
     return this.teamService.changeRole({
-      ...body,
+      targetId: memberId,
+      newRole: MEMBER_ROLE[role],
       teamId,
       requesterId,
     });

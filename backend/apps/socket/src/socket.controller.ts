@@ -79,7 +79,7 @@ export class SocketController {
     queue: "events_socket_add_member",
   })
   handleAddMember(payload: AddMemberEventPayload) {
-    const { members, requesterName, teamName } = payload;
+    const { members, requesterName, teamName, teamId } = payload;
     members.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m.id,
@@ -96,7 +96,7 @@ export class SocketController {
     queue: "events_socket_member_role_changed",
   })
   handleMemberRoleChanged(payload: ChangeRoleMember) {
-    const { requesterId, teamName, requesterName, newRole } = payload;
+    const { requesterId, teamName, requesterName, newRole, teamId } = payload;
     this.socketGateway.sendNotificationToUser({
       userId: requesterId,
       title: `Your role in team ${teamName} has been changed`,
@@ -111,7 +111,7 @@ export class SocketController {
     queue: "events_socket_remove_member",
   })
   handleRemoveMember(payload: RemoveMemberEventPayload) {
-    const { requesterName, teamName, memberIds } = payload;
+    const { requesterName, teamName, memberIds, teamId } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m,
@@ -145,7 +145,7 @@ export class SocketController {
     queue: "events_socket_leave_team",
   })
   handleLeaveTeam(payload: LeaveMember) {
-    const { requesterName, teamName, memberIds = [] } = payload;
+    const { requesterName, teamName, memberIds = [], teamId } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m,
@@ -162,7 +162,7 @@ export class SocketController {
     queue: "events_socket_remove_team",
   })
   handleRemoveTeam(payload: RemoveTeamEventPayload) {
-    const { requesterName, teamName, memberIds = [] } = payload;
+    const { requesterName, teamName, memberIds = [], teamId } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m,
