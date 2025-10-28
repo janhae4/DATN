@@ -12,6 +12,15 @@ export class ForbiddenException extends RpcException {
   }
 }
 
+export class SerializableRpcException extends RpcException {
+  constructor(error: any) {
+    if (typeof error !== 'string') {
+      error = JSON.stringify(error); // 👈 ép serialize
+    }
+    super(error);
+  }
+}
+
 export class NotFoundException extends RpcException {
   constructor(message: string = 'Not found') {
     super({ error: 'Not found', statusCode: 404, message });

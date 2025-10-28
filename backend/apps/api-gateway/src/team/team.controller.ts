@@ -30,7 +30,7 @@ import { TransferOwnership } from './dto/transfer-owner.dto';
 @UseGuards(RoleGuard)
 @Roles(Role.ADMIN, Role.USER)
 export class TeamController {
-  constructor(private readonly teamService: TeamService) {}
+  constructor(private readonly teamService: TeamService) { }
 
   @Get()
   @ApiOperation({ summary: 'Get all teams' })
@@ -67,6 +67,15 @@ export class TeamController {
       ...createTeamDto,
       ownerId: userId,
     });
+  }
+
+  @Delete(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete team' })
+  @ApiParam({ name: 'id', description: 'Team id' })
+  @Roles(Role.ADMIN, Role.USER)
+  async deleteTeam(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return await this.teamService.removeTeam(userId, id);
   }
 
   @Post(':teamId/member')

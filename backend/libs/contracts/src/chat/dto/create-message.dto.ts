@@ -29,6 +29,10 @@ export class CreateChatMessageDto {
   @IsOptional()
   content?: string;
 
+  @IsString()
+  @IsOptional()
+  teamId?: string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AttachmentDto)

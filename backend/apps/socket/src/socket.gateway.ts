@@ -24,6 +24,9 @@ import {
   RPC_TIMEOUT,
   SendMessageEventPayload,
   SummarizeDocumentDto,
+  Team,
+  TEAM_EXCHANGE,
+  TEAM_PATTERN,
 } from '@app/contracts';
 import * as cookie from 'cookie';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
@@ -82,8 +85,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
+      const rooms = await this.amqpConnection.request<string[]>({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_ROOMS_BY_USER_ID,
+        payload: user.id,
+      })
+
+      console.log(rooms)
+
       this.logger.log(`Client ${client.id} - Authenticated: ${user.id}`);
       client.data.user = user;
+      client.join(rooms)
       client.join(user.id);
     } catch (error) {
       const e = error as Error;
@@ -107,7 +119,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: AuthenticatedSocket,
     payload: MessageDto,
   ): Promise<ConversationDocument | null> {
-    const { message, userId, conversationId, role } = payload;
+    const { message, userId, conversationId, role, teamId, metadata } = payload;
     const savedConversation = await this.amqpConnection.request<ConversationDocument>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.HANDLE_MESSAGE,
@@ -116,6 +128,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         conversationId,
         role,
         userId,
+        teamId,
+        metadata
       } as MessageDto,
       timeout: RPC_TIMEOUT,
     });
@@ -162,7 +176,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const { question, conversationId } = payload;
+    const { question, conversationId, teamId } = payload;
     this.logger.log(
       `Received ask_question from ${client.id} (User: ${user.id}): ${question}`,
     );
@@ -170,18 +184,34 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const savedConversation = await this.handleInteraction(client, {
       message: question,
       userId: user.id,
-      conversationId,
       role: 'user',
+      conversationId,
+      teamId
     } as MessageDto);
 
     if (!savedConversation) {
       return;
     }
 
+
+    const newMessage = savedConversation.messages[savedConversation.messages.length - 1];
+    const broadcastRoom = teamId ? teamId : user.id;
+
+    // DEBUG: Kiểm tra xem room id có đúng không?
+    console.log(`Đang broadcast 'new_ai_message' tới room: ${broadcastRoom}`);
+    console.log(`TeamId là: ${teamId}, UserId là: ${user.id}`);
+
+    client.broadcast
+      .to(broadcastRoom)
+      .emit('new_ai_message', {
+        ...newMessage,
+        conversationId
+      });
+
     const chatHistory = savedConversation.messages
       .slice(-20)
       .map((message) => ({
-        role: message.role.replace('ai', 'you').replace('user', 'me'),
+        role: message.role,
         content: message.content,
       }));
 
@@ -190,13 +220,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       question,
       socketId: client.id,
       conversationId: String(savedConversation._id),
+      teamId,
       chatHistory,
     };
 
     this.logger.log(
       `Emitting to RAG_CLIENT (ask_question) for user ${user.id}`,
     );
-    
+
     await this.amqpConnection.publish(
       CHATBOT_EXCHANGE,
       CHATBOT_PATTERN.ASK_QUESTION,
@@ -217,16 +248,19 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const { fileName, conversationId } = payload;
+    const { fileName, conversationId, teamId } = payload;
     this.logger.log(
       `Received summarize_document from ${client.id} (User: ${user.id}): ${fileName}`,
     );
 
-    const messageContent = `Yêu cầu tóm tắt tài liệu: ${fileName}`;
+    const name = fileName.split("_").pop();
+
+    const messageContent = `Yêu cầu tóm tắt tài liệu: ${name}`;
     const savedConversation = await this.handleInteraction(client, {
       message: messageContent,
       userId: user.id,
       conversationId,
+      teamId,
       role: 'user',
     } as MessageDto);
 
@@ -234,9 +268,21 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    const broadcastRoom = teamId ? teamId : user.id;
+
+    const newMessage = savedConversation.messages[savedConversation.messages.length - 1];
+
+    client.broadcast
+      .to(broadcastRoom)
+      .emit('new_ai_message', {
+        ...newMessage,
+        conversationId: savedConversation._id
+      });
+
     const requestPayload = {
       userId: user.id,
       fileName,
+      teamId,
       socketId: client.id,
       conversationId: String(savedConversation._id),
     };
@@ -244,7 +290,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(
       `Emitting to RAG_CLIENT (summarize_document) for user ${user.id}`,
     );
-    this.amqpConnection.publish(
+    await this.amqpConnection.publish(
       CHATBOT_EXCHANGE,
       CHATBOT_PATTERN.SUMMARIZE_DOCUMENT,
       requestPayload
@@ -252,7 +298,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleStreamResponse(response: ResponseStreamDto) {
-    const { conversationId, socketId, content, type } = response;
+    const { conversationId, socketId, content, type, teamId } = response;
     const client = this.server.sockets.sockets.get(socketId) as
       | AuthenticatedSocket
       | undefined;
@@ -261,16 +307,28 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    const broadcastRoom = teamId || conversationId;
+
+    if (!broadcastRoom) {
+      this.logger.warn(`Invalid broadcast room for client ${client.id}.`);
+      return;
+    }
+
     this.logger.debug(`handleStreamResponse for ${client.id}, type: ${type}`);
+    let metadata = {};
 
     if (type === 'chunk') {
       const currentMessage = client.data.accumulatedMessage || '';
       client.data.accumulatedMessage = currentMessage + content;
-      client.emit(CHATBOT_PATTERN.RESPONSE_CHUNK, content);
+      this.server.to(broadcastRoom).emit(CHATBOT_PATTERN.RESPONSE_CHUNK, content);
+    } else if (type === 'start') {
+      this.server.to(broadcastRoom).emit(CHATBOT_PATTERN.RESPONSE_START, content);
     } else if (type === 'error') {
-      client.emit(CHATBOT_PATTERN.RESPONSE_ERROR, content);
+      this.server.to(broadcastRoom).emit(CHATBOT_PATTERN.RESPONSE_ERROR, content);
+    } else if (type === "metadata") {
+      metadata = JSON.parse(content);
     } else if (type === 'end') {
-      client.emit(CHATBOT_PATTERN.RESPONSE_END, content);
+      this.server.to(broadcastRoom).emit(CHATBOT_PATTERN.RESPONSE_END, content);
       const fullMessage = client.data.accumulatedMessage || '';
       if (fullMessage.trim().length > 0) {
         const user = client.data.user;
@@ -280,7 +338,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               userId: user.id,
               message: fullMessage,
               conversationId,
+              teamId,
               role: 'ai',
+              metadata,
             });
           } catch (error) {
             this.logger.error(error);
@@ -318,6 +378,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       attachments,
       sender,
       createdAt,
+      teamId
     } = payload;
     this.logger.log(`Received new message for conversation ${conversationId}`);
 
@@ -338,21 +399,26 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
+      const room = teamId || conversationId
+
+      console.log(payload)
+
       this.logger.log(
         `Broadcasting to participants: ${participantIds.join(', ')}`,
       );
-      participantIds.forEach((userId) => {
-        this.server.to(userId).emit('new_message', {
-          _id: id,
-          conversationId,
-          content,
-          sender,
-          attachments,
-          createdAt,
-        });
+      this.server.to(room).emit('new_message', {
+        _id: id,
+        conversationId,
+        content,
+        sender,
+        attachments,
+        createdAt,
       });
     } catch (error) {
-      this.logger.error('Failed to handle new message event', error);
+      this.logger.error(
+        `Failed to broadcast new message for conversation ${conversationId}`,
+        error,
+      );
     }
   }
 }

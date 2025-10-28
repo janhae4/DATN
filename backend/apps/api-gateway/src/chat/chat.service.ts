@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   CHAT_EXCHANGE,
   CHAT_PATTERN,
@@ -8,6 +8,7 @@ import {
 } from '@app/contracts';
 import { PaginationDto } from './dto/pagination.dto';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Injectable()
 export class ChatService {
@@ -25,7 +26,6 @@ export class ChatService {
   }
 
   createChatMessage(payload: CreateChatMessageDto) {
-    console.log(payload)
     return this.amqp.request({
       exchange: CHAT_EXCHANGE,
       routingKey: CHAT_PATTERN.CREATE_MESSAGE,
@@ -61,12 +61,22 @@ export class ChatService {
     })
   }
 
+  async getConversationByTeamId(userId: string, teamId: string) {
+    const result = await this.amqp.request({
+      exchange: CHAT_EXCHANGE,
+      routingKey: CHAT_PATTERN.GET_CONVERSATION_BY_TEAM_ID,
+      payload: { teamId, userId },
+    });
+    console.log(result)
+    return unwrapRpcResult(result);
+  }
+
   searchMessages(query: string, conversationId: string, userId: string, page: number, limit: number) {
     const options = { page, limit };
     return this.amqp.request({
       exchange: CHAT_EXCHANGE,
       routingKey: CHAT_PATTERN.SEARCH_MESSAGES,
-      payload: { query, conversationId, userId, options},
+      payload: { query, conversationId, userId, options },
       timeout: this.rpcTimeout,
     })
   }

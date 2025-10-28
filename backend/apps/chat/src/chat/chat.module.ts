@@ -11,7 +11,7 @@ import {
 import { MongooseModule } from '@nestjs/mongoose';
 import { Conversation, ConversationSchema } from './schema/conversation.schema';
 import { Message, MessageSchema } from './schema/message.schema';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { MessageHandlerErrorBehavior, RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 @Module({
   imports: [
     ClientConfigModule,
@@ -51,11 +51,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
         ],
         uri: cfg.getRMQUrl(),
         connectionInitOptions: { wait: false },
-        connectionManagerOptions: {
-          heartbeatIntervalInSeconds: 5,
-          reconnectTimeInSeconds: 10,
-        },
-      })
+      }),
     }),
   ],
   controllers: [ChatController],

@@ -135,7 +135,7 @@ export class AuthService {
       })
 
       this.setCookies(token.accessToken, token.refreshToken, response);
-      return "Login successfully";
+      return {message: "Login successfully"};
     } catch (error) {
       this.clearCookies(response);
       throw error;

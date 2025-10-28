@@ -10,40 +10,31 @@ import {
   Patch,
   Post,
   Query,
-  Req,
   Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
-import { JwtDto, Role } from '@app/contracts';
+import { ApiBearerAuth, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Role } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
-import type { Request, Response } from 'express';
-import { Payload } from '@nestjs/microservices';
+import type { Response } from 'express';
 import { RoleGuard } from '../common/role/role.guard';
 import { CurrentUser } from '../common/role/current-user.decorator';
 
 @Controller('chatbot')
+@ApiBearerAuth()
+@UseGuards(RoleGuard)
 export class ChatbotController {
   constructor(private readonly chatbotService: ChatbotService) { }
 
   @Post('files')
-  @UseGuards(RoleGuard)
   @Roles(Role.USER)
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        userId: { type: 'string' },
-        file: { type: 'string', format: 'binary' },
-      },
-    },
-  })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multer.memoryStorage(),
@@ -56,14 +47,16 @@ export class ChatbotController {
       }),
     )
     file: Express.Multer.File,
-    @CurrentUser('id') userId: string
+    @CurrentUser('id') userId: string,
+    @Query('teamId') teamId?: string,
   ) {
     if (file.buffer.length === 0 || !file) {
       throw new BadRequestException('File is empty.');
     }
 
-    const fileName = await this.chatbotService.uploadFile(file, userId);
-    this.chatbotService.processDocument(fileName, userId);
+    const fileName = await this.chatbotService.uploadFile(file, userId, teamId);
+    this.chatbotService.processDocument(fileName, userId, teamId);
+
     return {
       message: 'File is processing',
       fileName,
@@ -71,60 +64,51 @@ export class ChatbotController {
     };
   }
 
-  @Get('files/user')
-  @UseGuards(RoleGuard)
+  @Get('files')
   @Roles(Role.USER, Role.ADMIN)
-  @ApiBearerAuth()
-  async getFilesByUserId(@Req() request: Request) {
-    const user = request.user as JwtDto;
-    if (!user.id) {
-      throw new BadRequestException('User not found');
-    }
-    return await this.chatbotService.getFilesByUserId(user.id);
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  async getFiles(
+    @CurrentUser('id') userId: string,
+    @Query('teamId') teamId?: string,
+  ) {
+    return await this.chatbotService.getFilesPrefix(userId, teamId);
   }
 
   @Get('files/:id')
-  @UseGuards(RoleGuard)
   @Roles(Role.USER)
-  @ApiBearerAuth()
-  @ApiParam({
-    name: 'file id',
-    type: 'string'
-  })
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   async getFile(
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
-    @Res() res: Response
+    @Res() res: Response,
+    @Query('teamId') teamId?: string,
   ) {
-    const payload = await this.chatbotService.getFile(userId, id);
+    const payload = await this.chatbotService.getFile(id, userId, teamId);
     const { data, contentType } = payload;
     res.set({
       'Content-Type': contentType,
-      'Content-Disposition': `inline; filename="${id}"`,
     });
     res.send(data);
   }
 
   @Delete('files/:id')
-  @UseGuards(RoleGuard)
   @Roles(Role.USER, Role.ADMIN)
-  @ApiBearerAuth()
-  @ApiParam({
-    name: 'file id',
-    type: 'string'
-  })
-  async deleteFile(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return await this.chatbotService.deleteFile(userId, id);
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  async deleteFile(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Query('teamId') teamId?: string,
+  ) {
+    console.log("TEAMID", teamId)
+    return await this.chatbotService.deleteFile(id, userId, teamId);
   }
 
   @Patch('files/:id/content')
-  @UseGuards(RoleGuard)
   @Roles(Role.USER, Role.ADMIN)
-  @ApiBearerAuth()
-  @ApiParam({
-    name: 'file id',
-    type: 'string'
-  })
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multer.memoryStorage(),
@@ -138,68 +122,119 @@ export class ChatbotController {
     )
     file: Express.Multer.File,
     @Param('id') id: string,
-    @CurrentUser('id') userId: string
+    @CurrentUser('id') userId: string,
+    @Query('teamId') teamId?: string,
   ) {
-    console.log(id)
-    return await this.chatbotService.updateFile(file, userId, id);
+    return await this.chatbotService.updateFile(file, id, userId, teamId);
   }
 
   @Patch('files/:id/rename')
-  @UseGuards(RoleGuard)
   @Roles(Role.USER, Role.ADMIN)
-  @ApiBearerAuth()
-  @ApiParam({
-    name: 'file id',
-    type: 'string'
-  })
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   async renameFile(
     @Param('id') id: string,
     @Body('newName') newName: string,
-    @CurrentUser('id') userId: string
+    @CurrentUser('id') userId: string,
+    @Query('teamId') teamId?: string,
   ) {
-    return await this.chatbotService.renameFile(userId, id, newName);
+    return await this.chatbotService.renameFile(id, newName, userId, teamId);
   }
 
-  @Post('conversations')
-  @UseGuards(RoleGuard)
+  @Get('conversations')
   @Roles(Role.USER)
-  @ApiBearerAuth()
-  async findConversation(
-    @Req() request: Request,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: 'number' })
+  @ApiQuery({ name: 'limit', required: false, type: 'number' })
+  async findConversations(
+    @CurrentUser('id') userId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 15,
   ) {
-    const user = request.user as JwtDto;
-    return await this.chatbotService.findAllConversation(user.id, page, limit);
+    return await this.chatbotService.findAllConversation(
+      userId, page, limit
+    );
+  }
+
+  @Post('conversations/:id')
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  async handleMessage(
+    @Param('id') id: string,
+    @Body('message') message: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return await this.chatbotService.sendMessage({
+      userId,
+      conversationId: id,
+      message,
+    });
+  }
+
+  @Post('conversations/teams/:id')
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  async handleTeamMessage(
+    @Param('id') id: string,
+    @Body('message') message: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return await this.chatbotService.sendMessage({
+      userId,
+      teamId: id,
+      message,
+    });
+  }
+
+  @Get('conversations/teams/:id')
+  @Roles(Role.USER)
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: 'number' })
+  @ApiQuery({ name: 'limit', required: false, type: 'number' })
+  async findTeamConversations(
+    @CurrentUser('id') userId: string,
+    @Param('id') teamId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 15,
+  ) {
+    return await this.chatbotService.findTeamConversation(
+      userId, teamId, page, limit
+    );
   }
 
   @Get('conversations/:id')
-  @UseGuards(RoleGuard)
   @Roles(Role.USER)
-  @ApiBearerAuth()
-  @ApiParam({
-    name: 'id',
-    type: 'string',
-  })
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: 'number' })
+  @ApiQuery({ name: 'limit', required: false, type: 'number' })
   async findConversationById(
-    @Req() request: Request,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 15,
+    @Query('teamId') teamId?: string,
   ) {
-    const user = request.user as JwtDto;
-    return await this.chatbotService.findConversation(user.id, id, page, limit);
+    return await this.chatbotService.findConversation(
+      userId,
+      id,
+      page,
+      limit,
+      teamId,
+    );
   }
 
   @Delete('conversations/:id')
-  @UseGuards(RoleGuard)
   @Roles(Role.USER)
-  @ApiBearerAuth()
-  @ApiParam({
-    name: 'id',
-    type: 'string',
-  })
-  async deleteConversation(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return await this.chatbotService.deleteConversation(userId, id);
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  async deleteConversation(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Query('teamId') teamId?: string,
+  ) {
+    return await this.chatbotService.deleteConversation(id, userId, teamId);
   }
 }

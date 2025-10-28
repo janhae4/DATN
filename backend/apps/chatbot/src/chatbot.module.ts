@@ -10,6 +10,9 @@ import {
   ClientConfigService,
   Conversation,
   ConversationSchema,
+  EVENTS_EXCHANGE,
+  TEAM_EXCHANGE,
+  USER_EXCHANGE,
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 @Module({
@@ -36,6 +39,18 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
             name: CHATBOT_EXCHANGE,
             type: 'direct',
           },
+          {
+            name: USER_EXCHANGE,
+            type: 'direct'
+          },
+          {
+            name: TEAM_EXCHANGE,
+            type: 'direct'
+          },
+          {
+            name: EVENTS_EXCHANGE,
+            type: 'topic'
+          }
         ],
         uri: config.getRMQUrl(),
         connectionInitOptions: { wait: false },

@@ -42,6 +42,14 @@ export class ChatController {
     return this.chatService.getConversationsForUser(userId, paginationDto);
   }
 
+  @Get('conversations/teams/:teamId')
+  getConversationByTeamId(
+    @Param('teamId') teamId: string,
+    @CurrentUser('id') userId: string
+  ) {
+    return this.chatService.getConversationByTeamId(userId, teamId);
+  }
+
   @Get('conversations/:conversationId/messages/search')
   @ApiOperation({ summary: 'Get message' })
   @ApiParam({

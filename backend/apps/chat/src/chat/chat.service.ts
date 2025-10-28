@@ -1,12 +1,9 @@
 import {
   Injectable,
   Logger,
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import mongoose, { Model, Types } from 'mongoose';
 import { Conversation } from './schema/conversation.schema';
 import { Message } from './schema/message.schema';
 import {
@@ -21,23 +18,19 @@ import {
   TransferOwnershipEventPayload,
   CreateDirectChatDto,
   USER_PATTERNS,
-  USER_CLIENT,
-  EVENT_CLIENT,
   EVENTS,
   SendMessageEventPayload,
-  SOCKET_CLIENT,
   ConversationDocument,
   USER_EXCHANGE,
   EVENTS_EXCHANGE,
-  CHAT_EXCHANGE,
-  CHAT_PATTERN,
   RPC_TIMEOUT,
   PaginationDto,
   SEARCH_EXCHANGE,
   SEARCH_PATTERN,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
 } from '@app/contracts';
-import { firstValueFrom } from 'rxjs';
-import { ClientProxy } from '@nestjs/microservices';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
@@ -52,7 +45,7 @@ export class ChatService {
     private readonly amqp: AmqpConnection
   ) { }
 
-  async createChat(createTeam: CreateTeamEventPayload): Promise<Conversation> {
+  async createChat(createTeam: CreateTeamEventPayload) {
     const { ownerId, members, name, teamId } = createTeam;
     this.logger.log(`Creating a new team named "${name}"...`);
 
@@ -71,8 +64,8 @@ export class ChatService {
       isGroupChat: true,
       groupAdmins: [ownerId],
     });
-    this.logger.log(`Team "${name}" created successfully.`);
-    return await newConversation.save();
+    this.logger.log(`Team "${name}" with ID "${teamId}" created successfully.`);
+    await newConversation.save();
   }
 
   async createDirectChat(payload: CreateDirectChatDto): Promise<Conversation> {
@@ -92,7 +85,7 @@ export class ChatService {
         'participants._id': { $all: participantIds },
         participants: { $size: 2 },
       })
-      .lean();
+      .lean<Conversation>();
 
     if (existingConversation) {
       return existingConversation;
@@ -124,34 +117,89 @@ export class ChatService {
     });
   }
 
-  async addMember(payload: AddMemberEventPayload): Promise<Conversation> {
+  async createChatMessage(
+    createChatMessage: CreateChatMessageDto,
+  ): Promise<Message> {
+    const { conversationId, senderId, content, attachments } =
+      createChatMessage;
+
+    this._markAsRead(conversationId, senderId);
+
+    const conversation = await this.conversationModel.findOne({
+      _id: conversationId,
+      'participants._id': senderId,
+    });
+    if (!conversation) {
+      throw new ForbiddenException(
+        `Conversation not found or you are not a participant.`,
+      );
+    }
+    const sender = conversation.participants.find(
+      (p) => p._id.toString() === senderId,
+    );
+    console.log(sender)
+    if (!sender) {
+      throw new ForbiddenException(
+        `Conversation not found or you are not a participant.`,
+      );
+    }
+    const newMessage = new this.messageModel({
+      conversation: conversationId,
+      sender,
+      content,
+      attachments,
+    });
+    const savedMessage = await newMessage.save();
+    conversation.latestMessage = savedMessage;
+    await conversation.save();
+    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.NEW_MESSAGE, {
+      id: savedMessage._id.toString(),
+      conversationId,
+      attachments,
+      sender,
+      content,
+      participants: conversation.participants,
+      reactions: [],
+      createdAt: savedMessage.createdAt,
+      teamId: conversation.teamId
+    } as SendMessageEventPayload);
+    return savedMessage;
+  }
+
+  async addMember(payload: AddMemberEventPayload) {
     const {
       members,
       requesterId,
-      teamId: conversationId,
+      teamId,
       requesterName,
     } = payload;
     this.logger.log(
-      `User [${requesterId}] adding ${members.length} members to conversation [${conversationId}].`,
+      `User [${requesterId}] adding ${members.length} members to team [${teamId}].`,
     );
 
-    await this._verifyPermission(conversationId, requesterId, [
-      MEMBER_ROLE.ADMIN,
-      MEMBER_ROLE.OWNER,
-    ]);
+    const conversation = await this._verifyPermission(
+      teamId,
+      requesterId,
+      [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER],
+    )
+
+    const participants = members.map((member) => ({
+      ...member,
+      _id: member.id,
+    }));
 
     const content = `${requesterName} added ${members.map((m) => m.name).join(', ')} to the group.`;
 
     const [updatedConversation, _] = await Promise.all([
       this.conversationModel
         .findByIdAndUpdate(
-          conversationId,
-          { $addToSet: { participants: { $each: members } } },
+          conversation._id,
+          { $addToSet: { participants: { $each: participants } } },
           { new: true },
         )
         .lean<Conversation>(),
 
-      this._systemSendMessage(conversationId, content),
+      this._systemSendMessage(conversation, content),
     ]);
 
     void _;
@@ -160,121 +208,13 @@ export class ChatService {
       throw new NotFoundException('Conversation not found.');
     }
 
-    return updatedConversation;
-  }
-
-  async removeMember(payload: RemoveMemberEventPayload): Promise<Conversation> {
-    const { memberIds, requesterId, teamId: conversationId } = payload;
     this.logger.log(
-      `User [${requesterId}] removing members from conversation [${conversationId}].`,
-    );
-
-    const conversation = await this._verifyPermission(
-      conversationId,
-      requesterId,
-      [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER],
-    );
-    const requester = conversation.participants.find(
-      (p) => p._id === requesterId,
-    );
-
-    if (!requester) {
-      throw new NotFoundException('You are not in this team.');
-    }
-
-    if (!conversation.isGroupChat) {
-      throw new BadRequestException(
-        'You cannot remove members from a direct chat.',
-      );
-    }
-
-    const membersToRemove = conversation.participants.filter((p) =>
-      memberIds.includes(p._id),
-    );
-
-    if (membersToRemove.length === 0) {
-      throw new NotFoundException(
-        'None of the provided member IDs were found in the team.',
-      );
-    }
-
-    for (const member of membersToRemove) {
-      if (member._id === conversation.ownerId) {
-        throw new ForbiddenException('The team owner cannot be removed.');
-      }
-      if (
-        requester.role === MEMBER_ROLE.ADMIN &&
-        member.role === MEMBER_ROLE.ADMIN
-      ) {
-        throw new ForbiddenException(
-          `An admin cannot remove another admin (user: ${member._id}).`,
-        );
-      }
-    }
-
-    const validMemberIdsToRemove = membersToRemove.map((m) => m._id);
-
-    const [updatedConversation] = await Promise.all([
-      this.conversationModel
-        .findByIdAndUpdate(
-          conversationId,
-          { $pull: { participants: { _id: { $in: validMemberIdsToRemove } } } },
-          { new: true },
-        )
-        .lean<Conversation>(),
-
-      this._systemSendMessage(
-        conversationId,
-        `${requester.name} removed ${membersToRemove.map((m) => m.name).join(', ')} from the group.`,
-      ),
-    ]);
-
-    if (!updatedConversation) {
-      throw new NotFoundException('Conversation not found.');
-    }
-
-    return updatedConversation;
+      `User [${requesterId}] added ${members.length} members to team [${teamId}].`,
+    )
   }
 
-  async leaveTeam(payload: LeaveMember): Promise<Conversation> {
-    const { teamId: conversationId, requesterId, requesterName } = payload;
-    this.logger.log(`User [${requesterId}] leaving team [${conversationId}].`);
 
-    const conversation = await this._verifyPermission(
-      conversationId,
-      requesterId,
-      [MEMBER_ROLE.MEMBER, MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER],
-    );
-
-    if (conversation.ownerId === requesterId) {
-      throw new ForbiddenException(
-        'As the team owner, you cannot leave. Please delete the team or transfer ownership first.',
-      );
-    }
-
-    const [updatedConversation] = await Promise.all([
-      this.conversationModel
-        .findByIdAndUpdate(
-          conversationId,
-          { $pull: { participants: { _id: requesterId } } },
-          { new: true },
-        )
-        .lean<Conversation>(),
-
-      this._systemSendMessage(
-        conversationId,
-        `${requesterName} has left the group.`,
-      ),
-    ]);
-
-    if (!updatedConversation) {
-      throw new NotFoundException('Conversation not found.');
-    }
-
-    return updatedConversation;
-  }
-
-  async changeRole(payload: ChangeRoleMember): Promise<Conversation> {
+  async changeRole(payload: ChangeRoleMember) {
     const {
       requesterId,
       teamId: conversationId,
@@ -292,26 +232,22 @@ export class ChatService {
       MEMBER_ROLE.OWNER,
     ]);
 
-    const [updatedConversation] = await Promise.all([
-      this.conversationModel
-        .findOneAndUpdate(
-          { _id: conversationId, 'participants._id': targetId },
-          { $set: { 'participants.$.role': newRole } },
-          { new: true },
-        )
-        .lean<Conversation>(),
+    const conversation = await this.conversationModel
+      .findOneAndUpdate(
+        { _id: conversationId, 'participants._id': targetId },
+        { $set: { 'participants.$.role': newRole } },
+        { new: true },
+      )
+      .lean<Conversation>()
 
-      this._systemSendMessage(
-        conversationId,
-        `${requesterName} changed ${targetName}'s role to ${newRole}.`,
-      ),
-    ]);
-
-    if (!updatedConversation) {
+    if (!conversation) {
       throw new NotFoundException('Conversation not found.');
     }
 
-    return updatedConversation;
+    this._systemSendMessage(
+      conversation,
+      `${requesterName} changed ${targetName}'s role to ${newRole}.`,
+    );
   }
 
   async transferOwnership(
@@ -365,7 +301,7 @@ export class ChatService {
         .lean<Conversation>(),
 
       this._systemSendMessage(
-        conversationId,
+        conversation,
         `${requesterName} transferred ownership to ${newOwnerName}.`,
       ),
     ]);
@@ -377,62 +313,142 @@ export class ChatService {
     return updatedConversation;
   }
 
-  async createChatMessage(
-    createChatMessage: CreateChatMessageDto,
-  ): Promise<Message> {
-    const { conversationId, senderId, content, attachments } =
-      createChatMessage;
-
-    this._markAsRead(conversationId, senderId);
-
-    const conversation = await this.conversationModel.findOne({
-      _id: conversationId,
-      'participants._id': senderId,
-    });
-    if (!conversation) {
-      throw new ForbiddenException(
-        `Conversation not found or you are not a participant.`,
-      );
-    }
-    const sender = conversation.participants.find(
-      (p) => p._id.toString() === senderId,
+  async removeMember(payload: RemoveMemberEventPayload) {
+    const { memberIds, requesterId, teamId } = payload;
+    this.logger.log(
+      `User [${requesterId}] removing members from teamId [${teamId}].`,
     );
-    console.log(sender)
-    if (!sender) {
-      throw new ForbiddenException(
-        `Conversation not found or you are not a participant.`,
+
+    const conversation = await this._verifyPermission(
+      teamId,
+      requesterId,
+      [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER],
+    );
+    const requester = conversation.participants.find(
+      (p) => p._id === requesterId,
+    );
+
+    if (!requester) {
+      throw new NotFoundException('You are not in this team.');
+    }
+
+    if (!conversation.isGroupChat) {
+      throw new BadRequestException(
+        'You cannot remove members from a direct chat.',
       );
     }
-    const newMessage = new this.messageModel({
-      conversation: conversationId,
-      sender,
-      content,
-      attachments,
-    });
-    const savedMessage = await newMessage.save();
-    conversation.latestMessage = savedMessage;
-    await conversation.save();
-    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.NEW_MESSAGE, {
-      id: savedMessage._id.toString(),
+
+    console.log(conversation.participants)
+
+    const membersToRemove = conversation.participants.filter((p) =>
+      memberIds.includes(p._id),
+    );
+
+    if (membersToRemove.length === 0) {
+      throw new NotFoundException(
+        'None of the provided member IDs were found in the team.',
+      );
+    }
+
+    for (const member of membersToRemove) {
+      if (member._id === conversation.ownerId) {
+        throw new ForbiddenException('The team owner cannot be removed.');
+      }
+      if (
+        requester.role === MEMBER_ROLE.ADMIN &&
+        member.role === MEMBER_ROLE.ADMIN
+      ) {
+        throw new ForbiddenException(
+          `An admin cannot remove another admin (user: ${member._id}).`,
+        );
+      }
+    }
+
+    const validMemberIdsToRemove = membersToRemove.map((m) => m._id);
+
+    const [updatedConversation] = await Promise.all([
+      this.conversationModel
+        .findByIdAndUpdate(
+          conversation._id,
+          { $pull: { participants: { _id: { $in: validMemberIdsToRemove } } } },
+          { new: true },
+        )
+        .lean<Conversation>(),
+
+      this._systemSendMessage(
+        conversation,
+        `${requester.name} removed ${membersToRemove.map((m) => m.name).join(', ')} from the group.`,
+      ),
+    ]);
+
+    if (!updatedConversation) {
+      throw new NotFoundException('Conversation not found.');
+    }
+
+    this.logger.log(
+      `User [${requesterId}] removed ${membersToRemove.length} members from team [${teamId}].`,)
+  }
+
+  async leaveTeam(payload: LeaveMember): Promise<Conversation> {
+    const { teamId: conversationId, requesterId, requesterName } = payload;
+    this.logger.log(`User [${requesterId}] leaving team [${conversationId}].`);
+
+    const conversation = await this._verifyPermission(
       conversationId,
-      attachments,
-      sender,
-      content,
-      participants: conversation.participants,
-      reactions: [],
-      createdAt: savedMessage.createdAt,
-    } as SendMessageEventPayload);
-    return savedMessage;
+      requesterId,
+      [MEMBER_ROLE.MEMBER, MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER],
+    );
+
+    if (conversation.ownerId === requesterId) {
+      throw new ForbiddenException(
+        'As the team owner, you cannot leave. Please delete the team or transfer ownership first.',
+      );
+    }
+
+    const [updatedConversation] = await Promise.all([
+      this.conversationModel
+        .findByIdAndUpdate(
+          conversationId,
+          { $pull: { participants: { _id: requesterId } } },
+          { new: true },
+        )
+        .lean<Conversation>(),
+
+      this._systemSendMessage(
+        conversation,
+        `${requesterName} has left the group.`,
+      ),
+    ]);
+
+    if (!updatedConversation) {
+      throw new NotFoundException('Conversation not found.');
+    }
+
+    return updatedConversation;
+  }
+
+  async removeTeam(payload: LeaveMember) {
+    const { teamId, requesterId } = payload;
+    this.logger.log(`User [${requesterId}] deleting team [${teamId}].`);
+
+    const conversation = await this._verifyPermission(
+      teamId,
+      requesterId,
+      [MEMBER_ROLE.OWNER],
+    )
+
+    return await this.conversationModel.findByIdAndDelete(conversation._id);
   }
 
   async getConversationsForUser(userId: string, page = 1, limit = 20) {
+    this.logger.log(`Getting conversations for user [${userId}]`);
     const [conversations, total] = await Promise.all([
       this.conversationModel
         .find({ 'participants._id': userId })
         .skip((page - 1) * limit)
         .populate('latestMessage')
         .limit(limit)
-        .sort({ updatedAt: -1 })
+        .sort({ updatedDate: -1, createdAt: -1 })
         .lean<ConversationDocument>(),
       this.conversationModel.countDocuments({ 'participants._id': userId }),
     ]);
@@ -443,6 +459,17 @@ export class ChatService {
       page,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async getConversationByTeamId(userId: string, teamId: string) {
+    const conversation = await this.conversationModel
+      .findOne({ teamId, 'participants._id': userId })
+      .lean<ConversationDocument>();
+    console.log(conversation)
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found.');
+    }
+    return conversation;
   }
 
   async getMessagesForConversation(
@@ -512,49 +539,74 @@ export class ChatService {
     }
   }
 
+
   private async _verifyPermission(
-    conversationId: string,
+    identifier: string,
     requesterId: string,
     allowedRoles: MEMBER_ROLE[],
   ) {
-    const conversation = await this.conversationModel
-      .findOne({
-        _id: conversationId,
-        participants: {
-          $elemMatch: {
-            _id: requesterId,
-            role: { $in: allowedRoles },
-          },
+    const query: mongoose.FilterQuery<Conversation> = {
+      participants: {
+        $elemMatch: {
+          _id: requesterId,
+          role: { $in: allowedRoles },
         },
-      })
+      },
+    };
+
+    if (mongoose.Types.ObjectId.isValid(identifier)) {
+      query.$or = [
+        { _id: new mongoose.Types.ObjectId(identifier) },
+        { teamId: identifier },
+      ];
+    } else {
+      query.teamId = identifier;
+    }
+
+    const conversation = await this.conversationModel
+      .findOne(query)
       .lean<Conversation>();
+
     if (!conversation) {
       throw new ForbiddenException(
-        'You do not have permission to perform this action on this conversation.',
+        'Conversation not found or you do not have permission to perform this action.',
       );
     }
     return conversation;
   }
 
   private async _systemSendMessage(
-    conversationId: string | Types.ObjectId,
+    conversation: Conversation,
     content: string,
   ) {
+    const sender = {
+      _id: 'SYSTEM',
+      name: 'System',
+      avatar: '',
+      role: MEMBER_ROLE.MEMBER,
+    }
+
     const systemMessage = new this.messageModel({
-      conversation: conversationId,
-      sender: {
-        _id: 'SYSTEM',
-        name: 'System',
-        avatar: '',
-        role: MEMBER_ROLE.MEMBER,
-      },
+      conversation: conversation._id,
+      sender,
       content,
     });
     const savedMessage = await systemMessage.save();
 
-    await this.conversationModel.findByIdAndUpdate(conversationId, {
+    await this.conversationModel.findByIdAndUpdate(conversation._id, {
       latestMessage: savedMessage._id,
     });
+
+    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.NEW_MESSAGE, {
+      id: savedMessage._id.toString(),
+      conversationId: conversation._id,
+      attachments: [],
+      sender,
+      content,
+      participants: conversation.participants,
+      reactions: [],
+      createdAt: savedMessage.createdAt,
+    } as SendMessageEventPayload);
     return savedMessage;
   }
 
@@ -606,5 +658,4 @@ export class ChatService {
       timeout: RPC_TIMEOUT
     })
   }
-
 }

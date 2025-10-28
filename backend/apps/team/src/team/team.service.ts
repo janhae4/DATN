@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, EntityManager } from 'typeorm';
+import { DataSource, Repository, EntityManager, In, JsonContains } from 'typeorm';
 import {
   Team,
   MEMBER_ROLE,
@@ -23,8 +23,13 @@ import {
   CreateTeamEventPayload,
   USER_EXCHANGE,
   EVENTS_EXCHANGE,
+  SendMessageEventPayload,
+  SOCKET_EXCHANGE,
+  TEAM_PATTERN,
+  NotificationEventDto,
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { RemoveTeamEventPayload } from '@app/contracts/team/dto/remove-team.dto';
 
 @Injectable()
 export class TeamService {
@@ -82,8 +87,6 @@ export class TeamService {
 
       const newTeam = teamRepo.create(teamData);
       const savedTeam = await teamRepo.save(newTeam);
-
-      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       this.logger.log(`Team [${savedTeam.id}] created. Emitting event.`);
       this.amqp.publish(EVENTS_EXCHANGE, EVENTS.CREATE_TEAM, {
@@ -173,6 +176,8 @@ export class TeamService {
 
   async removeMember(payload: RemoveMember): Promise<Team> {
     const { teamId, memberIds, requesterId } = payload;
+    console.log(teamId, memberIds, requesterId);
+
     this.logger.log(
       `User [${requesterId}] removing ${memberIds.length} member from team [${teamId}].`,
     );
@@ -224,6 +229,36 @@ export class TeamService {
 
       return updatedTeam;
     });
+  }
+
+  async removeTeam(userId: string, teamId: string) {
+    return await this.dataSource.transaction(async (manager) => {
+      const teamRepo = manager.getRepository(Team);
+      const team = await this._getTeamForModification(teamId, manager);
+      this._verifyPermission({
+        team,
+        requesterId: userId,
+        allowedRoles: [MEMBER_ROLE.OWNER],
+        action: 'remove_team',
+      })
+      const removedTeam = await teamRepo.remove(team)
+
+      const requester = team.members.find((m) => m.id === userId);
+      const requesterName = requester ? requester.name : 'Unknown';
+
+      this.amqp.publish(
+        EVENTS_EXCHANGE,
+        EVENTS.REMOVE_TEAM,
+        {
+          requesterId: userId,
+          requesterName,
+          teamId,
+          teamName: team.name,
+          memberIds: team.members.map((m) => m.id),
+        } as RemoveTeamEventPayload
+      )
+      return removedTeam
+    })
   }
 
   async changeMemberRole(payload: ChangeRoleMember): Promise<Team> {
@@ -397,7 +432,7 @@ export class TeamService {
     requesterId: string;
     allowedRoles: MEMBER_ROLE[];
     targetUserIds?: string[];
-    action: 'add_member' | 'remove_member' | 'change_role';
+    action: 'add_member' | 'remove_member' | 'change_role' | 'remove_team';
   }): void {
     const { team, requesterId, allowedRoles, targetUserIds, action } = options;
     const requester = team.members.find((m) => m.id === requesterId);
@@ -459,19 +494,38 @@ export class TeamService {
   }
 
   async findById(id: string, userId: string) {
-    return await this.teamRepo.findOne({
-      where: {
-        id,
-        members: { id: userId },
-      },
-      relations: ['members'],
-    });
+    return await this.teamRepo.createQueryBuilder("team")
+      .where("team.id = :id", { id: id })
+      .andWhere("team.members @> :memberQuery", {
+        memberQuery: JSON.stringify([{ id: userId }]),
+      })
+      .getOne();
   }
 
   async findByUserId(userId: string) {
     return await this.teamRepo.find({
-      relations: ['members'],
       where: { members: { id: userId } },
     });
+  }
+
+  async findRoomsByUserId(userId: string) {
+    const team = await this.teamRepo.createQueryBuilder("team")
+      .where("team.members @> :memberQuery", {
+        memberQuery: JSON.stringify([{ id: userId }]),
+      })
+      .select(["team.id"])
+      .getMany();
+    return team.map((t) => t.id);
+  }
+
+  async sendNotification(userId: string, teamId: string, message: NotificationEventDto) {
+    const team = await this.teamRepo.findOne({
+      where: { id: teamId, members: { id: userId } },
+    })
+    if (!team) {
+      throw new NotFoundException(`You are not a member of this team.`);
+    }
+    const members = team.members.map((member) => member.id)
+    this.amqp.publish(SOCKET_EXCHANGE, TEAM_PATTERN.SEND_NOTIFICATION, { members, message });
   }
 }
