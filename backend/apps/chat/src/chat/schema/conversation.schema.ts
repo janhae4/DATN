@@ -25,6 +25,12 @@ export class Conversation extends Document{
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Message' })
   latestMessage: Message | MongooseSchema.Types.ObjectId;
+
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'Message' })
+  pinnedMessages: MongooseSchema.Types.ObjectId[];
+
+  @Prop({default: false})
+  isDeleted: boolean
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);
