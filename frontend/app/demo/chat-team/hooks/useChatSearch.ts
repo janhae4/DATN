@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ApiService } from "../services/api-service";
-import { MessageData } from "../types/type";
+import { Conversation, MessageData, MessageDocument } from "../types/type";
 
 const MESSAGE_LIMIT = 20;
 
@@ -10,7 +10,7 @@ export function useChatSearch(
 ) {
     const [searchQuery, setSearchQuery] = useState("");
     const [isApiSearching, setIsApiSearching] = useState(false);
-    const [searchApiResults, setSearchApiResults] = useState<MessageData[]>([]);
+    const [searchApiResults, setSearchApiResults] = useState<MessageDocument[]>([]);
     const [searchPage, setSearchPage] = useState(1);
     const [searchHasMore, setSearchHasMore] = useState(false);
     const [totalSearchHits, setTotalSearchHits] = useState(0);

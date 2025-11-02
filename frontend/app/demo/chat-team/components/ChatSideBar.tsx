@@ -10,7 +10,8 @@ import { useChatStore } from "../store/useChatStore";
 import { NewChatModal } from "./modals/CreateChatModal";
 import { ConversationList } from "./ConversationList";
 import { CreateTeamModal } from "./modals/CreateTeamModal";
-import { Conversation, CreateTeam, CurrentUser, User } from "../types/type";
+import { CreateTeam, CurrentUser } from "../types/type";
+import { ApiService } from "../services/api-service";
 
 export function ChatSidebar({
   currentUser,
@@ -33,11 +34,11 @@ export function ChatSidebar({
   } = useChatStore();
 
   const handleChatCreated = useCallback(
-    (newConversation: Conversation & CreateTeam) => {
-      const id = newConversation.id || newConversation._id;
-      ensureConversationVisible(id, async () => newConversation).then(() => {
-        moveConversationToTop(id);
-        setSelectedConversation(newConversation);
+    (newConversation: CreateTeam) => {
+      const id = newConversation.id
+      ensureConversationVisible(id, async () => await ApiService.getConversationByTeamId(id)).then(() => {
+        moveConversationToTop({teamId: id});
+        setSelectedConversation({teamId: id});
       });
       setIsNewChatModalOpen(false);
       setIsCreateTeamModalOpen(false);

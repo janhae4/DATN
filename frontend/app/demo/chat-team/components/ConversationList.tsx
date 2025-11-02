@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { Loader2 } from "lucide-react";
 import { ConversationItem } from "./ConversationItem";
-import { Conversation, CurrentUser, User } from "../types/type";
+import { Conversation, CurrentUser } from "../types/type";
+import { useSocket } from "@/app/SocketContext";
+import { useSocketHandler } from "../hooks/useSocketHandler";
 
 interface ConversationListProps {
   currentUser: CurrentUser;
@@ -22,6 +24,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     totalPages,
   } = useChatStore();
 
+  const { socket } = useSocket();
   const listRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingTriggerRef = useRef<HTMLDivElement>(null);
@@ -71,9 +74,21 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   const handleSelect = useCallback(
     (conv: Conversation) => {
+      console.log(conv._id);
+      socket?.emit(
+        "join_room",
+        {roomId: conv._id},
+        (response: { status: string; roomId: string }) => {
+          if (response.status === "ok") {
+            console.log(`ĐÃ THAM GIA PHÒNG THÀNH CÔNG: ${response.roomId}`);
+          } else {
+            console.error(`Không thể tham gia phòng: ${response.status}`);
+          }
+        }
+      );
       onSelectConversation(conv);
     },
-    [onSelectConversation]
+    [onSelectConversation, socket]
   );
 
   return (

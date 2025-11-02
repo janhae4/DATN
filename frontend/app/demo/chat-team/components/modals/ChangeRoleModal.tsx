@@ -1,14 +1,14 @@
 import { Loader2 } from "lucide-react";
 import { ApiService } from "../../services/api-service";
 import { useEffect, useState } from "react";
-import { Conversation, Participant, Team, UserRole } from "../../types/type";
+import { Conversation, Participant, ParticipantTeam, Team, TeamRole, UserRole } from "../../types/type";
 
 interface ChangeRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRoleChanged: (updatedConversation: Team) => void;
   conversationId: string;
-  member: Participant;
+  member: ParticipantTeam;
 }
 export const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({
   isOpen,
@@ -17,12 +17,12 @@ export const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({
   conversationId,
   member,
 }) => {
-  const [newRole, setNewRole] = useState<UserRole>(member.role as UserRole || "MEMBER");
+  const [newRole, setNewRole] = useState<TeamRole>(member.role || "MEMBER");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isOpen) setNewRole(member.role as UserRole || "MEMBER");
+    if (isOpen) setNewRole(member.role || "MEMBER");
     else {
       setError("");
       setIsLoading(false);
@@ -41,7 +41,7 @@ export const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({
     try {
       const updatedConversation = await ApiService.changeMemberRole(
         conversationId,
-        member._id,
+        member.userId,
         newRole
       );
       console.log("Updated conversation:", updatedConversation);
@@ -57,7 +57,7 @@ export const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">
-          Đổi vai trò cho {member.name}
+          Đổi vai trò cho {member.cachedUser.name}
         </h2>
         <form onSubmit={handleSubmit}>
           <div>
@@ -71,7 +71,7 @@ export const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({
             <select
               id="roleSelect"
               value={newRole}
-              onChange={(e) => setNewRole(e.target.value as UserRole)}
+              onChange={(e) => setNewRole(e.target.value as TeamRole)}
               className="w-full p-2 border border-gray-300 rounded"
             >
               <option value="ADMIN">Quản trị viên (Admin)</option>

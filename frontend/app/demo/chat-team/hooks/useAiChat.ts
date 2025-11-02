@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ApiService } from "../services/api-service";
 import { CHATBOT_PATTERN, useSocket } from "@/app/SocketContext";
 import { AiMessage, AskQuestionPayload, CurrentUser, KnowledgeFile, SummarizeDocumentPayload } from "../types/type";
-import { useChatScroll } from "./useChatScroll";
+import { useInfiniteScroll } from "./useInfiniteroll";
 
 export function useAiChat(
     currentUser: CurrentUser,
@@ -177,14 +177,14 @@ export function useAiChat(
     const handleSummarize = (file: KnowledgeFile) => {
         if (!socket || isStreaming) return;
 
-        const userMessage = createOptimisticMessage(`Vui lòng tóm tắt tài liệu: ${file.fileName}`);
+        const userMessage = createOptimisticMessage(`Vui lòng tóm tắt tài liệu: ${file.name}`);
         const aiPlaceholder = createStreamingPlaceholder();
 
         setAiMessages((prev) => [...prev, userMessage, aiPlaceholder]);
         setIsStreaming(true);
 
         socket.emit(CHATBOT_PATTERN.SUMMARIZE_DOCUMENT, {
-            fileName: file.fileId,
+            fileId: file.id,
             conversationId: activeConversationId,
             teamId: teamId,
         } as SummarizeDocumentPayload);
@@ -223,12 +223,12 @@ export function useAiChat(
         }
     }, [isHistoryLoading, messagePagination, teamId, chatboxRef]);
 
-    useChatScroll({
-        chatContainerRef: chatboxRef,
-        messagesEndRef,
-        loadOlderMessages: handleLoadMoreMessages,
-        messageCount: aiMessages.length,
-        isLoadingOlderMessages: isHistoryLoading
+    useInfiniteScroll({
+        containerRef: chatboxRef,
+        endRef: messagesEndRef,
+        loadOlder: handleLoadMoreMessages,
+        count: aiMessages.length,
+        isLoadingOlder: isHistoryLoading
     });
 
     return {

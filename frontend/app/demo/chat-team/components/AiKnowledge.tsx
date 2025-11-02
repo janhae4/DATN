@@ -34,6 +34,9 @@ export function AiKnowledgePage({
     isUploading,
     uploadStatus,
     fileInputRef,
+    fileContainerRef,
+    endFileRef,
+    isLoadingMore,
     isViewerOpen,
     viewingFile,
     handleFileUpload,
@@ -84,6 +87,9 @@ export function AiKnowledgePage({
           isUploading={isUploading}
           uploadStatus={uploadStatus}
           fileInputRef={fileInputRef}
+          fileContainerRef={fileContainerRef}
+          endFileRef={endFileRef}
+          isLoadingMore={isLoadingMore}
           handleFileUpload={handleFileUpload}
           handleFileDelete={handleFileDelete}
           handleOpenFileViewer={handleOpenFileViewer}
@@ -95,10 +101,10 @@ export function AiKnowledgePage({
         <FileViewerModal
           isOpen={isViewerOpen}
           onClose={handleCloseFileViewer}
-          fileId={viewingFile.fileId}
-          originalName={viewingFile.fileName}
-          fileType={viewingFile.fileType || "other"}
-          onRenameSuccess={handleRenameSuccess}
+          fileId={viewingFile.id}
+          originalName={viewingFile.name}
+          fileType={viewingFile.type || "other"}
+          onRenameSuccess={() => {}}
           teamId={teamId}
         />
       )}

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { ApiService } from "../services/api-service";
-import { Conversation, CurrentUser, MessageData, User } from "../types/type";
+import { Conversation, CurrentUser, MessageData } from "../types/type";
 
 export function useMessageSender(
     selectedConversation: Conversation,
@@ -23,7 +23,7 @@ export function useMessageSender(
 
             const convoId = selectedConversation._id;
             const tempMessageId = `temp-${Date.now()}`;
-            const tempMessage: MessageData= {
+            const tempMessage: MessageData = {
                 _id: tempMessageId,
                 content: newMessage,
                 sender: {
@@ -35,13 +35,12 @@ export function useMessageSender(
                     )?.role,
                 },
                 createdAt: new Date().toISOString(),
-                conversationId: convoId,
+                discussionId: convoId,
                 teamId: selectedConversation.teamId,
             };
 
             appendMessage(convoId, tempMessage);
-            moveConversationToTop(convoId);
-            upsertConversationMeta({ _id: convoId, latestMessage: tempMessage });
+            moveConversationToTop({conversationId: convoId});
 
             const messageToSend = newMessage;
             setNewMessage("");
@@ -50,11 +49,11 @@ export function useMessageSender(
                 const savedMessage = await ApiService.sendMessage(
                     convoId,
                     messageToSend,
-                    selectedConversation.teamId
                 );
                 replaceTempMessage(convoId, tempMessageId, savedMessage);
-                upsertConversationMeta({ _id: convoId, latestMessage: savedMessage });
-                moveConversationToTop(convoId);
+                upsertConversationMeta({...savedMessage });
+                moveConversationToTop({conversationId: convoId});
+                
             } catch (error) {
                 console.error("❌ Failed to send:", error);
                 removeTempMessage(convoId, tempMessageId);

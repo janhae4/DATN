@@ -2,7 +2,7 @@
 import React from "react";
 import { Send as SendIcon } from "lucide-react";
 import { useMessageSender } from "../hooks/useMessageSender";
-import { Conversation, CurrentUser, User } from "../types/type";
+import { Conversation, CurrentUser } from "../types/type";
 
 export function MessageInput({
   currentUser,
@@ -20,11 +20,15 @@ export function MessageInput({
     <footer className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
       <form onSubmit={handleSendMessage} className="flex items-center gap-4">
         <input
+          disabled={selectedConversation.isDeleted}
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Nhập tin nhắn..."
-          className="flex-1 bg-gray-100 border border-gray-300 rounded-lg py-2 px-4 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+          className={` ${
+            selectedConversation.isDeleted ? "pointer-events-none opacity-40 bg-gray-400/50" : ""
+          }
+          flex-1 bg-gray-100 border border-gray-300 rounded-lg py-2 px-4 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition`}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();

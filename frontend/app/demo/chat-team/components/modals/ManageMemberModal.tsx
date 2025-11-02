@@ -11,7 +11,14 @@ import { ConfirmationModal } from "./ConfirmationModal";
 import { RoleIcon } from "../RoleIcon";
 import { ApiService } from "../../services/api-service";
 import { useEffect, useRef, useState } from "react";
-import { Conversation, CurrentUser, Participant, Team, User, UserRole } from "../../types/type";
+import {
+  Conversation,
+  CurrentUser,
+  Participant,
+  ParticipantTeam,
+  Team,
+  UserRole,
+} from "../../types/type";
 
 interface ManageMembersModalProps {
   isOpen: boolean;
@@ -33,9 +40,10 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
   const [modalState, setModalState] = useState<
     "add" | "kick" | "role" | "transfer" | "leave" | "delete" | null
   >(null);
-  const [selectedMember, setSelectedMember] = useState<Participant | null>(
+  const [selectedMember, setSelectedMember] = useState<ParticipantTeam | null>(
     null
   );
+  const [members, setMembers] = useState<ParticipantTeam[]>([]);
   const optionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,7 +65,21 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
     };
   }, [optionsForMember]);
 
+  const getMembers = async () => {
+    const members = await ApiService.getMembers(conversation.teamId || "");
+    setMembers(members);
+  };
+
+  useEffect(() => console.log(members), [members]);
+
   useEffect(() => {
+    const getMembers = async () => {
+      const members = await ApiService.getMembers(conversation.teamId || "");
+      setMembers(members);
+    };
+
+    getMembers();
+
     if (!isOpen) {
       setOptionsForMember(null);
       setModalState(null);
@@ -67,11 +89,8 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
 
   if (!isOpen) return null;
 
-  const participants = conversation.participants || [];
-  const currentUserParticipant = participants.find(
-    (p) => p._id === currentUser.id
-  );
-  const currentUserRole = currentUserParticipant?.role;
+  const currentUserParticipant = members.find((p) => p.userId === currentUser.id);
+  const currentUserRole = currentUserParticipant?.role || "MEMBER";
 
   const canAddMembers =
     currentUserRole === "OWNER" || currentUserRole === "ADMIN";
@@ -80,9 +99,9 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
   const canDelete = currentUserRole === "OWNER";
 
   const canManageMember = (
-    member: Participant
+    member: ParticipantTeam
   ): { canKick: boolean; canChangeRole: boolean; canTransfer: boolean } => {
-    if (member._id === currentUser.id)
+    if (member.id === currentUser.id)
       return { canKick: false, canChangeRole: false, canTransfer: false };
     if (currentUserRole === "OWNER")
       return { canKick: true, canChangeRole: true, canTransfer: true };
@@ -97,13 +116,14 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
     return { canKick: false, canChangeRole: false, canTransfer: false };
   };
 
-  const handleOpenOptions = (e: React.MouseEvent, member: Participant) => {
+  const handleOpenOptions = (e: React.MouseEvent, member: ParticipantTeam) => {
+    if (!member.id) return;
     e.stopPropagation();
-    setOptionsForMember(optionsForMember === member._id ? null : member._id);
+    setOptionsForMember(optionsForMember === member.id ? null : member.id);
   };
   const handleAction = (
     action: "kick" | "role" | "transfer",
-    member: Participant
+    member: ParticipantTeam
   ) => {
     setSelectedMember(member);
     setModalState(action);
@@ -120,19 +140,19 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
   };
 
   const handleKick = async () => {
-    if (!selectedMember) return;
+    if (!selectedMember?.id) return;
     console.log(selectedMember);
     const updated = await ApiService.removeMember(
       conversation.teamId || "",
-      selectedMember._id
+      selectedMember.id
     );
     onConversationUpdated(updated);
   };
   const handleTransfer = async () => {
-    if (!selectedMember) return;
+    if (!selectedMember?.id) return;
     const updated = await ApiService.transferOwnership(
       conversation.teamId || "",
-      selectedMember._id
+      selectedMember.id
     );
     onConversationUpdated(updated);
   };
@@ -164,29 +184,27 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
               onClick={onClose}
               className="p-2 rounded-full hover:bg-gray-200"
             >
-              {" "}
-              <XIcon className="w-6 h-6" />{" "}
+              <XIcon className="w-6 h-6" />
             </button>
           </div>
 
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-            {" "}
             {/* Thêm padding right để scroll bar ko che nút */}
-            {participants.map((member) => {
+            {members.map((member) => {
               const permissions = canManageMember(member);
-              const isCurrentUser = member._id === currentUser.id;
+              const isCurrentUser = member.id === currentUser.id;
               return (
                 <div
-                  key={member._id}
+                  key={member.id}
                   className="flex items-center justify-between p-2 rounded hover:bg-gray-50"
                 >
                   <div className="flex items-center gap-3">
                     <img
                       src={
-                        member.avatar ||
-                        `https://i.pravatar.cc/150?u=${member._id}`
+                        member.cachedUser.avatar ||
+                        `https://i.pravatar.cc/150?u=${member.id}`
                       }
-                      alt={member.name}
+                      alt={member.cachedUser.name}
                       className="w-10 h-10 rounded-full object-cover"
                       onError={(e) =>
                         (e.currentTarget.src = `https://placehold.co/100x100/cccccc/ffffff?text=?`)
@@ -194,12 +212,11 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                     />
                     <div>
                       <p className="font-semibold">
-                        {member.name} {isCurrentUser && "(Bạn)"}
+                        {member.cachedUser.name} {isCurrentUser && "(Bạn)"}
                       </p>
                       <p className="text-sm text-gray-500">
                         {member.role || "MEMBER"}
-                      </p>{" "}
-                      {/* Hiển thị MEMBER nếu role null */}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -215,7 +232,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                           >
                             <MoreVerticalIcon className="w-5 h-5" />
                           </button>
-                          {optionsForMember === member._id && (
+                          {optionsForMember === member.id && (
                             <div
                               ref={optionsRef}
                               className="absolute right-0 top-full mt-2 w-48 bg-white border rounded-lg shadow-lg z-10 py-1"
@@ -225,8 +242,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                                   onClick={() => handleAction("role", member)}
                                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                 >
-                                  {" "}
-                                  Đổi vai trò{" "}
+                                  Đổi vai trò
                                 </button>
                               )}
                               {permissions.canTransfer && (
@@ -236,8 +252,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                                   }
                                   className="block w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
                                 >
-                                  {" "}
-                                  Chuyển quyền sở hữu{" "}
+                                  Chuyển quyền sở hữu
                                 </button>
                               )}
                               {permissions.canKick && (
@@ -264,8 +279,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                 onClick={() => setModalState("add")}
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg"
               >
-                {" "}
-                <UserPlusIcon className="w-5 h-5" /> Thêm thành viên{" "}
+                <UserPlusIcon className="w-5 h-5" /> Thêm thành viên
               </button>
             )}
             {canLeave && (
@@ -273,8 +287,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                 onClick={() => setModalState("leave")}
                 className="w-full flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 px-4 rounded-lg"
               >
-                {" "}
-                <LogOutIcon className="w-5 h-5" /> Rời khỏi nhóm{" "}
+                <LogOutIcon className="w-5 h-5" /> Rời khỏi nhóm
               </button>
             )}
             {canDelete && (
@@ -287,8 +300,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
             )}
             {!canLeave && (
               <p className="text-sm text-gray-500 text-center">
-                {" "}
-                Bạn phải chuyển quyền sở hữu cho người khác trước khi rời nhóm.{" "}
+                Bạn phải chuyển quyền sở hữu cho người khác trước khi rời nhóm.
               </p>
             )}
           </div>
@@ -315,8 +327,8 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
         <ConfirmationModal
           isOpen={modalState === "kick"}
           onClose={onModalClose}
-          title={`Xóa ${selectedMember.name}?`}
-          message={`Bạn có chắc muốn xóa ${selectedMember.name} khỏi nhóm?`}
+          title={`Xóa ${selectedMember.cachedUser.name}?`}
+          message={`Bạn có chắc muốn xóa ${selectedMember.cachedUser.name} khỏi nhóm?`}
           confirmText="Xóa"
           onConfirm={handleKick}
         />
@@ -326,7 +338,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
           isOpen={modalState === "transfer"}
           onClose={onModalClose}
           title={`Chuyển quyền sở hữu?`}
-          message={`Bạn có chắc muốn chuyển quyền sở hữu cho ${selectedMember.name}? Bạn sẽ trở thành Quản trị viên (Admin).`}
+          message={`Bạn có chắc muốn chuyển quyền sở hữu cho ${selectedMember.cachedUser.name}? Bạn sẽ trở thành Quản trị viên (Admin).`}
           confirmText="Chuyển quyền"
           confirmColorClass="bg-yellow-600 hover:bg-yellow-700"
           onConfirm={handleTransfer}
