@@ -4,13 +4,15 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
-import { MemberDto } from '../dto/member.dto';
+import { TeamMember } from './team-member.entity';
 
 export enum TeamStatus {
-  ACTIVE = 'active',
-  ARCHIVED = 'archived',
-  DISBANDED = 'disbanded',
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  DISBANDED = 'DISBANDED',
+  DELETED = 'DELETED',
 }
 
 @Entity()
@@ -21,11 +23,14 @@ export class Team {
   @Column()
   name: string;
 
+  @Column({nullable: true})
+  avatar?: string;
+
   @Column()
   ownerId: string;
 
-  @Column('jsonb', { default: [] })
-  members: MemberDto[];
+  @OneToMany(() => TeamMember, (member) => member.team)
+  members: TeamMember[];
 
   @Column({
     type: 'enum',

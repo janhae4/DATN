@@ -1,5 +1,6 @@
 import { ArrayMinSize, IsArray, IsNotEmpty, IsString } from 'class-validator';
 import { MemberDto } from './member.dto';
+import { EventUserSnapshot } from './create-team.dto';
 
 export class AddMember {
   @IsString()
@@ -18,8 +19,9 @@ export class AddMember {
 
 export interface AddMemberEventPayload {
   requesterId: string;
-  requesterName: string;
+  requesterName?: string;
   teamId: string;
   teamName: string;
-  members: MemberDto[];
+  members: EventUserSnapshot[];
+  memberIdsToNotify: string[]
 }

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TeamService } from './team.service';
 import { TeamController } from './team.controller';
-import { CLIENT_PROXY_PROVIDER, ClientConfigModule, ClientConfigService, TEAM_EXCHANGE } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, TEAM_EXCHANGE } from '@app/contracts';
 import { AuthModule } from '../auth/auth.module';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 

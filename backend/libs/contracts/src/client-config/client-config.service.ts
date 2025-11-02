@@ -5,20 +5,23 @@ import { RmqOptions, Transport } from '@nestjs/microservices';
 export class ClientConfigService {
   constructor(private config: ConfigService) { }
 
-  get eventClientOptions(): RmqOptions {
-    return {
-      transport: Transport.RMQ,
-      options: {
-        urls: [this.getRMQUrl()],
-        queue: 'events_queue',
-        exchange: 'events',
-        exchangeType: 'fanout',
-        noAck: true,
-        queueOptions: { durable: true },
-        routingKey: "events.*"
-      },
-    };
+  /*
+  DATABASE
+  */
+ get databaseTeamUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_TEAM_URL',
+      'mongodb://localhost:27017/team',
+    );
   }
+
+  get databaseDiscussionUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_DISCUSSION_URL',
+      'mongodb://localhost:27017/discussion',
+    );
+  }
+
 
   /*  
   -------------------------
@@ -372,6 +375,13 @@ export class ClientConfigService {
     return this.config.get<string>('MINIO_BUCKET_NAME', 'documents');
   }
 
+  getMinioPublicWebHook(): string {
+    return this.config.get<string>(
+      'MINIO_PUBLIC_WEBHOOK',
+      'http://localhost:3000/files/hooks/upload-completed',
+    );
+  }
+
   /*
   -------------
   --- SOCKET --
@@ -453,4 +463,16 @@ export class ClientConfigService {
     };
   }
 
+  /*
+--------------
+--- FILE ---
+--------------
+*/
+
+  getFileDatabaseUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_FILE_URL',
+      'mongodb://localhost:27017/file',
+    );
+  }
 }

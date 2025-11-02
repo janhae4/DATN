@@ -1,4 +1,5 @@
-import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { EventUserSnapshot } from './create-team.dto';
 
 export class LeaveMember {
   @IsString()
@@ -16,8 +17,12 @@ export class LeaveMember {
   @IsString()
   @IsOptional()
   teamName?: string;
+}
 
-  @IsArray()
-  @IsOptional()
-  memberIds?: string[];
+
+export class LeaveMemberEventPayload {
+  teamId: string
+  teamName: string
+  requester: EventUserSnapshot
+  memberIdsToNotify: string[]
 }

@@ -1,4 +1,5 @@
 import { ArrayMinSize, IsArray, IsNotEmpty, IsString } from 'class-validator';
+import { EventUserSnapshot } from './create-team.dto';
 
 export class RemoveMember {
   @IsString()
@@ -19,8 +20,9 @@ export class RemoveMember {
 
 export interface RemoveMemberEventPayload {
   requesterId: string;
-  requesterName: string;
+  requesterName?: string;
   teamId: string;
   teamName: string;
-  memberIds: string[];
+  members: EventUserSnapshot[];
+  memberIdsToNotify: string[]
 }

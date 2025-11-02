@@ -1,4 +1,4 @@
-import { MEMBER_ROLE } from '@app/contracts';
+import { MemberRole } from '@app/contracts';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsString } from 'class-validator';
 
@@ -13,9 +13,9 @@ export class ChangeRoleMember {
 
   @ApiProperty({
     description: 'The new role to assign to the member.',
-    enum: MEMBER_ROLE,
-    example: MEMBER_ROLE.MEMBER,
+    enum: MemberRole,
+    example: MemberRole.MEMBER,
   })
-  @IsEnum(MEMBER_ROLE)
-  newRole: MEMBER_ROLE;
+  @IsEnum(MemberRole)
+  newRole: MemberRole;
 }

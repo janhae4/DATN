@@ -1,6 +1,7 @@
 export const CHATBOT_PATTERN = {
   ASK_QUESTION: 'ask_question',
   PROCESS_DOCUMENT: 'process_document',
+  DELETE_DOCUMENT_VECTOR: 'delete_document_vector',
   SUMMARIZE_DOCUMENT: 'summarize_document',
   RESPONSE_CHUNK: 'chatbot.response_chunk',
   RESPONSE_START: 'chatbot.response_start',
@@ -19,4 +20,5 @@ export const CHATBOT_PATTERN = {
   UPDATE_FILE: 'chatbot.update_file',
   RENAME_FILE: 'chatbot.rename_file',
   REMOVE_COLLECTION: 'chatbot.remove_collection',
+  UPDATE_STATUS_DOCUMENT: 'file.update.status'
 };

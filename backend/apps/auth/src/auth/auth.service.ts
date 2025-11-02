@@ -5,18 +5,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { firstValueFrom, map, tap } from 'rxjs';
+import { RpcException } from '@nestjs/microservices';
 import {
-  REDIS_CLIENT,
-  USER_CLIENT,
-  GMAIL_CLIENT,
   USER_PATTERNS,
   GMAIL_PATTERNS,
   REDIS_PATTERN,
   User,
   CreateAuthDto,
-  CreateAuthOAuthDto,
   LoginDto,
   GoogleAccountDto,
   SendEmailVerificationDto,
@@ -30,8 +25,6 @@ import {
   ChangePasswordDto,
   ForgotPasswordDto,
   NotFoundException,
-  SOCKET_CLIENT,
-  EVENT_CLIENT,
   EVENTS,
   Error,
   USER_EXCHANGE,
@@ -43,7 +36,6 @@ import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { ResetCodeDto } from './dto/reset-code.dto';
-import { handleRpc } from '@app/common/utils/handle-rpc';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
@@ -140,7 +132,9 @@ export class AuthService {
       `Generating JWT for ${typeCode} code for user ${user.id}...`,
     );
     const tokenPayload = {
-      userId: user.id,
+      id: user.id,
+      name: user.name,
+      avatar: user.avatar,
       code,
       expiredCode,
     };
@@ -215,14 +209,14 @@ export class AuthService {
 
   private async _generateTokensAndSession(user: User | JwtDto) {
     const sessionId = randomUUID();
-    const payload = { id: user.id, role: user.role };
+    const payload = { id: user.id, role: user.role, name: user.name, avatar: user.avatar };
 
     this.logger.log(
       `Generating tokens for user ${user.id}, session ${sessionId}...`,
     );
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, { expiresIn: ACCESS_TTL }),
+      this.jwtService.signAsync(payload, { expiresIn: '1h' }),
       this.jwtService.signAsync(
         { ...payload, sessionId },
         { expiresIn: REFRESH_TTL },

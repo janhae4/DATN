@@ -1,7 +1,7 @@
 export * from './error';
-export * from './rpc-exception.filter';
 export * from './constants';
 export * from './pagination.dto'
+export * from './enum'
 
 /*----
 AUTH
@@ -22,35 +22,33 @@ export * from './auth/dto/reset-password.dto';
 export * from './auth/dto/verify-account.dto';
 
 /*----
-CHAT
+DISCUSSION
 -----*/
-export * from './chat/dto/create-chat.dto';
-export * from './chat/dto/create-message.dto';
-export * from './chat/dto/get-messages.dto';
-export * from './chat/dto/participant.dto';
-export * from './chat/dto/create-direct-chat.dto';
-export * from './chat/dto/send-message.dto';
-export * from './chat/chat.pattern.dto';
-
+export * from './discussion/dto/create-discussion.dto';
+export * from './discussion/dto/create-direct-discussion.dto';
+export * from './discussion/dto/create-message.dto';
+export * from './discussion/dto/get-messages.dto';
+export * from './discussion/dto/participant.dto';
+export * from './discussion/dto/create-direct-discussion.dto';
+export * from './discussion/dto/send-message.dto';
+export * from './discussion/dto/response-message.dto'
+export * from './discussion/dto/message.dto'
+export * from './discussion/discussion.pattern.dto';
 /*----
 CHATBOT
 -----*/
 export * from './chatbot/chatbot.pattern';
 export * from './chatbot/dto/chatbot-document.dto';
 export * from './chatbot/dto/conversation.dto';
-export * from './chatbot/dto/message-metadata.dto';
 export * from './chatbot/dto/message-response.dto';
 export * from './chatbot/dto/response-stream.dto';
 export * from './chatbot/dto/summarize-document.dto';
 export * from './chatbot/dto/ask-question.dto';
 export * from './chatbot/dto/message.dto';
-export * from './chatbot/schema/conversation.schema';
-export * from './chatbot/schema/message.schema';
 
 /*----
 CLIENT-CONFIG
 -----*/
-export * from './client-config/client-config.provider';
 export * from './client-config/client-config.module';
 export * from './client-config/client-config.service';
 
@@ -113,6 +111,7 @@ export * from './team/dto/update-team.dto';
 export * from './team/dto/member.dto';
 export * from './team/dto/add-member.dto';
 export * from './team/entity/team.entity';
+export * from './team/entity/team-member.entity';
 export * from './team/dto/remove-member.dto';
 export * from './team/dto/change-role.dto';
 export * from './team/dto/leave-member.dto';
@@ -138,3 +137,11 @@ SEARCH
 -----*/
 export * from './search/search.pattern';
 export * from './search/dto/search-message.dto';
+
+/*----
+FILE
+-----*/
+export * from './file/file.pattern';
+export * from './file/dto/delete-file.dto';
+export * from './file/dto/update-file.dto';
+export * from './file/dto/upload-file.dto';

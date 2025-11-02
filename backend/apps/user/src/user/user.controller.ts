@@ -216,7 +216,7 @@ export class UserController {
     queue: USER_PATTERNS.FIND_MANY_BY_NAME,
   })
   findByName(payload: FindUserDto) {
-    return this.userService.findByName(payload.key, payload.options, payload.requesterId);
+    return this.userService.findByName(payload.key, payload.options, payload.requesterId, payload.teamId);
   }
 
   @RabbitRPC({

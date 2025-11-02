@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { CLIENT_PROXY_PROVIDER, ClientConfigModule, ClientConfigService, USER_EXCHANGE } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, USER_EXCHANGE } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { AuthModule } from '../auth/auth.module';
 

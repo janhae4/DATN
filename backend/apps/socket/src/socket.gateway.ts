@@ -1,4 +1,6 @@
 import {
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
@@ -13,23 +15,26 @@ import {
   AUTH_PATTERN,
   CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
-  ConversationDocument,
+  FileStatus,
   JwtDto,
-  MessageDto,
+  MessageSnapshot,
+  MessageUserChatbot,
   NOTIFICATION_EXCHANGE,
   NOTIFICATION_PATTERN,
   NotificationEventDto,
   NotificationType,
+  ResponseMessageDto,
   ResponseStreamDto,
   RPC_TIMEOUT,
   SendMessageEventPayload,
   SummarizeDocumentDto,
-  Team,
   TEAM_EXCHANGE,
   TEAM_PATTERN,
 } from '@app/contracts';
 import * as cookie from 'cookie';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { on } from 'events';
+import { DiscussionDocument } from 'apps/discussion/src/discussion/schema/discussion.schema';
 
 interface AuthenticatedSocket extends Socket {
   data: {
@@ -55,48 +60,44 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(private readonly amqpConnection: AmqpConnection) { }
 
+  async _validateToken(client: AuthenticatedSocket): Promise<JwtDto | null> {
+    const accessToken = cookie.parse(
+      client.handshake.headers.cookie || '',
+    ).accessToken;
+
+    if (!accessToken) {
+      this.logger.warn(
+        `Client ${client.id} - Disconnected, accessToken not found.`,
+      );
+      client.disconnect();
+      return null;
+    }
+
+    this.logger.log(`Client ${client.id} - Access token found!`);
+
+    const user = await this.amqpConnection.request<JwtDto>({
+      exchange: AUTH_EXCHANGE,
+      routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
+      payload: accessToken,
+      timeout: RPC_TIMEOUT,
+    });
+
+    if (!user) {
+      this.logger.warn(`Client ${client.id} - Disconnected, invalid token.`);
+      client.disconnect();
+      return null;
+    }
+
+    return user
+  }
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      const accessToken = cookie.parse(
-        client.handshake.headers.cookie || '',
-      ).accessToken;
-
-      if (!accessToken) {
-        this.logger.warn(
-          `Client ${client.id} - Disconnected, accessToken not found.`,
-        );
-        client.disconnect();
-        return;
-      }
-
-      this.logger.log(`Client ${client.id} - Access token found!`);
-
-      const user = await this.amqpConnection.request<JwtDto>({
-        exchange: AUTH_EXCHANGE,
-        routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
-        payload: accessToken,
-        timeout: RPC_TIMEOUT,
-      });
-
-      if (!user) {
-        this.logger.warn(`Client ${client.id} - Disconnected, invalid token.`);
-        client.disconnect();
-        return;
-      }
-
-      const rooms = await this.amqpConnection.request<string[]>({
-        exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.FIND_ROOMS_BY_USER_ID,
-        payload: user.id,
-      })
-
-      console.log(rooms)
-
+      const user = await this._validateToken(client)
+      if (!user) return
       this.logger.log(`Client ${client.id} - Authenticated: ${user.id}`);
-      client.data.user = user;
-      client.join(rooms)
-      client.join(user.id);
+      console.log(user.id)
+      client.join(user.id)
     } catch (error) {
       const e = error as Error;
       this.logger.error(
@@ -115,22 +116,30 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage("join_room")
+  async joinRoom(
+    client: AuthenticatedSocket,
+    payload: { roomId: string }
+  ) {
+    const user = await this._validateToken(client);
+    if (!user) return
+    const rooms = Array.from(client.rooms);
+    console.log(123, rooms, payload.roomId)
+    const currentRooms = rooms.filter(r => r !== user.id);
+    currentRooms.forEach(r => client.leave(r));
+    client.join(payload.roomId);
+  }
+
+
   private async handleInteraction(
     client: AuthenticatedSocket,
-    payload: MessageDto,
-  ): Promise<ConversationDocument | null> {
-    const { message, userId, conversationId, role, teamId, metadata } = payload;
-    const savedConversation = await this.amqpConnection.request<ConversationDocument>({
+    payload: MessageUserChatbot,
+  ): Promise<DiscussionDocument | null> {
+    const { userId, id } = payload;
+    const savedConversation = await this.amqpConnection.request<DiscussionDocument>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.HANDLE_MESSAGE,
-      payload: {
-        message,
-        conversationId,
-        role,
-        userId,
-        teamId,
-        metadata
-      } as MessageDto,
+      payload,
       timeout: RPC_TIMEOUT,
     });
 
@@ -153,7 +162,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       `Client ${client.id} - Saved conversation: ${String(savedConversation._id)}`,
     );
 
-    if (!conversationId) {
+    if (!id) {
       this.logger.log(
         `Emitting new conversation ID: ${String(savedConversation._id)} for client ${client.id}`,
       );
@@ -170,69 +179,69 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: AuthenticatedSocket,
     payload: AskQuestionDto,
   ) {
-    const user = client.data.user;
-    if (!user) {
-      this.logger.warn(`Invalid user on ask_question for client ${client.id}.`);
-      return;
-    }
+    return ;
+    // const user = client.data.user;
+    // if (!user) {
+    //   this.logger.warn(`Invalid user on ask_question for client ${client.id}.`);
+    //   return;
+    // }
 
-    const { question, conversationId, teamId } = payload;
-    this.logger.log(
-      `Received ask_question from ${client.id} (User: ${user.id}): ${question}`,
-    );
+    // const { question, conversationId, teamId } = payload;
+    // this.logger.log(
+    //   `Received ask_question from ${client.id} (User: ${user.id}): ${question}`,
+    // );
 
-    const savedConversation = await this.handleInteraction(client, {
-      message: question,
-      userId: user.id,
-      role: 'user',
-      conversationId,
-      teamId
-    } as MessageDto);
+    // const savedConversation = await this.handleInteraction(client, {
+    //   message: question,
+    //   userId: user.id,
+    //   role: 'user',
+    //   id: conversationId,
+    //   teamId
+    // });
 
-    if (!savedConversation) {
-      return;
-    }
+    // if (!savedConversation) {
+    //   return;
+    // }
 
 
-    const newMessage = savedConversation.messages[savedConversation.messages.length - 1];
-    const broadcastRoom = teamId ? teamId : user.id;
+    // const newMessage = savedConversation.messages[savedConversation.messages.length - 1];
+    // const broadcastRoom = teamId ? teamId : user.id;
 
-    // DEBUG: Kiểm tra xem room id có đúng không?
-    console.log(`Đang broadcast 'new_ai_message' tới room: ${broadcastRoom}`);
-    console.log(`TeamId là: ${teamId}, UserId là: ${user.id}`);
+    // console.log(`Đang broadcast 'new_ai_message' tới room: ${broadcastRoom}`);
+    // console.log(`TeamId là: ${teamId}, UserId là: ${user.id}`);
 
-    client.broadcast
-      .to(broadcastRoom)
-      .emit('new_ai_message', {
-        ...newMessage,
-        conversationId
-      });
+    // client.broadcast
+    //   .to(broadcastRoom)
+    //   .emit('new_ai_message', {
+    //     ...newMessage,
+    //     conversationId
+    //   });
 
-    const chatHistory = savedConversation.messages
-      .slice(-20)
-      .map((message) => ({
-        role: message.role,
-        content: message.content,
-      }));
+    // const chatHistory = savedConversation.
+    //   .slice(-20)
+    //   .map((message) => ({
+    //     role: message.role,
+    //     content: message.content,
+    //   }));
 
-    const requestPayload = {
-      userId: user.id,
-      question,
-      socketId: client.id,
-      conversationId: String(savedConversation._id),
-      teamId,
-      chatHistory,
-    };
+    // const requestPayload = {
+    //   userId: user.id,
+    //   question,
+    //   socketId: client.id,
+    //   conversationId: String(savedConversation._id),
+    //   teamId,
+    //   chatHistory,
+    // };
 
-    this.logger.log(
-      `Emitting to RAG_CLIENT (ask_question) for user ${user.id}`,
-    );
+    // this.logger.log(
+    //   `Emitting to RAG_CLIENT (ask_question) for user ${user.id}`,
+    // );
 
-    await this.amqpConnection.publish(
-      CHATBOT_EXCHANGE,
-      CHATBOT_PATTERN.ASK_QUESTION,
-      requestPayload
-    );
+    // await this.amqpConnection.publish(
+    //   CHATBOT_EXCHANGE,
+    //   CHATBOT_PATTERN.ASK_QUESTION,
+    //   requestPayload
+    // );
   }
 
   @SubscribeMessage(CHATBOT_PATTERN.SUMMARIZE_DOCUMENT)
@@ -240,61 +249,62 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: AuthenticatedSocket,
     payload: SummarizeDocumentDto,
   ): Promise<void> {
-    const user = client.data.user;
-    if (!user) {
-      this.logger.warn(
-        `Invalid user on summarize_document for client ${client.id}.`,
-      );
-      return;
-    }
+    return ;
+    // const user = client.data.user;
+    // if (!user) {
+    //   this.logger.warn(
+    //     `Invalid user on summarize_document for client ${client.id}.`,
+    //   );
+    //   return;
+    // }
 
-    const { fileName, conversationId, teamId } = payload;
-    this.logger.log(
-      `Received summarize_document from ${client.id} (User: ${user.id}): ${fileName}`,
-    );
+    // const { fileName, conversationId, teamId } = payload;
+    // this.logger.log(
+    //   `Received summarize_document from ${client.id} (User: ${user.id}): ${fileName}`,
+    // );
 
-    const name = fileName.split("_").pop();
+    // const name = fileName.split("_").pop();
 
-    const messageContent = `Yêu cầu tóm tắt tài liệu: ${name}`;
-    const savedConversation = await this.handleInteraction(client, {
-      message: messageContent,
-      userId: user.id,
-      conversationId,
-      teamId,
-      role: 'user',
-    } as MessageDto);
+    // const messageContent = `Yêu cầu tóm tắt tài liệu: ${name}`;
+    // const savedConversation = await this.handleInteraction(client, {
+    //   message: messageContent,
+    //   userId: user.id,
+    //   id : conversationId,
+    //   teamId,
+    //   role: 'user',
+    // });
 
-    if (!savedConversation) {
-      return;
-    }
+    // if (!savedConversation) {
+    //   return;
+    // }
 
-    const broadcastRoom = teamId ? teamId : user.id;
+    // const broadcastRoom = teamId ? teamId : user.id;
 
-    const newMessage = savedConversation.messages[savedConversation.messages.length - 1];
+    // const newMessage = savedConversation.messages[savedConversation.messages.length - 1];
 
-    client.broadcast
-      .to(broadcastRoom)
-      .emit('new_ai_message', {
-        ...newMessage,
-        conversationId: savedConversation._id
-      });
+    // client.broadcast
+    //   .to(broadcastRoom)
+    //   .emit('new_ai_message', {
+    //     ...newMessage,
+    //     conversationId: savedConversation._id
+    //   });
 
-    const requestPayload = {
-      userId: user.id,
-      fileName,
-      teamId,
-      socketId: client.id,
-      conversationId: String(savedConversation._id),
-    };
+    // const requestPayload = {
+    //   userId: user.id,
+    //   fileName,
+    //   teamId,
+    //   socketId: client.id,
+    //   conversationId: String(savedConversation._id),
+    // };
 
-    this.logger.log(
-      `Emitting to RAG_CLIENT (summarize_document) for user ${user.id}`,
-    );
-    await this.amqpConnection.publish(
-      CHATBOT_EXCHANGE,
-      CHATBOT_PATTERN.SUMMARIZE_DOCUMENT,
-      requestPayload
-    );
+    // this.logger.log(
+    //   `Emitting to RAG_CLIENT (summarize_document) for user ${user.id}`,
+    // );
+    // await this.amqpConnection.publish(
+    //   CHATBOT_EXCHANGE,
+    //   CHATBOT_PATTERN.SUMMARIZE_DOCUMENT,
+    //   requestPayload
+    // );
   }
 
   handleStreamResponse(response: ResponseStreamDto) {
@@ -337,7 +347,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.handleInteraction(client, {
               userId: user.id,
               message: fullMessage,
-              conversationId,
+              id : conversationId,
               teamId,
               role: 'ai',
               metadata,
@@ -371,54 +381,61 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleNewMessage(payload: SendMessageEventPayload) {
     const {
-      id,
-      conversationId,
-      participants,
-      content,
-      attachments,
-      sender,
-      createdAt,
-      teamId
+      discussionId,
+      _id,
+      messageSnapshot,
+      membersToNotify
     } = payload;
-    this.logger.log(`Received new message for conversation ${conversationId}`);
 
-    try {
-      const participantIds = participants.reduce((acc, participant) => {
-        if (participant._id !== sender._id) {
-          acc.push(participant._id);
-        }
-        return acc;
-      }, [] as string[]);
+    const senderId = messageSnapshot.sender?._id;
+    if (!senderId) {
+      this.logger.error("Lỗi: Tin nhắn không có senderId", payload);
+      return;
+    }
 
-      console.log(participantIds)
+    const messageDoc: ResponseMessageDto = {
+      _id,
+      discussionId,
+      message: messageSnapshot as MessageSnapshot,
+    };
 
-      if (participants.length === 0) {
-        this.logger.warn(
-          `No participants found for conversation ${conversationId}`,
-        );
+    this.logger.log(`Received new message for ${discussionId}. Sender: ${senderId}`);
+
+    if (!membersToNotify?.length) return;
+
+    const onlineUsers: string[] = [];
+    const offlineUsers: string[] = [];
+
+    membersToNotify.forEach((userId) => {
+      if (userId === senderId) {
         return;
       }
 
-      const room = teamId || conversationId
+      const socketIds = this.server.sockets.adapter.rooms.get(userId);
+      if (socketIds && socketIds.size) {
+        onlineUsers.push(userId);
+        console.log("SEND TO ", socketIds)
+        socketIds.forEach((socketId) => {
+          console.log("SEND TO ", socketId)
+          this.server.to(userId).emit('new_message', messageDoc);
+        });
+      } else {
+        offlineUsers.push(userId);
+      }
+    });
 
-      console.log(payload)
-
-      this.logger.log(
-        `Broadcasting to participants: ${participantIds.join(', ')}`,
-      );
-      this.server.to(room).emit('new_message', {
-        _id: id,
-        conversationId,
-        content,
-        sender,
-        attachments,
-        createdAt,
-      });
-    } catch (error) {
-      this.logger.error(
-        `Failed to broadcast new message for conversation ${conversationId}`,
-        error,
-      );
+    if (offlineUsers.length) {
+      this.logger.log(`Offline users: ${offlineUsers.join(', ')}`);
     }
+  }
+
+
+
+  handleFileStatus(fileId: string, fileName: string, fileStatus: FileStatus, userId: string, teamId?: string) {
+    this.server.to(teamId || userId).emit('file_status', { id: fileId, status: fileStatus, name: fileName });
+  }
+
+  handleUploadCompletion(fileId: string, status: FileStatus, userId: string, teamId?: string) {
+    this.server.to(teamId || userId).emit('file_status', { id: fileId, status: status });
   }
 }

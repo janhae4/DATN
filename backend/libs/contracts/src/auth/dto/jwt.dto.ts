@@ -3,6 +3,8 @@ import { PartialType } from '@nestjs/mapped-types';
 
 export class JwtDto {
   id: string;
+  name: string;
+  avatar?: string;
   iat: number;
   exp: number;
   role: Role;

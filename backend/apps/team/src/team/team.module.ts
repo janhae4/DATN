@@ -2,21 +2,30 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TeamService } from './team.service';
 import { TeamController } from './team.controller';
-import { typeOrmConfig } from './typeorm.config';
 import {
-  CLIENT_PROXY_PROVIDER,
   ClientConfigModule,
   ClientConfigService,
   EVENTS_EXCHANGE,
-  Team,
   TEAM_EXCHANGE,
+  Team,
+  TeamMember,
+  USER_EXCHANGE
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(typeOrmConfig),
-    TypeOrmModule.forFeature([Team]),
+    TypeOrmModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (configService: ClientConfigService) => ({
+        type: 'postgres',
+        url: configService.databaseTeamUrl,
+        entities: [Team, TeamMember],
+        synchronize: true,
+      })
+    }),
+    TypeOrmModule.forFeature([Team, TeamMember]),
     ClientConfigModule,
     RabbitMQModule.forRootAsync({
       imports: [ClientConfigModule],
@@ -30,6 +39,10 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
           {
             name: EVENTS_EXCHANGE,
             type: 'topic',
+          },
+          {
+            name: USER_EXCHANGE,
+            type: 'direct',
           }
         ],
         uri: configService.getRMQUrl(),

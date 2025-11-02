@@ -4,15 +4,19 @@ import {
   AddMember,
   ChangeRoleMember,
   CreateTeamDto,
+  EVENTS,
+  EVENTS_EXCHANGE,
   LeaveMember,
   NotificationEventDto,
   RemoveMember,
   TEAM_EXCHANGE,
   TEAM_PATTERN,
   TransferOwnership,
+  User,
 } from '@app/contracts';
-import { RabbitPayload, RabbitRPC } from '@golevelup/nestjs-rabbitmq';
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import { customErrorHandler } from '@app/common';
+import { VerifyPermissionPayload } from '@app/contracts/team/dto/verify-permission.dto';
 
 @Controller()
 export class TeamController {
@@ -131,6 +135,17 @@ export class TeamController {
 
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+    queue: TEAM_PATTERN.VERIFY_PERMISSION,
+    errorHandler: customErrorHandler
+  })
+  async verifyPermission(payload: VerifyPermissionPayload) {
+    return await this.teamService.verifyPermission(payload.userId, payload.teamId, payload.roles);
+  }
+
+
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.SEND_NOTIFICATION,
     queue: TEAM_PATTERN.SEND_NOTIFICATION,
     errorHandler: customErrorHandler
@@ -138,4 +153,26 @@ export class TeamController {
   async sendNotification(payload: { userId: string, teamId: string; message: NotificationEventDto }) {
     return await this.teamService.sendNotification(payload.userId, payload.teamId, payload.message);
   }
+
+
+  @RabbitRPC({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.USER_UPDATED,
+    queue: "events.user.updated.team",
+    errorHandler: customErrorHandler
+  })
+  async onUserUpdated(user: User) {
+    return await this.teamService.handleUserUpdated(user);
+  }
+
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
+    queue: TEAM_PATTERN.FIND_PARTICIPANTS,
+    errorHandler: customErrorHandler
+  })
+  async findParticipants(teamId: string) {
+    return await this.teamService.findParticipants(teamId);
+  }
+
 }

@@ -2,10 +2,9 @@ import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { AUTH_EXCHANGE, CLIENT_PROXY_PROVIDER, ClientConfigModule, ClientConfigService, EVENTS_EXCHANGE, GMAIL_EXCHANGE, NOTIFICATION_EXCHANGE, REDIS_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
+import { AUTH_EXCHANGE, ClientConfigModule, ClientConfigService, EVENTS_EXCHANGE, GMAIL_EXCHANGE, NOTIFICATION_EXCHANGE, REDIS_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
 import { JwtModule } from '@nestjs/jwt';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { Auth } from 'googleapis';
 
 @Module({
   imports: [
@@ -16,7 +15,7 @@ import { Auth } from 'googleapis';
       inject: [ClientConfigService],
       useFactory: (cfg: ClientConfigService) => ({
         secret: cfg.getJWTSecret(),
-        signOptions: { expiresIn: '15m' },
+        signOptions: { expiresIn: '1h' },
       }),
     }),
     RabbitMQModule.forRootAsync({

@@ -2,9 +2,11 @@ export const TEAM_PATTERN = {
   CREATE: 'team.create',
   FIND_ALL: 'team.findAll',
   FIND_BY_ID: 'team.findById',
+  FIND_BY_IDS: 'team.findByIds',
   FIND_BY_USER_ID: 'team.findByUserId',
   FIND_BY_OWNER_ID: 'team.findByOwnerId',
   FIND_ROOMS_BY_USER_ID: 'team.findRoomsByUserId',
+  FIND_PARTICIPANTS: 'team.findParticipants',
   UPDATE: 'team.update',
   REMOVE: 'team.remove',
   ADD_MEMBER: 'team.addMember',
@@ -18,4 +20,5 @@ export const TEAM_PATTERN = {
   JOIN_TEAM: 'team.joinTeam',
   KICK_MEMBER: 'team.kickMember',
   SEND_NOTIFICATION: 'team.sendNotification',
+  VERIFY_PERMISSION: 'team.verifyPermission',
 };

@@ -11,4 +11,5 @@ export const EVENTS = {
   MEMBER_ROLE_CHANGED: 'events.member.role.changed',
   OWNERSHIP_TRANSFERRED: 'events.ownership.transferred',
   NEW_MESSAGE: 'events.new.message',
+  DELETE_DOCUMENT: 'events.delete.document',
 };
