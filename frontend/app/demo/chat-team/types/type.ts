@@ -1,113 +1,84 @@
-// --- TYPE DEFINITIONS ---
 
-// Định nghĩa tin nhắn AI
-export type AiMessage = {
-    _id: string; // Hoặc 'id'
-    sender: Participant;
-    role: "user" | "ai" | "error" | "system";
-    content: string;
-    conversationId?: string;
-    timestamp: string; // Từ backend
-    metadata?: any; // Cho RAG context/errors
-};
+export type UserRole = "USER" | "ADMIN";
 
-// Định nghĩa file trong Knowledge Base
-export type KnowledgeFile = {
-    fileId: string;
-    fileName: string;
-    fileType: "pdf" | "txt" | "other";
-};
+export type TeamRole = "OWNER" | "ADMIN" | "MEMBER";
 
-type Member = {
-    id: string;
-    name: string;
-    avatar?: string;
-    role: UserRole;
+export type MemberStatus = "ACTIVE" | "LEFT" | "INVITED" | "BANNED";
+
+export interface CurrentUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  role: string; // Có thể dùng UserRole nếu muốn
+}
+
+export interface SearchUser {
+  id: string;
+  email: string;
+  name: string;
+  avatar?: string;
+  accounts: {
+    providerId: string;
+  }[]
 }
 
 export interface Team {
-    id: string;
-    name: string;
-    ownerId: string;
-    members: Member[]
-    createdAt: string;
-    status: string;
-}
-
-export interface CurrentUser {
-    id: string;
-    name: string;
-    avatar?: string;
-    role: string;
-}
-
-// --- API Response Types ---
-export interface AiHistoryResponse {
-    data: {
-        _id: string;
-        title?: string;
-        team_id?: string;
-        user_id?: string;
-        messages: AiMessage[];
-    };
-    page: number;
-    limit: number;
-    totalPages: number;
-    totalMessage: number;
-}
-
-export interface FileListResponse extends Array<KnowledgeFile> { }
-
-// --- SOCKET PAYLOADS ---
-export interface AskQuestionPayload {
-    question: string;
-    conversationId: string | null;
-    teamId: string;
-}
-
-export interface SummarizeDocumentPayload {
-    fileName: string;
-    conversationId: string | null;
-    teamId: string;
-}
-
-export interface ResponseStreamDto {
-    socketId: string;
-    content: string;
-    type: "chunk" | "error" | "end";
-    conversationId: string;
-    teamId: string;
-    metadata?: any;
-}
-
-// --- CONSTANTS ---
-export const NESTJS_GATEWAY_URL = "http://localhost:4001";
-export const NESTJS_HTTP_URL = "http://localhost:3000";
-
-export const CHATBOT_PATTERN = {
-    ASK_QUESTION: "ask_question",
-    SUMMARIZE_DOCUMENT: "summarize_document",
-    CONVERSATION_STARTED: "conversation_started",
-    RESPONSE_CHUNK: "chatbot.response_chunk",
-    RESPONSE_ERROR: "chatbot.response_error",
-    RESPONSE_END: "chatbot.response_end",
-};
-
-export interface User {
   id: string;
   name: string;
-  avatar: string;
-  providerId?: string;
-  email?: string;
+  ownerId: string;
+  members: Participant[]; // Dùng kiểu Participant chung
+  createdAt: string;
+  status: string;
 }
 
-export type UserRole = "MEMBER" | "ADMIN" | "OWNER";
-
+/**
+ * Đại diện cho một người tham gia/thành viên trong bất kỳ hệ thống nào.
+ */
 export interface Participant {
-  _id: string;
+  _id?: string;
+  id?: string;
   name: string;
   avatar?: string;
-  role?: string;
+  role?: UserRole;
+  status?: MemberStatus;
+}
+
+export interface ParticipantTeam {
+  id: string;
+  userId: string;
+  cachedUser: {
+    name: string;
+    email: string;
+    avatar?: string
+  };
+  role: TeamRole;
+  isActive: boolean;
+  joinedAt: string;
+}
+
+/**
+ * Kiểu trả về chung cho API có phân trang.
+ */
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit?: number;
+  totalItems?: number;
+  currentPage?: number;
+}
+
+
+export interface Attachment {
+  url: string;
+  type: string;
+  fileName?: string;
+}
+
+export interface Reaction {
+  userId: string;
+  emoji: string;
 }
 
 export interface MessageData {
@@ -115,35 +86,68 @@ export interface MessageData {
   content: string;
   sender: Participant;
   createdAt: string;
-  conversationId: string;
-  teamId?: string
+  discussionId: string;
+  teamId?: string;
+  attachments?: Attachment[];
+  reactions?: Reaction[];
+  readBy?: { id: string, readAt: string }[];
 }
 
-export interface SearchResponse {
-  hits: MessageData[];
+export interface TeamSnapshot {
+  id: string;
+  name: string;
+  avatar?: string;
+}
+
+export interface Conversation {
+  _id: string;
+  latestMessage?: string;
+  latestMessageSnapshot?: MessageData;
+  participants: Participant[];
+  isGroup: boolean;
+  name?: string;
+  teamId?: string;
+  isDeleted?: boolean;
+  teamSnapshot?: TeamSnapshot;
+  ownerId?: string;
+  groupAdminIds?: string[];
+}
+
+interface SenderSnapshot {
+  _id: string;
+  name: string;
+  avatar: string | null;
+  status: string; // Hoặc một kiểu cụ thể hơn nếu bạn có, ví dụ: "ACTIVE" | "INACTIVE"
+}
+
+interface MessageSnapshot {
+  _id: string;
+  content: string;
+  attachments: Attachment[]; // Hoặc 'any[]' / 'unknown[]' nếu bạn không chắc
+  sender: SenderSnapshot;
+  createdAt: string; // Kiểu string cho ISO Date
+}
+
+export interface MessageDocument {
+  id: string;
+  discussionId: string;
+  team: TeamSnapshot;
+  message: MessageSnapshot;
+}
+
+export interface SearchResponse<T> {
+  hits: T[];
   totalHits: number;
   totalPages: number;
   currentPage: number;
 }
 
-export interface ConversationMeta {
+export interface NewMessageEvent {
   _id: string;
-  latestMessage?: MessageData;
-}
-
-export interface Conversation extends ConversationMeta {
-  participants?: Participant[];
-  isGroupChat: boolean;
-  name?: string;
-  teamId?: string
-  avatar?: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  totalPages: number;
+  discussionId: string;
+  message: MessageData;
+  teamSnapshot?: TeamSnapshot;
+  participants: Participant[];
 }
 
 export interface ChatState {
@@ -153,22 +157,22 @@ export interface ChatState {
   hasMoreMessages: { [conversationId: string]: boolean };
 
   visibleConversations: Conversation[];
-  metaMap: { [conversationId: string]: ConversationMeta };
+  metaMap: { [conversationId: string]: Conversation };
   currentPage: number;
   totalPages: number;
   isLoadingConversations: boolean;
 
-  setSelectedConversation: (conv: Conversation | null) => void;
+  setSelectedConversation: (payload: { conversation?: Conversation | null, teamId?: string }) => void;
   appendMessage: (conversationId: string, message: MessageData) => void;
   prependMessages: (conversationId: string, messages: MessageData[]) => void;
   loadInitialConversations: () => Promise<void>;
   loadMoreConversations: () => Promise<void>;
-  upsertConversationMeta: (meta: ConversationMeta) => void;
+  upsertConversationMeta: (meta: NewMessageEvent) => void;
   ensureConversationVisible: (
     conversationId: string,
     fetchIfMissing: (id: string) => Promise<Conversation | null>
   ) => Promise<void>;
-  moveConversationToTop: (conversationId: string) => void;
+  moveConversationToTop: (payload: { conversationId?: string, teamId?: string }) => void;
   updateConversationInList: (updatedConversation: Team) => void;
   setMessagesForConversation: (
     conversationId: string,
@@ -179,7 +183,7 @@ export interface ChatState {
   replaceTempMessage: (
     conversationId: string,
     tempId: string,
-    finalMessage: MessageData
+    finalMessage: NewMessageEvent
   ) => void;
   removeTempMessage: (conversationId: string, tempId: string) => void;
   setMessagePage: (conversationId: string, page: number) => void;
@@ -190,3 +194,119 @@ export interface CreateTeam {
   id: string;
   name: string;
 }
+
+
+export enum FileStatus {
+  UPLOADING = 'uploading',
+  UPLOADED = 'uploaded',
+  PROCESSING = 'processing',
+  PROCCESSED = 'processed',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  DELETED = 'deleted',
+  PENDING = 'pending',
+  UPDATING = 'updating',
+}
+
+export type KnowledgeFileResponse = {
+  _id: string;
+  originalName: string;
+  type: string;
+  status: FileStatus;
+  createdAt: string;
+}
+
+export type FileStatusEvent = {
+  id: string;
+  status: FileStatus;
+  name: string
+}
+
+// Định nghĩa tin nhắn AI
+export type AiMessage = {
+  _id: string;
+  sender: Participant; // Dùng kiểu Participant chung
+  role: "user" | "ai" | "error" | "system";
+  content: string;
+  conversationId?: string;
+  timestamp: string;
+  metadata?: any;
+};
+
+export type KnowledgeFile = {
+  id: string;
+  name: string;
+  type: "pdf" | "txt" | "other";
+  status: FileStatus;
+  createdAt: string;
+  size: 0;
+};
+
+// Dùng Participant thay cho Member
+export interface Team {
+  id: string;
+  name: string;
+  ownerId: string;
+  members: Participant[]; // Dùng kiểu Participant chung
+  createdAt: string;
+  status: string;
+}
+
+export interface CurrentUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  role: string; // Có thể dùng UserRole nếu muốn
+}
+
+// --- API Response Types ---
+export interface AiHistoryResponse {
+  data: {
+    _id: string;
+    title?: string;
+    team_id?: string;
+    user_id?: string;
+    messages: AiMessage[];
+  };
+  page: number;
+  limit: number;
+  totalPages: number;
+  totalMessage: number;
+}
+
+export interface FileListResponse extends Array<KnowledgeFile> { }
+
+// --- SOCKET PAYLOADS ---
+export interface AskQuestionPayload {
+  question: string;
+  conversationId: string | null;
+  teamId: string;
+}
+
+export interface SummarizeDocumentPayload {
+  fileId: string;
+  conversationId: string | null;
+  teamId: string;
+}
+
+export interface ResponseStreamDto {
+  socketId: string;
+  content: string;
+  type: "chunk" | "error" | "end";
+  conversationId: string;
+  teamId: string;
+  metadata?: any;
+}
+
+// --- CONSTANTS ---
+export const NESTJS_GATEWAY_URL = "http://localhost:4001";
+export const NESTJS_HTTP_URL = "http://localhost:3000";
+
+export const CHATBOT_PATTERN = {
+  ASK_QUESTION: "ask_question",
+  SUMMARIZE_DOCUMENT: "summarize_document",
+  CONVERSATION_STARTED: "conversation_started",
+  RESPONSE_CHUNK: "chatbot.response_chunk",
+  RESPONSE_ERROR: "chatbot.response_error",
+  RESPONSE_END: "chatbot.response_end",
+};

@@ -1,4 +1,19 @@
-import { Conversation, CreateTeam, CurrentUser, MessageData, PaginatedResponse, SearchResponse, Team, User, UserRole } from "../types/type";
+import {
+  Conversation,
+  CreateTeam,
+  CurrentUser,
+  MessageData,
+  PaginatedResponse,
+  SearchResponse,
+  UserRole,
+  Team,
+  NewMessageEvent,
+  SearchUser,
+  Participant,
+  ParticipantTeam,
+  TeamRole,
+  MessageDocument
+} from "../types/type";
 
 const API_BASE_URL = "http://localhost:3000";
 
@@ -85,35 +100,34 @@ export const ApiService = {
     page = 1,
     limit = 8
   ): Promise<PaginatedResponse<Conversation>> =>
-    ApiService.request(`/chat/conversations?page=${page}&limit=${limit}`),
+    ApiService.request(`/discussions?page=${page}&limit=${limit}`),
 
   getConversationById: (id: string): Promise<Conversation | null> =>
-    ApiService.request(`/chat/conversations/${id}`),
+    ApiService.request(`/discussions/${id}`),
 
   getConversationByTeamId: (id: string): Promise<Conversation> =>
-    ApiService.request(`/chat/conversations/teams/${id}`),
+    ApiService.request(`/discussions/teams/${id}`),
 
   getMessages: (
     conversationId: string,
     page = 1,
     limit = 20
-  ): Promise<MessageData[]> =>
+  ): Promise<PaginatedResponse<MessageData>> =>
     ApiService.request(
-      `/chat/conversations/${conversationId}/messages?page=${page}&limit=${limit}`
+      `/discussions/${conversationId}/messages?page=${page}&limit=${limit}`
     ),
 
   sendMessage: (
     conversationId: string,
     content: string,
-    teamId?: string
-  ): Promise<MessageData> =>
-    ApiService.request(`/chat/conversations/${conversationId}/messages`, {
+  ): Promise<NewMessageEvent> =>
+    ApiService.request(`/discussions/${conversationId}/messages`, {
       method: "POST",
       body: JSON.stringify({ content }),
     }),
 
   createDirectChat: (partnerId: string): Promise<Conversation> =>
-    ApiService.request("/chat/conversations/direct", {
+    ApiService.request("/discussions/conversations/direct", {
       method: "POST",
       body: JSON.stringify({ partnerId }),
     }),
@@ -121,16 +135,15 @@ export const ApiService = {
   createTeam: (
     name: string,
     participantIds: string[]
-  ): Promise<CreateTeam & Conversation> =>
+  ): Promise<CreateTeam> =>
     ApiService.request("/teams", {
       method: "POST",
       body: JSON.stringify({ name, memberIds: participantIds }),
     }),
 
-  addMembers: (
-    teamId: string,
-    participantIds: string[]
-  ): Promise<Team> =>
+  getMembers: (teamId: string): Promise<ParticipantTeam[]> => ApiService.request(`/teams/${teamId}/members`),
+
+  addMembers: (teamId: string, participantIds: string[]): Promise<Team> =>
     ApiService.request(`/teams/${teamId}/member`, {
       method: "POST",
       body: JSON.stringify({ memberIds: participantIds }),
@@ -155,15 +168,12 @@ export const ApiService = {
   changeMemberRole: (
     conversationId: string,
     memberId: string,
-    role: UserRole = "MEMBER"
+    role: TeamRole = "MEMBER"
   ): Promise<Team> =>
-    ApiService.request(
-      `/teams/${conversationId}/member/${memberId}/role`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({ role }),
-      }
-    ),
+    ApiService.request(`/teams/${conversationId}/member/${memberId}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    }),
 
   transferOwnership: (
     conversationId: string,
@@ -177,10 +187,11 @@ export const ApiService = {
   findByName: (
     query: string,
     page: number = 1,
-    limit: number = 5
-  ): Promise<{ data: User[]; hasNextPage: boolean }> =>
+    limit: number = 5,
+    teamId?: string,
+  ): Promise<{ data: SearchUser[]; hasNextPage: boolean }> =>
     ApiService.request(
-      `/user/search?query=${query}&page=${page}&limit=${limit}`
+      `/user/search?query=${query}${teamId ? `&teamId=${teamId}` : ""}&page=${page}&limit=${limit}`
     ),
 
   searchMessages: (
@@ -188,55 +199,93 @@ export const ApiService = {
     conversationId: string,
     page: number = 1,
     limit: number = 5
-  ): Promise<SearchResponse> =>
+  ): Promise<SearchResponse<MessageDocument>> =>
     ApiService.request(
-      `/chat/conversations/${conversationId}/messages/search?query=${query}&page=${page}&limit=${limit}`
+      `/discussions/${conversationId}/messages/search?query=${query}&page=${page}&limit=${limit}`
     ),
 
-  getFile: (fileId: string, teamId?: string) =>
-    ApiService.requestFile(`/chatbot/files/${fileId}${teamId ? `?teamId=${teamId}` : ""}`),
+  getFilePreview: (
+    fileId: string,
+    teamId?: string
+  ): Promise<{ viewUrl: string }> =>
+    ApiService.request(
+      `/files/${fileId}/preview${teamId ? `?teamId=${teamId}` : ""}`
+    ),
+
+  getFileDownload: (
+    fileId: string,
+    teamId?: string
+  ): Promise<{ downloadUrl: string }> =>
+    ApiService.request(
+      `/files/${fileId}/download/${teamId ? `?teamId=${teamId}` : ""}`
+    ),
 
   renameFile: (fileId: string, newName: string, teamId?: string) =>
-    ApiService.request(`/chatbot/files/${fileId}/rename${teamId ? `?teamId=${teamId}` : ""}`, {
-      method: "PATCH",
-      body: JSON.stringify({ newName }),
-    }),
+    ApiService.request(
+      `/discussionsbot/files/${fileId}/rename${teamId ? `?teamId=${teamId}` : ""}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ newName }),
+      }
+    ),
 
   updateFileContent: (file: File, fileId: string) => {
-    return ApiService.upload(`/chatbot/files/${fileId}/content`, file, {
+    return ApiService.upload(`/discussionsbot/files/${fileId}/content`, file, {
       method: "PATCH",
     });
   },
 
-  uploadNewFile: (file: File) => {
-    return ApiService.upload("/chatbot/files", file);
+  initiateUpload: (
+    fileName: string,
+    teamId?: string
+  ): Promise<{ uploadUrl: string; fileId: string }> => {
+    return ApiService.request(
+      `/files/initiate-upload${teamId ? `?teamId=${teamId}` : ""}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ fileName }),
+      }
+    );
   },
 
   getAiChatHistory: (page: number, limit: number, teamId?: string) => {
     return ApiService.request(
-      `/chatbot/conversations/${teamId ? `teams/${teamId}` : ""}?page=${page}&limit=${limit}`
+      `/discussionsbot/conversations/${
+        teamId ? `teams/${teamId}` : ""
+      }?page=${page}&limit=${limit}`
     );
   },
 
-  getKnowledgeFiles(teamId?: string) {
-    console.log(teamId)
-    return ApiService.request(`/chatbot/files${teamId ? `?teamId=${teamId}` : ""}`);
+  getKnowledgeFiles(teamId?: string, page?: number, limit?: number) {
+    console.log(teamId);
+    return ApiService.request(
+      `/files?${teamId ? `teamId=${teamId}&` : ""}page=${page}&limit=${limit}`
+    );
   },
 
   uploadKnowledgeFile(file: File, teamId?: string) {
-    return ApiService.upload(`/chatbot/files${teamId ? `?teamId=${teamId}` : ""}`, file);
+    return ApiService.upload(
+      `/files${teamId ? `?teamId=${teamId}` : ""}`,
+      file
+    );
   },
 
   deleteKnowledgeFile(fileId: string, teamId?: string) {
-    return ApiService.request(`/chatbot/files/${fileId}${teamId ? `?teamId=${teamId}` : ""}`, {
-      method: "DELETE",
-    });
+    return ApiService.request(
+      `/files/${fileId}${teamId ? `?teamId=${teamId}` : ""}`,
+      {
+        method: "DELETE",
+      }
+    );
   },
 
   sendTeamAiChatMessage: (message: string, teamId?: string) => {
-    return ApiService.request(`/chatbot/conversations/${teamId ? `teams/${teamId}` : ""}`, {
-      method: "POST",
-      body: JSON.stringify({ message }),
-    });
+    return ApiService.request(
+      `/discussionsbot/conversations/${teamId ? `teams/${teamId}` : ""}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      }
+    );
   },
 };

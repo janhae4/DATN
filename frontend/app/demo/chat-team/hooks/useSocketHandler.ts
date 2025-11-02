@@ -1,67 +1,46 @@
 import { useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { ApiService } from "../services/api-service";
-import { io, Socket } from "socket.io-client";
-import { MessageData } from "../types/type";
+import { NewMessageEvent } from "../types/type";
+import { useSocket } from "@/app/SocketContext";
 
 export function useSocketHandler() {
-    const socketRef = useRef<Socket | null>(null);
     const {
         upsertConversationMeta,
         ensureConversationVisible,
         moveConversationToTop,
         appendMessage,
+        selectedConversation
     } = useChatStore();
 
+    const { socket } = useSocket()
     useEffect(() => {
-        const socket = io("http://localhost:4001", { withCredentials: true });
-        socketRef.current = socket;
+        if (!socket) return;
 
-        socket.on("connect", () => console.log("✅ Socket connected", socket.id));
-        socket.on("disconnect", (reason) =>
-            console.warn("⚠️ Socket disconnected:", reason)
-        );
-
-        const handleNewMessage = async (payload: MessageData) => {
+        const handleNewMessage = async (payload: NewMessageEvent) => {
             console.log("Received new message via socket:", payload);
-            const { conversationId } = payload;
-            if (!conversationId) {
-                console.error("Received message without conversationId:", payload);
+            const { discussionId } = payload;
+            if (!discussionId) {
+                console.error("Received message without discussionId:", payload);
                 return;
             }
-
-            upsertConversationMeta({ _id: conversationId, latestMessage: payload });
-
-            await ensureConversationVisible(conversationId, async (id) => {
-                try {
-                    return await ApiService.getConversationById(id);
-                } catch (error) {
-                    console.error(`Error fetching conversation ${id}:`, error);
-                    return null;
-                }
-            });
-
-            moveConversationToTop(conversationId);
-            appendMessage(conversationId, payload);
+            ensureConversationVisible(discussionId, ApiService.getConversationById);
+            upsertConversationMeta(payload);
+            if (selectedConversation?._id === payload.discussionId) {
+                appendMessage(payload.discussionId, payload.message);
+            }
         };
 
         socket.on("new_message", handleNewMessage);
 
         return () => {
-            console.log("Disconnecting socket...");
-            socket.disconnect();
-            socket.off("connect");
-            socket.off("disconnect");
             socket.off("new_message", handleNewMessage);
-            socketRef.current = null;
         };
     }, [
         upsertConversationMeta,
         ensureConversationVisible,
         moveConversationToTop,
         appendMessage,
+        selectedConversation
     ]);
-
-    // Bạn có thể return socketRef nếu các hook khác cần
-    // return socketRef;
 }

@@ -13,8 +13,7 @@ export const Message: React.FC<MessageProps> = ({
   isCurrentUser,
   isStreaming,
 }) => {
-  console.log(message)
-  if (message.sender?._id === "SYSTEM") {
+  if (message.sender?._id === "SYSTEM_ID") {
     return (
       <div className="flex justify-center items-center my-3 w-full">
         <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-100 rounded-full px-3 py-1.5">
@@ -46,7 +45,7 @@ export const Message: React.FC<MessageProps> = ({
       }`}
     >
       {!isCurrentUser &&
-        (message.sender._id === "ai-system-id" ? (
+        (message.sender._id === "AI_SYSTEM_ID" ? (
           <div className="w-10 h-10 bg-indigo-600 p-2.5 rounded-full text-white flex-shrink-0 flex items-center justify-center">
             <Bot size={20} />
           </div>

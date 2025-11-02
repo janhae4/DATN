@@ -8,7 +8,7 @@ import { useChatStore } from "../store/useChatStore";
 import { ManageMembersModal } from "./modals/ManageMemberModal";
 import { MessageList } from "./MessageList";
 import { AiKnowledgePage } from "./AiKnowledge";
-import { Conversation, CurrentUser, Team, User } from "../types/type";
+import { Conversation, CurrentUser, Team } from "../types/type";
 
 export function ChatWindow({
   currentUser,
@@ -40,13 +40,13 @@ export function ChatWindow({
 
   const onUserLeave = useCallback(() => {
     setIsManageMembersModalOpen(false);
-    setSelectedConversation(null);
+    setSelectedConversation({});
     loadInitialConversations();
   }, [setSelectedConversation, loadInitialConversations]);
 
   return (
     <>
-      {selectedConversation.isGroupChat && (
+      {selectedConversation.isGroup && (
         <ManageMembersModal
           isOpen={isManageMembersModalOpen}
           onClose={() => setIsManageMembersModalOpen(false)}
@@ -64,7 +64,7 @@ export function ChatWindow({
         onSearch={() => setIsSearchActive(true)}
       />
 
-      {selectedConversation.isGroupChat && (
+      {selectedConversation.isGroup && (
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 pt-2 flex items-center gap-4">
           <button
             onClick={() => setActiveTab("discussion")}

@@ -6,7 +6,7 @@ import { ChatWindow } from "./components/ChatWindow";
 import { useSocketHandler } from "./hooks/useSocketHandler";
 import { useChatStore } from "./store/useChatStore";
 import { PersonalAiChat } from "./components/PersonalAiChat";
-import { CurrentUser, User } from "./types/type";
+import { CurrentUser } from "./types/type";
 
 export function ChatPage({
   currentUser,

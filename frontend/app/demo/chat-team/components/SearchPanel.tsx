@@ -18,7 +18,7 @@ export function SearchPanel({
     searchHasMore,
     totalSearchHits,
     handleLoadMoreSearch,
-  } = useChatSearch(conversationId, true); // `true` để kích hoạt tìm kiếm
+  } = useChatSearch(conversationId, true);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -70,26 +70,24 @@ export function SearchPanel({
           </div>
         )}
 
-        {/* (Bạn cần tạo component render kết quả tìm kiếm, 
-            dưới đây là ví dụ đơn giản) */}
         <div className="flex flex-col gap-4">
           {searchApiResults.map((msg) => (
-            <div key={msg._id} className="p-2 bg-white rounded shadow-sm">
+            <div key={msg.id} className="p-2 bg-white rounded shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <img
                   src={
-                    msg.sender.avatar ||
-                    `https://i.pravatar.cc/150?u=${msg.sender._id}`
+                    msg.message.sender.avatar ||
+                    `https://i.pravatar.cc/150?u=${msg.message.sender._id}`
                   }
-                  alt={msg.sender.name}
+                  alt={msg.message.sender.name}
                   className="w-6 h-6 rounded-full"
                 />
-                <span className="font-semibold">{msg.sender.name}</span>
+                <span className="font-semibold">{msg.message.sender.name}</span>
                 <span className="text-xs text-gray-500">
-                  {new Date(msg.createdAt).toLocaleString()}
+                  {new Date(msg.message.createdAt).toLocaleString()}
                 </span>
               </div>
-              <p className="text-sm text-gray-700">{msg.content}</p>
+              <p className="text-sm text-gray-700">{msg.message.content}</p>
             </div>
           ))}
         </div>

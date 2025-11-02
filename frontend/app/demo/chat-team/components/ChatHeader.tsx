@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo } from "react";
 import { Users as UsersIcon, SearchIcon } from "lucide-react";
-import { Conversation, CurrentUser, User } from "../types/type";
+import { Conversation, CurrentUser } from "../types/type";
 
 export function ChatHeader({
   currentUser,
@@ -15,11 +15,11 @@ export function ChatHeader({
   onSearch: () => void;
 }) {
   const headerData = useMemo(() => {
-    if (selectedConversation.isGroupChat) {
+    if (selectedConversation.isGroup) {
       return {
         name: selectedConversation.name || "Group Chat",
         avatar:
-          selectedConversation.avatar ||
+          selectedConversation.teamSnapshot?.avatar ||
           `https://placehold.co/100x100/7c3aed/ffffff?text=${(
             selectedConversation.name || "G"
           )
@@ -56,14 +56,14 @@ export function ChatHeader({
             {headerData.name}
           </h2>
           <p className="text-sm text-gray-500">
-            {selectedConversation.isGroupChat
+            {selectedConversation.isGroup
               ? `${headerData.members?.length || 0} thành viên`
               : "Online"}
           </p>
         </div>
       </div>
       <div className="flex items-center justify-center gap-2">
-        {selectedConversation.isGroupChat && (
+        {selectedConversation.isGroup && (
           <button
             onClick={onManageMembers}
             title="Quản lý thành viên"

@@ -6,7 +6,7 @@ import { LoginPage } from "./login";
 import { ApiService } from "./services/api-service";
 import { useChatStore } from "./store/useChatStore";
 import { ChatPage } from "./chat";
-import { CurrentUser, User } from "./types/type";
+import { CurrentUser } from "./types/type";
 
 export default function Page() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { ApiService } from "../services/api-service";
 import { shallow } from "zustand/shallow";
-import { useChatScroll } from "./useChatScroll";
+import { useInfiniteScroll } from "./useInfiniteroll";
 
 const MESSAGE_LIMIT = 20;
 
@@ -40,8 +40,9 @@ export function useMessageLoader(
             try {
                 setIsLoadingMessages(true);
                 const data = await ApiService.getMessages(selectedConversationId, 1, MESSAGE_LIMIT);
-                const reversedData = data.reverse();
-                const hasMore = data.length === MESSAGE_LIMIT;
+                const messages = data.data
+                const reversedData = messages.reverse();
+                const hasMore = messages.length === MESSAGE_LIMIT;
                 setMessagesForConversation(selectedConversationId, reversedData, 1, hasMore);
                 setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 100);
             } catch (error) {
@@ -66,15 +67,15 @@ export function useMessageLoader(
                 nextPage,
                 MESSAGE_LIMIT
             );
-            const reversedOlderMessages = olderMessages.reverse();
-            const hasMore = olderMessages.length === MESSAGE_LIMIT;
+            const reversedOlderMessages = olderMessages.data.reverse();
+
 
             const container = chatContainerRef.current;
             const oldScrollHeight = container?.scrollHeight || 0;
 
             prependMessages(selectedConversationId, reversedOlderMessages);
             setMessagePage(selectedConversationId, nextPage);
-            setHasMoreMessages(selectedConversationId, hasMore);
+            setHasMoreMessages(selectedConversationId, olderMessages.totalPages > nextPage);
 
             requestAnimationFrame(() => {
                 if (container) {
@@ -97,12 +98,12 @@ export function useMessageLoader(
         chatContainerRef,
     ]);
 
-    useChatScroll({
-        chatContainerRef,
-        messagesEndRef,
-        loadOlderMessages,
-        messageCount: currentMessages.length,
-        isLoadingOlderMessages: isLoadingOlderMessages
+    useInfiniteScroll({
+        containerRef: chatContainerRef,
+        endRef: messagesEndRef,
+        loadOlder: loadOlderMessages,
+        count: currentMessages.length,
+        isLoadingOlder: isLoadingOlderMessages
     });
 
     return {

@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { ApiService } from "../../services/api-service";
 import { useEffect, useState } from "react";
-import { Conversation, Team, User } from "../../types/type";
+import { Conversation, SearchUser, Team } from "../../types/type";
 
 interface AddMemberModalProps {
   isOpen: boolean;
@@ -19,8 +19,8 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     const delayDebounceFn = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const response = await ApiService.findByName(searchQuery, 1, 5);
+        const response = await ApiService.findByName(searchQuery, 1, 5, teamId);
         console.log(response);
         const availableUsers = response.data.filter(
           (user) => !selectedUsers.find((su) => su.id === user.id)
@@ -49,7 +49,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, selectedUsers]);
 
-  const handleSelectUser = (user: User) => {
+  const handleSelectUser = (user: SearchUser) => {
     if (!selectedUsers.find((u) => u.id === user.id)) {
       setSelectedUsers((prev) => [...prev, user]);
     }
@@ -138,20 +138,52 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
              
             {searchResults.length > 0 && (
               <div className="absolute w-full bg-white border border-gray-300 rounded shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
-                     
-                {searchResults.map((user) => (
-                  <div
-                    key={user.id}
-                    onClick={() => handleSelectUser(user)}
-                    className="p-2 hover:bg-gray-100 cursor-pointer"
-                  >
-                             <p className="font-medium">{user.name}</p>         
-                    <p className="text-sm text-gray-500">
-                      {user.providerId ? `@${user.providerId}` : user.email}   
-                    </p>
-                  </div>
-                ))}
-                   
+                <div className="flex flex-col space-y-1">
+                  {searchResults.map((user) => {
+                    const initials = user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
+
+                    const providerText =
+                      user.accounts && user.accounts.length > 0
+                        ? user.accounts
+                            .map((acc) => `@${acc.providerId}`)
+                            .join(", ")
+                        : user.email;
+
+                    return (
+                      <div
+                        key={user.id}
+                        onClick={() => handleSelectUser(user)}
+                        className="flex items-center p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                      >
+                        {user.avatar ? (
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                            {initials}
+                          </div>
+                        )}
+
+                        <div className="ml-3">
+                          <p className="font-medium text-gray-900">
+                            {user.name}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {providerText}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

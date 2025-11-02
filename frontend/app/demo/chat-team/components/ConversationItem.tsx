@@ -1,5 +1,5 @@
 import React from "react";
-import { Conversation, CurrentUser, User } from "../types/type";
+import { Conversation, CurrentUser } from "../types/type";
 
 interface ConversationItemProps {
   conversation: Conversation;
@@ -10,11 +10,11 @@ interface ConversationItemProps {
 export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
   ({ conversation, selected, onClick, currentUser }) => {
     const getDisplayData = () => {
-      if (conversation.isGroupChat) {
+      if (conversation.isGroup) {
         return {
           name: conversation.name || "Group Chat",
           avatar:
-            conversation.avatar ||
+            conversation.teamSnapshot?.avatar ||
             `https://placehold.co/100x100/7c3aed/ffffff?text=${(
               conversation.name || "G"
             )
@@ -34,9 +34,9 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
     };
     const display = getDisplayData();
     const latestMessageContent =
-      conversation.latestMessage?.content || "Chưa có tin nhắn";
-    const timestamp = conversation.latestMessage
-      ? new Date(conversation.latestMessage.createdAt).toLocaleTimeString([], {
+      conversation.latestMessageSnapshot?.content || "Chưa có tin nhắn";
+    const timestamp = conversation.latestMessageSnapshot?.createdAt
+      ? new Date(conversation.latestMessageSnapshot?.createdAt).toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         })
