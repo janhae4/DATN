@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { MEMBER_ROLE } from './member.dto';
+import { MemberRole } from './member.dto';
 
 export class ChangeRoleMember {
   @IsString()
@@ -24,6 +24,6 @@ export class ChangeRoleMember {
   @IsOptional()
   targetName?: string;
 
-  @IsEnum(MEMBER_ROLE)
-  newRole: MEMBER_ROLE;
+  @IsEnum(MemberRole)
+  newRole: MemberRole;
 }

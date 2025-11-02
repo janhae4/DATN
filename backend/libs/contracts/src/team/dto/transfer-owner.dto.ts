@@ -18,4 +18,5 @@ export interface TransferOwnershipEventPayload {
   newOwnerName: string;
   requesterId: string;
   requesterName: string;
+  memberIdsToNotify: string[]
 }

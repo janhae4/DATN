@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ChatbotModule } from './chatbot.module';
+import { ChatbotModule } from './ai-discussion.module';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {

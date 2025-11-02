@@ -3,7 +3,7 @@ import {
   ChangeRoleMember,
   CreateTeamDto,
   LeaveMember,
-  MEMBER_ROLE,
+  MemberRole,
   RemoveMember,
   TEAM_EXCHANGE,
   TEAM_PATTERN,
@@ -38,6 +38,14 @@ export class TeamService {
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_BY_ID,
       payload: { id, userId },
+    }));
+  }
+
+  async findParticipants(teamId: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
+      payload: teamId ,
     }));
   }
 
@@ -102,7 +110,7 @@ export class TeamService {
   }
 
   async changeRole(payload: ChangeRoleMember) {
-    if (payload.newRole === MEMBER_ROLE.OWNER) {
+    if (payload.newRole === MemberRole.OWNER) {
       throw new ForbiddenException('Please use route /ownership instead');
     }
     return unwrapRpcResult(await this.amqpConnection.request({

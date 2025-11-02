@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SocketController } from './socket.controller';
 import { SocketGateway } from './socket.gateway';
-import { CHATBOT_EXCHANGE, CLIENT_PROXY_PROVIDER, ClientConfigModule, ClientConfigService, SOCKET_EXCHANGE } from '@app/contracts';
+import { CHATBOT_EXCHANGE, ClientConfigModule, ClientConfigService, SOCKET_EXCHANGE } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({

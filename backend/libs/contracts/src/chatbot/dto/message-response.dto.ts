@@ -7,7 +7,7 @@ import {
   ValidateNested,
   IsDateString,
 } from 'class-validator';
-import { MessageMetadataDto } from './message-metadata.dto';
+import { MessageMetadataDto } from './message.dto';
 
 export class MessageResponseDto {
   @IsString()

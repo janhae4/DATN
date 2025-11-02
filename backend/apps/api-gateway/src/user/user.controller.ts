@@ -36,9 +36,10 @@ export class UserController {
     @Query('query') key: string,
     @Query('page') page: number,
     @Query('limit') limit: number,
-    @CurrentUser('id') requesterId: string
+    @CurrentUser('id') requesterId: string,
+    @Query('teamId') teamId?: string,
   ) {
-    return this.userService.findByName({ key, options: { limit, page }, requesterId });
+    return this.userService.findByName({ key, options: { limit, page }, requesterId, teamId });
   }
 
   @Post('/:id/follow')

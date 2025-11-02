@@ -1,0 +1,20 @@
+export const FILE_PATTERN = {
+    CREATE_FILE: 'file.create',
+    UPDATE_FILE: 'file.update',
+    DELETE_FILE: 'file.delete',
+    UPLOAD_FILE: 'file.upload',
+    DOWNLOAD_FILE: 'file.download',
+    RENAME: 'file.rename',
+    GET_FILE: 'file.get',
+    GET_FILE_BY_USER_ID: 'file.get.userId',
+    GET_FILE_BY_TEAM_ID: 'file.get.teamId',
+    GET_FILES: 'file.get.all',
+    GET_PREVIEW_URL : 'file.preview.url',
+    GET_DOWNLOAD_URL: 'file.download.url',
+    INITIAL_UPLOAD: 'file.initial.upload',
+    INITIAL_UPDATE: 'file.initial.update',
+    COMPLETE_UPLOAD: 'file.complete.upload',
+    COMPLETE_UPDATE: 'file.complete.update',
+    FILE_STATUS: 'file.status',
+
+}

@@ -1,7 +1,8 @@
-import { PaginationDto } from "@app/contracts/pagination.dto"
+import { RequestPaginationDto } from "@app/contracts/pagination.dto"
 
 export class SearchMessageDto {
+    userId: string
     query: string
-    conversationId: string
-    options: PaginationDto
+    discussionId: string
+    options: RequestPaginationDto
 }

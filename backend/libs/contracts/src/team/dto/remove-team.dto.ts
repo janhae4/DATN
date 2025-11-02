@@ -1,6 +1,6 @@
 export class RemoveTeam {
-    userId: string;
-    teamId: string;
+  userId: string;
+  teamId: string;
 }
 
 export interface RemoveTeamEventPayload {
@@ -8,5 +8,6 @@ export interface RemoveTeamEventPayload {
   requesterName: string;
   teamId: string;
   teamName: string;
-  memberIds: string[];
+  memberIdsToNotify: string[]
+
 }

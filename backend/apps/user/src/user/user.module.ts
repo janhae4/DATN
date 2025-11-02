@@ -4,10 +4,10 @@ import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import {
   Account,
-  CLIENT_PROXY_PROVIDER,
   ClientConfigModule,
   ClientConfigService,
   Follow,
+  TEAM_EXCHANGE,
   User,
   USER_EXCHANGE,
 } from '@app/contracts';
@@ -22,7 +22,6 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
         url: process.env.DATABASE_USER_URL,
         entities: [User, Account, Follow],
         synchronize: true,
-        logging: true,
       }),
     }),
     TypeOrmModule.forFeature([User, Account, Follow]),
@@ -35,6 +34,10 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
             name: USER_EXCHANGE,
             type: 'direct',
           },
+          {
+            name: TEAM_EXCHANGE,
+            type: 'direct',
+          }
         ],
         uri: config.getRMQUrl(),
         connectionInitOptions: { wait: false }

@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { ChangeRoleMember } from './dto/change-role.dto';
 import { Roles } from '../common/role/role.decorator';
-import { MEMBER_ROLE, Role } from '@app/contracts';
+import { MemberRole, Role } from '@app/contracts';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { AddMember } from './dto/add-member.dto';
 import { RemoveMember } from './dto/remove-member.dto';
@@ -52,6 +52,15 @@ export class TeamController {
   @ApiParam({ name: 'id', description: 'Team id' })
   findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.teamService.findById(id, userId);
+  }
+
+  @Get(':teamId/members')
+  @ApiBearerAuth()
+  @ApiParam({ name: 'teamId', description: 'Team id' })
+  @Roles(Role.ADMIN, Role.USER)
+  findParticipants(
+    @Param('teamId') teamId: string) {
+    return this.teamService.findParticipants(teamId);
   }
 
   @Post()
@@ -177,11 +186,11 @@ export class TeamController {
     @Param('teamId') teamId: string,
     @Param('memberId') memberId: string,
     @CurrentUser('id') requesterId: string,
-    @Body('role') role: string,
+    @Body('role') role: MemberRole,
   ) {
     return this.teamService.changeRole({
       targetId: memberId,
-      newRole: MEMBER_ROLE[role],
+      newRole: role,
       teamId,
       requesterId,
     });

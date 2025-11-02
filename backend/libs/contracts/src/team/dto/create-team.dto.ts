@@ -8,6 +8,10 @@ export class CreateTeamDto {
   @IsString()
   name: string;
 
+  @IsString()
+  @IsOptional()
+  avatar?: string;
+
   @IsArray()
   @IsString({ each: true })
   @ArrayMinSize(0)
@@ -15,11 +19,22 @@ export class CreateTeamDto {
   memberIds?: string[];
 }
 
-export interface CreateTeamEventPayload {
-  teamId: string;
-  ownerId: string;
-  ownerName: string;
+export interface EventUserSnapshot {
+  id: string;
   name: string;
-  members: MemberDto[];
+  avatar?: string;
+}
+
+export interface TeamSnapshot {
+  id: string;
+  name: string;
+  avatar?: string;
+}
+
+export interface CreateTeamEventPayload {
+  owner: EventUserSnapshot;
+  members: EventUserSnapshot[]; 
+  teamSnapshot: TeamSnapshot;
+  membersToNotify: string[];
   createdAt: Date;
 }

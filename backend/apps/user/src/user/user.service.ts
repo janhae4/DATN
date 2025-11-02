@@ -12,11 +12,15 @@ import {
   CreateAuthOAuthDto,
   LoginDto,
   Provider,
-  PaginationDto,
   EVENTS_EXCHANGE,
   Follow,
   Role,
   ForbiddenException,
+  RequestPaginationDto,
+  TEAM_EXCHANGE,
+  TEAM_PATTERN,
+  Team,
+  TeamMember,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { EVENTS } from '@app/contracts/events/events.pattern';
@@ -572,6 +576,7 @@ export class UserService {
 
   async update(id: string, data: Partial<User>) {
     this.logger.log(`Updating user data for ID: ${id}`);
+    const isPublish = data.name || data.avatar;
     const result = await this.userRepo
       .createQueryBuilder()
       .update(User)
@@ -583,9 +588,10 @@ export class UserService {
     const rows = result.raw as User[];
     const user = rows[0] ?? null;
 
-    if (user) {
-      this.logger.log(`Successfully updated user ${id}.`);
-      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.USER_UPDATED, user);
+    this.logger.log(`Successfully updated user ${id}.`);
+    if (user && isPublish) {
+      const userUpdated = { id, name: user.name, avatar: user.avatar };
+      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.USER_UPDATED, userUpdated);
     } else {
       this.logger.warn(
         `Update operation did not return a user for ID: ${id}. It might not exist.`,
@@ -608,10 +614,28 @@ export class UserService {
     return result;
   }
 
-  async findByName(name: string, options: PaginationDto, requesterId: string) {
+  async findByName(name: string, options: RequestPaginationDto, requesterId: string, teamId?: string) {
     this.logger.log(`Finding user by name or username or email: ${name}`);
-    const { page, limit } = options;
+    const { page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
+
+    const searchTerm = `%${name}%`;
+
+    let memberIds: string[] = [];
+    if (teamId) {
+      const team = await this.amqp.request<Team & { members: TeamMember[] }>({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_BY_ID,
+        payload: { id: teamId, userId: requesterId },
+      });
+      console.log(team);
+
+      if (team && team.members) {
+        memberIds = team.members.map(member => member.userId);
+      } else {
+        this.logger.warn(`Team ${teamId} not found or user ${requesterId} lacks access/permissions.`);
+      }
+    }
 
     const qb = this.userRepo.createQueryBuilder("user")
       .leftJoin(
@@ -621,13 +645,16 @@ export class UserService {
         { provider: Provider.LOCAL }
       )
       .where(new Brackets(sqb => {
-        const searchTerm = `%${name}%`;
         sqb.where("user.name ILIKE :term", { term: searchTerm })
           .orWhere("user.email ILIKE :term", { term: searchTerm })
           .orWhere("account.providerId ILIKE :term", { term: searchTerm })
           .orWhere("account.email ILIKE :term", { term: searchTerm });
       }))
-      .andWhere("user.id != :requesterId", { requesterId })
+      .andWhere("user.id != :requesterId", { requesterId });
+
+    if (teamId && memberIds.length > 0) {
+      qb.andWhere("user.id NOT IN (:...memberIds)", { memberIds });
+    }
 
     const userIdsWithExtra = await qb.clone()
       .select("DISTINCT user.id")
@@ -635,7 +662,7 @@ export class UserService {
       .skip(skip)
       .take(limit + 1)
       .getRawMany()
-      .then(results => results.map(r => r.id));
+      .then(results => results.map(r => r.id as string));
 
     const hasNextPage = userIdsWithExtra.length > limit;
     const userIds = userIdsWithExtra.slice(0, limit);
@@ -645,7 +672,7 @@ export class UserService {
     }
 
     const data = await this.userRepo.createQueryBuilder("user")
-      .leftJoinAndSelect(
+      .leftJoin(
         "user.accounts",
         "account",
         "account.provider = :provider",

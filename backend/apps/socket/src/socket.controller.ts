@@ -13,13 +13,16 @@ import {
   SOCKET_EXCHANGE,
   CHATBOT_EXCHANGE,
   TEAM_PATTERN,
+  FILE_PATTERN,
 } from '@app/contracts';
 
 import type {
   AddMemberEventPayload,
   ChangeRoleMember,
   CreateTeamEventPayload,
+  FileStatus,
   LeaveMember,
+  LeaveMemberEventPayload,
   RemoveMemberEventPayload,
   RemoveTeamEventPayload,
   SendMessageEventPayload,
@@ -27,6 +30,7 @@ import type {
 } from '@app/contracts';
 
 import { SocketGateway } from './socket.gateway';
+import { customErrorHandler } from '@app/common';
 
 @Controller()
 export class SocketController {
@@ -36,6 +40,7 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.LOGIN,
     queue: EVENTS.LOGIN,
+    errorHandler: customErrorHandler
   })
   handleLogin(payload: Partial<User>) {
     this.socketGateway.sendNotificationToUser({
@@ -50,6 +55,7 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.NEW_MESSAGE,
     queue: EVENTS.NEW_MESSAGE,
+    errorHandler: customErrorHandler
   })
   handleNewMessage(payload: SendMessageEventPayload) {
     this.socketGateway.handleNewMessage(payload);
@@ -59,15 +65,16 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.CREATE_TEAM,
     queue: "events.create.team.socket",
+    errorHandler: customErrorHandler
   })
   handleCreateTeam(payload: CreateTeamEventPayload) {
-    const { members, name, createdAt, ownerName } = payload;
+    const { membersToNotify, createdAt, owner, teamSnapshot} = payload;
     const createAtDate = new Date(createdAt);
-    members.map((m) =>
+    membersToNotify.map((m) =>
       this.socketGateway.sendNotificationToUser({
-        userId: m.id,
-        title: `You have been added to team ${name}`,
-        message: `User ${ownerName} created team ${name} at ${createAtDate.toISOString()}`,
+        userId: m,
+        title: `You have been added to team ${teamSnapshot.name}`,
+        message: `User ${owner.name} created team ${teamSnapshot.name} at ${createAtDate.toISOString()}`,
         type: NotificationType.SUCCESS,
       }),
     );
@@ -77,6 +84,7 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.ADD_MEMBER,
     queue: "events_socket_add_member",
+    errorHandler: customErrorHandler
   })
   handleAddMember(payload: AddMemberEventPayload) {
     const { members, requesterName, teamName, teamId } = payload;
@@ -94,6 +102,7 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.MEMBER_ROLE_CHANGED,
     queue: "events_socket_member_role_changed",
+    errorHandler: customErrorHandler
   })
   handleMemberRoleChanged(payload: ChangeRoleMember) {
     const { requesterId, teamName, requesterName, newRole, teamId } = payload;
@@ -109,9 +118,10 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.REMOVE_MEMBER,
     queue: "events_socket_remove_member",
+    errorHandler: customErrorHandler
   })
   handleRemoveMember(payload: RemoveMemberEventPayload) {
-    const { requesterName, teamName, memberIds, teamId } = payload;
+    const { requesterName, teamName, memberIdsToNotify: memberIds = [], teamId } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m,
@@ -126,9 +136,10 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.REMOVE_MEMBER,
     queue: "events_socket_team_deleted",
+    errorHandler: customErrorHandler
   })
-  handleTeamDeleted(payload: LeaveMember) {
-    const { requesterName, requesterId, teamName, memberIds = [] } = payload;
+  handleTeamDeleted(payload: RemoveTeamEventPayload) {
+    const { requesterName, requesterId, teamName, teamId, memberIdsToNotify: memberIds } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m,
@@ -143,14 +154,15 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.LEAVE_TEAM,
     queue: "events_socket_leave_team",
+    errorHandler: customErrorHandler
   })
-  handleLeaveTeam(payload: LeaveMember) {
-    const { requesterName, teamName, memberIds = [], teamId } = payload;
+  handleLeaveTeam(payload: LeaveMemberEventPayload) {
+    const { requester, memberIdsToNotify: memberIds = [], teamName } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m,
         title: `A member has left team ${teamName}`,
-        message: `${requesterName} left`,
+        message: `${requester.name} left`,
         type: NotificationType.SUCCESS,
       }),
     );
@@ -160,9 +172,10 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.REMOVE_TEAM,
     queue: "events_socket_remove_team",
+    errorHandler: customErrorHandler
   })
   handleRemoveTeam(payload: RemoveTeamEventPayload) {
-    const { requesterName, teamName, memberIds = [], teamId } = payload;
+    const { requesterName, teamName, memberIdsToNotify: memberIds } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m,
@@ -177,6 +190,7 @@ export class SocketController {
     exchange: SOCKET_EXCHANGE,
     routingKey: NOTIFICATION_PATTERN.SEND,
     queue: "events_socket_send_notification",
+    errorHandler: customErrorHandler
   })
   handleSendNotification(event: NotificationEventDto) {
     this.socketGateway.sendNotificationToUser(event);
@@ -186,6 +200,7 @@ export class SocketController {
     exchange: SOCKET_EXCHANGE,
     routingKey: TEAM_PATTERN.SEND_NOTIFICATION,
     queue: TEAM_PATTERN.SEND_NOTIFICATION,
+    errorHandler: customErrorHandler
   })
   handleTeamSendNotification(event: SendTeamNotificationDto) {
     const { members, message } = event;
@@ -204,6 +219,7 @@ export class SocketController {
     exchange: CHATBOT_EXCHANGE,
     routingKey: NOTIFICATION_PATTERN.PROCESS_DOCUMENT,
     queue: NOTIFICATION_PATTERN.PROCESS_DOCUMENT,
+    errorHandler: customErrorHandler
   })
   handleGetProcessDocument(event: NotificationEventDto) {
     this.socketGateway.sendNotificationToUser(event);
@@ -213,8 +229,36 @@ export class SocketController {
     exchange: EVENTS_EXCHANGE,
     routingKey: CHATBOT_PATTERN.STREAM_RESPONSE,
     queue: CHATBOT_PATTERN.STREAM_RESPONSE,
+    errorHandler: customErrorHandler
   })
   handleStreamResponse(response: ResponseStreamDto) {
     this.socketGateway.handleStreamResponse(response);
+  }
+
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: FILE_PATTERN.FILE_STATUS,
+    queue: 'events_socket_file_status',
+    errorHandler: customErrorHandler
+  })
+  handleFileStatus(payload: { fileId: string, fileName: string, status: FileStatus ,userId: string, teamId?: string }) {
+    console.log(payload)
+    this.socketGateway.handleFileStatus(
+      payload.fileId,
+      payload.fileName,
+      payload.status,
+      payload.userId,
+      payload.teamId,
+    );
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: FILE_PATTERN.COMPLETE_UPLOAD,
+    queue: FILE_PATTERN.COMPLETE_UPLOAD,
+    errorHandler: customErrorHandler
+  })
+  handleCompleteUpload(payload: { fileId: string, status: FileStatus, userId: string, teamId?: string }) {
+    this.socketGateway.handleUploadCompletion(payload.fileId, payload.status, payload.userId, payload.teamId);
   }
 }
