@@ -1,5 +1,4 @@
 import {
-  Inject,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -37,6 +36,7 @@ import * as bcrypt from 'bcrypt';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { ResetCodeDto } from './dto/reset-code.dto';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { unwrapRpcResult } from '@app/common';
 
 @Injectable()
 export class AuthService {
@@ -51,11 +51,11 @@ export class AuthService {
     this.logger.log(
       `Starting registration for user: ${createAuthDto.email}...`,
     );
-    const user = await this.amqp.request<User>({
+    const user = await unwrapRpcResult(await this.amqp.request<User & Error>({
       exchange: USER_EXCHANGE,
-      routingKey: USER_PATTERNS.CREATE,
+      routingKey: USER_PATTERNS.CREATE_LOCAL,
       payload: createAuthDto,
-    })
+    }))
 
     this.logger.log(`User ${user.id} created. Emitting welcome email.`);
     this.amqp.publish(EVENTS_EXCHANGE, EVENTS.REGISTER, user);
@@ -209,7 +209,7 @@ export class AuthService {
 
   private async _generateTokensAndSession(user: User | JwtDto) {
     const sessionId = randomUUID();
-    const payload = { id: user.id, role: user.role, name: user.name, avatar: user.avatar };
+    const payload = { id: user.id, role: user.role };
 
     this.logger.log(
       `Generating tokens for user ${user.id}, session ${sessionId}...`,

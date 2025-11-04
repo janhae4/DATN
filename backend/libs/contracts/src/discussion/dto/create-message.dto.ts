@@ -49,10 +49,9 @@ export class CreateMessageDto {
   @IsNotEmpty()
   discussionId: string;
 
-  @ValidateNested()
-  @Type(() => SenderSnapshotDto)
+  @IsString()
   @IsNotEmpty()
-  sender: SenderSnapshotDto;
+  userId: string;
 
   @IsString()
   @IsOptional()

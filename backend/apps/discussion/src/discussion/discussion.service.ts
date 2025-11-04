@@ -36,6 +36,8 @@ import {
   ResponsePaginationDto,
   RequestPaginationDto,
   SearchMessageDto,
+  REDIS_EXCHANGE,
+  REDIS_PATTERN,
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Discussion, DiscussionDocument, LatestMessageSnapshot, ParticipantRef } from './schema/discussion.schema';
@@ -53,6 +55,7 @@ export class DiscussionService {
   ) { }
 
   async createChat(createTeam: CreateTeamEventPayload) {
+    console.log('Received createChat event:', createTeam);
     const { owner, members, teamSnapshot } = createTeam;
     const { id: teamId, name } = teamSnapshot;
 
@@ -121,16 +124,23 @@ export class DiscussionService {
     });
   }
 
-
   async createChatMessage(
     createChatMessage: CreateMessageDto,
   ): Promise<ResponseMessageDto> {
-    const { discussionId, sender, content, attachments } =
+    const { discussionId, userId, content, attachments } =
       createChatMessage;
 
-    await this._markAsRead(discussionId, sender._id);
+    await this._markAsRead(discussionId, userId);
 
-    const discussion = await this._getDiscussionOrFail(discussionId, sender._id);
+    const discussion = await this._getDiscussionOrFail(discussionId, userId);
+
+    const sender = await this.amqp.request<SenderSnapshot>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+      payload: { userIds: [userId], forDiscussion: true },
+    })
+
+    if (!sender) throw new NotFoundException('User not found');
 
     return await this._createMessage(
       discussion,

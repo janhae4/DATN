@@ -12,4 +12,5 @@ export const EVENTS = {
   OWNERSHIP_TRANSFERRED: 'events.ownership.transferred',
   NEW_MESSAGE: 'events.new.message',
   DELETE_DOCUMENT: 'events.delete.document',
+  RENAME_TEAM: 'events.rename.team',
 };

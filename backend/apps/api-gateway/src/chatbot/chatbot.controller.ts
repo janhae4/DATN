@@ -25,7 +25,7 @@ import type { Response } from 'express';
 import { RoleGuard } from '../common/role/role.guard';
 import { CurrentUser } from '../common/role/current-user.decorator';
 
-@Controller('chatbot')
+@Controller('ai-discussions')
 @ApiBearerAuth()
 @UseGuards(RoleGuard)
 export class ChatbotController {
@@ -141,22 +141,22 @@ export class ChatbotController {
     return await this.chatbotService.renameFile(id, newName, userId, teamId);
   }
 
-  @Get('conversations')
+  @Get()
   @Roles(Role.USER)
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: 'number' })
   @ApiQuery({ name: 'limit', required: false, type: 'number' })
-  async findConversations(
+  async find(
     @CurrentUser('id') userId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 15,
   ) {
+    console.log
     return await this.chatbotService.findAllConversation(
       userId, page, limit
     );
   }
 
-  @Post('conversations/:id')
+  @Post(':id')
   @Roles(Role.USER, Role.ADMIN)
   @ApiParam({ name: 'id', type: 'string' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
@@ -172,7 +172,7 @@ export class ChatbotController {
     });
   }
 
-  @Post('conversations/teams/:id')
+  @Post('/teams/:id')
   @Roles(Role.USER, Role.ADMIN)
   @ApiParam({ name: 'id', type: 'string' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
@@ -188,12 +188,12 @@ export class ChatbotController {
     });
   }
 
-  @Get('conversations/teams/:id')
+  @Get('/teams/:id')
   @Roles(Role.USER)
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: 'number' })
   @ApiQuery({ name: 'limit', required: false, type: 'number' })
-  async findTeamConversations(
+  async findTeam(
     @CurrentUser('id') userId: string,
     @Param('id') teamId: string,
     @Query('page') page: number = 1,
@@ -204,7 +204,7 @@ export class ChatbotController {
     );
   }
 
-  @Get('conversations/:id')
+  @Get('/:id')
   @Roles(Role.USER)
   @ApiParam({ name: 'id', type: 'string' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
@@ -226,7 +226,7 @@ export class ChatbotController {
     );
   }
 
-  @Delete('conversations/:id')
+  @Delete('/:id')
   @Roles(Role.USER)
   @ApiParam({ name: 'id', type: 'string' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })

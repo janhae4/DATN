@@ -1,7 +1,5 @@
-import { ParticipantDto } from "@app/contracts/discussion/dto/participant.dto";
-import { EventUserSnapshot } from "@app/contracts/team/dto/create-team.dto";
-import { MemberRole } from "@app/contracts/team/dto/member.dto";
-import { TeamSnapshot } from "apps/chatbot/src/schema/ai-discussion.schema";
+import { SenderSnapshotDto } from "@app/contracts/discussion/dto/create-message.dto";
+import { EventUserSnapshot, TeamSnapshot } from "@app/contracts/team/dto/create-team.dto";
 
 export class RetrievedContextDto {
   source_id: string;
@@ -17,30 +15,43 @@ export class MessageMetadataDto {
 }
 
 export class AiMessageSnapshot {
-  id: string;
-  sender: EventUserSnapshot;
+  _id: string;
+  sender: SenderSnapshotDto;
   content: string;
-  timestamp: Date;
+  createdAt: Date;
   metadata: MessageMetadataDto;
 }
 
 export class SendAiMessageEventPayload {
-  discussionId: string
-  teamSnapshot: TeamSnapshot;
-  message: AiMessageSnapshot
+  sender: SenderSnapshotDto
+  message: string
+  discussionId?: string
+  teamId?: string
+  metadata?: MessageMetadataDto
 }
 
 export class MessageUserChatbot {
-  id?: string;
+  discussionId?: string;
   userId: string;
   message: string;
-  role: 'ai' | 'user';
   teamId?: string;
   metadata?: MessageMetadataDto;
+  summarizeFileName?: string;
+  socketId?: string
 }
 
 export const SENDER_SNAPSHOT_AI: EventUserSnapshot = {
   id: 'AI_ID',
   name: 'Ai Assistant',
   avatar: '',
+}
+
+export class AiDiscussionDto {
+  _id?: string;
+  name: string;
+  teamId?: string;
+  teamSnapshot?: TeamSnapshot;
+  ownerId?: string;
+  latestMessage?: string;
+  latestMessageSnapshot?: AiMessageSnapshot;
 }

@@ -39,11 +39,11 @@
     },
     "ai-discussion": {
       "type": "application",
-      "root": "apps/ai-discussion",
+      "root": "apps/discussion-ai",
       "entryFile": "main",
-      "sourceRoot": "apps/ai-discussion/src",
+      "sourceRoot": "apps/discussion-ai/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/ai-discussion/tsconfig.app.json"
+        "tsConfigPath": "apps/discussion-ai/tsconfig.app.json"
       }
     },
     "common": {

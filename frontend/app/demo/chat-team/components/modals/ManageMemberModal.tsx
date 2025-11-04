@@ -144,7 +144,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
     console.log(selectedMember);
     const updated = await ApiService.removeMember(
       conversation.teamId || "",
-      selectedMember.id
+      selectedMember.userId
     );
     onConversationUpdated(updated);
   };
@@ -152,7 +152,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
     if (!selectedMember?.id) return;
     const updated = await ApiService.transferOwnership(
       conversation.teamId || "",
-      selectedMember.id
+      selectedMember.userId
     );
     onConversationUpdated(updated);
   };
@@ -191,6 +191,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             {/* Thêm padding right để scroll bar ko che nút */}
             {members.map((member) => {
+              console.log(member)
               const permissions = canManageMember(member);
               const isCurrentUser = member.id === currentUser.id;
               return (
@@ -201,10 +202,10 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                   <div className="flex items-center gap-3">
                     <img
                       src={
-                        member.cachedUser.avatar ||
+                        member.cachedUser?.avatar ||
                         `https://i.pravatar.cc/150?u=${member.id}`
                       }
-                      alt={member.cachedUser.name}
+                      alt={member.cachedUser?.name}
                       className="w-10 h-10 rounded-full object-cover"
                       onError={(e) =>
                         (e.currentTarget.src = `https://placehold.co/100x100/cccccc/ffffff?text=?`)
@@ -212,7 +213,7 @@ export const ManageMembersModal: React.FC<ManageMembersModalProps> = ({
                     />
                     <div>
                       <p className="font-semibold">
-                        {member.cachedUser.name} {isCurrentUser && "(Bạn)"}
+                        {member.cachedUser?.name} {isCurrentUser && "(Bạn)"}
                       </p>
                       <p className="text-sm text-gray-500">
                         {member.role || "MEMBER"}

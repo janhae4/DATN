@@ -140,7 +140,7 @@ export class AuthController {
     return this.authService.resetVerificationCode(userId);
   }
 
-  @Post('/verify-email')
+  @Get('/verify-email')
   @ApiOperation({ summary: 'Verify account using email token' })
   @ApiQuery({ name: 'token', type: String, required: true })
   verifyEmail(@Query('token') token: string) {

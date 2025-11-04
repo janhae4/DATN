@@ -1,5 +1,5 @@
 export class SummarizeDocumentDto {
-  fileName: string;
-  conversationId?: string;
+  fileId: string;
+  discussionId?: string;
   teamId?: string
 }

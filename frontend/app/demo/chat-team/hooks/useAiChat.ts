@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ApiService } from "../services/api-service";
 import { CHATBOT_PATTERN, useSocket } from "@/app/SocketContext";
-import { AiMessage, AskQuestionPayload, CurrentUser, KnowledgeFile, SummarizeDocumentPayload } from "../types/type";
+import { AiMessage, AskQuestionPayload, CurrentUser, KnowledgeFile, SummarizeDocumentPayload, TeamRole } from "../types/type";
 import { useInfiniteScroll } from "./useInfiniteroll";
 
 export function useAiChat(
     currentUser: CurrentUser,
     teamId?: string,
 ) {
-    const {socket} = useSocket()
+    const { socket } = useSocket()
     const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
     const [prompt, setPrompt] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
@@ -45,70 +45,68 @@ export function useAiChat(
         if (!socket) return;
 
         const handleChunk = (content: string) => {
-            console.log(content)
             setAiMessages((prev) => {
                 const lastMessage = prev[prev.length - 1];
-                if (lastMessage?.role === "ai" && lastMessage._id.startsWith("streaming-")) {
+                if (lastMessage?.role === TeamRole.AI && lastMessage._id.startsWith("streaming-")) {
                     return [
                         ...prev.slice(0, -1),
                         { ...lastMessage, content: lastMessage.content + content },
                     ];
                 }
-                return [...prev, {
-                    _id: `streaming-${Date.now()}`, role: "ai", content: content,
-                    timestamp: new Date().toISOString(),
-                    sender: { _id: "ai-system-id", name: "AI Assistant", role: "ai" }
-                }];
+                // Nếu 'start' bị lỡ, tạo mới
+                return [...prev, { ...createStreamingPlaceholder(), content }];
             });
         };
 
         const handleStart = () => {
             console.log("Stream started, creating loading placeholder...");
-            setIsStreaming(true)
-
+            setIsStreaming(true);
             setAiMessages((prev) => {
                 const lastMessage = prev[prev.length - 1];
-                if (lastMessage?._id.startsWith("streaming-")) {
-                    return prev;
-                }
-
-                return [
-                    ...prev,
-                    {
-                        _id: `streaming-${Date.now()}`,
-                        role: "ai",
-                        content: "",
-                        timestamp: new Date().toISOString(),
-                        sender: { _id: "ai-system-id", name: "AI Assistant", role: "ai" }
-                    }
-                ];
+                if (lastMessage?._id.startsWith("streaming-")) return prev; // Đã có placeholder
+                return [...prev, createStreamingPlaceholder()];
             });
-
         };
 
         const handleError = (data: { content: string; metadata?: any }) => {
+            setIsStreaming(false);
             setAiMessages((prev) => [
                 ...prev.filter((m) => !m._id.startsWith("streaming-")),
                 {
-                    _id: `err-${Date.now()}`, role: "error", content: `Lỗi AI: ${data.content}`,
+                    _id: `err-${Date.now()}`, role: TeamRole.SYSTEM, content: `Lỗi AI: ${data.content}`,
                     timestamp: new Date().toISOString(),
-                    sender: { _id: "system", name: "System", role: "system" }
+                    sender: { _id: "system", name: "System", role: TeamRole.SYSTEM }
                 },
             ]);
-            setIsStreaming(false);
         };
 
         const handleEnd = (data: { content: string; metadata?: any }) => {
             setIsStreaming(false);
+        };
+
+        const handleAiMessageSaved = (savedMessage: AiMessage) => {
             setAiMessages((prev) =>
                 prev.map((m) =>
-                    m._id.startsWith("streaming-")
-                        ? { ...m, _id: `ai-${Date.now()}` }
-                        : m
+                    m._id.startsWith("streaming-") ? savedMessage : m
                 )
             );
         };
 
+        const handleUserMessage = (newMessage: AiMessage) => {
+            // Chỉ thêm nếu discussionId khớp VÀ không phải là tin của mình
+            if (newMessage.conversationId === activeConversationId && newMessage.sender._id !== currentUser.id) {
+                setAiMessages((prev) => {
+                    // Tránh thêm trùng lặp
+                    if (prev.find(m => m._id === newMessage._id)) return prev;
+                    return [...prev, newMessage];
+                });
+            }
+        };
+
+        // Nhận ID discussion mới (nếu là chat mới)
+        const handleConversationStarted = (data: { newConversationId: string }) => {
+            setActiveConversationId(data.newConversationId);
+        };
 
         const handleNewMessage = (data: AiMessage) => {
             console.log(activeConversationId)
@@ -116,9 +114,6 @@ export function useAiChat(
             setAiMessages((prev) => [...prev, data]);
         };
 
-        const handleConversationStarted = (data: { newConversationId: string }) => {
-            setActiveConversationId(data.newConversationId);
-        };
 
         socket.on(CHATBOT_PATTERN.RESPONSE_CHUNK, handleChunk);
         socket.on(CHATBOT_PATTERN.RESPONSE_START, handleStart);
@@ -138,23 +133,23 @@ export function useAiChat(
 
     const createOptimisticMessage = (content: string): AiMessage => ({
         _id: `user-${Date.now()}`,
-        role: "user",
+        role: TeamRole.MEMBER,
         content: content,
         timestamp: new Date().toISOString(),
         sender: {
             _id: currentUser.id,
             name: currentUser.name,
             avatar: currentUser.avatar,
-            role: "MEMBER",
+            role: TeamRole.MEMBER,
         },
     });
 
     const createStreamingPlaceholder = (): AiMessage => ({
         _id: `streaming-${Date.now()}`,
-        role: "ai",
+        role: TeamRole.AI,
         content: "",
         timestamp: new Date().toISOString(),
-        sender: { _id: "ai-system-id", name: "AI Assistant", role: "ai" },
+        sender: { _id: "ai-system-id", name: "AI Assistant", role: TeamRole.AI },
     });
 
     const handleSendAiMessage = () => {
@@ -164,7 +159,7 @@ export function useAiChat(
         const aiPlaceholder = createStreamingPlaceholder();
 
         setAiMessages((prev) => [...prev, userMessage, aiPlaceholder]);
-
+        console.log("Sending AI message:", prompt, teamId, activeConversationId);
         socket.emit(CHATBOT_PATTERN.ASK_QUESTION, {
             question: prompt,
             conversationId: activeConversationId,

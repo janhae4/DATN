@@ -1,8 +1,14 @@
 
 export type UserRole = "USER" | "ADMIN";
 
-export type TeamRole = "OWNER" | "ADMIN" | "MEMBER";
-
+export type TeamRole = "OWNER" | "ADMIN" | "MEMBER" | "AI" | "SYSTEM";
+export const TeamRole = {
+  OWNER: "OWNER" as TeamRole,
+  ADMIN: "ADMIN" as TeamRole,
+  MEMBER: "MEMBER" as TeamRole,
+  AI: "AI" as TeamRole,
+  SYSTEM: "SYSTEM" as TeamRole,
+}
 export type MemberStatus = "ACTIVE" | "LEFT" | "INVITED" | "BANNED";
 
 export interface CurrentUser {
@@ -39,7 +45,7 @@ export interface Participant {
   id?: string;
   name: string;
   avatar?: string;
-  role?: UserRole;
+  role?: TeamRole;
   status?: MemberStatus;
 }
 
@@ -225,8 +231,8 @@ export type FileStatusEvent = {
 // Định nghĩa tin nhắn AI
 export type AiMessage = {
   _id: string;
-  sender: Participant; // Dùng kiểu Participant chung
-  role: "user" | "ai" | "error" | "system";
+  sender: Participant;
+  role: TeamRole;
   content: string;
   conversationId?: string;
   timestamp: string;

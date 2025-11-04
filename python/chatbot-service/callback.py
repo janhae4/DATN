@@ -1,5 +1,5 @@
 import json
-from aio_pika import IncomingMessage, Channel, Message
+from aio_pika import Exchange, IncomingMessage, Channel, Message
 from services.vectorstore_service import VectorStoreService
 from services.minio_service import MinioService
 from chains.rag_chain import RAGChain
@@ -7,11 +7,47 @@ from chains.summarizer import Summarizer
 from config import (
     EVENTS_EXCHANGE,
     ASK_QUESTION_ROUTING_KEY,
+    SEND_FILE_STATUS_ROUTING_KEY,
     SEND_NOTIFICATION_ROUTING_KEY,
     SUMMARIZE_DOCUMENT_ROUTING_KEY,
     STREAM_RESPONSE_ROUTING_KEY,
     SOCKET_EXCHANGE
 )
+
+async def publish_response(
+    channel: Channel, 
+    socket_id: str, 
+    discussion_id: str,
+    content: str, 
+    type: str, 
+    team_id: str = None, 
+    metadata: dict = None, 
+    membersToNotify: list = []
+):
+    """
+    Hàm helper để gửi DTO phản hồi về cho NestJS (SocketGateway).
+    """
+    response_dto = {
+        "socketId": socket_id,
+        "content": content,
+        "type": type,
+        "discussionId": discussion_id,
+        "teamId": team_id,
+        "metadata": metadata if metadata else {},
+        "membersToNotify": membersToNotify
+    }
+    message_body = Message(
+        body=json.dumps(response_dto).encode()
+    )
+    
+    print(f"--> [Py->Nest] Gửi về ({type}): {content[:50]}...")
+    
+    events_exchange = await channel.get_exchange(EVENTS_EXCHANGE)
+    await events_exchange.publish(
+        message_body,
+        routing_key=STREAM_RESPONSE_ROUTING_KEY
+    )
+
 
 async def send_notification(channel: Channel, user_id, file_name, status, message):
     """
@@ -34,7 +70,32 @@ async def send_notification(channel: Channel, user_id, file_name, status, messag
     except Exception as e:
         print(f"Lỗi khi gửi thông báo: {e}")
 
-async def ingestion_callback(message: IncomingMessage, vectorstore_service: VectorStoreService, channel: Channel):
+async def send_status_file(channel: Channel, user_id, file_id, fileName,status, teamId: str = None):
+    try:
+        notification_body = { 
+            "userId": user_id, 
+            "teamId": teamId,
+            "status": status,
+            "fileId": file_id,
+            "fileName": fileName
+        }
+        print(f"--> Đang gửi thông báo '{status}' cho file: {file_id}")
+        print(f"--> Thống báo: {notification_body}")
+        socket = await channel.get_exchange(EVENTS_EXCHANGE)
+        await socket.publish(
+            message=Message(json.dumps(notification_body).encode()),
+            routing_key=SEND_FILE_STATUS_ROUTING_KEY
+        )
+        print(f"--> Đã gửi thông báo '{status}' cho file: {file_id}")
+    except Exception as e:
+        print(f"Lỗi khi gửi thông báo: {e}")
+
+async def ingestion_callback(
+    message: IncomingMessage, 
+    vectorstore_service: VectorStoreService, 
+    channel: Channel, 
+    search_exchange: Exchange
+    ):
     """
     Callback xử lý các tác vụ nạp dữ liệu (ingestion).
     """
@@ -47,32 +108,49 @@ async def ingestion_callback(message: IncomingMessage, vectorstore_service: Vect
             print(f"--> Payload DTO nhận được: {payload_dto}")
 
             user_id = payload_dto.get('userId')
-            file_name = payload_dto.get('fileName')
+            file_id = payload_dto.get('fileId')
             team_id = payload_dto.get('teamId')
-        
-            if user_id and file_name:
-                print(f"--> Bắt đầu xử lý file '{file_name}' cho user '{user_id}'.")
-                await vectorstore_service.process_and_store(user_id, file_name, team_id)
-                print(f"--> Xử lý file thành công!")
+            storage_key = payload_dto.get('storageKey')
+            original_name = payload_dto.get('originalName')
+            
+            if not all([user_id, file_id, storage_key, original_name]):
+                raise ValueError("Payload bị thiếu các trường bắt buộc (userId, fileId, storageKey, originalName).")
+            
+            print(f"--> Bắt đầu xử lý file '{file_name}' cho user '{user_id}'.")
+            await send_notification(channel, user_id, file_id, "processing", f"File '{original_name}' is being processed.")
+            await send_status_file(channel, user_id, file_id, original_name, "processing", team_id)
+            await vectorstore_service.process_and_store(
+                user_id=user_id,
+                team_id=team_id,
+                file_id=file_id,
+                original_name=original_name,
+                storage_key=storage_key,
+                channel=channel,
+                search_exchange=search_exchange
+            )
+            print(f"--> Xử lý file thành công!")
+            await send_status_file(channel, user_id, file_id, original_name, "completed", team_id)
+            await send_notification(channel, user_id, original_name, "success", f"File '{original_name}' had been processed successfully.")
 
-                original_name = file_name.split('-', 1)[1] if '-' in file_name else file_name
-                await send_notification(channel, user_id, file_name, "success", f"File '{original_name}' had been processed successfully.")
-            else:
-                raise ValueError("Missing user_id or file_name.")
         except Exception as e:
             error_message = str(e)
             print(f"Error processing '{file_name}': {error_message}")
-            if user_id and file_name:
-                await send_notification(channel, user_id, file_name, "failed", error_message)
-
+            if payload_dto:
+                user_id = payload_dto.get('userId')
+                file_id = payload_dto.get('fileId')
+                original_name = payload_dto.get('originalName', 'unknown file')
+                await send_notification(channel, user_id, file_id, "failed", f"Failed to process '{original_name}': {error_message}")
+                await send_status_file(channel, user_id, file_id ,original_name, "failed", team_id)
 async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, channel: Channel):
     """
     Callback xử lý các tác vụ tương tác (RAG, Summarize).
     """
     print(f"\n[ACTION] Nhận được yêu cầu tương tác mới...")
-    socket_id, user_id, conversation_id = None, None, None
+    
+    socket_id, user_id, discussion_id, team_id = None, None, None, None
+    membersToNotify = []
     pattern_from_key = "unknown"
-    print(message)
+    retrieved_metadata = None
     
     actual_routing_key = message.routing_key
     print(f"--> Nhận message với routing key: {actual_routing_key}")
@@ -83,75 +161,83 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
         pattern_from_key = "summarize_document"
     
     async with message.process():
-        retrieved_metadata = None
         try:
             payload_dto = json.loads(message.body.decode())
             print(f"--> Payload DTO nhận được: {payload_dto}")
 
             socket_id = payload_dto.get('socketId')
             user_id = payload_dto.get('userId')
-            conversation_id = payload_dto.get('conversationId')
+            discussion_id = payload_dto.get('discussionId')
             team_id = payload_dto.get('teamId')
+            membersToNotify = payload_dto.get('membersToNotify', [])
 
-            if not all([socket_id, user_id, conversation_id]):
-                raise ValueError("Tin nhắn thiếu socketId, userId, hoặc conversationId.")
+            print(f"Socket ID: {socket_id}, User ID: {user_id}, Discussion ID: {discussion_id}, Team ID: {team_id}")
 
-            async def publish_response(content, type, metadata = None, team_id = None):
-                response_dto = {
-                    "socketId": socket_id,
-                    "content": content,
-                    "type": type,
-                    "conversationId": conversation_id,
-                    "teamId": team_id,
-                    "metadata": metadata if metadata else {}
-                }
-                message_body = Message(
-                    body=json.dumps(response_dto).encode()
-                )
-                
-                print(f"--> [Py->Nest] Gửi về ({type}): {content}...")
-                
-                events_exchange = await channel.get_exchange(EVENTS_EXCHANGE)
-                await events_exchange.publish(
-                    message_body,
-                    routing_key=STREAM_RESPONSE_ROUTING_KEY
-                )
-                
+            if not all([socket_id, user_id, discussion_id]):
+                raise ValueError("Tin nhắn thiếu socketId, userId, hoặc discussionId.")
+
             if pattern_from_key == 'ask_question':
-                    question = payload_dto.get('question')
-                    chat_history = payload_dto.get('chatHistory', [])
-                    if not question: raise ValueError("Tin nhắn thiếu 'question'.")
+                question = payload_dto.get('question')
+                chat_history = payload_dto.get('chatHistory', [])
+                if not question: raise ValueError("Tin nhắn thiếu 'question'.")
 
-                    print(f"--> [RAG] Câu hỏi từ user '{user_id}': {question}")
-                    await publish_response("Thinking...", "start", team_id=team_id)
-                    async for chunk in rag_chain.ask_question_for_user(question, user_id, team_id, chat_history):
-                        await publish_response(chunk, "chunk", team_id=team_id)
-                    retrieved_metadata = rag_chain.get_last_retrieved_context()
-                    print(f"--> [RAG] Đã lấy được metadata: {retrieved_metadata}")
+                print(f"--> [RAG] Câu hỏi từ user '{user_id}': {question}")
+                await publish_response(channel, socket_id, discussion_id, "Thinking...", "start", team_id, membersToNotify=membersToNotify)
+                
+                async for chunk in rag_chain.ask_question_for_user(question, user_id, team_id, chat_history):
+                    await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
+                
+                retrieved_metadata = rag_chain.get_last_retrieved_context()
+                print(f"--> [RAG] Đã lấy được metadata: {retrieved_metadata}")
 
             elif pattern_from_key == 'summarize_document':
-                file_name = payload_dto.get('fileName')
-                if not file_name: raise ValueError("Tin nhắn thiếu 'fileName'.")
-                await publish_response("Summarizing...", "start", team_id=team_id)
+                file_name = payload_dto.get('summarizeFileName') # Sửa: Key là summarizeFileName
+                if not file_name: raise ValueError("Tin nhắn thiếu 'summarizeFileName'.")
+                
+                await publish_response(channel, socket_id, discussion_id, "Summarizing...", "start", team_id, membersToNotify=membersToNotify)
                 print(f"--> [SUMMARIZE] Bắt đầu tóm tắt file '{file_name}' cho user '{user_id}'.")
+                
                 documents = await minio_service.load_documents(file_name)
                 async for chunk in summarizer.summarize(documents):
-                    await publish_response(chunk, "chunk", team_id=team_id)
+                    await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
                     
             else:
                 raise ValueError(f"Routing key không xác định: '{actual_routing_key}'")
 
         except Exception as e:
             error_message = f"Lỗi khi xử lý '{pattern_from_key}': {e}"
-            if socket_id:
+            print(f"!!! LỖI: {error_message}")
+            
+            # ***
+            # SỬA 3: Phải kiểm tra 'socket_id' trước khi gửi lỗi
+            # (Vì nếu 'socket_id' là None, ta không thể gửi lỗi về)
+            # ***
+            if socket_id and discussion_id:
                 error_metadata = {"error": str(error_message)}
-                await publish_response(str(error_message), "error", error_metadata, team_id)
+                try:
+                    await publish_response(
+                        channel, socket_id, discussion_id, 
+                        str(error_message), "error", 
+                        team_id, error_metadata, membersToNotify
+                    )
+                except Exception as e_pub:
+                    print(f"!!! LỖI KHI GỬI LỖI: {e_pub}")
 
         finally:
-            if socket_id:
-                await publish_response("Stream has ended.", "end", retrieved_metadata, team_id)
+            # ***
+            # SỬA 4: Gửi 'end' bất kể thành công hay thất bại (miễn là có socket_id)
+            # ***
+            if socket_id and discussion_id:
                 print(f"--> Đã gửi tín hiệu kết thúc stream cho tác vụ '{pattern_from_key}'.")
-                
+                try:
+                    await publish_response(
+                        channel, socket_id, discussion_id, 
+                        "Stream has ended.", "end", 
+                        team_id, retrieved_metadata, membersToNotify
+                    )
+                except Exception as e_pub:
+                    print(f"!!! LỖI KHI GỬI 'END': {e_pub}")
+               
 async def on_team_deleted(message: IncomingMessage, vector_store: VectorStoreService):
     """
     Callback lắng nghe sự kiện xóa team từ NestJS và xóa collection 
