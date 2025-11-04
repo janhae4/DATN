@@ -7,6 +7,7 @@ export const CHATBOT_PATTERN = {
   RESPONSE_START: 'chatbot.response_start',
   RESPONSE_ERROR: 'chatbot.response_error',
   RESPONSE_END: 'chatbot.response_end',
+  CREATE: 'chatbot.create',
   STREAM_RESPONSE: 'rag_response',
   UPLOAD_FILE: 'chatbot.upload_file',
   GET_FILES_BY_PREFIX: 'chatbot.get_files_by_prefix',

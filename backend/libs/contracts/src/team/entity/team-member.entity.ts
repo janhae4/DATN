@@ -13,17 +13,7 @@ export class TeamMember {
 
     @Column()
     userId: string;
-
-    @Column({
-        type: 'jsonb',
-        nullable: true,
-    })
-    cachedUser?: {
-        name?: string;
-        avatar?: string;
-        email?: string;
-    };
-
+    
     @Column({
         type: 'enum',
         enum: MemberRole,

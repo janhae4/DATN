@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { RedisController } from './redis.controller';
-import { ClientConfigModule, ClientConfigService, REDIS_EXCHANGE } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, EVENTS_EXCHANGE, REDIS_EXCHANGE, TEAM_EXCHANGE } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
@@ -17,6 +17,14 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
               name: REDIS_EXCHANGE,
               type: 'direct',
             },
+            {
+              name: EVENTS_EXCHANGE,
+              type: 'topic',
+            },
+            {
+              name: TEAM_EXCHANGE,
+              type: 'direct'
+            }
           ],
           uri: cfg.getRMQUrl(),
           connectionInitOptions: { wait: false },

@@ -222,7 +222,7 @@ export const ApiService = {
 
   renameFile: (fileId: string, newName: string, teamId?: string) =>
     ApiService.request(
-      `/discussionsbot/files/${fileId}/rename${teamId ? `?teamId=${teamId}` : ""}`,
+      `/files/${fileId}/rename${teamId ? `?teamId=${teamId}` : ""}`,
       {
         method: "PATCH",
         body: JSON.stringify({ newName }),
@@ -230,7 +230,7 @@ export const ApiService = {
     ),
 
   updateFileContent: (file: File, fileId: string) => {
-    return ApiService.upload(`/discussionsbot/files/${fileId}/content`, file, {
+    return ApiService.upload(`/files/${fileId}/content`, file, {
       method: "PATCH",
     });
   },
@@ -250,8 +250,8 @@ export const ApiService = {
 
   getAiChatHistory: (page: number, limit: number, teamId?: string) => {
     return ApiService.request(
-      `/discussionsbot/conversations/${
-        teamId ? `teams/${teamId}` : ""
+      `/ai-discussions${
+        teamId ? `/teams/${teamId}` : ""
       }?page=${page}&limit=${limit}`
     );
   },
@@ -281,7 +281,7 @@ export const ApiService = {
 
   sendTeamAiChatMessage: (message: string, teamId?: string) => {
     return ApiService.request(
-      `/discussionsbot/conversations/${teamId ? `teams/${teamId}` : ""}`,
+      `/conversations/${teamId ? `teams/${teamId}` : ""}`,
       {
         method: "POST",
         body: JSON.stringify({ message }),

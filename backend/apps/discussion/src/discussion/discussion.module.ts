@@ -19,6 +19,7 @@ import { Discussion, DiscussionSchema } from './schema/discussion.schema';
       inject: [ClientConfigService],
       useFactory: (cfg: ClientConfigService) => ({
         uri: cfg.databaseDiscussionUrl,
+        connectTimeoutMS: 3000,
       }),
     }),
     MongooseModule.forFeature([

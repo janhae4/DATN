@@ -6,6 +6,7 @@ import {
   ClientConfigModule,
   ClientConfigService,
   EVENTS_EXCHANGE,
+  REDIS_EXCHANGE,
   TEAM_EXCHANGE,
   Team,
   TeamMember,
@@ -41,7 +42,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
             type: 'topic',
           },
           {
-            name: USER_EXCHANGE,
+            name: REDIS_EXCHANGE,
             type: 'direct',
           }
         ],

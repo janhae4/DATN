@@ -7,10 +7,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { JwtDto, Role } from '@app/contracts';
+import { Role } from '@app/contracts';
 import { Request } from 'express';
 import { ROLES_KEY } from './role.decorator';
-import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 
 @Injectable()
@@ -37,6 +36,7 @@ export class RoleGuard implements CanActivate {
     try {
       this.logger.log('[RoleGuard] Validating token...');
       const user = await this.authService.validateToken(cookies.accessToken as string)
+      console.log(user)
       this.logger.log('[RoleGuard] Token validated:', user.id);
       if (!user) throw new UnauthorizedException('Invalid token');
       contextRequest.user = user;

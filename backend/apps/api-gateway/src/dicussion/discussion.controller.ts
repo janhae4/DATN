@@ -15,7 +15,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/role/current-user.decorator';
-import { JwtDto, MemberShip, RequestPaginationDto, Role, SenderSnapshotDto } from '@app/contracts';
+import {  RequestPaginationDto, Role } from '@app/contracts';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { CreateDiscussionMessageDto } from './dto/create-discussion-message.dto';
@@ -139,19 +139,13 @@ export class DiscussionController {
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 404, description: 'discussion not found.' })
   createDiscussionMessage(
-    @CurrentUser() payload: JwtDto,
+    @CurrentUser('id') userId: string,
     @Param('discussionId') discussionId: string,
     @Body() createDiscussionMessageDto: CreateDiscussionMessageDto,
   ) {
-    const sender: SenderSnapshotDto = {
-      _id: payload.id,
-      name: payload.name,
-      avatar: payload.avatar,
-      status: MemberShip.ACTIVE
-    }
     return this.discussionService.createDiscussionMessage({
       ...createDiscussionMessageDto,
-      sender,
+      userId,
       discussionId,
     });
   }

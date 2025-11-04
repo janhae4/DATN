@@ -21,10 +21,13 @@ import {
   TEAM_PATTERN,
   Team,
   TeamMember,
+  REDIS_EXCHANGE,
+  REDIS_PATTERN,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { EVENTS } from '@app/contracts/events/events.pattern';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { unwrapRpcResult } from '@app/common';
 
 @Injectable()
 export class UserService {
@@ -372,10 +375,42 @@ export class UserService {
     });
   }
 
-  async findManyByIds(ids: string[]) {
-    return await this.userRepo.find({
-      where: { id: In(ids) },
-    });
+  async findManyByIds(ids: string[], forDiscussion?: boolean) {
+    const cachedUsers: Partial<User>[] = unwrapRpcResult(await this.amqp.request({
+      exchange: REDIS_EXCHANGE,
+      routingKey: REDIS_PATTERN.GET_USER_INFO,
+      payload: ids,
+    }))
+
+    const cachedIds = new Set(cachedUsers.map(u => u.id));
+    const missingIds = ids.filter(id => !cachedIds.has(id));
+
+    let missingUsers: Partial<User>[] = [];
+
+    if (missingIds.length > 0) {
+      this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from DB...`);
+      missingUsers = await this.userRepo.findBy({ id: In(missingIds) });
+      if (missingUsers.length > 0) {
+        await this.amqp.publish(
+          REDIS_EXCHANGE,
+          REDIS_PATTERN.SET_MANY_USERS_INFO,
+          missingUsers,
+        )
+      }
+    }
+
+    const allUsers = [...cachedUsers, ...missingUsers];
+
+    if (forDiscussion) {
+      allUsers.forEach(user => {
+        if (user.id !== undefined) {
+          (user as any)._id = user.id;
+          delete user.id;
+        }
+      })
+    }
+
+    return allUsers;
   }
 
   async validate(loginDto: LoginDto) {

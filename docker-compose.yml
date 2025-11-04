@@ -38,8 +38,8 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d
-
+      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+      
   meili-search:
     image: getmeili/meilisearch:v1.16
     container_name: meili_search
@@ -48,7 +48,7 @@ services:
     environment:
       MEILI_MASTER_KEY: "A7Uu1TlCVUtQRaUpFY9Z2sLoJeZMYVi0"
     volumes:
-      - - ./meili-data:/meili_data
+      - ./meili-data:/meili_data
 
   chroma:
     image: chromadb/chroma
@@ -59,69 +59,69 @@ services:
     volumes:
       - chroma-data:/chroma/.chroma/chroma
 
-  worker:
-    build: 
-      context: ./python/ner-service
-      dockerfile: Dockerfile
+  # worker:
+  #   build: 
+  #     context: ./python/ner-service
+  #     dockerfile: Dockerfile
     
-    container_name: task_ner
+  #   container_name: task_ner
 
-    command: ["python", "main.py"]
+  #   command: ["python", "main.py"]
     
-    volumes:
-      - ./python/ner-service:/app
+  #   volumes:
+  #     - ./python/ner-service:/app
     
-    ports:
-      - "4002:4002"
+  #   ports:
+  #     - "4002:4002"
       
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      QUEUE_NAME: process_nlp
+  #   environment:
+  #     RABBITMQ_HOST: rabbitmq
+  #     QUEUE_NAME: process_nlp
       
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_started
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
 
-  chatbot: 
-    build: 
-      context: ./python/chatbot-service
-      dockerfile: dockerfile
-    container_name: rag_chatbot
-    command: ["python", "main.py"]
-    volumes:
-      - ./python/chatbot-service:/app
-    ports:
-      - "4003:4003"
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      INGESTION_QUEUE: ingestion_queue
-      RAG_QUEUE: rag_queue
-      SUMMARIZE_QUEUE: summarize_queue
-      RESPONSE_QUEUE: chatbot_service_queue
-      NOTIFICATION_QUEUE: notifications_service_queue
-      CHROMA_HOST: chroma
-      CHROMA_PORT: 8000      
-      OLLAMA_BASE_URL: http://ollama:11434 
-      OLLAMA_MODEL: gemma3:4b
+  # chatbot: 
+  #   build: 
+  #     context: ./python/chatbot-service
+  #     dockerfile: dockerfile
+  #   container_name: rag_chatbot
+  #   command: ["python", "main.py"]
+  #   volumes:
+  #     - ./python/chatbot-service:/app
+  #   ports:
+  #     - "4003:4003"
+  #   environment:
+  #     RABBITMQ_HOST: rabbitmq
+  #     INGESTION_QUEUE: ingestion_queue
+  #     RAG_QUEUE: rag_queue
+  #     SUMMARIZE_QUEUE: summarize_queue
+  #     RESPONSE_QUEUE: chatbot_service_queue
+  #     NOTIFICATION_QUEUE: notifications_service_queue
+  #     CHROMA_HOST: chroma
+  #     CHROMA_PORT: 8000      
+  #     OLLAMA_BASE_URL: http://ollama:11434 
+  #     OLLAMA_MODEL: gemma3:4b
 
-  ollama:
-    image: ollama/ollama
-    container_name: ollama_service
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-      - ./init-ollama.sh:/init-ollama.sh
-    entrypoint: ["/bin/sh", "/init-ollama.sh"]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+  # ollama:
+  #   image: ollama/ollama
+  #   container_name: ollama_service
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #     - ./init-ollama.sh:/init-ollama.sh
+  #   entrypoint: ["/bin/sh", "/init-ollama.sh"]
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
   
   minio:
     image: minio/minio
@@ -136,13 +136,22 @@ services:
     volumes:
       - minio-data:/data
 
-  mongo:
+  mongo_db:
     image: mongo:8.0
     container_name: mongo_db
     ports:
       - "27017:27017"
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     volumes:
       - mongo-data:/data/db
+      - ./init-mongo.sh:/scripts/init-mongo.sh
+  mongo_rs_init:
+    image: mongo:8.0
+    depends_on:
+      - mongo_db
+    volumes:
+      - ./init-mongo.sh:/scripts/init-mongo.sh
+    entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
 
 volumes:
   postgres-data:

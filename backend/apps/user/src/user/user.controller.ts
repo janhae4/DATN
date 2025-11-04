@@ -17,6 +17,7 @@ import {
   USER_PATTERNS,
 } from '@app/contracts';
 import { Payload } from '@nestjs/microservices';
+import { customErrorHandler } from '@app/common';
 
 @Controller()
 export class UserController {
@@ -29,6 +30,7 @@ export class UserController {
     queueOptions: {
       durable: true,
     },
+    errorHandler: customErrorHandler
   })
   handleLogin(@Payload() payload: Partial<User>) {
     this.userService.update(payload.id ?? '', {
@@ -41,6 +43,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.CREATE_LOCAL,
     queue: USER_PATTERNS.CREATE_LOCAL,
+    errorHandler: customErrorHandler
   })
   create(createUserDto: CreateAuthLocalDto) {
     return this.userService.createLocal(createUserDto);
@@ -50,6 +53,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.CREATE_OAUTH,
     queue: USER_PATTERNS.CREATE_OAUTH,
+    errorHandler: customErrorHandler
   })
   createOAuth(data: CreateAuthOAuthDto) {
     return this.userService.createOAuth(data);
@@ -59,6 +63,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.CREATE_ACCOUNT,
     queue: USER_PATTERNS.CREATE_ACCOUNT,
+    errorHandler: customErrorHandler
   })
   createAccount(partial: Partial<Account>) {
     return this.userService.createAccount(partial);
@@ -68,6 +73,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.VERIFY_LOCAL,
     queue: USER_PATTERNS.VERIFY_LOCAL,
+    errorHandler: customErrorHandler
   })
   verifyLocal(data: { userId: string; code: string }) {
     return this.userService.verifyLocal(data.userId, data.code);
@@ -77,6 +83,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
     queue: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
+    errorHandler: customErrorHandler
   })
   verifyForgotPassword(data: { userId: string; code: string; password: string }) {
     return this.userService.verifyForgotPassword(
@@ -90,6 +97,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.RESET_CODE,
     queue: USER_PATTERNS.RESET_CODE,
+    errorHandler: customErrorHandler
   })
   resetCode(data: { userId: string; typeCode: 'verify' | 'reset' }) {
     const { userId, typeCode } = data;
@@ -101,6 +109,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.RESET_PASSWORD,
     queue: USER_PATTERNS.RESET_PASSWORD,
+    errorHandler: customErrorHandler
   })
   resetPassword(email: string) {
     console.log(email);
@@ -111,6 +120,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FIND_ALL,
     queue: USER_PATTERNS.FIND_ALL,
+    errorHandler: customErrorHandler
   })
   findAll() {
     return this.userService.findAll({});
@@ -120,6 +130,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FIND_ONE,
     queue: USER_PATTERNS.FIND_ONE,
+    errorHandler: customErrorHandler
   })
   findOne(id: string) {
     return this.userService.findOne(id);
@@ -129,6 +140,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FIND_ONE_WITH_PASSWORD,
     queue: USER_PATTERNS.FIND_ONE_WITH_PASSWORD,
+    errorHandler: customErrorHandler
   })
   async findOneWithPassword(@RabbitPayload('id') id: string) {
     return await this.userService.findOneWithPassword(id);
@@ -138,6 +150,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL,
     queue: USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL,
+    errorHandler: customErrorHandler
   })
   async findOneGoogle(email: string) {
     return await this.userService.findOneGoogle(email);
@@ -147,6 +160,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FIND_ONE_BY_EMAIL,
     queue: USER_PATTERNS.FIND_ONE_BY_EMAIL,
+    errorHandler: customErrorHandler
   })
   async findOneByEmail(email: string) {
     return await this.userService.findOneByEmail(email);
@@ -156,6 +170,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FIND_ONE_OAUTH,
     queue: USER_PATTERNS.FIND_ONE_OAUTH,
+    errorHandler: customErrorHandler
   })
   async findOneOAuth(data: { provider: Provider; providerId: string }) {
     return await this.userService.findOneOAuth(data.provider, data.providerId);
@@ -165,15 +180,17 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
     queue: USER_PATTERNS.FIND_MANY_BY_IDs,
+    errorHandler: customErrorHandler
   })
-  async findManyByIds(ids: string[]) {
-    return await this.userService.findManyByIds(ids);
+  async findManyByIds(payload: { userIds: string[], forDiscussion?: boolean }) {
+    return await this.userService.findManyByIds(payload.userIds, payload.forDiscussion);
   }
 
   @RabbitRPC({
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.VALIDATE,
     queue: USER_PATTERNS.VALIDATE,
+    errorHandler: customErrorHandler
   })
   async validate(loginDto: LoginDto) {
     return await this.userService.validate(loginDto);
@@ -183,6 +200,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.UPDATE_PASSWORD,
     queue: USER_PATTERNS.UPDATE_PASSWORD,
+    errorHandler: customErrorHandler
   })
   async updatePassword(updatePasswordDto: ChangePasswordDto) {
     return await this.userService.updatePassword(
@@ -196,6 +214,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.UPDATE,
     queue: USER_PATTERNS.UPDATE,
+    errorHandler: customErrorHandler
   })
   update(data: { id: string; updateUser: Partial<User> }) {
     return this.userService.update(data.id, data.updateUser);
@@ -205,6 +224,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.REMOVE,
     queue: USER_PATTERNS.REMOVE,
+    errorHandler: customErrorHandler
   })
   remove(@RabbitPayload('id') id: string) {
     return this.userService.remove(id);
@@ -214,6 +234,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FIND_MANY_BY_NAME,
     queue: USER_PATTERNS.FIND_MANY_BY_NAME,
+    errorHandler: customErrorHandler
   })
   findByName(payload: FindUserDto) {
     return this.userService.findByName(payload.key, payload.options, payload.requesterId, payload.teamId);
@@ -223,6 +244,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.FOLLOW,
     queue: USER_PATTERNS.FOLLOW,
+    errorHandler: customErrorHandler
   })
   follow(requesterId: string, followingId: string) {
     return this.userService.follow(requesterId, followingId);
@@ -232,6 +254,7 @@ export class UserController {
     exchange: USER_EXCHANGE,
     routingKey: USER_PATTERNS.UNFOLLOW,
     queue: USER_PATTERNS.UNFOLLOW,
+    errorHandler: customErrorHandler
   })
   unfollow(requesterId: string, followingId: string) {
     return this.userService.unfollow(requesterId, followingId);

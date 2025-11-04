@@ -21,7 +21,6 @@ import type {
   ChangeRoleMember,
   CreateTeamEventPayload,
   FileStatus,
-  LeaveMember,
   LeaveMemberEventPayload,
   RemoveMemberEventPayload,
   RemoveTeamEventPayload,

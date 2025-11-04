@@ -98,11 +98,11 @@
             }
         },
         {
-            "label": "chat",
+            "label": "discussion",
             "command": "npm",
             "args": [
                 "run",
-                "start:chat"
+                "start:discussion"
             ],
             "type": "shell",
             "options": {
@@ -110,6 +110,23 @@
             },
             "presentation": {
                 "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "ai-discussion",
+            "command": "nest",
+            "args": [
+                "start",
+                "ai-discussion",
+                "--watch"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatbotDemo",
                 "panel": "new"
             }
         },
@@ -154,7 +171,8 @@
                 "redis",
                 "notification",
                 "team",
-                "chat",
+                "discussion",
+                "ai-discussion",
                 "search",
                 "socket"
             ],

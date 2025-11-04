@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 from config import (
+    SEARCH_EXCHANGE,
+    EVENTS_EXCHANGE,
     RABBITMQ_URL, 
     THREADPOOL_MAX_WORKERS,
     INGESTION_QUEUE,
@@ -60,12 +62,24 @@ async def main():
             type= ExchangeType.DIRECT, 
             durable=True
         )
+        
+        search_exchange = await channel.declare_exchange(
+            SEARCH_EXCHANGE,
+            type=ExchangeType.DIRECT,
+            durable=True
+        )
+        
+        events_exchange = await channel.declare_exchange(
+            EVENTS_EXCHANGE,
+            type=ExchangeType.TOPIC,
+            durable=True
+        )
 
         ingestion_queue = await channel.declare_queue(INGESTION_QUEUE, durable=True)
         await ingestion_queue.bind(chatbot_exchange, routing_key=PROCESS_DOCUMENT_ROUTING_KEY)
 
         delete_queue = await channel.declare_queue(REMOVE_QUEUE, durable=True)
-        await delete_queue.bind(chatbot_exchange, routing_key=REMOVE_COLLECTION_ROUTING_KEY)
+        await delete_queue.bind(events_exchange, routing_key=REMOVE_COLLECTION_ROUTING_KEY)
 
         rag_queue = await channel.declare_queue(RAG_QUEUE, durable=True)
         await rag_queue.bind(chatbot_exchange, routing_key=ASK_QUESTION_ROUTING_KEY)
@@ -75,7 +89,8 @@ async def main():
         ingestion_consumer = partial(
             ingestion_callback, 
             vectorstore_service=vectorstore_service, 
-            channel=channel
+            channel=channel,
+            search_exchange=search_exchange
         )
         action_consumer = partial(
             action_callback, 
