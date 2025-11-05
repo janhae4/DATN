@@ -12,7 +12,7 @@ export default function Page() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(true);
   const loadInitialConversations = useChatStore(
-    (state) => state.loadInitialConversations
+    (state) => state.loadInitialDiscussions
   );
 
   const handleLogout = async () => {
@@ -23,15 +23,15 @@ export default function Page() {
     } finally {
       setCurrentUser(null);
       useChatStore.setState({
-        visibleConversations: [],
-        selectedConversation: null,
+        visibleDiscussions: [],
+        selectedDiscussion: null,
         messages: {},
         messagePages: {},
         hasMoreMessages: {},
         metaMap: {},
         currentPage: 0,
         totalPages: 1,
-        isLoadingConversations: false,
+        isLoadingDiscussions: false,
       });
     }
   };
@@ -44,32 +44,32 @@ export default function Page() {
         if (!userInfo) {
           setCurrentUser(null);
           useChatStore.setState({
-            visibleConversations: [],
-            selectedConversation: null,
+            visibleDiscussions: [],
+            selectedDiscussion: null,
             messages: {},
             messagePages: {},
             hasMoreMessages: {},
             metaMap: {},
             currentPage: 0,
             totalPages: 1,
-            isLoadingConversations: false,
+            isLoadingDiscussions: false,
           });
         }
         setCurrentUser(userInfo);
-        loadInitialConversations();
+        loadInitialConversations('team');
       } catch (error) {
         console.error("Verification failed:", error);
         setCurrentUser(null);
         useChatStore.setState({
-          visibleConversations: [],
-          selectedConversation: null,
+          visibleDiscussions: [],
+          selectedDiscussion: null,
           messages: {},
           messagePages: {},
           hasMoreMessages: {},
           metaMap: {},
           currentPage: 0,
           totalPages: 1,
-          isLoadingConversations: false,
+          isLoadingDiscussions: false,
         });
       } finally {
         setIsAuthenticating(false);
@@ -91,7 +91,7 @@ export default function Page() {
       <LoginPage
         onLoginSuccess={(user) => {
           setCurrentUser(user);
-          loadInitialConversations();
+          loadInitialConversations('team');
         }}
       />
     );

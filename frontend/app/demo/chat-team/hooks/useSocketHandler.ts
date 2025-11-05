@@ -1,46 +1,123 @@
-import { useEffect, useRef } from "react";
+"use client";
+
+import { useEffect } from "react";
+import { useSocket, CHATBOT_PATTERN } from "@/app/SocketContext";
 import { useChatStore } from "../store/useChatStore";
-import { ApiService } from "../services/api-service";
-import { NewMessageEvent } from "../types/type";
-import { useSocket } from "@/app/SocketContext";
+import { AiMessage, MessageData, NewMessageEvent } from "../types/type";
 
 export function useSocketHandler() {
-    const {
-        upsertConversationMeta,
-        ensureConversationVisible,
-        moveConversationToTop,
-        appendMessage,
-        selectedConversation
-    } = useChatStore();
+    const { socket } = useSocket();
+    const store = useChatStore();
 
-    const { socket } = useSocket()
     useEffect(() => {
         if (!socket) return;
 
-        const handleNewMessage = async (payload: NewMessageEvent) => {
-            console.log("Received new message via socket:", payload);
-            const { discussionId } = payload;
-            if (!discussionId) {
-                console.error("Received message without discussionId:", payload);
-                return;
+        const getStoreDiscussionId = (
+            data: { teamId?: string; discussionId?: string }
+        ): string | null => {
+            if (data.teamId) {
+                return `team_ai_${data.teamId}`;
             }
-            ensureConversationVisible(discussionId, ApiService.getConversationById);
-            upsertConversationMeta(payload);
-            if (selectedConversation?._id === payload.discussionId) {
-                appendMessage(payload.discussionId, payload.message);
+            if (data.discussionId) {
+                const personalId = useChatStore.getState().personalAiDiscussionId;
+                if (data.discussionId === personalId) {
+                    return "personal_ai";
+                }
+            }
+            if (!data.teamId && !data.discussionId) {
+                return "personal_ai";
+            }
+            return null;
+        };
+
+        const handleNewMessage = (data: NewMessageEvent) => {
+            store.appendMessage(data.discussionId, data.message);
+            store.upsertDiscussionMeta(data);
+        };
+
+        const handleStreamStart = (
+            data: { teamId?: string; DiscussionId?: string }
+        ) => {
+            const storeId = getStoreDiscussionId(data);
+            if (storeId) {
+                store.setStreaming(storeId, true);
+                store.appendStreamingPlaceholder(storeId);
             }
         };
 
-        socket.on("new_message", handleNewMessage);
+        const handleStreamChunk = (
+            data: { content: string; teamId?: string; discussionId?: string }
+        ) => {
+            const storeId = getStoreDiscussionId(data);
+            if (storeId) {
+                store.updateStreamingMessage(storeId, data.content);
+            }
+        };
+
+        const handleStreamEnd = (
+            data: { teamId?: string; DiscussionId?: string }
+        ) => {
+            const storeId = getStoreDiscussionId(data);
+            if (storeId) {
+                store.setStreaming(storeId, false);
+            }
+        };
+
+        const handleStreamError = (
+            data: { content: string; teamId?: string; DiscussionId?: string }
+        ) => {
+            const storeId = getStoreDiscussionId(data);
+            if (storeId) {
+                store.handleStreamingError(storeId, data.content);
+                store.setStreaming(storeId, false);
+            }
+        };
+
+        const handleAiMessageSaved = (savedMessage: AiMessage) => {
+            const storeId = getStoreDiscussionId(savedMessage);
+            if (storeId) {
+                store.finalizeStreamingMessage(storeId, savedMessage);
+            }
+        };
+
+        const handleDiscussionStarted = (data: { newDiscussionId: string }) => {
+            store.setPersonalAiDiscussionId(data.newDiscussionId);
+        };
+
+        const handleNewAiMessage = (aiMessage: AiMessage) => {
+            store.appendMessage(aiMessage.discussionId || "personal_ai", {
+                _id: aiMessage._id,
+                sender: aiMessage.sender,
+                content: aiMessage.content,
+                createdAt: aiMessage.timestamp,
+                discussionId: aiMessage.discussionId || "personal_ai",
+                teamId: aiMessage.teamId,
+                metadata: aiMessage.metadata,
+            });
+        };
+
+        socket.on(CHATBOT_PATTERN.NEW_MESSAGE, handleNewMessage);
+
+        socket.on(CHATBOT_PATTERN.RESPONSE_START, handleStreamStart);
+        socket.on(CHATBOT_PATTERN.RESPONSE_CHUNK, handleStreamChunk);
+        socket.on(CHATBOT_PATTERN.RESPONSE_END, handleStreamEnd);
+        socket.on(CHATBOT_PATTERN.RESPONSE_ERROR, handleStreamError);
+        socket.on(CHATBOT_PATTERN.CONVERSATION_STARTED, handleDiscussionStarted);
+
+        socket.on(CHATBOT_PATTERN.MESSAGE_SAVED, handleAiMessageSaved);
+        socket.on(CHATBOT_PATTERN.NEW_AI_MESSAGE, handleNewAiMessage);
 
         return () => {
             socket.off("new_message", handleNewMessage);
+
+            socket.off(CHATBOT_PATTERN.RESPONSE_START, handleStreamStart);
+            socket.off(CHATBOT_PATTERN.RESPONSE_CHUNK, handleStreamChunk);
+            socket.off(CHATBOT_PATTERN.RESPONSE_END, handleStreamEnd);
+            socket.off(CHATBOT_PATTERN.RESPONSE_ERROR, handleStreamError);
+            socket.off(CHATBOT_PATTERN.CONVERSATION_STARTED, handleDiscussionStarted);
+
+            socket.off(CHATBOT_PATTERN.MESSAGE_SAVED, handleAiMessageSaved);
+            socket.off(CHATBOT_PATTERN.NEW_AI_MESSAGE, handleNewAiMessage);
         };
-    }, [
-        upsertConversationMeta,
-        ensureConversationVisible,
-        moveConversationToTop,
-        appendMessage,
-        selectedConversation
-    ]);
+    }, [socket, store]);
 }

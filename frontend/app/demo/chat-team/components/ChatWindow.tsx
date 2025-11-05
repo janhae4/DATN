@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Users as UsersIcon } from "lucide-react";
 import { ChatHeader } from "./ChatHeader";
 import { MessageInput } from "./MessageInput";
@@ -22,12 +22,17 @@ export function ChatWindow({
     useState(false);
 
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [chatMode, setChatMode] = useState<"team" | "ai">("team");
 
   const {
     updateConversationInList,
     setSelectedConversation,
     loadInitialConversations,
   } = useChatStore();
+
+  useEffect(() => {
+    loadInitialConversations(chatMode);
+  }, [chatMode, loadInitialConversations]);
 
   const onConversationUpdated = useCallback(
     (updatedConversation: Team) => {
@@ -41,7 +46,7 @@ export function ChatWindow({
   const onUserLeave = useCallback(() => {
     setIsManageMembersModalOpen(false);
     setSelectedConversation({});
-    loadInitialConversations();
+    loadInitialConversations("team");
   }, [setSelectedConversation, loadInitialConversations]);
 
   return (

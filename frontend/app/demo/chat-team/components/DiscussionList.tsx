@@ -1,25 +1,26 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { Loader2 } from "lucide-react";
-import { ConversationItem } from "./ConversationItem";
-import { Conversation, CurrentUser } from "../types/type";
+import { DiscussionItem } from "./DiscussionItem";
+import { Discussion, CurrentUser } from "../types/type";
 import { useSocket } from "@/app/SocketContext";
-import { useSocketHandler } from "../hooks/useSocketHandler";
 
-interface ConversationListProps {
+interface DiscussionListProps {
   currentUser: CurrentUser;
-  onSelectConversation: (conversation: Conversation) => void;
+  onSelectDiscussion: (discussion: Discussion) => void;
+  chatMode?: "team" | "ai";
 }
-export const ConversationList: React.FC<ConversationListProps> = ({
+export const DiscussionList: React.FC<DiscussionListProps> = ({
   currentUser,
-  onSelectConversation,
+  onSelectDiscussion,
+  chatMode = "team",
 }) => {
   const {
-    visibleConversations,
-    selectedConversation,
-    isLoadingConversations,
-    loadInitialConversations,
-    loadMoreConversations,
+    visibleDiscussions,
+    selectedDiscussion,
+    isLoadingDiscussions,
+    loadInitialDiscussions,
+    loadMoreDiscussions,
     currentPage,
     totalPages,
   } = useChatStore();
@@ -32,8 +33,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   const hasMore = currentPage < totalPages;
 
   useEffect(() => {
-    if (visibleConversations.length === 0) {
-      loadInitialConversations();
+    if (visibleDiscussions.length === 0) {
+      loadInitialDiscussions(chatMode);
     }
   }, []);
 
@@ -50,9 +51,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       (entries) => {
         const freshState = useChatStore.getState();
 
-        if (entries[0].isIntersecting && !freshState.isLoadingConversations) {
+        if (entries[0].isIntersecting && !freshState.isLoadingDiscussions) {
           console.log("Intersection observer triggered load more...");
-          loadMoreConversations();
+          loadMoreDiscussions();
         }
       },
       {
@@ -70,14 +71,14 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       }
       observer.disconnect();
     };
-  }, [hasMore, loadMoreConversations]);
+  }, [hasMore, loadMoreDiscussions]);
 
   const handleSelect = useCallback(
-    (conv: Conversation) => {
-      console.log(conv._id);
+    (disc: Discussion) => {
+      console.log(disc._id);
       socket?.emit(
         "join_room",
-        {roomId: conv._id},
+        { roomId: disc._id },
         (response: { status: string; roomId: string }) => {
           if (response.status === "ok") {
             console.log(`ĐÃ THAM GIA PHÒNG THÀNH CÔNG: ${response.roomId}`);
@@ -86,19 +87,19 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           }
         }
       );
-      onSelectConversation(conv);
+      onSelectDiscussion(disc);
     },
-    [onSelectConversation, socket]
+    [onSelectDiscussion, socket]
   );
 
   return (
     <div ref={listRef} className="overflow-y-auto h-full px-2 space-y-1">
-      {visibleConversations.map((conv) => (
-        <ConversationItem
-          key={conv._id}
-          conversation={conv}
-          selected={selectedConversation?._id === conv._id}
-          onClick={() => handleSelect(conv)}
+      {visibleDiscussions.map((disc) => (
+        <DiscussionItem
+          key={disc._id}
+          discussion={disc}
+          selected={selectedDiscussion?._id === disc._id}
+          onClick={() => handleSelect(disc)}
           currentUser={currentUser}
         />
       ))}
@@ -110,19 +111,18 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         />
       )}
 
-      {/* Loading indicator */}
-      {isLoadingConversations && (
+      {isLoadingDiscussions && (
         <div className="flex justify-center items-center py-4">
           <Loader2 className="animate-spin h-6 w-6 text-indigo-600" />
         </div>
       )}
 
-      {!hasMore && visibleConversations.length > 0 && (
+      {!hasMore && visibleDiscussions.length > 0 && (
         <p className="text-center text-sm text-gray-500 py-3">Hết rồi 😅</p>
       )}
-      {!isLoadingConversations && visibleConversations.length === 0 && (
+      {!isLoadingDiscussions && visibleDiscussions.length === 0 && (
         <p className="text-center text-sm text-gray-500 py-3">
-          Không có cuộc trò chuyện nào.
+          Không có cuộc thảo luận nào.
         </p>
       )}
     </div>

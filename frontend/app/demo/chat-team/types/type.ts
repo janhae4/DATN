@@ -97,6 +97,7 @@ export interface MessageData {
   attachments?: Attachment[];
   reactions?: Reaction[];
   readBy?: { id: string, readAt: string }[];
+  metadata?: any;
 }
 
 export interface TeamSnapshot {
@@ -105,7 +106,7 @@ export interface TeamSnapshot {
   avatar?: string;
 }
 
-export interface Conversation {
+export interface Discussion {
   _id: string;
   latestMessage?: string;
   latestMessageSnapshot?: MessageData;
@@ -156,46 +157,6 @@ export interface NewMessageEvent {
   participants: Participant[];
 }
 
-export interface ChatState {
-  selectedConversation: Conversation | null;
-  messages: { [conversationId: string]: MessageData[] };
-  messagePages: { [conversationId: string]: number };
-  hasMoreMessages: { [conversationId: string]: boolean };
-
-  visibleConversations: Conversation[];
-  metaMap: { [conversationId: string]: Conversation };
-  currentPage: number;
-  totalPages: number;
-  isLoadingConversations: boolean;
-
-  setSelectedConversation: (payload: { conversation?: Conversation | null, teamId?: string }) => void;
-  appendMessage: (conversationId: string, message: MessageData) => void;
-  prependMessages: (conversationId: string, messages: MessageData[]) => void;
-  loadInitialConversations: () => Promise<void>;
-  loadMoreConversations: () => Promise<void>;
-  upsertConversationMeta: (meta: NewMessageEvent) => void;
-  ensureConversationVisible: (
-    conversationId: string,
-    fetchIfMissing: (id: string) => Promise<Conversation | null>
-  ) => Promise<void>;
-  moveConversationToTop: (payload: { conversationId?: string, teamId?: string }) => void;
-  updateConversationInList: (updatedConversation: Team) => void;
-  setMessagesForConversation: (
-    conversationId: string,
-    messages: MessageData[],
-    page: number,
-    hasMore: boolean
-  ) => void;
-  replaceTempMessage: (
-    conversationId: string,
-    tempId: string,
-    finalMessage: NewMessageEvent
-  ) => void;
-  removeTempMessage: (conversationId: string, tempId: string) => void;
-  setMessagePage: (conversationId: string, page: number) => void;
-  setHasMoreMessages: (conversationId: string, hasMore: boolean) => void;
-}
-
 export interface CreateTeam {
   id: string;
   name: string;
@@ -222,7 +183,7 @@ export type KnowledgeFileResponse = {
   createdAt: string;
 }
 
-export type FileStatusEvent = {
+export interface FileStatusEvent  {
   id: string;
   status: FileStatus;
   name: string
@@ -234,7 +195,8 @@ export type AiMessage = {
   sender: Participant;
   role: TeamRole;
   content: string;
-  conversationId?: string;
+  discussionId?: string;
+  teamId?: string;
   timestamp: string;
   metadata?: any;
 };
@@ -285,13 +247,13 @@ export interface FileListResponse extends Array<KnowledgeFile> { }
 // --- SOCKET PAYLOADS ---
 export interface AskQuestionPayload {
   question: string;
-  conversationId: string | null;
-  teamId: string;
+  discussionId?: string;
+  teamId?: string;
 }
 
 export interface SummarizeDocumentPayload {
   fileId: string;
-  conversationId: string | null;
+  discussionId: string | null;
   teamId: string;
 }
 
@@ -299,7 +261,7 @@ export interface ResponseStreamDto {
   socketId: string;
   content: string;
   type: "chunk" | "error" | "end";
-  conversationId: string;
+  discussionId: string;
   teamId: string;
   metadata?: any;
 }

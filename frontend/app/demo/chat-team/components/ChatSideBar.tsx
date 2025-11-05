@@ -8,7 +8,7 @@ import {
 
 import { useChatStore } from "../store/useChatStore";
 import { NewChatModal } from "./modals/CreateChatModal";
-import { ConversationList } from "./ConversationList";
+import { DiscussionList } from "./DiscussionList";
 import { CreateTeamModal } from "./modals/CreateTeamModal";
 import { CreateTeam, CurrentUser } from "../types/type";
 import { ApiService } from "../services/api-service";
@@ -28,22 +28,26 @@ export function ChatSidebar({
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
 
   const {
-    ensureConversationVisible,
-    moveConversationToTop,
-    setSelectedConversation,
+    ensureDiscussionVisible,
+    moveDiscussionToTop,
+    setSelectedDiscussion,
   } = useChatStore();
 
   const handleChatCreated = useCallback(
-    (newConversation: CreateTeam) => {
-      const id = newConversation.id
-      ensureConversationVisible(id, async () => await ApiService.getConversationByTeamId(id)).then(() => {
-        moveConversationToTop({teamId: id});
-        setSelectedConversation({teamId: id});
+    (newTeam: CreateTeam) => {
+      const id = newTeam.id;
+
+      ensureDiscussionVisible(
+        id,
+        async () => await ApiService.getDiscussionByTeamId(id)
+      ).then(() => {
+        moveDiscussionToTop({ teamId: id });
+        setSelectedDiscussion({ teamId: id });
       });
       setIsNewChatModalOpen(false);
       setIsCreateTeamModalOpen(false);
     },
-    [ensureConversationVisible, moveConversationToTop, setSelectedConversation]
+    [ensureDiscussionVisible, moveDiscussionToTop, setSelectedDiscussion]
   );
 
   return (
@@ -97,18 +101,10 @@ export function ChatSidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {chatMode === "team" ? (
-            <ConversationList
-              currentUser={currentUser}
-              onSelectConversation={setSelectedConversation}
-            />
-          ) : (
-            <div className="p-4 text-sm text-gray-500 text-center">
-              <p>
-                Trò chuyện riêng tư với AI. Lịch sử của bạn sẽ được lưu ở đây.
-              </p>
-            </div>
-          )}
+          <DiscussionList
+            currentUser={currentUser}
+            onSelectDiscussion={setSelectedDiscussion}
+          />
         </div>
 
         <div className="p-4 border-t border-gray-200 space-y-2">

@@ -1,28 +1,28 @@
 import React from "react";
-import { Conversation, CurrentUser } from "../types/type";
+import { Discussion, CurrentUser } from "../types/type";
 
-interface ConversationItemProps {
-  conversation: Conversation;
+interface DiscussionItemProps {
+  discussion: Discussion;
   selected: boolean;
   onClick: () => void;
   currentUser: CurrentUser;
 }
-export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
-  ({ conversation, selected, onClick, currentUser }) => {
+export const DiscussionItem: React.FC<DiscussionItemProps> = React.memo(
+  ({ discussion, selected, onClick, currentUser }) => {
     const getDisplayData = () => {
-      if (conversation.isGroup) {
+      if (discussion.isGroup) {
         return {
-          name: conversation.name || "Group Chat",
+          name: discussion.name || "Group Chat",
           avatar:
-            conversation.teamSnapshot?.avatar ||
+            discussion.teamSnapshot?.avatar ||
             `https://placehold.co/100x100/7c3aed/ffffff?text=${(
-              conversation.name || "G"
+              discussion.name || "G"
             )
               .charAt(0)
               .toUpperCase()}`,
         };
       }
-      const otherUser = conversation.participants?.find(
+      const otherUser = discussion.participants?.find(
         (p) => p._id !== currentUser.id
       );
       return {
@@ -34,9 +34,11 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
     };
     const display = getDisplayData();
     const latestMessageContent =
-      conversation.latestMessageSnapshot?.content || "Chưa có tin nhắn";
-    const timestamp = conversation.latestMessageSnapshot?.createdAt
-      ? new Date(conversation.latestMessageSnapshot?.createdAt).toLocaleTimeString([], {
+      discussion.latestMessageSnapshot?.content || "Chưa có tin nhắn";
+    const timestamp = discussion.latestMessageSnapshot?.createdAt
+      ? new Date(
+          discussion.latestMessageSnapshot?.createdAt
+        ).toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         })

@@ -1,45 +1,371 @@
 import { create } from "zustand";
 import { ApiService } from "../services/api-service";
-import { ChatState, Conversation, MessageData } from "../types/type";
+import { AiMessage, Discussion, CurrentUser, MessageData, NewMessageEvent, Team, TeamRole, AskQuestionPayload, SummarizeDocumentPayload, FileStatusEvent } from "../types/type";
+import { Socket } from "socket.io-client";
+import { CHATBOT_PATTERN } from "@/app/SocketContext";
 
+function transformAiMessage(aiMsg: AiMessage, discId: string): MessageData {
+    return {
+        _id: aiMsg._id,
+        content: aiMsg.content,
+        sender: {
+            _id: aiMsg.sender._id,
+            name: aiMsg.sender.name,
+            avatar: aiMsg.sender.avatar,
+            role: aiMsg.role || "MEMBER",
+        },
+        createdAt: aiMsg.timestamp,
+        discussionId: discId,
+    };
+}
+
+const createOptimisticMessage = (content: string, currentUser: CurrentUser, discussionId: string): MessageData => ({
+    _id: `temp-user-${Date.now()}`,
+    discussionId,
+    content: content,
+    createdAt: new Date().toISOString(),
+    sender: {
+        _id: currentUser.id,
+        name: currentUser.name,
+        avatar: currentUser.avatar,
+        role: TeamRole.MEMBER,
+    },
+});
+
+const createStreamingPlaceholder = (discussionId: string): MessageData => ({
+    _id: `temp-streaming-${Date.now()}`,
+    discussionId,
+    content: "",
+    createdAt: new Date().toISOString(),
+    sender: { _id: "ai-system-id", name: "AI Assistant", role: TeamRole.AI },
+});
+
+export interface ChatState {
+    selectedDiscussion: Discussion | null;
+    messages: { [discussionId: string]: MessageData[] };
+    messagePages: { [discussionId: string]: number };
+    hasMoreMessages: { [discussionId: string]: boolean };
+
+    streamingResponses: { [discussionId: string]: boolean };
+    historyLoading: { [discussionId: string]: boolean };
+    prompts: { [discussionId: string]: string };
+    personalAiDiscussionId: string | null;
+
+    visibleDiscussions: Discussion[];
+    metaMap: { [discussionId: string]: Discussion };
+    currentPage: number;
+    totalPages: number;
+    isLoadingDiscussions: boolean;
+
+    appendStreamingPlaceholder: (discussionId: string) => void;
+
+    setStreaming: (discussionId: string, isStreaming: boolean) => void;
+    setHistoryLoading: (discussionId: string, isLoading: boolean) => void;
+    setPrompt: (discussionId: string, prompt: string) => void;
+    setPersonalAiDiscussionId: (id: string | null) => void;
+    updateStreamingMessage: (discussionId: string, contentChunk: string) => void;
+    setSelectedDiscussion: (payload: { discussion?: Discussion | null, teamId?: string }) => void;
+    finalizeStreamingMessage: (discussionId: string, finalAiMessage: AiMessage) => void;
+    handleStreamingError: (discussionId: string, errorContent: string) => void;
+    summarizeAiDocument: (conversationId: string, currentUser: CurrentUser, socket: Socket, file: FileStatusEvent, teamId?: string) => void;
+    appendMessage: (discussionId: string, message: MessageData) => void;
+    prependMessages: (discussionId: string, messages: MessageData[]) => void;
+    loadInitialDiscussions: (chatMode: 'team' | 'ai') => Promise<void>;
+    loadMoreDiscussions: () => Promise<void>;
+    upsertDiscussionMeta: (meta: NewMessageEvent) => void;
+    ensureDiscussionVisible: (
+        DiscussionId: string,
+        fetchIfMissing: (id: string) => Promise<Discussion | null>
+    ) => Promise<void>;
+    moveDiscussionToTop: (payload: { discussionId?: string, teamId?: string }) => void;
+    updateDiscussionInList: (updatedDiscussion: Team) => void;
+    setMessagesForDiscussion: (
+        DiscussionId: string,
+        messages: MessageData[],
+        page: number,
+        hasMore: boolean
+    ) => void;
+    replaceTempMessage: (
+        DiscussionId: string,
+        tempId: string,
+        finalMessage: NewMessageEvent
+    ) => void;
+    removeTempMessage: (discussionId: string, tempId: string) => void;
+    setMessagePage: (discussionId: string, page: number) => void;
+    setHasMoreMessages: (discussionId: string, hasMore: boolean) => void;
+
+    loadInitialAiMessages: (
+        discussionId: string,
+        currentUser: CurrentUser,
+        teamId?: string
+    ) => Promise<void>;
+    loadMoreAiMessages: (discussionId: string) => Promise<number>;
+    sendAiMessage: (
+        discersationId: string,
+        currentUser: CurrentUser,
+        socket: Socket,
+        teamId?: string
+    ) => void;
+}
 
 export const useChatStore = create<ChatState>((set, get) => ({
-    selectedConversation: null,
+    selectedDiscussion: null,
     messages: {},
     messagePages: {},
     hasMoreMessages: {},
-    visibleConversations: [],
+    visibleDiscussions: [],
     metaMap: {},
     currentPage: 0,
     totalPages: 1,
-    isLoadingConversations: false,
+    isLoadingDiscussions: false,
+    streamingResponses: {},
+    historyLoading: {},
+    prompts: {},
+    personalAiDiscussionId: null,
 
-    setSelectedConversation: async ({ conversation, teamId }) => {
+    setPersonalAiDiscussionId: (id) => set({ personalAiDiscussionId: id }),
+
+    updateStreamingMessage: (discussionId, contentChunk) =>
+        set((state) => {
+            const currentMessages = state.messages[discussionId] || [];
+            if (currentMessages.length === 0) return {};
+
+            const lastMessage = currentMessages[currentMessages.length - 1];
+
+            if (lastMessage?._id.startsWith("temp-streaming-")) {
+                const updatedMessage = {
+                    ...lastMessage,
+                    content: lastMessage.content + contentChunk,
+                };
+                return {
+                    messages: {
+                        ...state.messages,
+                        [discussionId]: [
+                            ...currentMessages.slice(0, -1),
+                            updatedMessage,
+                        ],
+                    },
+                };
+            }
+            return {};
+        }),
+
+    finalizeStreamingMessage: (discersationId, finalAiMessage) => {
+        const finalMessage = transformAiMessage(finalAiMessage, discersationId);
+        set((state) => {
+            const currentMessages = state.messages[discersationId] || [];
+            const updatedMessages = currentMessages.map((msg) =>
+                msg._id.startsWith("temp-streaming-") ? finalMessage : msg
+            );
+            return {
+                messages: { ...state.messages, [discersationId]: updatedMessages },
+            };
+        });
+    },
+
+    handleStreamingError: (discussionId, errorContent) => {
+        const errorMsg: MessageData = {
+            _id: `err-${Date.now()}`,
+            content: `Lỗi AI: ${errorContent}`,
+            createdAt: new Date().toISOString(),
+            discussionId,
+            sender: { _id: "system", name: "System", role: TeamRole.SYSTEM },
+        };
+        set((state) => ({
+            messages: {
+                ...state.messages,
+                [discussionId]: [
+                    ...(state.messages[discussionId] || []).filter(
+                        (m) => !m._id.startsWith("temp-streaming-")
+                    ),
+                    errorMsg,
+                ],
+            },
+            streamingResponses: {
+                ...state.streamingResponses,
+                [discussionId]: false,
+            },
+        }));
+    },
+
+    summarizeAiDocument: (conversationId, currentUser, socket, file, teamId) => {
+        const state = get();
+        if (state.streamingResponses[conversationId] || !socket) {
+            return;
+        }
+
+        const prompt = `Vui lòng tóm tắt tài liệu: ${file.name}`;
+        const userMessage = createOptimisticMessage(prompt, currentUser, conversationId);
+        state.appendMessage(conversationId, userMessage);
+
+        const payload: SummarizeDocumentPayload = {
+            fileId: file.id,
+            discussionId: state.personalAiDiscussionId,
+            teamId: teamId || "",
+        };
+
+        socket.emit(CHATBOT_PATTERN.SUMMARIZE_DOCUMENT, payload);
+    },
+
+    loadInitialAiMessages: async (discussionId, currentUser, teamId) => {
+        const { setHistoryLoading, setMessagesForDiscussion } = get();
+        console.log("Đang tải tin nhắn AI ban đầu cho:", discussionId, teamId);
+        setHistoryLoading(discussionId, true);
+
+        try {
+            const response = await ApiService.getAiChatHistory(1, 30, teamId);
+
+            const transformedMessages = (response.data.messages || [])
+                .map((msg: AiMessage) => transformAiMessage(msg, discussionId))
+                .reverse();
+
+            const hasMore = response.page < response.totalPages;
+
+            setMessagesForDiscussion(discussionId, transformedMessages, response.page, hasMore);
+
+            if (!teamId && response.data.discussionId) {
+                get().setPersonalAiDiscussionId(response.data.discussionId);
+            }
+
+        } catch (error) {
+            console.error(`Failed to fetch initial AI messages for ${discussionId}:`, error);
+            setMessagesForDiscussion(discussionId, [], 1, false);
+        } finally {
+            setHistoryLoading(discussionId, false);
+        }
+    },
+
+    loadMoreAiMessages: async (discussionId) => {
+        const state = get();
+        if (state.historyLoading[discussionId] || !state.hasMoreMessages[discussionId]) return 0;
+
+        state.setHistoryLoading(discussionId, true);
+
+        const nextPage = state.messagePages[discussionId] + 1;
+
+        try {
+            const response = await ApiService.getAiChatHistory(nextPage, 30);
+
+            const transformedMessages = (response.data.messages || [])
+                .map((msg: AiMessage) => transformAiMessage(msg, discussionId))
+                .reverse();
+
+            state.prependMessages(discussionId, transformedMessages);
+            state.setMessagePage(discussionId, response.page);
+            state.setHasMoreMessages(discussionId, response.page < response.totalPages);
+            return transformedMessages.length;
+
+        } catch (error) {
+            console.error(`Failed to load more AI messages for ${discussionId}:`, error);
+            return 0;
+        } finally {
+            state.setHistoryLoading(discussionId, false);
+        }
+    },
+
+    sendAiMessage: (discussionId, currentUser, socket, teamId) => {
+        const state = get();
+        const { setPrompt, appendMessage, setStreaming, personalAiDiscussionId } = state;
+        const prompt = state.prompts[discussionId];
+
+        if (!prompt?.trim() || state.streamingResponses[discussionId] || !socket) {
+            console.warn("Gửi tin nhắn AI bị chặn:", { prompt, streaming: state.streamingResponses[discussionId], socket: !!socket });
+            return;
+        }
+
+        const userMessage = createOptimisticMessage(prompt, currentUser, discussionId);
+        appendMessage(discussionId, userMessage);
+
+        const aiPlaceholder = createStreamingPlaceholder(discussionId);
+        appendMessage(discussionId, aiPlaceholder);
+
+        setPrompt(discussionId, "");
+        setStreaming(discussionId, true);
+
+        let payload: AskQuestionPayload;
+
+        if (teamId) {
+            payload = {
+                question: prompt,
+                teamId: teamId,
+            };
+        } else {
+            payload = {
+                question: prompt,
+                discussionId: discussionId,
+            };
+        }
+
+        console.log("Emitting socket 'ask_question':", payload);
+        socket.emit(CHATBOT_PATTERN.ASK_QUESTION, payload);
+    },
+
+    setStreaming: (discussionId, isStreaming) =>
+        set((state) => ({
+            streamingResponses: {
+                ...state.streamingResponses,
+                [discussionId]: isStreaming,
+            },
+        })),
+
+    appendStreamingPlaceholder: (discussionId) => {
+        set((state) => {
+            const currentMessages = state.messages[discussionId] || [];
+            const lastMessage = currentMessages[currentMessages.length - 1];
+
+            if (lastMessage?._id.startsWith("temp-streaming-")) {
+                return {};
+            }
+
+            const placeholder = createStreamingPlaceholder(discussionId);
+            return {
+                messages: {
+                    ...state.messages,
+                    [discussionId]: [...currentMessages, placeholder],
+                },
+            };
+        });
+    },
+
+    setHistoryLoading: (discussionId, isLoading) =>
+        set((state) => ({
+            historyLoading: {
+                ...state.historyLoading,
+                [discussionId]: isLoading,
+            },
+        })),
+
+    setPrompt: (discussionId, prompt) =>
+        set((state) => ({
+            prompts: { ...state.prompts, [discussionId]: prompt },
+        })),
+
+    setSelectedDiscussion: async ({ discussion, teamId }) => {
         const state = get();
         if (teamId) {
-            set({ selectedConversation: state.visibleConversations.find(c => c.teamId === teamId) });
+            set({ selectedDiscussion: state.visibleDiscussions.find(c => c.teamId === teamId) });
             return;
         }
 
-        const conv = conversation;
-        set({ selectedConversation: conv });
+        const disc = discussion;
+        set({ selectedDiscussion: disc });
 
-        if (!conv) {
+        if (!disc) {
             return;
         }
 
-        const convId = conv._id;
+        const discId = disc._id;
 
-        console.log(convId)
+        console.log(discId)
 
-        if (state.messages[convId] !== undefined) {
-            console.log(`Messages for ${convId} already exist, skipping fetch.`);
+        if (state.messages[discId] !== undefined) {
+            console.log(`Messages for ${discId} already exist, skipping fetch.`);
             return;
         }
 
-        console.log(`No messages for ${convId}, fetching page 1...`);
+        console.log(`No messages for ${discId}, fetching page 1...`);
         try {
-            const messageResponse = await ApiService.getMessages(convId, 1);
+            const messageResponse = await ApiService.getMessages(discId, 1);
             console.log("MESSAGE RESPONSE", messageResponse)
             const initialMessages = messageResponse.data.reverse();
             const hasMore = messageResponse.page < messageResponse.totalPages;
@@ -48,40 +374,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
             set((currentState) => ({
                 messages: {
                     ...currentState.messages,
-                    [convId]: initialMessages,
+                    [discId]: initialMessages,
                 },
                 messagePages: {
                     ...currentState.messagePages,
-                    [convId]: page,
+                    [discId]: page,
                 },
                 hasMoreMessages: {
                     ...currentState.hasMoreMessages,
-                    [convId]: hasMore,
+                    [discId]: hasMore,
                 },
             }));
 
         } catch (error) {
-            console.error(`Failed to fetch initial messages for ${convId}:`, error);
+            console.error(`Failed to fetch initial messages for ${discId}:`, error);
             set((currentState) => ({
                 messages: {
                     ...currentState.messages,
-                    [convId]: [],
+                    [discId]: [],
                 },
                 messagePages: {
                     ...currentState.messagePages,
-                    [convId]: 1,
+                    [discId]: 1,
                 },
                 hasMoreMessages: {
                     ...currentState.hasMoreMessages,
-                    [convId]: false,
+                    [discId]: false,
                 },
             }));
         }
     },
 
-    appendMessage: (convId, message) =>
+    appendMessage: (discId, message) =>
         set((state) => {
-            const currentMessages = state.messages[convId] || [];
+            const currentMessages = state.messages[discId] || [];
             const isTemp = message._id.startsWith("temp-");
 
             if (!isTemp) {
@@ -115,15 +441,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
             return {
                 messages: {
                     ...state.messages,
-                    [convId]: updatedMessages,
+                    [discId]: updatedMessages,
                 },
             };
         }),
 
-    prependMessages: (conversationId, messagesToPrepend) =>
+    prependMessages: (discussionId, messagesToPrepend) =>
         set((state) => {
             if (messagesToPrepend.length === 0) return {};
-            const currentMessages = state.messages[conversationId] || [];
+            const currentMessages = state.messages[discussionId] || [];
             const existingIds = new Set(currentMessages.map((m) => m._id));
             const uniqueNewMessages = messagesToPrepend.filter(
                 (m) => !existingIds.has(m._id)
@@ -132,49 +458,48 @@ export const useChatStore = create<ChatState>((set, get) => ({
             if (uniqueNewMessages.length === 0) return {};
 
             console.log(
-                `Prepending ${uniqueNewMessages.length} older messages to ${conversationId}`
+                `Prepending ${uniqueNewMessages.length} older messages to ${discussionId}`
             );
             return {
                 messages: {
                     ...state.messages,
-                    [conversationId]: [...uniqueNewMessages, ...currentMessages],
+                    [discussionId]: [...uniqueNewMessages, ...currentMessages],
                 },
             };
         }),
 
-    setMessagesForConversation: (conversationId, messages, page, hasMore) =>
+    setMessagesForDiscussion: (discussionId, messages, page, hasMore) =>
         set((state) => ({
             messages: {
                 ...state.messages,
-                [conversationId]: messages,
+                [discussionId]: messages,
             },
             messagePages: {
                 ...state.messagePages,
-                [conversationId]: page,
+                [discussionId]: page,
             },
             hasMoreMessages: {
                 ...state.hasMoreMessages,
-                [conversationId]: hasMore,
+                [discussionId]: hasMore,
             },
         })),
 
     // Action set page
-    setMessagePage: (conversationId, page) =>
+    setMessagePage: (discussionId, page) =>
         set((state) => ({
-            messagePages: { ...state.messagePages, [conversationId]: page },
+            messagePages: { ...state.messagePages, [discussionId]: page },
         })),
 
-    // Action set hasMore
-    setHasMoreMessages: (conversationId, hasMore) =>
+    setHasMoreMessages: (discussionId, hasMore) =>
         set((state) => ({
-            hasMoreMessages: { ...state.hasMoreMessages, [conversationId]: hasMore },
+            hasMoreMessages: { ...state.hasMoreMessages, [discussionId]: hasMore },
         })),
 
-    replaceTempMessage: (conversationId, tempId, finalMessageEvent) =>
+    replaceTempMessage: (discussionId, tempId, finalMessageEvent) =>
         set((state) => {
             const finalMessage: MessageData = finalMessageEvent.message;
 
-            const currentMessages = state.messages[conversationId] || [];
+            const currentMessages = state.messages[discussionId] || [];
             const messageAlreadyExists = currentMessages.some(
                 (m) => m._id === finalMessage._id
             );
@@ -186,7 +511,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 return {
                     messages: {
                         ...state.messages,
-                        [conversationId]: filteredMessages,
+                        [discussionId]: filteredMessages,
                     },
                 };
             }
@@ -195,65 +520,73 @@ export const useChatStore = create<ChatState>((set, get) => ({
             );
 
             return {
-                messages: { ...state.messages, [conversationId]: updatedMessages },
+                messages: { ...state.messages, [discussionId]: updatedMessages },
             };
         }),
 
-    removeTempMessage: (conversationId, tempId) =>
+    removeTempMessage: (discussionId, tempId) =>
         set((state) => {
-            const currentMessages = state.messages[conversationId] || [];
+            const currentMessages = state.messages[discussionId] || [];
             const filteredMessages = currentMessages.filter(
                 (msg) => msg._id !== tempId
             );
             return {
-                messages: { ...state.messages, [conversationId]: filteredMessages },
+                messages: { ...state.messages, [discussionId]: filteredMessages },
             };
         }),
 
-    loadInitialConversations: async () => {
-        if (get().isLoadingConversations) return;
-        console.log("Loading initial conversations...");
+    loadInitialDiscussions: async (chatMode: string = 'team') => {
+        if (get().isLoadingDiscussions) return;
+        console.log("Loading initial Discussions...");
         set({
-            isLoadingConversations: true,
+            isLoadingDiscussions: true,
         });
         try {
             const nextPage = 1;
-            const response = await ApiService.getConversationsPage(nextPage);
+            let response;
+            if (chatMode === 'ai') {
+                console.log(chatMode)
+                response = await ApiService.getAiChatHistory(nextPage);
+            }
+            else {
+                response = await ApiService.getDiscussionsPage(nextPage);
+            }
+            console.log(response)
             const newMetaMap = response.data.reduce(
-                (acc: { [conversationId: string]: Conversation }, curr: Conversation) => {
+                (acc: { [discussionId: string]: Discussion }, curr: Discussion) => {
                     acc[curr._id] = { ...curr };
                     return acc;
                 },
-                {} as { [conversationId: string]: Conversation }
+                {} as { [discussionId: string]: Discussion }
             );
 
             set({
-                visibleConversations: response.data,
+                visibleDiscussions: response.data,
                 metaMap: newMetaMap,
                 currentPage: response.page,
                 totalPages: response.totalPages,
-                isLoadingConversations: false,
+                isLoadingDiscussions: false,
             });
-            console.log("Initial conversations loaded:", response.data.length);
+            console.log("Initial Discussions loaded:", response.data.length);
         } catch (error) {
-            console.error("Failed to load initial conversations:", error);
-            set({ isLoadingConversations: false });
+            console.error("Failed to load initial Discussions:", error);
+            set({ isLoadingDiscussions: false });
         }
     },
 
-    loadMoreConversations: async () => {
+    loadMoreDiscussions: async () => {
         const state = get();
-        if (state.isLoadingConversations || state.currentPage >= state.totalPages) {
+        if (state.isLoadingDiscussions || state.currentPage >= state.totalPages) {
             return;
         }
-        console.log("Loading more conversations, page:", state.currentPage + 1);
-        set({ isLoadingConversations: true });
+        console.log("Loading more Discussions, page:", state.currentPage + 1);
+        set({ isLoadingDiscussions: true });
         try {
             const nextPage = state.currentPage + 1;
-            const response = await ApiService.getConversationsPage(nextPage) as { data: Conversation[], page: number, totalPages: number };
+            const response = await ApiService.getDiscussionsPage(nextPage) as { data: Discussion[], page: number, totalPages: number };
 
-            const existingIds = new Set(state.visibleConversations.map((c) => c._id));
-            const newConversations = response.data.filter(
+            const existingIds = new Set(state.visibleDiscussions.map((c) => c._id));
+            const newDiscussions = response.data.filter(
                 (c) => !existingIds.has(c._id)
             );
 
@@ -264,26 +597,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
             console.log(
                 "Loaded more:",
-                newConversations.length,
-                "new conversations."
+                newDiscussions.length,
+                "new Discussions."
             );
             set({
-                visibleConversations: [
-                    ...state.visibleConversations,
-                    ...newConversations,
+                visibleDiscussions: [
+                    ...state.visibleDiscussions,
+                    ...newDiscussions,
                 ],
                 metaMap: updatedMetaMap,
                 currentPage: response.page,
                 totalPages: response.totalPages,
-                isLoadingConversations: false,
+                isLoadingDiscussions: false,
             });
         } catch (error) {
-            console.error("Failed to load more conversations:", error);
-            set({ isLoadingConversations: false });
+            console.error("Failed to load more Discussions:", error);
+            set({ isLoadingDiscussions: false });
         }
     },
 
-    upsertConversationMeta: (meta) =>
+    upsertDiscussionMeta: (meta) =>
         set((state) => {
             const { discussionId, message: newMessage } = meta;
 
@@ -318,7 +651,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 [discussionId]: metaToStore,
             };
 
-            const index = state.visibleConversations.findIndex(
+            const index = state.visibleDiscussions.findIndex(
                 (c) => c._id === discussionId
             );
 
@@ -334,61 +667,61 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 message: metaMessage,
                 ...restOfMeta
             } = meta;
-            const itemToMove = state.visibleConversations[index];
+            const itemToMove = state.visibleDiscussions[index];
             const updatedItem = {
                 ...itemToMove,
                 ...restOfMeta,
                 latestMessageSnapshot: newMessage,
             };
 
-            const remaining = state.visibleConversations.filter(
+            const remaining = state.visibleDiscussions.filter(
                 (c) => c._id !== discussionId
             );
 
             return {
                 metaMap: newMetaMap,
-                visibleConversations: [updatedItem, ...remaining],
+                visibleDiscussions: [updatedItem, ...remaining],
             };
         }),
 
-    ensureConversationVisible: async (convId, fetchIfMissing) => {
+    ensureDiscussionVisible: async (discId, fetchIfMissing) => {
         const state = get();
-        const isVisible = state.visibleConversations.some((c) => c._id === convId);
+        const isVisible = state.visibleDiscussions.some((c) => c._id === discId);
         console.log(isVisible)
         if (isVisible) return;
 
-        console.log(`Conversation ${convId} not visible. Fetching...`);
+        console.log(`Discussion ${discId} not visible. Fetching...`);
         try {
-            const fullConversation = await fetchIfMissing(convId);
-            if (!fullConversation) {
-                console.error(`Fetch function returned null for convId: ${convId}`);
+            const fullDiscussion = await fetchIfMissing(discId);
+            if (!fullDiscussion) {
+                console.error(`Fetch function returned null for discId: ${discId}`);
                 return;
             }
             set((currentState) => {
                 if (
-                    currentState.visibleConversations.some(
-                        (c) => c._id === fullConversation._id
+                    currentState.visibleDiscussions.some(
+                        (c) => c._id === fullDiscussion._id
                     )
                 ) {
                     console.log(
-                        `Conversation ${convId} became visible during fetch, merging meta only.`
+                        `Discussion ${discId} became visible during fetch, merging meta only.`
                     );
 
-                    const meta = currentState.metaMap[fullConversation._id];
+                    const meta = currentState.metaMap[fullDiscussion._id];
                     const metaTime = meta?.latestMessageSnapshot?.createdAt
                         ? new Date(meta.latestMessageSnapshot.createdAt).getTime()
                         : 0;
-                    const fetchedTime = fullConversation.latestMessageSnapshot?.createdAt
-                        ? new Date(fullConversation.latestMessageSnapshot.createdAt).getTime()
+                    const fetchedTime = fullDiscussion.latestMessageSnapshot?.createdAt
+                        ? new Date(fullDiscussion.latestMessageSnapshot.createdAt).getTime()
                         : 0;
 
                     if (fetchedTime > metaTime) {
                         return {
                             metaMap: {
                                 ...currentState.metaMap,
-                                [fullConversation._id]: {
+                                [fullDiscussion._id]: {
                                     ...(meta || {}),
-                                    ...fullConversation,
+                                    ...fullDiscussion,
                                 },
                             },
                         };
@@ -397,55 +730,55 @@ export const useChatStore = create<ChatState>((set, get) => ({
                     return {};
 
                 } else {
-                    console.log(`Conversation ${convId} fetched, adding to visible list.`);
+                    console.log(`Discussion ${discId} fetched, adding to visible list.`);
 
-                    const meta = currentState.metaMap[fullConversation._id];
+                    const meta = currentState.metaMap[fullDiscussion._id];
                     const metaTime = meta?.latestMessageSnapshot?.createdAt
                         ? new Date(meta.latestMessageSnapshot.createdAt).getTime()
                         : 0;
-                    const fetchedTime = fullConversation.latestMessageSnapshot?.createdAt
-                        ? new Date(fullConversation.latestMessageSnapshot.createdAt).getTime()
+                    const fetchedTime = fullDiscussion.latestMessageSnapshot?.createdAt
+                        ? new Date(fullDiscussion.latestMessageSnapshot.createdAt).getTime()
                         : 0;
 
-                    const finalConversation =
+                    const finalDiscussion =
                         meta && metaTime > fetchedTime
-                            ? { ...fullConversation, ...meta }
-                            : fullConversation;
+                            ? { ...fullDiscussion, ...meta }
+                            : fullDiscussion;
 
                     return {
-                        visibleConversations: [
-                            finalConversation,
-                            ...currentState.visibleConversations,
+                        visibleDiscussions: [
+                            finalDiscussion,
+                            ...currentState.visibleDiscussions,
                         ],
                         metaMap: {
                             ...currentState.metaMap,
-                            [finalConversation._id]: {
+                            [finalDiscussion._id]: {
                                 ...(meta || {}),
-                                ...finalConversation,
+                                ...finalDiscussion,
                             },
                         },
                     };
                 }
             });
         } catch (err) {
-            console.error(`Failed to fetch missing conversation ${convId}:`, err);
+            console.error(`Failed to fetch missing Discussion ${discId}:`, err);
         }
     },
 
-    moveConversationToTop: ({ conversationId, teamId }) =>
+    moveDiscussionToTop: ({ discussionId, teamId }) =>
         set((state) => {
-            const convId = state.visibleConversations.find(c => c.teamId === teamId)?._id || conversationId || '';
+            const discId = state.visibleDiscussions.find(c => c.teamId === teamId)?._id || discussionId || '';
 
-            const index = state.visibleConversations.findIndex(
-                (c) => c._id === convId
+            const index = state.visibleDiscussions.findIndex(
+                (c) => c._id === discId
             );
 
             if (index <= 0) {
                 return {};
             }
 
-            const itemToMove = state.visibleConversations[index];
-            const meta = state.metaMap[convId];
+            const itemToMove = state.visibleDiscussions[index];
+            const meta = state.metaMap[discId];
 
             const metaTime = meta?.latestMessageSnapshot?.createdAt
                 ? new Date(meta.latestMessageSnapshot.createdAt).getTime()
@@ -458,25 +791,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 ? { ...itemToMove, ...meta }
                 : itemToMove;
 
-            const remaining = state.visibleConversations.filter(
-                (c) => c._id !== convId
+            const remaining = state.visibleDiscussions.filter(
+                (c) => c._id !== discId
             );
 
-            return { visibleConversations: [updatedItem, ...remaining] };
+            return { visibleDiscussions: [updatedItem, ...remaining] };
         }),
 
-    updateConversationInList: (updatedTeam) =>
+    updateDiscussionInList: (updatedTeam) =>
         set((state) => {
-            const convoToUpdate = state.visibleConversations.find(
+            const discoToUpdate = state.visibleDiscussions.find(
                 (c) => c.teamId === updatedTeam.id
             );
 
-            if (!convoToUpdate) {
-                console.warn("Không tìm thấy conversation cho teamId:", updatedTeam.id);
+            if (!discoToUpdate) {
+                console.warn("Không tìm thấy Discussion cho teamId:", updatedTeam.id);
                 return state;
             }
 
-            const convoIdToUpdate = convoToUpdate._id;
+            const discoIdToUpdate = discoToUpdate._id;
             const members = updatedTeam.members.map((m) => ({
                 id: m._id,
                 name: m.name,
@@ -484,8 +817,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 role: m.role,
             }))
 
-            const newVisible = state.visibleConversations.map((c) =>
-                c._id === convoIdToUpdate
+            const newVisible = state.visibleDiscussions.map((c) =>
+                c._id === discoIdToUpdate
                     ? {
                         ...c,
                         name: updatedTeam.name,
@@ -495,23 +828,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
             );
 
             const newSelected =
-                state.selectedConversation?._id === convoIdToUpdate
-                    ? newVisible.find(c => c._id === convoIdToUpdate)
-                    : state.selectedConversation;
+                state.selectedDiscussion?._id === discoIdToUpdate
+                    ? newVisible.find(c => c._id === discoIdToUpdate)
+                    : state.selectedDiscussion;
 
-            const updatedConvoForMeta = newVisible.find(c => c._id === convoIdToUpdate);
+            const updateddiscoForMeta = newVisible.find(c => c._id === discoIdToUpdate);
 
             const newMeta = {
                 ...state.metaMap,
-                [convoIdToUpdate]: {
-                    ...state.metaMap[convoIdToUpdate],
-                    ...updatedConvoForMeta,
+                [discoIdToUpdate]: {
+                    ...state.metaMap[discoIdToUpdate],
+                    ...updateddiscoForMeta,
                 },
             };
 
             return {
-                visibleConversations: newVisible,
-                selectedConversation: newSelected,
+                visibleDiscussions: newVisible,
+                selectedDiscussion: newSelected,
                 metaMap: newMeta,
             };
         }),
