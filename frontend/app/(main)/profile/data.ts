@@ -1,5 +1,5 @@
 // Mock Data for Profile Page
-import { User, Provider } from '../../../lib/dto/user.interface'
+import { User, Provider } from '../../../types/user.interface'
 
 // Mock Data (Keeping LOCAL provider for demoing password change)
 export const mockUser: User = {

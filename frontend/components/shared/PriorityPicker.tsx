@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Task } from "@/lib/dto/task.type"
+import { Task } from "@/types/task.type"
 
 // Helper để lấy màu cờ
 const getPriorityColor = (priority: Task["priority"]) => {

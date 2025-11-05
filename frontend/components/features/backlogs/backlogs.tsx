@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { TaskDetailModal } from "./taskmodal"
-import { statusesForProject1 } from "@/lib/utils/backlog-utils"
+import { statusesForProject1 } from "@/lib/backlog-utils"
 import {
   Accordion,
   AccordionContent,
@@ -18,18 +18,17 @@ import {
   DragOverlay,
   closestCenter
 } from "@dnd-kit/core"
-import { Task } from "@/lib/dto/task.type"
-import { Epic } from "@/lib/dto/epic.type"
-import { Sprint } from "@/lib/dto/sprint.type"
-import { Badge } from "@/components/ui/badge" // <-- 1. IMPORT BADGE
-import { db } from "@/public/mock-data/mock-data" // <-- 2. IMPORT DB
+import { Task } from "@/types/task.type"
+import { Epic } from "@/types/epic.type"
+import { Sprint } from "@/types/sprint.type"
+import { Badge } from "@/components/ui/badge"
+import { db } from "@/public/mock-data/mock-data" 
 
 import { BacklogTaskList } from "./task/backlogTaskList"
 import { EpicList } from "./epic/epicList"
 import { SprintList } from "./sprint/sprintList"
 import { TaskManagementProvider, useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 import { TaskDragOverlay } from "./task/TaskDragOverlay"
-import { cn } from "@/lib/utils"
 
 export default function Backlogs() {
   return (
@@ -41,7 +40,7 @@ export default function Backlogs() {
 
 function BacklogsContent() {
   const {
-    data, // <-- 3. LẤY DATA TỪ CONTEXT
+    data,
     selectedTask,
     setSelectedTask,
     handleStatusChange,
@@ -53,9 +52,7 @@ function BacklogsContent() {
     handleSprintChange,
   } = useTaskManagementContext()
 
-  // --- 4. TÍNH TOÁN SỐ LƯỢNG CHO MỖI MỤC ---
   const backlogTaskCount = React.useMemo(() => {
-    // Logic: Task "Backlog" là task chưa được gán cho Sprint hoặc Epic
     return data.filter(task => !task.epicId && !task.sprintId).length
   }, [data])
 
@@ -70,7 +67,6 @@ function BacklogsContent() {
     ).length,
     []
   )
-  // --- KẾT THÚC TÍNH TOÁN ---
 
 
   const [activeTask, setActiveTask] = React.useState<Task | null>(null)

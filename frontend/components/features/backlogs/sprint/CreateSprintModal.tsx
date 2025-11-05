@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useModal } from "@/hooks/useModal"
 import {
   Dialog,
   DialogContent,
@@ -15,22 +16,26 @@ import { Label } from "@/components/ui/label"
 import { Rocket } from "lucide-react"
 
 interface CreateSprintModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function CreateSprintModal({ open, onOpenChange }: CreateSprintModalProps) {
-  // Placeholder state - you'll add real state and logic later
+export function CreateSprintModal({ open: propOpen, onOpenChange: propOnOpenChange }: CreateSprintModalProps) {
+  const { isOpen, open, close, onOpenChange } = useModal(propOpen)
+  
+  const isControlled = propOpen !== undefined
+  const modalOpen = isControlled ? propOpen : isOpen
+  const handleOpenChange = isControlled ? propOnOpenChange : onOpenChange
+  
   const [sprintName, setSprintName] = React.useState("")
 
   const handleSubmit = () => {
     console.log("Submitting new sprint:", sprintName)
-    // Add logic to actually create the sprint (e.g., call context function)
-    onOpenChange(false) // Close modal on submit
+    handleOpenChange?.(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={modalOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

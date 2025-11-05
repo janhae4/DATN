@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Status, statusEnum } from "@/lib/dto/status.interaface"
+import { Status, statusEnum } from "@/types/status.interaface"
 
 type StatusPickerProps = {
   statuses: Status[]

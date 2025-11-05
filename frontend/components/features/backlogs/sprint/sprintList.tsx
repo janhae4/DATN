@@ -3,8 +3,8 @@
 
 import * as React from "react"
 import { db } from "@/public/mock-data/mock-data"
-import { Sprint } from "@/lib/dto/sprint.type"
-import { Task } from "@/lib/dto/task.type"
+import { Sprint } from "@/types/sprint.type"
+import { Task } from "@/types/task.type"
 import {
   Accordion,
   AccordionContent,
@@ -15,7 +15,7 @@ import { Table } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress" // <-- 1. IMPORT Progress
 import { Rocket } from "lucide-react" // <-- 2. IMPORT Icon
-import { formatDate, statusesForProject1 } from "@/lib/utils/backlog-utils"
+import { formatDate, statusesForProject1 } from "@/lib/backlog-utils"
 import { useDroppable } from "@dnd-kit/core"
 import { cn } from "@/lib/utils"
 import TaskTreeList from "../task/TaskTreeList"
@@ -43,10 +43,8 @@ export function SprintList() {
         const totalTasks = sprintTasks.length;
         const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
         // --- KẾT THÚC TÍNH TOÁN ---
-
-        const sprintSubtaskIds = new Set<string>()
-        sprintTasks.forEach((t) => t.subtaskIds?.forEach((id: string) => sprintSubtaskIds.add(id)))
-        const topLevelSprintTasks = sprintTasks.filter((t: Task) => !sprintSubtaskIds.has(t.id))
+        
+        const topLevelSprintTasks = [...sprintTasks] // No need to filter subtasks anymore
 
         const { setNodeRef, isOver } = useDroppable({
           id: sprint.id,

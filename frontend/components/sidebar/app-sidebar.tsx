@@ -10,13 +10,15 @@ import {
   GalleryVerticalEnd,
   Map,
   PieChart,
-  Settings2,
+  Sparkle,
+  Sparkles,
   SquareTerminal,
+  Star,
+  Users,
 } from "lucide-react"
 
 import { NavMain } from "@/components/sidebar/nav-main"
 import { NavProjects } from "@/components/sidebar/nav-projects"
-import { NavUser } from "@/components/sidebar/nav-user"
 import { TeamSwitcher } from "@/components/sidebar/team-switcher"
 import Image from "next/image"
 // import logo from "@/public/assets/logo/logo_white .png"
@@ -70,7 +72,7 @@ const data = {
   ],
   navMain: [
     {
-      title: "Dashboard",
+      title: "Project management",
       url: "dashboard",
       icon: Bot,
       isActive: true,
@@ -81,15 +83,15 @@ const data = {
         },
         {
           title: "Boards",
-          url: "boards",
+          url: "dashboard#boards",
         },
         {
           title: "Backlogs",
-          url: "backlogs",
+          url: "dashboard#backlogs",
         },
         {
           title: "Timeline",
-          url: "timeline",
+          url: "dashboard#timeline",
         },
       ],
 
@@ -112,49 +114,21 @@ const data = {
     },
     {
       title: "Documentation",
-      url: "#",
+      url: "documentation",
       icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
+      isActive: true
     },
     {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
+      title: "Team",
+      url: "team",
+      icon: Users,
+      isActive: true
+    },
+     {
+      title: "AI Assistant",
+      url: "ai-assistant",
+      icon: Sparkles,
+      isActive: true
     },
   ],
 

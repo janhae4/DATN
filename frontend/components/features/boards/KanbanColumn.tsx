@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Task } from "@/lib/dto/task.type"
-import { Status } from "@/lib/dto/status.interaface"
+import { Task } from "@/types/task.type"
+import { Status } from "@/types/status.interaface"
 import { KanbanCard } from "./KanbanCard"
 import { useDroppable } from "@dnd-kit/core"
 import {

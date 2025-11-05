@@ -1,6 +1,6 @@
 // hooks/useTaskManagement.ts
 import * as React from "react"
-import { Task } from "@/lib/dto/task.type"
+import { Task } from "@/types/task.type"
 import { db } from "@/public/mock-data/mock-data" 
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"

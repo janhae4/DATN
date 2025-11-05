@@ -14,10 +14,10 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
-import { Task } from "@/lib/dto/task.type"
-import { Status } from "@/lib/dto/status.interaface"
+import { Task } from "@/types/task.type"
+import { Status } from "@/types/status.interaface"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
-import { statusesForProject1 } from "@/lib/utils/backlog-utils" // Lấy danh sách status
+import { statusesForProject1 } from "@/lib/backlog-utils" // Lấy danh sách status
 import { KanbanColumn } from "./KanbanColumn";
 
 export function KanbanBoard() {

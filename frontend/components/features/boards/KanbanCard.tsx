@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Task } from "@/lib/dto/task.type"
-import { Status } from "@/lib/dto/status.interaface"
-import { User } from "@/lib/dto/user.interface" // Import User type
-import { Label } from "@/lib/dto/label.interface" // Import Label type
+import { Task } from "@/types/task.type"
+import { Status } from "@/types/status.interaface"
+import { User } from "@/types/user.interface" // Import User type
+import { Label } from "@/types/label.interface" // Import Label type
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -14,7 +14,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import { db } from "@/public/mock-data/mock-data" // Import db để lấy user, label
 import LabelTag from "@/components/ui/LabelTag"
-import { getAssigneeInitial } from "@/lib/utils/backlog-utils"
+import { getAssigneeInitial } from "@/lib/backlog-utils"
 
 interface KanbanCardProps {
   task: Task

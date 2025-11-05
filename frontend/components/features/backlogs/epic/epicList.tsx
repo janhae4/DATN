@@ -1,12 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Epic } from "@/lib/dto/epic.type"
-import { Task } from "@/lib/dto/task.type"
+import { Epic } from "@/types/epic.type"
+import { Task } from "@/types/task.type"
 import { Badge } from "@/components/ui/badge"
 import { PriorityPicker } from "@/components/shared/PriorityPicker"
-import { Progress } from "@/components/ui/progress" // <-- 1. IMPORT Progress
-import { Target } from "lucide-react" // <-- 2. IMPORT Icon (ví dụ: Target)
+import { Progress } from "@/components/ui/progress"   
+import { Target } from "lucide-react" 
 import { useDroppable } from "@dnd-kit/core"
 import {
   Table,
@@ -43,7 +43,7 @@ export function EpicList({ statuses }: EpicListProps) {
     <div className="flex flex-col">
       <Accordion
         type="multiple"
-        className="w-full flex flex-col gap-4" // <-- Thêm gap giữa các Epic
+        className="w-full flex flex-col gap-4" 
       >
         {epicsMeta.map((epic: Epic) => {
           // --- Logic lấy task và tính toán tiến độ ---
@@ -52,10 +52,8 @@ export function EpicList({ statuses }: EpicListProps) {
           const totalTasks = epicTasks.length;
           const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
           // --- Kết thúc tính toán ---
-
-          const epicSubtaskIds = new Set<string>()
-          epicTasks.forEach((t) => t.subtaskIds?.forEach((id: string) => epicSubtaskIds.add(id)))
-          const topLevelEpicTasks = epicTasks.filter((t: Task) => !epicSubtaskIds.has(t.id))
+          
+          const topLevelEpicTasks = [...epicTasks] // No need to filter subtasks anymore
 
           const { setNodeRef, isOver } = useDroppable({
             id: epic.id,
@@ -71,26 +69,21 @@ export function EpicList({ statuses }: EpicListProps) {
               value={epic.id}
               key={epic.id}
               className={cn(
-                // --- 3. Style như Card ---
                 "rounded-lg border transition-all",
                 "data-[state=open]:bg-muted/20",
-                // -------------------------
                 isOver && "bg-primary/20 ring-2 ring-primary/40"
               )}
             >
-              {/* --- 4. NÂNG CẤP UI TRIGGER --- */}
               <AccordionTrigger
                 className={cn(
-                  "hover:no-underline px-4 py-3 text-left", // Căn trái text
-                  // Bỏ bo tròn dưới khi mở
+                  "hover:no-underline px-4 py-3 text-left", 
                   "data-[state=open]:rounded-b-none"
                 )}
               >
-                <div className="flex w-full flex-col gap-2"> {/* Cho các dòng xếp chồng lên nhau */}
-                  {/* Dòng 1: Icon, Title, Actions (Status, Priority) */}
+                <div className="flex w-full flex-col gap-2"> 
                   <div className="flex w-full items-center justify-between gap-4">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Target className="h-5 w-5 text-purple-600 flex-shrink-0" /> {/* Icon màu tím */}
+                      <Target className="h-5 w-5 text-purple-600 flex-shrink-0" /> 
                       <span className="text-base font-medium truncate" title={epic.title}>
                         {epic.title}
                       </span>
@@ -110,7 +103,6 @@ export function EpicList({ statuses }: EpicListProps) {
                     </div>
                   </div>
 
-                  {/* Dòng 2: Description (nếu có) */}
                   {epic.description && (
                      <p className="line-clamp-1 text-sm text-muted-foreground pr-8"> {/* Thêm padding phải để không đè lên chevron */}
                        {epic.description}
@@ -118,8 +110,7 @@ export function EpicList({ statuses }: EpicListProps) {
                   )}
 
 
-                  {/* Dòng 3: Progress Bar và % */}
-                  <div className="flex items-center gap-2 pt-1 pr-8"> {/* Thêm padding phải */}
+                  <div className="flex items-center gap-2 pt-1 pr-8"> 
                     <Progress value={progress} className="h-1.5 flex-1" />
                     <span className="text-xs font-medium text-muted-foreground w-10 text-right">
                       {progress}%
@@ -127,7 +118,6 @@ export function EpicList({ statuses }: EpicListProps) {
                   </div>
                 </div>
               </AccordionTrigger>
-              {/* --- KẾT THÚC NÂNG CẤP --- */}
 
               <AccordionContent className="border-t bg-background/50 p-0 data-[state=closed]:animate-none">
                 <div className="p-2">

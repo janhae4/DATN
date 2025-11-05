@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Task } from "@/lib/dto/task.type"
-import { Status } from "@/lib/dto/status.interaface"
+import { Task } from "@/types/task.type"
+import { Status } from "@/types/status.interaface"
 import { useDraggable } from "@dnd-kit/core"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -13,7 +13,7 @@ import { DatePicker } from "@/components/shared/DatePicker"
 import StatusPicker from "@/components/shared/StatusPicker"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { UserCircle2Icon, ChevronRight, GripVertical } from "lucide-react"
-import { getAssigneeInitial } from "@/lib/utils/backlog-utils"
+import { getAssigneeInitial } from "@/lib/backlog-utils"
 import { db } from "@/public/mock-data/mock-data"
 import LabelTag from "@/components/ui/LabelTag"
 import { cn } from "@/lib/utils"
@@ -22,34 +22,28 @@ import { useTaskManagementContext } from "@/components/providers/TaskManagementC
 interface BacklogTaskRowProps {
   task: Task
   statuses: Status[]
-  level?: number
-  hasSubtasks?: boolean
-  isExpanded?: boolean
-  onToggleExpand?: () => void
   isDraggable?: boolean
+  onRowClick?: (task: Task) => void
 }
 
 export function BacklogTaskRow({
   task,
   statuses,
-  level = 0,
-  hasSubtasks = false,
-  isExpanded = false,
-  onToggleExpand,
   isDraggable = false,
+  onRowClick,
 }: BacklogTaskRowProps) {
   const {
     handleUpdateCell,
     handleStatusChange,
     handlePriorityChange,
     handleDateChange,
-    handleRowClick,
+    handleRowClick: handleRowClickContext,
   } = useTaskManagementContext()
 
   // --- DND-KIT HOOK (Không thay đổi) ---
   const {
     attributes,
-    listeners, // <-- Chúng ta sẽ di chuyển cái này
+    listeners,
     setNodeRef,
     isDragging,
   } = useDraggable({
@@ -57,27 +51,23 @@ export function BacklogTaskRow({
     data: {
       task: task,
     },
-    disabled: !isDraggable || level > 0,
+    disabled: !isDraggable,
   })
   // --- END DND-KIT HOOK ---
 
   const stopPropagation = (e: React.MouseEvent | React.PointerEvent) => e.stopPropagation()
-  const isSubtask = level > 0
-  const indentationStyle = { paddingLeft: `${level * 1.5 + 0.5}rem` }
 
   return (
     <TableRow
       ref={setNodeRef} // <-- Giữ nguyên ref
       {...attributes} // <-- Giữ nguyên attributes
-      // {...listeners} // <-- XÓA DÒNG NÀY
       className={cn(
         "group cursor-pointer hover:bg-muted/50 transition-colors",
-        isSubtask && "bg-muted/30 hover:bg-muted/40",
-        isDragging && "opacity-30 bg-primary/10 blur-sm" // <-- Giữ nguyên style
+        isDragging && "opacity-30 bg-primary/10 blur-sm"
       )}
-      onClick={() => handleRowClick?.(task)} // <-- Giờ nó sẽ hoạt động
+      onClick={() => onRowClick?.(task) || handleRowClickContext?.(task)}
     >
-      <TableCell style={indentationStyle} className="min-w-[300px]">
+      <TableCell className="min-w-[300px]">
         <div className="flex items-center gap-1">
           
           {/* --- THÊM TAY CẦM KÉO THẢ (DRAG HANDLE) --- */}
@@ -86,13 +76,11 @@ export function BacklogTaskRow({
             size="icon"
             className={cn(
               "h-6 w-6 rounded-md text-muted-foreground flex-shrink-0 cursor-grab",
-              // Ẩn đi nếu không thể kéo (là subtask hoặc không trong backlog)
-              (!isDraggable || level > 0) && "invisible", 
+              !isDraggable && "invisible",
               isDragging && "cursor-grabbing"
             )}
             {...listeners} // <-- CHỈ ÁP DỤNG LISTENERS VÀO ĐÂY
             onClick={stopPropagation} // Ngăn sự kiện click của hàng
-            // onPointerDown={stopPropagation} // Ngăn sự kiện click của hàng
           >
             <GripVertical className="h-4 w-4" />
           </Button>
@@ -103,26 +91,6 @@ export function BacklogTaskRow({
             onClick={stopPropagation} 
             onPointerDown={stopPropagation} 
           />
-
-          {/* MODIFICATION: Always show the toggle button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-6 w-6 rounded-md text-muted-foreground flex-shrink-0 transition-transform duration-200",
-              isExpanded && "rotate-90",
-              // Show with low opacity normally, full opacity when hovering the entire row for tasks without subtasks
-              !hasSubtasks && "opacity-0 group-hover:opacity-100",
-            )}
-            aria-label="Toggle subtasks"
-            onClick={(e) => {
-              e.stopPropagation()
-              onToggleExpand?.()
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
 
           <Input
             className="border-none bg-transparent h-auto px-2  shadow-none  focus-visible:ring-2 text-sm truncate flex-1 min-w-0"

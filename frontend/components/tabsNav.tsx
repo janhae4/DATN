@@ -17,7 +17,6 @@ export function TabsNav() {
                     <TabsTrigger value="summary">Summary</TabsTrigger>
                     <TabsTrigger value="boards">Boards</TabsTrigger>
                     <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                    <TabsTrigger value="pages">Pages</TabsTrigger>
                 </TabsList>
                 <TabsContent value="backlogs">
                     <Backlogs />
@@ -29,10 +28,7 @@ export function TabsNav() {
                     <KanbanBoard />
                 </TabsContent>
                 <TabsContent value="timeline">
-                    <TimelineView/>
-                </TabsContent>
-                <TabsContent value="pages">
-                    content
+                    <TimelineView />
                 </TabsContent>
             </Tabs>
         </div>

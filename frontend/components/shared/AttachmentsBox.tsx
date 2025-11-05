@@ -13,13 +13,17 @@ interface Attachment {
     file?: File
 }
 
-// State quản lý attachments
 const useAttachments = () => {
     const [attachments, setAttachments] = React.useState<Attachment[]>([])
 
+    // Generate a more unique ID using timestamp and random string
+    const generateUniqueId = () => {
+        return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
     const addAttachment = (file: File) => {
         const newAttachment: Attachment = {
-            id: Date.now().toString(),
+            id: generateUniqueId(),
             name: file.name,
             size: formatFileSize(file.size),
             type: file.type,

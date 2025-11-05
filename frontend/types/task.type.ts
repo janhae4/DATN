@@ -6,7 +6,6 @@ export type Task = {
   priority: "low" | "medium" | "high" | null;
   assigneeIds: string[];
   due_date?: string | null;
-  subtaskIds?: string[] | null;
   epicId?: string | null;
   projectId: string;
   sprintId?: string | null;

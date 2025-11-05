@@ -10,7 +10,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: 'Tashora',
+  title: 'Taskora',
   description: '',
 };
 

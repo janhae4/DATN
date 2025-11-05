@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Label } from "@/lib/dto/label.interface"
+import { Label } from "@/types/label.interface"
 import { cn } from "@/lib/utils"
 
 export function LabelTag({

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useModal } from "@/hooks/useModal"
 import {
   Dialog,
   DialogContent,
@@ -14,27 +15,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Target } from "lucide-react"
 
-interface CreateEpicModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
 
-export function CreateEpicModal({ open, onOpenChange }: CreateEpicModalProps) {
-  // Placeholder state
+export function CreateEpicModal() {
+  const { isOpen, open, close, onOpenChange } = useModal()
+
+  const modalOpen = isOpen
+  const handleOpenChange = onOpenChange
   const [epicName, setEpicName] = React.useState("")
 
   const handleSubmit = () => {
     console.log("Submitting new epic:", epicName)
-    // Add logic to actually create the epic
-    onOpenChange(false)
+    handleOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={modalOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-purple-600"/> Create New Epic
+            <Target className="h-5 w-5 text-purple-600" /> Create New Epic
           </DialogTitle>
           <DialogDescription>
             Enter the details for your new epic. Click save when you're done.
@@ -53,7 +52,6 @@ export function CreateEpicModal({ open, onOpenChange }: CreateEpicModalProps) {
               placeholder="e.g., User Authentication Flow"
             />
           </div>
-          {/* Add more fields here later (Description, Priority, etc.) */}
         </div>
         <DialogFooter>
           <Button type="submit" onClick={handleSubmit}>Save Epic</Button>

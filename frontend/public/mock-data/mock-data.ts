@@ -1,13 +1,13 @@
 // Các import này được lấy từ nội dung bạn cung cấp
-import { Attachment } from "@/lib/dto/attachment.interface";
-import { Epic } from "@/lib/dto/epic.type";
-import { Label } from "@/lib/dto/label.interface";
-import { Project } from "@/lib/dto/project.type";
-import { Sprint } from "@/lib/dto/sprint.type";
-import { Status, statusEnum } from "@/lib/dto/status.interaface";
-import { Task } from "@/lib/dto/task.type";
-import { User } from "@/lib/dto/user.interface";
-import { Provider } from "@/lib/dto/user.interface";
+import { Attachment } from "@/types/attachment.interface";
+import { Epic } from "@/types/epic.type";
+import { Label } from "@/types/label.interface";
+import { Project } from "@/types/project.type";
+import { Sprint } from "@/types/sprint.type";
+import { Status, statusEnum } from "@/types/status.interaface";
+import { Task } from "@/types/task.type";
+import { User } from "@/types/user.interface";
+import { Provider } from "@/types/user.interface";
 
 // --- Định nghĩa ID cố định để liên kết ---
 const USER_1_ID = "user-1";

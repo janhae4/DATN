@@ -1,13 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { Task } from "@/lib/dto/task.type"
-import { Status } from "@/lib/dto/status.interaface"
+import { Task } from "@/types/task.type"
+import { Status } from "@/types/status.interaface"
 import { PriorityPicker } from "@/components/shared/PriorityPicker"
 import { DatePicker } from "@/components/shared/DatePicker"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { UserCircle2Icon, GripVertical } from "lucide-react"
-import { getAssigneeInitial } from "@/lib/utils/backlog-utils"
+import { getAssigneeInitial } from "@/lib/backlog-utils"
 import { db } from "@/public/mock-data/mock-data"
 import LabelTag from "@/components/ui/LabelTag"
 
