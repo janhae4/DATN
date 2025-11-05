@@ -1,58 +1,55 @@
-// (Import các component con và types)
+"use client";
+
+import React, { useCallback } from "react";
 import { AiPromptInput } from "./AiPromptInput";
 import { AiMessageList } from "./AiMessageList";
+import { useChatStore } from "../store/useChatStore";
+import { CurrentUser } from "../types/type";
 
 interface AiChatWindowProps {
-    aiMessages: any[];
-    prompt: string;
-    setPrompt: (value: string) => void;
-    isStreaming: boolean;
-    isLoadingMessages: boolean;
-    isHistoryLoading: boolean;
-    messagePagination: any;
-    chatboxRef: any;
-    messagesEndRef: any;
-    currentUser: any;
-    activeConversationId: string | null;
-    handleSendAiMessage: () => void;
-    handleLoadMoreMessages: () => void;
-    teamId?: string;
+  chatboxRef: React.RefObject<HTMLDivElement | null>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  currentUser: CurrentUser;
+
+  discussionId: string; // ĐÃ THAY ĐỔI
+  isLoadingInitialMessages: boolean;
+  handleSendAiMessage: () => void;
+  handleLoadMoreMessages: () => void;
 }
 
 export function AiChatWindow({
-  aiMessages,
-  prompt,
-  setPrompt,
-  isStreaming,
-  isLoadingMessages,
-  isHistoryLoading,
-  messagePagination,
   chatboxRef,
   messagesEndRef,
   currentUser,
-  activeConversationId,
-  teamId,
+  discussionId, // ĐÃ THAY ĐỔI
+  isLoadingInitialMessages,
   handleSendAiMessage,
   handleLoadMoreMessages,
 }: AiChatWindowProps) {
+  const selector = useCallback(
+    (state: any) => ({
+      prompt: state.prompts[discussionId] || "",
+      isStreaming: state.streamingResponses[discussionId] || false,
+      setPrompt: state.setPrompt,
+    }),
+    [discussionId]
+  );
+
+  const { prompt, isStreaming, setPrompt } = useChatStore(selector);
+
   return (
     <div className="flex-1 flex flex-col bg-gray-100">
       <AiMessageList
         chatboxRef={chatboxRef}
-        aiMessages={aiMessages}
         messagesEndRef={messagesEndRef}
         currentUser={currentUser}
-        isLoadingMessages={isLoadingMessages}
-        isStreaming={isStreaming}
-        isHistoryLoading={isHistoryLoading}
-        messagePagination={messagePagination}
-        activeConversationId={activeConversationId}
-        teamId={teamId}
+        discussionId={discussionId} // ĐÃ THAY ĐỔI
+        isLoadingInitialMessages={isLoadingInitialMessages}
         handleLoadMoreMessages={handleLoadMoreMessages}
       />
       <AiPromptInput
         prompt={prompt}
-        setPrompt={setPrompt}
+        setPrompt={(e) => setPrompt(discussionId, e)}
         isStreaming={isStreaming}
         handleSendAiMessage={handleSendAiMessage}
       />

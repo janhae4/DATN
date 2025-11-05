@@ -1,5 +1,5 @@
 import {
-  Conversation,
+  Discussion,
   CreateTeam,
   CurrentUser,
   MessageData,
@@ -96,38 +96,38 @@ export const ApiService = {
 
   logout: () => ApiService.request("/auth/logout", { method: "POST" }),
 
-  getConversationsPage: (
+  getDiscussionsPage: (
     page = 1,
     limit = 8
-  ): Promise<PaginatedResponse<Conversation>> =>
+  ): Promise<PaginatedResponse<Discussion>> =>
     ApiService.request(`/discussions?page=${page}&limit=${limit}`),
 
-  getConversationById: (id: string): Promise<Conversation | null> =>
+  getDiscussionById: (id: string): Promise<Discussion | null> =>
     ApiService.request(`/discussions/${id}`),
 
-  getConversationByTeamId: (id: string): Promise<Conversation> =>
+  getDiscussionByTeamId: (id: string): Promise<Discussion> =>
     ApiService.request(`/discussions/teams/${id}`),
 
   getMessages: (
-    conversationId: string,
+    discussionId: string,
     page = 1,
     limit = 20
   ): Promise<PaginatedResponse<MessageData>> =>
     ApiService.request(
-      `/discussions/${conversationId}/messages?page=${page}&limit=${limit}`
+      `/discussions/${discussionId}/messages?page=${page}&limit=${limit}`
     ),
 
   sendMessage: (
-    conversationId: string,
+    discussionId: string,
     content: string,
   ): Promise<NewMessageEvent> =>
-    ApiService.request(`/discussions/${conversationId}/messages`, {
+    ApiService.request(`/discussions/${discussionId}/messages`, {
       method: "POST",
       body: JSON.stringify({ content }),
     }),
 
-  createDirectChat: (partnerId: string): Promise<Conversation> =>
-    ApiService.request("/discussions/conversations/direct", {
+  createDirectChat: (partnerId: string): Promise<Discussion> =>
+    ApiService.request("/discussions/direct", {
       method: "POST",
       body: JSON.stringify({ partnerId }),
     }),
@@ -160,26 +160,26 @@ export const ApiService = {
       method: "DELETE",
     }),
 
-  leaveConversation: (conversationId: string): Promise<void> =>
-    ApiService.request(`teams/${conversationId}/leave`, {
+  leaveDiscussion: (DiscussionId: string): Promise<void> =>
+    ApiService.request(`teams/${DiscussionId}/leave`, {
       method: "POST",
     }),
 
   changeMemberRole: (
-    conversationId: string,
+    DiscussionId: string,
     memberId: string,
     role: TeamRole = "MEMBER"
   ): Promise<Team> =>
-    ApiService.request(`/teams/${conversationId}/member/${memberId}/role`, {
+    ApiService.request(`/teams/${DiscussionId}/member/${memberId}/role`, {
       method: "PATCH",
       body: JSON.stringify({ role }),
     }),
 
   transferOwnership: (
-    conversationId: string,
+    DiscussionId: string,
     newOwnerId: string
   ): Promise<Team> =>
-    ApiService.request(`/team/${conversationId}/member/transfer-ownership`, {
+    ApiService.request(`/team/${DiscussionId}/member/transfer-ownership`, {
       method: "POST",
       body: JSON.stringify({ newOwnerId }),
     }),
@@ -196,12 +196,12 @@ export const ApiService = {
 
   searchMessages: (
     query: string,
-    conversationId: string,
+    DiscussionId: string,
     page: number = 1,
     limit: number = 5
   ): Promise<SearchResponse<MessageDocument>> =>
     ApiService.request(
-      `/discussions/${conversationId}/messages/search?query=${query}&page=${page}&limit=${limit}`
+      `/discussions/${DiscussionId}/messages/search?query=${query}&page=${page}&limit=${limit}`
     ),
 
   getFilePreview: (
@@ -248,7 +248,7 @@ export const ApiService = {
     );
   },
 
-  getAiChatHistory: (page: number, limit: number, teamId?: string) => {
+  getAiChatHistory: (page: number, limit: number = 8, teamId?: string) => {
     return ApiService.request(
       `/ai-discussions${
         teamId ? `/teams/${teamId}` : ""
@@ -257,7 +257,6 @@ export const ApiService = {
   },
 
   getKnowledgeFiles(teamId?: string, page?: number, limit?: number) {
-    console.log(teamId);
     return ApiService.request(
       `/files?${teamId ? `teamId=${teamId}&` : ""}page=${page}&limit=${limit}`
     );
@@ -281,7 +280,7 @@ export const ApiService = {
 
   sendTeamAiChatMessage: (message: string, teamId?: string) => {
     return ApiService.request(
-      `/conversations/${teamId ? `teams/${teamId}` : ""}`,
+      `/Discussions/${teamId ? `teams/${teamId}` : ""}`,
       {
         method: "POST",
         body: JSON.stringify({ message }),

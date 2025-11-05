@@ -1,49 +1,56 @@
 "use client";
 
-import React from "react";
-import { Loader2, Sparkles, ChevronUp, Bot } from "lucide-react";
-import { AiMessage, CurrentUser, MessageData } from "../types/type";
-import { Message } from "./Message";
+import React, { useCallback } from "react";
+import { Loader2, Sparkles, ChevronUp } from "lucide-react";
+import { CurrentUser, TeamRole } from "../types/type";
+import { Message } from "./Message"; // Giả sử component Message của bạn
+import { ChatState, useChatStore } from "../store/useChatStore";
 
 interface AiMessageListProps {
   chatboxRef: React.RefObject<HTMLDivElement | null>;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  aiMessages: AiMessage[];
   currentUser: CurrentUser;
-  isLoadingMessages: boolean;
-  isStreaming: boolean;
-  isHistoryLoading: boolean;
-  messagePagination: { page: number; totalPages: number };
-  activeConversationId: string | null;
+
+  discussionId: string; // ĐÃ THAY ĐỔI
   handleLoadMoreMessages: () => void;
-  teamId?: string;
+  isLoadingInitialMessages: boolean;
 }
 
 export function AiMessageList({
   chatboxRef,
   messagesEndRef,
-  aiMessages,
   currentUser,
-  isLoadingMessages,
-  isStreaming,
-  isHistoryLoading,
-  messagePagination,
-  activeConversationId,
+  discussionId, // ĐÃ THAY ĐỔI
   handleLoadMoreMessages,
-  teamId,
+  isLoadingInitialMessages,
 }: AiMessageListProps) {
+  const selector = useCallback(
+    (state: ChatState) => {
+      const msgs = state.messages[discussionId] || [];
+      return {
+        messages: msgs ,
+        hasMore: state.hasMoreMessages[discussionId] !== false,
+        isStreaming: state.streamingResponses[discussionId] || false,
+        isHistoryLoading: state.historyLoading[discussionId] || false,
+      };
+    },
+    [discussionId]
+  );
+
+  const { messages, hasMore, isStreaming, isHistoryLoading } =
+    useChatStore(selector);
+
   return (
     <div
       ref={chatboxRef}
       className="flex-1 p-6 overflow-y-auto space-y-6"
       style={{ scrollBehavior: "auto" }}
     >
-      {isLoadingMessages && aiMessages.length === 0 ? (
+      {isLoadingInitialMessages && messages.length === 0 ? (
         <div className="flex justify-center items-center h-full">
           <Loader2 className="animate-spin text-indigo-600 h-10 w-10" />
         </div>
-      ) : /* 2. Trạng thái Rỗng (chưa có tin nhắn) */
-      !isLoadingMessages && aiMessages.length === 0 ? (
+      ) : !isLoadingInitialMessages && messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-slate-500">
           <Sparkles size={64} className="mb-4 text-indigo-500" />
           <h2 className="text-2xl font-semibold text-slate-700">
@@ -52,10 +59,8 @@ export function AiMessageList({
           <p>Hỏi AI về tài liệu của team bạn.</p>
         </div>
       ) : (
-        /* 3. Hiển thị tin nhắn */
         <>
-          {/* Nút tải tin nhắn cũ hơn */}
-          {messagePagination.page < messagePagination.totalPages && (
+          {hasMore && (
             <div className="flex justify-center">
               <button
                 onClick={handleLoadMoreMessages}
@@ -72,27 +77,16 @@ export function AiMessageList({
             </div>
           )}
 
-          {aiMessages.map((msg, index) => {
-            const messageProps = {
-              _id: msg._id,
-              content: msg.content,
-              sender: {
-                ...msg.sender,
-                role: "MEMBER",
-              },
-              createdAt: msg.timestamp,
-              conversationId: activeConversationId || teamId,
-            } as MessageData;
-
-
+          {messages.map((msg, index) => {
             const isThisMessageStreaming =
               isStreaming &&
-              index === aiMessages.length - 1 &&
-              msg.role === "ai";
+              index === messages.length - 1 &&
+              msg.sender.role === TeamRole.AI;
+
             return (
               <Message
                 key={msg._id}
-                message={messageProps}
+                message={msg}
                 isCurrentUser={msg.sender._id === currentUser.id}
                 isStreaming={isThisMessageStreaming}
               />
@@ -103,5 +97,5 @@ export function AiMessageList({
 
       <div ref={messagesEndRef} style={{ height: "1px" }} />
     </div>
-  );    
+  );
 }

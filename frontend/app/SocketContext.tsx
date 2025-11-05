@@ -17,6 +17,8 @@ export const CHATBOT_PATTERN = {
   RESPONSE_END: "chatbot.response_end",
   NEW_MESSAGE: "new_message",
   CONVERSATION_STARTED: "conversation_started",
+  MESSAGE_SAVED: "message_saved",
+  NEW_AI_MESSAGE: "new_ai_message",
 };
 
 interface SocketContextType {
