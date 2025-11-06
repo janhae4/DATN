@@ -1,0 +1,16 @@
+export const USER_PATTERNS = {
+  CREATE: 'user.create',
+  CREATE_LOCAL: 'user.createLocal',
+  CREATE_OAUTH: 'user.createOAuth',
+  FIND_ALL: 'user.findAll',
+  FIND_ONE: 'user.findOne',
+  FIND_ONE_WITH_PASSWORD: 'user.findOneWithPassword',
+  FIND_ONE_GOOGLE_BY_EMAIL: 'user.findOneGoogleByEmail',
+  FIND_ONE_BY_EMAIL: 'find_one_user_by_email',
+  UPDATE: 'user.update',
+  UPDATE_PASSWORD: 'user.updatePassword',
+  REMOVE: 'user.remove',
+  VALIDATE: 'user.validate',
+  VERIFY_EMAIL: 'user.verifyEmail',
+  SEND_VERIFICATION_EMAIL: 'user.sendVerificationEmail',
+};

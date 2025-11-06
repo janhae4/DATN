@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+<<<<<<< HEAD
 import * as request from 'supertest';
+=======
+>>>>>>> frontend/feature/backlogs
 import { TaskServiceModule } from './../src/task-service.module';
 
 describe('TaskServiceController (e2e)', () => {
@@ -15,10 +18,14 @@ describe('TaskServiceController (e2e)', () => {
     await app.init();
   });
 
+<<<<<<< HEAD
   it('/ (GET)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
       .expect('Hello World!');
   });
+=======
+  it('/ (GET)', () => {});
+>>>>>>> frontend/feature/backlogs
 });

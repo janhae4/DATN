@@ -1,0 +1,33 @@
+FROM node:18-slim AS deps
+WORKDIR /app
+
+# cài openssl
+RUN apt-get update -y && apt-get install -y openssl libssl-dev
+
+# copy package.json và cài deps
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
+
+# copy code
+COPY . .
+
+# generate Prisma Client
+RUN npx prisma generate --schema apps/task-service/src/prisma/schema.prisma
+
+# build NestJS
+RUN npx nest build task-service
+
+# ------------------------
+FROM node:18-slim
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    RMQ_URL=amqp://rabbitmq:5672 \
+    TASK_QUEUE=task_service_queue
+
+# copy node_modules và build
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/dist ./dist
+COPY --from=deps /app/apps/task-service/src/prisma ./apps/task-service/src/prisma
+
+CMD ["node", "dist/apps/task-service/main.js"]
