@@ -1,0 +1,18 @@
+    .mainLayout {
+      display: flex;
+      height: 100vh;
+      flex: 1;
+    }
+
+    .content {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto; /* Cho phép cuộn nếu nội dung dài */
+    }
+
+    .pageWrapper {
+      padding: 1.5rem;
+      flex-grow: 1;
+    }
+    
