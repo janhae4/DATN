@@ -1,7 +1,7 @@
 export * from './error';
 export * from './constants';
-export * from './pagination.dto'
-export * from './enum'
+export * from './pagination.dto';
+export * from './enum';
 
 /*----
 AUTH
@@ -34,6 +34,7 @@ export * from './discussion/dto/send-message.dto';
 export * from './discussion/dto/response-message.dto'
 export * from './discussion/dto/message.dto'
 export * from './discussion/discussion.pattern.dto';
+
 /*----
 CHATBOT
 -----*/
@@ -83,12 +84,48 @@ export * from './redis/store-refreshtoken.dto';
 
 /*----
 TASK
------*/
+------*/
 export * from './task/task.patterns';
 export * from './task/task.errors';
-export * from './task/dto/create-task.dto';
-export * from './task/dto/update-task.dto';
+export * from './task/create-task.dto';
+export * from './task/update-task.dto';
 export * from './task/dto/request-google-task.dto';
+
+/*----
+PROJECT
+------*/
+export * from './project/create-project.dto';
+export * from './project/update-project.dto';
+export * from './project/project.patterns';
+
+/*----
+SPRINT
+------*/
+export * from './sprint/create-sprint.dto';
+export * from './sprint/update-sprint.dto';
+export * from './sprint/sprint.patterns';
+
+/*----
+EPIC
+------*/
+export * from './epic/create-epic.dto';
+export * from './epic/update-epic.dto';
+export * from './epic/epic.patterns';
+
+/*----
+STATUS
+------*/
+export * from './status/create-status.dto';
+export * from './status/update-status.dto';
+export * from './status/update-status-order.dto';
+export * from './status/status.patterns';
+
+/*----
+LABEL
+------*/
+export * from './label/create-label.dto';
+export * from './label/update-label.dto';
+export * from './label/label.patterns';
 
 /*----
 USER
@@ -145,3 +182,4 @@ export * from './file/file.pattern';
 export * from './file/dto/delete-file.dto';
 export * from './file/dto/update-file.dto';
 export * from './file/dto/upload-file.dto';
+

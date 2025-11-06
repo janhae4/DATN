@@ -9,4 +9,5 @@ export const NOTIFICATION_PATTERN = {
   MARK_ALL_AS_READ: 'notification.markAllAsRead',
   MARK_ALL_AS_UNREAD: 'notification.markAllAsUnread',
   PROCESS_DOCUMENT: 'notification.processDocument',
+  PROJECT_INVITATION: 'notification.projectInvitation',
 };
