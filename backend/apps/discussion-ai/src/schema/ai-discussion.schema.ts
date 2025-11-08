@@ -14,7 +14,7 @@ export class TeamSnapshot {
   avatar?: string;
 }
 
-@Schema({ _id: false })
+@Schema({ _id: false, timestamps: true })
 export class LatestMessageSnapshot {
   @Prop({ required: true })
   _id: string;
@@ -28,7 +28,6 @@ export class LatestMessageSnapshot {
   @Prop({ type: SenderSnapshotSchema, required: true })
   sender: SenderSnapshot;
 
-  @Prop()
   createdAt: Date;
 }
 export const LatestMessageSnapshotSchema = SchemaFactory.createForClass(LatestMessageSnapshot);

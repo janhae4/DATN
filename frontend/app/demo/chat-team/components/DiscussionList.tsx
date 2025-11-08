@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { use, useCallback, useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { Loader2 } from "lucide-react";
 import { DiscussionItem } from "./DiscussionItem";
@@ -8,12 +8,10 @@ import { useSocket } from "@/app/SocketContext";
 interface DiscussionListProps {
   currentUser: CurrentUser;
   onSelectDiscussion: (discussion: Discussion) => void;
-  chatMode?: "team" | "ai";
 }
 export const DiscussionList: React.FC<DiscussionListProps> = ({
   currentUser,
   onSelectDiscussion,
-  chatMode = "team",
 }) => {
   const {
     visibleDiscussions,
@@ -23,7 +21,10 @@ export const DiscussionList: React.FC<DiscussionListProps> = ({
     loadMoreDiscussions,
     currentPage,
     totalPages,
+    chatMode
   } = useChatStore();
+
+  useEffect(() => {console.log(visibleDiscussions)}, [visibleDiscussions]);
 
   const { socket } = useSocket();
   const listRef = useRef<HTMLDivElement>(null);
@@ -53,7 +54,7 @@ export const DiscussionList: React.FC<DiscussionListProps> = ({
 
         if (entries[0].isIntersecting && !freshState.isLoadingDiscussions) {
           console.log("Intersection observer triggered load more...");
-          loadMoreDiscussions();
+          loadMoreDiscussions(chatMode)
         }
       },
       {
@@ -87,6 +88,7 @@ export const DiscussionList: React.FC<DiscussionListProps> = ({
           }
         }
       );
+      console.log(disc)
       onSelectDiscussion(disc);
     },
     [onSelectDiscussion, socket]

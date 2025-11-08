@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ChatbotService } from './chatbot.service';
-import { ChatbotController } from './chatbot.controller';
+import { AiDiscussionService } from './ai-discussion.service';
+import { AiDiscussionController } from './ai-discussion.controller';
 import { MulterModule } from '@nestjs/platform-express';
 import { AuthModule } from '../auth/auth.module';
 import { CHATBOT_EXCHANGE, ClientConfigModule, ClientConfigService } from '@app/contracts';
@@ -28,7 +28,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       })
     })
   ],
-  controllers: [ChatbotController],
-  providers: [ChatbotService],
+  controllers: [AiDiscussionController],
+  providers: [AiDiscussionService],
 })
-export class ChatbotModule { }
+export class AiDiscussionModule { }

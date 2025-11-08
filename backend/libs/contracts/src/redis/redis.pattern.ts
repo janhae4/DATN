@@ -9,6 +9,7 @@ export const REDIS_PATTERN = {
   NOTIFICATION: 'redis.notification',
   GET_USER_INFO: 'redis.getUserInfo',
   GET_USER_ROLE: 'redis.getUserRole',
+  SET_USER_ROLE: 'redis.setUserRole',
   GET_MANY_USERS_INFO: 'redis.getManyUserInfo',
   SET_MANY_USERS_INFO: 'redis.setManyUserInfo',
   GET_TEAM_MEMBERS: 'redis.getTeamMember',

@@ -181,10 +181,10 @@ export class DiscussionController {
     errorHandler: customErrorHandler,
   })
   getDiscussionById(
-    payload: { conversationId: string; userId: string },
+    payload: { discussionId: string; userId: string },
   ) {
-    const { conversationId, userId } = payload;
-    return this.chatService.getDiscussionById(conversationId, userId);
+    const { discussionId, userId } = payload;
+    return this.chatService.getDiscussionById(discussionId, userId);
   }
 
   @RabbitRPC({

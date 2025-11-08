@@ -8,7 +8,7 @@ import {
   REDIS_PATTERN,
   User,
 } from '@app/contracts';
-import type { AddMemberEventPayload, ChangeRoleMember, LeaveMemberEventPayload, RemoveMemberEventPayload, RemoveTeamEventPayload, TransferOwnership, TransferOwnershipEventPayload } from "@app/contracts"
+import type { AddMemberEventPayload, ChangeRoleMember, LeaveMemberEventPayload, MemberRole, RemoveMemberEventPayload, RemoveTeamEventPayload, TransferOwnership, TransferOwnershipEventPayload } from "@app/contracts"
 import { customErrorHandler } from '@app/common';
 
 @Controller()
@@ -120,7 +120,7 @@ export class RedisController {
     queue: "event.login.redis",
     errorHandler: customErrorHandler
   })
-  async login(payload: { user: User,  memberRoles?: { teamId: string; role: string }[] }) {
+  async login(payload: { user: User, memberRoles?: { teamId: string; role: string }[] }) {
     return await this.redisService.handleUserLogin(payload.user, payload.memberRoles);
   }
 
@@ -219,7 +219,7 @@ export class RedisController {
     routingKey: REDIS_PATTERN.GET_USER_INFO,
     queue: REDIS_PATTERN.GET_USER_INFO,
     errorHandler: customErrorHandler
-  }) 
+  })
   async getUserInfo(userIds: string[]) {
     return await this.redisService.getUserInfo(userIds);
   }
@@ -229,10 +229,21 @@ export class RedisController {
     routingKey: REDIS_PATTERN.GET_USER_ROLE,
     queue: REDIS_PATTERN.GET_USER_ROLE,
     errorHandler: customErrorHandler
-  }) 
+  })
   async getUserRole(payload: { userId: string; teamId: string }) {
     const { userId, teamId } = payload;
     return await this.redisService.getUserRole(userId, teamId);
+  }
+
+  @RabbitSubscribe({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.SET_USER_ROLE,
+    queue: REDIS_PATTERN.SET_USER_ROLE,
+    errorHandler: customErrorHandler
+  })
+  async setUserRole(payload: { userId: string; teamId: string; role: MemberRole }) {
+    const { userId, teamId, role } = payload;
+    return await this.redisService.setUserRole(userId, teamId, role);
   }
 
   @RabbitRPC({

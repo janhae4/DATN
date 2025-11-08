@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
     let inThrottle = false;
     return function (this: any, ...args: any[]) {
@@ -32,6 +32,13 @@ export function useInfiniteScroll({
     throttleMs = 200,
     threshold = 50
 }: UseInfiniteScrollProps) {
+    const isScrolledToBottomRef = useRef(false);
+    const container = containerRef.current;
+    if (container && loadDirection === 'top') {
+        const scrollThreshold = threshold + 50;
+        isScrolledToBottomRef.current =
+            container.scrollHeight - container.scrollTop - container.clientHeight < scrollThreshold;
+    }
 
     useEffect(() => {
         if (isLoadingOlder || !endRef.current) return;
@@ -40,11 +47,7 @@ export function useInfiniteScroll({
         if (!container) return;
 
         if (loadDirection === 'top') {
-            const scrollThreshold = threshold + 50;
-            const isScrolledToBottom =
-                container.scrollHeight - container.scrollTop - container.clientHeight < scrollThreshold;
-
-            if (isScrolledToBottom) {
+            if (isScrolledToBottomRef.current) {
                 setTimeout(() => {
                     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
                 }, 100);

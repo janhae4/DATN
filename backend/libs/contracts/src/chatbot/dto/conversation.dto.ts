@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import { MessageResponseDto } from './message-response.dto';
 
-export class ConversationResponseDto {
+export class DiscussionResponseDto {
   @IsString()
   _id: string;
 

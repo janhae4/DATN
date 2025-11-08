@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, use, useEffect } from "react";
 import {
   LogOut as LogOutIcon,
   Plus as PlusIcon,
@@ -12,26 +12,40 @@ import { DiscussionList } from "./DiscussionList";
 import { CreateTeamModal } from "./modals/CreateTeamModal";
 import { CreateTeam, CurrentUser } from "../types/type";
 import { ApiService } from "../services/api-service";
+import { useShallow } from "zustand/shallow";
 
 export function ChatSidebar({
   currentUser,
   onLogout,
-  chatMode,
-  setChatMode,
 }: {
   currentUser: CurrentUser;
   onLogout: () => void;
-  chatMode: "team" | "ai";
-  setChatMode: (mode: "team" | "ai") => void;
 }) {
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"team" | "ai">("team");
 
   const {
     ensureDiscussionVisible,
     moveDiscussionToTop,
     setSelectedDiscussion,
-  } = useChatStore();
+    setChatMode,
+    loadInitialDiscussions,
+    chatMode
+  } = useChatStore(
+    useShallow((state) => ({
+      ensureDiscussionVisible: state.ensureDiscussionVisible,
+      moveDiscussionToTop: state.moveDiscussionToTop,
+      setSelectedDiscussion: state.setSelectedDiscussion,
+      setChatMode: state.setChatMode,
+      loadInitialDiscussions: state.loadInitialDiscussions,
+      chatMode: state.chatMode
+    }))
+  );
+
+  useEffect(() => {
+    loadInitialDiscussions(activeTab);
+  }, [activeTab, loadInitialDiscussions]);
 
   const handleChatCreated = useCallback(
     (newTeam: CreateTeam) => {
@@ -49,6 +63,12 @@ export function ChatSidebar({
     },
     [ensureDiscussionVisible, moveDiscussionToTop, setSelectedDiscussion]
   );
+
+  const handleSetActiveTab = (tab: "team" | "ai") => {
+    setActiveTab(tab);
+    setChatMode(tab);
+    setSelectedDiscussion({});
+  };
 
   return (
     <>
@@ -78,9 +98,9 @@ export function ChatSidebar({
         <div className="p-4">
           <div className="flex bg-gray-100 rounded-lg p-1">
             <button
-              onClick={() => setChatMode("team")}
+              onClick={() => handleSetActiveTab("team")}
               className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${
-                chatMode === "team"
+                activeTab === "team"
                   ? "bg-white shadow text-indigo-600"
                   : "text-gray-600 hover:bg-gray-200"
               }`}
@@ -88,9 +108,9 @@ export function ChatSidebar({
               Team Chat
             </button>
             <button
-              onClick={() => setChatMode("ai")}
+              onClick={() => handleSetActiveTab("ai")}
               className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${
-                chatMode === "ai"
+                activeTab === "ai"
                   ? "bg-white shadow text-indigo-600"
                   : "text-gray-600 hover:bg-gray-200"
               }`}
@@ -103,7 +123,9 @@ export function ChatSidebar({
         <div className="flex-1 overflow-y-auto">
           <DiscussionList
             currentUser={currentUser}
-            onSelectDiscussion={setSelectedDiscussion}
+            onSelectDiscussion={(discussion) => {
+              setSelectedDiscussion({discussion, chatMode});
+            }}
           />
         </div>
 

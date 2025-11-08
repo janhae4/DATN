@@ -12,7 +12,7 @@ import {
   Participant,
   ParticipantTeam,
   TeamRole,
-  MessageDocument
+  MessageDocument,
 } from "../types/type";
 
 const API_BASE_URL = "http://localhost:3000";
@@ -97,10 +97,15 @@ export const ApiService = {
   logout: () => ApiService.request("/auth/logout", { method: "POST" }),
 
   getDiscussionsPage: (
+    chatMode: "team" | "ai" = "team",
     page = 1,
     limit = 8
   ): Promise<PaginatedResponse<Discussion>> =>
-    ApiService.request(`/discussions?page=${page}&limit=${limit}`),
+    ApiService.request(
+      `/${
+        chatMode === "team" ? "discussions" : "ai-discussions"
+      }?page=${page}&limit=${limit}`
+    ),
 
   getDiscussionById: (id: string): Promise<Discussion | null> =>
     ApiService.request(`/discussions/${id}`),
@@ -111,15 +116,27 @@ export const ApiService = {
   getMessages: (
     discussionId: string,
     page = 1,
+    limit = 20,
+    chatMode: "team" | "ai" = "team"
+  ): Promise<PaginatedResponse<MessageData>> =>
+    ApiService.request(
+      `/${
+        chatMode === "team" ? "discussions" : "ai-discussions"
+      }/${discussionId}/messages?page=${page}&limit=${limit}`
+    ),
+
+  getTeamAiMessages: (
+    teamId: string,
+    page = 1,
     limit = 20
   ): Promise<PaginatedResponse<MessageData>> =>
     ApiService.request(
-      `/discussions/${discussionId}/messages?page=${page}&limit=${limit}`
+      `/ai-discussions/teams/${teamId}/messages?page=${page}&limit=${limit}`
     ),
 
   sendMessage: (
     discussionId: string,
-    content: string,
+    content: string
   ): Promise<NewMessageEvent> =>
     ApiService.request(`/discussions/${discussionId}/messages`, {
       method: "POST",
@@ -132,16 +149,14 @@ export const ApiService = {
       body: JSON.stringify({ partnerId }),
     }),
 
-  createTeam: (
-    name: string,
-    participantIds: string[]
-  ): Promise<CreateTeam> =>
+  createTeam: (name: string, participantIds: string[]): Promise<CreateTeam> =>
     ApiService.request("/teams", {
       method: "POST",
       body: JSON.stringify({ name, memberIds: participantIds }),
     }),
 
-  getMembers: (teamId: string): Promise<ParticipantTeam[]> => ApiService.request(`/teams/${teamId}/members`),
+  getMembers: (teamId: string): Promise<ParticipantTeam[]> =>
+    ApiService.request(`/teams/${teamId}/members`),
 
   addMembers: (teamId: string, participantIds: string[]): Promise<Team> =>
     ApiService.request(`/teams/${teamId}/member`, {
@@ -188,10 +203,12 @@ export const ApiService = {
     query: string,
     page: number = 1,
     limit: number = 5,
-    teamId?: string,
+    teamId?: string
   ): Promise<{ data: SearchUser[]; hasNextPage: boolean }> =>
     ApiService.request(
-      `/user/search?query=${query}${teamId ? `&teamId=${teamId}` : ""}&page=${page}&limit=${limit}`
+      `/user/search?query=${query}${
+        teamId ? `&teamId=${teamId}` : ""
+      }&page=${page}&limit=${limit}`
     ),
 
   searchMessages: (

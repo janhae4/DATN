@@ -92,6 +92,7 @@ export interface MessageData {
   content: string;
   sender: Participant;
   createdAt: string;
+  timestamp?: string;
   discussionId: string;
   teamId?: string;
   attachments?: Attachment[];
@@ -111,7 +112,7 @@ export interface Discussion {
   latestMessage?: string;
   latestMessageSnapshot?: MessageData;
   participants: Participant[];
-  isGroup: boolean;
+  isGroup?: boolean;
   name?: string;
   teamId?: string;
   isDeleted?: boolean;
@@ -155,6 +156,7 @@ export interface NewMessageEvent {
   message: MessageData;
   teamSnapshot?: TeamSnapshot;
   participants: Participant[];
+  latestMessageSnapshot?: MessageData
 }
 
 export interface CreateTeam {
@@ -197,7 +199,7 @@ export type AiMessage = {
   content: string;
   discussionId?: string;
   teamId?: string;
-  timestamp: string;
+  createdAt: string;
   metadata?: any;
 };
 

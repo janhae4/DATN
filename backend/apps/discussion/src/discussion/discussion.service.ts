@@ -134,17 +134,19 @@ export class DiscussionService {
 
     const discussion = await this._getDiscussionOrFail(discussionId, userId);
 
-    const sender = await this.amqp.request<SenderSnapshot>({
+    const sender = await this.amqp.request<SenderSnapshot[]>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
       payload: { userIds: [userId], forDiscussion: true },
     })
 
-    if (!sender) throw new NotFoundException('User not found');
+    console.log(sender)
+
+    if (!sender || sender.length === 0) throw new NotFoundException('User not found');
 
     return await this._createMessage(
       discussion,
-      sender,
+      sender[0],
       content as string,
       attachments as Attachment[],
     );
@@ -439,6 +441,7 @@ export class DiscussionService {
   }
 
   async getDiscussionById(discussionId: string, userId: string) {
+    console.log(discussionId, userId);
     return await this.discussionModel
       .findOne({ _id: discussionId, 'participants._id': userId })
       .lean<Discussion>();

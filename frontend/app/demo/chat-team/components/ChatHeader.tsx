@@ -1,69 +1,92 @@
 "use client";
 import React, { useMemo } from "react";
-import { Users as UsersIcon, SearchIcon } from "lucide-react";
-import { Conversation, CurrentUser } from "../types/type";
+import { Users as UsersIcon, SearchIcon, Bot } from "lucide-react";
+import { Discussion, CurrentUser } from "../types/type";
+import { useChatStore } from "../store/useChatStore";
 
 export function ChatHeader({
   currentUser,
-  selectedConversation,
+  selectedDiscussion,
   onManageMembers,
   onSearch,
 }: {
   currentUser: CurrentUser;
-  selectedConversation: Conversation;
+  selectedDiscussion: Discussion;
   onManageMembers: () => void;
   onSearch: () => void;
 }) {
+  const { chatMode } = useChatStore();
+
   const headerData = useMemo(() => {
-    if (selectedConversation.isGroup) {
+    if (chatMode === "ai") {
       return {
-        name: selectedConversation.name || "Group Chat",
+        isAi: true,
+        name: selectedDiscussion.name || "AI Assistant",
+        avatar: null,
+        members: [],
+      };
+    }
+
+    if (selectedDiscussion.isGroup) {
+      return {
+        isAi: false,
+        name: selectedDiscussion.name || "Group Chat",
         avatar:
-          selectedConversation.teamSnapshot?.avatar ||
+          selectedDiscussion.teamSnapshot?.avatar ||
           `https://placehold.co/100x100/7c3aed/ffffff?text=${(
-            selectedConversation.name || "G"
+            selectedDiscussion.name || "G"
           )
             .charAt(0)
             .toUpperCase()}`,
-        members: selectedConversation.participants,
+        members: selectedDiscussion.participants,
       };
     }
-    const otherUser = selectedConversation.participants?.find(
-      (p) => p._id !== currentUser.id
+
+    const otherUser = selectedDiscussion.participants?.find(
+      (p) => p.id !== currentUser.id
     );
     return {
-      name: otherUser?.name || "Unknown",
+      isAi: false,
+      name: otherUser?.name || "Unknown User",
       avatar:
         otherUser?.avatar ||
-        `https://i.pravatar.cc/150?u=${otherUser?._id || "unknown"}`,
-      members: selectedConversation.participants,
+        `https://i.pravatar.cc/150?u=${otherUser?.id || "unknown"}`,
+      members: selectedDiscussion.participants,
     };
-  }, [selectedConversation, currentUser.id]);
+  }, [selectedDiscussion, currentUser.id, chatMode]);
 
   return (
     <header className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm flex-shrink-0">
       <div className="flex items-center min-w-0">
-        <img
-          src={headerData.avatar}
-          alt={headerData.name}
-          className="w-10 h-10 rounded-full object-cover mr-4 flex-shrink-0"
-          onError={(e) =>
-            (e.currentTarget.src = `https://placehold.co/100x100/cccccc/ffffff?text=?`)
-          }
-        />
+        {headerData.isAi ? (
+          <div className="w-10 h-10 bg-indigo-600 p-2.5 rounded-full text-white flex-shrink-0 flex items-center justify-center mr-4">
+            <Bot size={20} />
+          </div>
+        ) : (
+          <img
+            src={headerData.avatar as string}
+            alt={headerData.name}
+            className="w-10 h-10 rounded-full object-cover mr-4 flex-shrink-0"
+            onError={(e) =>
+              (e.currentTarget.src = `https://placehold.co/100x100/cccccc/ffffff?text=?`)
+            }
+          />
+        )}
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-gray-800 truncate">
             {headerData.name}
           </h2>
           <p className="text-sm text-gray-500">
-            {selectedConversation.isGroup
+            {headerData.isAi
+              ? "Trợ lý ảo"
+              : selectedDiscussion.isGroup
               ? `${headerData.members?.length || 0} thành viên`
               : "Online"}
           </p>
         </div>
       </div>
       <div className="flex items-center justify-center gap-2">
-        {selectedConversation.isGroup && (
+        {selectedDiscussion.isGroup && (
           <button
             onClick={onManageMembers}
             title="Quản lý thành viên"

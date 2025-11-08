@@ -3,19 +3,19 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
-  ConversationResponseDto,
+  DiscussionResponseDto,
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Injectable()
-export class ChatbotService {
+export class AiDiscussionService {
   constructor(
     private readonly amqp: AmqpConnection,
   ) { }
 
   async askQuestion(question: string) {
-    return unwrapRpcResult(await this.amqp.request<ConversationResponseDto>({
+    return unwrapRpcResult(await this.amqp.request<DiscussionResponseDto>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.ASK_QUESTION,
       payload: question,
@@ -50,7 +50,7 @@ export class ChatbotService {
     })
     return unwrapRpcResult(files);
   }
-  
+
   async deleteFile(fileId: string, userId: string, teamId?: string) {
     const file = await this.amqp.request<string>({
       exchange: CHATBOT_EXCHANGE,
@@ -60,55 +60,56 @@ export class ChatbotService {
     return unwrapRpcResult(file)
   }
 
-  async findTeamConversation(
+  async findTeamDiscussion(
     userId: string,
     teamId: string,
     page: number = 1,
     limit: number = 15
   ) {
-    const conversations = await this.amqp.request<ConversationResponseDto>({
+    const discussions = await this.amqp.request<DiscussionResponseDto>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.FIND_TEAM_CONVERSATIONS,
       payload: { userId, teamId, page, limit },
     })
-    return unwrapRpcResult(conversations);
+    return unwrapRpcResult(discussions);
   }
 
-  async findAllConversation(
+  async findAllDiscussion(
     userId: string,
     page: number = 1,
     limit: number = 15,
   ) {
-    const conversations = await this.amqp.request<ConversationResponseDto>({
+    const discussions = await this.amqp.request<DiscussionResponseDto>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.FIND_CONVERSATIONS,
       payload: { userId, page, limit },
     })
-    return unwrapRpcResult(conversations)
+    return unwrapRpcResult(discussions)
   }
 
-  async findConversation(
+  async findDiscussion(
     userId: string,
-    conversationId: string,
     page: number = 1,
     limit: number = 15,
+    discussionId?: string,
     teamId?: string
   ) {
-    const conversations = await this.amqp.request<ConversationResponseDto>({
+    console.log(`ChatbotService: Finding discussion ${discussionId} for user ${userId} with teamId:`, teamId);
+    const discussions = await this.amqp.request<DiscussionResponseDto>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.FIND_CONVERSATION,
-      payload: { userId, conversationId, page, limit, teamId },
+      payload: { userId, discussionId, page, limit, teamId },
     })
-    return unwrapRpcResult(conversations)
+    return unwrapRpcResult(discussions)
   }
 
-  async deleteConversation(conversationId: string, userId: string, teamId?: string) {
-    const conversation = await this.amqp.request<string>({
+  async deleteDiscussion(discussionId: string, userId: string, teamId?: string) {
+    const discussion = await this.amqp.request<string>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.DELETE_CONVERSATION,
-      payload: { conversationId, userId, teamId }
+      payload: { discussionId, userId, teamId }
     })
-    return unwrapRpcResult(conversation)
+    return unwrapRpcResult(discussion)
   }
 
   async getFile(fileId: string, userId: string, teamId?: string) {
@@ -157,7 +158,7 @@ export class ChatbotService {
   async sendMessage(payload: {
     userId: string,
     message: string,
-    conversationId?: string,
+    discussionId?: string,
     teamId?: string
   }) {
     const result = await this.amqp.request({
@@ -166,5 +167,20 @@ export class ChatbotService {
       payload
     })
     return unwrapRpcResult(result)
+  }
+
+  async getMessages(
+    userId: string,
+    page: number = 1,
+    limit: number = 15,
+    discussionId?: string,
+    teamId?: string
+  ) {
+    const messages = await this.amqp.request({
+      exchange: CHATBOT_EXCHANGE,
+      routingKey: CHATBOT_PATTERN.GET_MESSAGES,
+      payload: { userId, discussionId, page, limit, teamId },
+    })
+    return unwrapRpcResult(messages)
   }
 }

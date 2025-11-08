@@ -4,10 +4,10 @@ import { Loader2, XIcon } from "lucide-react";
 import { useChatSearch } from "../hooks/useChatSearch";
 
 export function SearchPanel({
-  conversationId,
+  discussionId,
   onClose,
 }: {
-  conversationId: string;
+  discussionId: string;
   onClose: () => void;
 }) {
   const {
@@ -18,7 +18,7 @@ export function SearchPanel({
     searchHasMore,
     totalSearchHits,
     handleLoadMoreSearch,
-  } = useChatSearch(conversationId, true);
+  } = useChatSearch(discussionId, true);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">

@@ -7,11 +7,9 @@ import {
   DISCUSSION_PATTERN,
   GetMessageDiscussionDto,
   RequestPaginationDto,
-  SearchMessageDto,
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { unwrapRpcResult } from '../common/helper/rpc';
-import { CreateDiscussionMessageDto } from './dto/create-discussion-message.dto';
 
 @Injectable()
 export class DiscussionService {
@@ -70,7 +68,6 @@ export class DiscussionService {
       routingKey: DISCUSSION_PATTERN.GET_DISCUSSION_BY_TEAM_ID,
       payload: { teamId, userId },
     });
-    console.log(result)
     return unwrapRpcResult(result);
   }
 

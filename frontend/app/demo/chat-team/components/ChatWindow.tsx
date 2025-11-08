@@ -8,120 +8,141 @@ import { useChatStore } from "../store/useChatStore";
 import { ManageMembersModal } from "./modals/ManageMemberModal";
 import { MessageList } from "./MessageList";
 import { AiKnowledgePage } from "./AiKnowledge";
-import { Conversation, CurrentUser, Team } from "../types/type";
+import { Discussion, CurrentUser, Team } from "../types/type";
+import { useShallow } from "zustand/shallow";
 
 export function ChatWindow({
   currentUser,
-  selectedConversation,
+  selectedDiscussion,
 }: {
   currentUser: CurrentUser;
-  selectedConversation: Conversation;
+  selectedDiscussion: Discussion;
 }) {
-  const [activeTab, setActiveTab] = useState<"discussion" | "ai">("discussion");
+  const [subActiveTab, setSubActiveTab] = useState<"discussion" | "ai">(
+    "discussion"
+  );
   const [isManageMembersModalOpen, setIsManageMembersModalOpen] =
     useState(false);
 
   const [isSearchActive, setIsSearchActive] = useState(false);
-  const [chatMode, setChatMode] = useState<"team" | "ai">("team");
 
   const {
-    updateConversationInList,
-    setSelectedConversation,
-    loadInitialConversations,
-  } = useChatStore();
+    loadInitialDiscussions,
+    updateDiscussionInList,
+    loadAiTeamMessages,
+    loadMessages,
+    setSelectedDiscussion,
+    setChatMode,
+    setMessageForDiscussion,
+    chatMode,
+  } = useChatStore(
+    useShallow((state) => ({
+      loadInitialDiscussions: state.loadInitialDiscussions,
+      updateDiscussionInList: state.updateDiscussionInList,
+      loadAiTeamMessages: state.loadAiTeamMessages,
+      loadMessages: state.loadMessages,
+      setSelectedDiscussion: state.setSelectedDiscussion,
+      setChatMode: state.setChatMode,
+      setMessageForDiscussion: state.setMessagesForDiscussion,
+      chatMode: state.chatMode,
+    }))
+  );
 
-  useEffect(() => {
-    loadInitialConversations(chatMode);
-  }, [chatMode, loadInitialConversations]);
-
-  const onConversationUpdated = useCallback(
-    (updatedConversation: Team) => {
-      console.log("Updated conversation:", updatedConversation);
-      updateConversationInList(updatedConversation);
+  const onDiscussionUpdated = useCallback(
+    (updatedDiscussion: Team) => {
+      console.log("Updated Discussion:", updatedDiscussion);
+      updateDiscussionInList(updatedDiscussion);
       setIsManageMembersModalOpen(false);
     },
-    [updateConversationInList]
+    [updateDiscussionInList]
   );
 
   const onUserLeave = useCallback(() => {
     setIsManageMembersModalOpen(false);
-    setSelectedConversation({});
-    loadInitialConversations("team");
-  }, [setSelectedConversation, loadInitialConversations]);
+    setSelectedDiscussion({});
+    loadInitialDiscussions("team");
+  }, [setSelectedDiscussion, loadInitialDiscussions]);
+
+  useEffect(() => {
+    setMessageForDiscussion([], 1, true);
+
+    if (chatMode === "team") {
+      if (subActiveTab === "ai") {
+        setSubActiveTab("ai");
+        loadAiTeamMessages(selectedDiscussion?.teamId!, 1, 10);
+      } else if (subActiveTab === "discussion") {
+        setSubActiveTab("discussion");
+        loadMessages("team", selectedDiscussion._id, 1, 10);
+      }
+    } else {
+      loadMessages("ai", selectedDiscussion?._id, 1, 10);
+    }
+  }, [subActiveTab, selectedDiscussion, chatMode]);
 
   return (
     <>
-      {selectedConversation.isGroup && (
+      {selectedDiscussion && selectedDiscussion!.isGroup && (
         <ManageMembersModal
           isOpen={isManageMembersModalOpen}
           onClose={() => setIsManageMembersModalOpen(false)}
-          conversation={selectedConversation}
+          conversation={selectedDiscussion}
           currentUser={currentUser}
           onUserLeave={onUserLeave}
-          onConversationUpdated={onConversationUpdated}
+          onConversationUpdated={onDiscussionUpdated}
         />
       )}
 
       <ChatHeader
         currentUser={currentUser}
-        selectedConversation={selectedConversation}
+        selectedDiscussion={selectedDiscussion}
         onManageMembers={() => setIsManageMembersModalOpen(true)}
         onSearch={() => setIsSearchActive(true)}
       />
 
-      {selectedConversation.isGroup && (
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 pt-2 flex items-center gap-4">
-          <button
-            onClick={() => setActiveTab("discussion")}
-            className={`py-2 text-sm font-medium border-b-2 ${
-              activeTab === "discussion"
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <UsersIcon className="w-4 h-4 inline-block mr-1.5" />
-            Thảo luận Team
-          </button>
-          <button
-            onClick={() => setActiveTab("ai")}
-            className={`py-2 text-sm font-medium border-b-2 ${
-              activeTab === "ai"
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {/* ... (icon AI) ... */}
-            AI Knowledge Base
-          </button>
-        </div>
-      )}
-
-      {/* Logic render 2 tab chính */}
-      {activeTab === "discussion" ? (
-        isSearchActive ? ( // <-- Logic render conditional
-          <SearchPanel
-            conversationId={selectedConversation._id}
-            onClose={() => setIsSearchActive(false)} // <-- Tắt tìm kiếm
-          />
-        ) : (
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <MessageList
-              currentUser={currentUser}
-              selectedConversationId={selectedConversation._id}
-            />
-            <MessageInput
-              currentUser={currentUser}
-              selectedConversation={selectedConversation}
-            />
+      {chatMode === "team" &&
+        selectedDiscussion &&
+        selectedDiscussion!.isGroup && (
+          <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 pt-2 flex items-center gap-4">
+            <button
+              onClick={() => setSubActiveTab("discussion")}
+              className={`py-2 text-sm font-medium border-b-2 ${
+                subActiveTab === "discussion"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <UsersIcon className="w-4 h-4 inline-block mr-1.5" />
+              Thảo luận Team
+            </button>
+            <button
+              onClick={() => setSubActiveTab("ai")}
+              className={`py-2 text-sm font-medium border-b-2 ${
+                subActiveTab === "ai"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              AI Knowledge Base
+            </button>
           </div>
-        )
-      ) : (
-        <AiKnowledgePage
-          key={selectedConversation._id}
-          currentUser={currentUser}
-          teamId={selectedConversation.teamId || ""}
+        )}
+
+      {isSearchActive && (
+        <SearchPanel
+          discussionId={selectedDiscussion?._id}
+          onClose={() => setIsSearchActive(false)}
         />
       )}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <MessageList
+          currentUser={currentUser}
+          selectedDiscussionId={selectedDiscussion?._id}
+        />
+        <MessageInput
+          currentUser={currentUser}
+          selectedDiscussion={selectedDiscussion}
+        />
+      </div>
     </>
   );
 }

@@ -4,14 +4,14 @@ import React, { useCallback } from "react";
 import { Loader2, Sparkles, ChevronUp } from "lucide-react";
 import { CurrentUser, TeamRole } from "../types/type";
 import { Message } from "./Message"; // Giả sử component Message của bạn
-import { ChatState, useChatStore } from "../store/useChatStore";
+import { useChatStore } from "../store/useChatStore";
+import { useShallow } from "zustand/shallow";
 
 interface AiMessageListProps {
   chatboxRef: React.RefObject<HTMLDivElement | null>;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   currentUser: CurrentUser;
-
-  discussionId: string; // ĐÃ THAY ĐỔI
+  discussionId: string;
   handleLoadMoreMessages: () => void;
   isLoadingInitialMessages: boolean;
 }
@@ -20,25 +20,15 @@ export function AiMessageList({
   chatboxRef,
   messagesEndRef,
   currentUser,
-  discussionId, // ĐÃ THAY ĐỔI
+  discussionId,
   handleLoadMoreMessages,
   isLoadingInitialMessages,
 }: AiMessageListProps) {
-  const selector = useCallback(
-    (state: ChatState) => {
-      const msgs = state.messages[discussionId] || [];
-      return {
-        messages: msgs ,
-        hasMore: state.hasMoreMessages[discussionId] !== false,
-        isStreaming: state.streamingResponses[discussionId] || false,
-        isHistoryLoading: state.historyLoading[discussionId] || false,
-      };
-    },
-    [discussionId]
-  );
 
-  const { messages, hasMore, isStreaming, isHistoryLoading } =
-    useChatStore(selector);
+  const hasMore = useChatStore((state) => state.hasMoreMessages[discussionId] !== false);
+  const isHistoryLoading = useChatStore((state) => state.historyLoading[discussionId] || false);
+  const isStreaming = useChatStore((state) => state.streamingResponses[discussionId] || false);
+  const messages = useChatStore(useShallow((state) => state.messages[discussionId] || []));
 
   return (
     <div

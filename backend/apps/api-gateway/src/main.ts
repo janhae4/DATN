@@ -4,7 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ApiGatewayModule } from './api-gateway/api-gateway.module';
 import cookieParser from 'cookie-parser';
 import { RoleGuard } from './common/role/role.guard';
-import { RpcErrorToHttpFilter } from './common/filter/rpc-to-http.filter';
+import { ResponseInterceptor } from './common/filter/response.interceptor';
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
 
@@ -34,7 +34,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalGuards(app.get(RoleGuard));
-  app.useGlobalFilters(app.get(RpcErrorToHttpFilter));
+  app.useGlobalInterceptors(app.get(ResponseInterceptor));
   await app.listen(process.env.port ?? 3000);
 }
 bootstrap();

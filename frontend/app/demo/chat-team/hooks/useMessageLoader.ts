@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { ApiService } from "../services/api-service";
-import { shallow } from "zustand/shallow";
+import { shallow, useShallow } from "zustand/shallow";
 import { useInfiniteScroll } from "./useInfiniteroll";
 
 const MESSAGE_LIMIT = 20;
@@ -10,91 +10,86 @@ export function useMessageLoader(
     selectedConversationId: string,
     chatContainerRef: React.RefObject<HTMLDivElement | null>
 ) {
+    console.log("useMessageLoader called with selectedConversationId:", selectedConversationId);
+
     const [isLoadingMessages, setIsLoadingMessages] = useState(true);
     const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     const {
         messages,
-        messagePages,
+        messagePage,
         hasMoreMessages,
         prependMessages,
-        setMessagesForConversation,
         setMessagePage,
         setHasMoreMessages,
-    } = useChatStore.getState()
-
-    const currentMessages = messages[selectedConversationId] || [];
-    const currentPage = messagePages[selectedConversationId] || 1;
-    const currentHasMore = hasMoreMessages[selectedConversationId] ?? true;
+        setHistoryLoading,
+        loadMessages,
+        isHistoryLoading,
+        chatMode,
+    } = useChatStore(useShallow((state) => ({
+        messages: state.messages,
+        messagePage: state.messagePage,
+        hasMoreMessages: state.hasMoreMessages,
+        isHistoryLoading: state.isHistoryLoading,
+        chatMode: state.chatMode,
+        prependMessages: state.prependMessages,
+        setMessagesForDiscussion: state.setMessagesForDiscussion,
+        setMessagePage: state.setMessagePage,
+        setHasMoreMessages: state.setHasMoreMessages,
+        setHistoryLoading: state.setHistoryLoading,
+        loadMessages: state.loadMessages
+    })));
 
     useEffect(() => {
-        const fetchInitialMessages = async () => {
-            if (!selectedConversationId) return;
-            if (messages[selectedConversationId]) {
-                setIsLoadingMessages(false);
-                setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 100);
-                return;
-            }
-
-            try {
-                setIsLoadingMessages(true);
-                const data = await ApiService.getMessages(selectedConversationId, 1, MESSAGE_LIMIT);
-                const messages = data.data
-                const reversedData = messages.reverse();
-                const hasMore = messages.length === MESSAGE_LIMIT;
-                setMessagesForConversation(selectedConversationId, reversedData, 1, hasMore);
-                setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 100);
-            } catch (error) {
-                console.error("Failed to fetch initial messages:", error);
-                setMessagesForConversation(selectedConversationId, [], 1, false);
-            } finally {
-                setIsLoadingMessages(false);
-            }
-        };
-        fetchInitialMessages();
-    }, [selectedConversationId, setMessagesForConversation, messages]);
+        if (selectedConversationId) {
+            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 100);
+        }
+    }, [selectedConversationId]);
 
     const loadOlderMessages = useCallback(async () => {
-        if (isLoadingOlderMessages || !currentHasMore) return;
+        if (isHistoryLoading || !hasMoreMessages || !selectedConversationId) {
+            console.log("Tải tin nhắn cũ bị bỏ qua:", { isHistoryLoading, hasMoreMessages, selectedConversationId });
+            return;
+        }
 
-        setIsLoadingOlderMessages(true);
-        const nextPage = currentPage + 1;
+        setHistoryLoading(true);
+        const nextPage = messagePage + 1;
+
+        const container = chatContainerRef.current;
+        const oldScrollHeight = container?.scrollHeight || 0;
 
         try {
-            const olderMessages = await ApiService.getMessages(
+
+            console.log("Đang tải tin nhắn TEAM cũ hơn...");
+            await loadMessages(
+                chatMode,
                 selectedConversationId,
                 nextPage,
                 MESSAGE_LIMIT
             );
-            const reversedOlderMessages = olderMessages.data.reverse();
-
-
-            const container = chatContainerRef.current;
-            const oldScrollHeight = container?.scrollHeight || 0;
-
-            prependMessages(selectedConversationId, reversedOlderMessages);
-            setMessagePage(selectedConversationId, nextPage);
-            setHasMoreMessages(selectedConversationId, olderMessages.totalPages > nextPage);
 
             requestAnimationFrame(() => {
                 if (container) {
                     container.scrollTop = container.scrollHeight - oldScrollHeight + (container.scrollTop || 0);
                 }
             });
+
         } catch (error) {
             console.error("Failed to load older messages:", error);
         } finally {
-            setIsLoadingOlderMessages(false);
+            setHistoryLoading(false);
         }
     }, [
         selectedConversationId,
-        isLoadingOlderMessages,
-        currentHasMore,
-        currentPage,
+        isHistoryLoading,
+        hasMoreMessages,
+        messagePage,
+        chatMode,
         prependMessages,
         setMessagePage,
         setHasMoreMessages,
+        setHistoryLoading,
         chatContainerRef,
     ]);
 
@@ -102,16 +97,16 @@ export function useMessageLoader(
         containerRef: chatContainerRef,
         endRef: messagesEndRef,
         loadOlder: loadOlderMessages,
-        count: currentMessages.length,
+        count: messages.length,
         isLoadingOlder: isLoadingOlderMessages
     });
 
     return {
         messagesEndRef,
-        currentMessages,
-        isLoadingMessages,
-        isLoadingOlderMessages,
-        currentHasMore,
+        currentMessages: messages,
+        isLoadingMessages: isHistoryLoading && messages.length === 0,
+        isLoadingOlderMessages: isHistoryLoading && messages.length > 0,
+        currentHasMore: hasMoreMessages,
         loadOlderMessages,
     };
 }

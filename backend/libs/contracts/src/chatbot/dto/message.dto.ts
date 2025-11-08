@@ -28,6 +28,7 @@ export class SendAiMessageEventPayload {
   discussionId?: string
   teamId?: string
   metadata?: MessageMetadataDto
+  createdAt: Date
 }
 
 export class MessageUserChatbot {

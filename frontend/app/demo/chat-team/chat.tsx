@@ -6,7 +6,7 @@ import { ChatWindow } from "./components/ChatWindow";
 import { useSocketHandler } from "./hooks/useSocketHandler";
 import { useChatStore } from "./store/useChatStore";
 import { CurrentUser } from "./types/type";
-import { PersonalAiChat } from "./components/PersonalAiChat";
+import { useShallow } from "zustand/shallow";
 
 export function ChatPage({
   currentUser,
@@ -17,16 +17,17 @@ export function ChatPage({
 }) {
   useSocketHandler();
 
-  const [chatMode, setChatMode] = useState<"team" | "ai">("team");
-
-  const selectedConversation = useChatStore(
-    (state) => state.selectedDiscussion
+  const { selectedDiscussion, visibleDiscussions } = useChatStore(
+    useShallow((state) => ({
+      selectedDiscussion: state.selectedDiscussion,
+      visibleDiscussions: state.visibleDiscussions,
+    }))
   );
 
   const teamChatPlaceholder = (
     <div className="flex-1 flex items-center justify-center">
       <p className="text-gray-500 text-center px-4">
-        {useChatStore.getState().visibleDiscussions.length > 0
+        {visibleDiscussions.length > 0
           ? "Chọn một cuộc hội thoại để bắt đầu trò chuyện."
           : "Bạn chưa có cuộc trò chuyện nào. Hãy tạo mới!"}
       </p>
@@ -35,26 +36,16 @@ export function ChatPage({
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans antialiased">
-      <ChatSidebar
-        currentUser={currentUser}
-        onLogout={onLogout}
-        chatMode={chatMode}
-        setChatMode={setChatMode}
-      />
+      <ChatSidebar currentUser={currentUser} onLogout={onLogout} />
 
       <main className="flex-1 flex flex-col bg-gray-100">
-        {chatMode === "team" ? (
-          selectedConversation ? (
-            <ChatWindow
-              key={selectedConversation._id}
-              currentUser={currentUser}
-              selectedConversation={selectedConversation}
-            />
-          ) : (
-            teamChatPlaceholder
-          )
+        {selectedDiscussion ? (
+          <ChatWindow
+            currentUser={currentUser}
+            selectedDiscussion={selectedDiscussion}
+          />
         ) : (
-          <PersonalAiChat currentUser={currentUser} />
+          teamChatPlaceholder
         )}
       </main>
     </div>

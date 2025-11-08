@@ -17,6 +17,7 @@ import { useKnowledgeFiles } from "../hooks/useKnowledgeFile";
 import { useChatStore } from "../store/useChatStore";
 import { useSocket } from "@/app/SocketContext";
 import { useInfiniteScroll } from "../hooks/useInfiniteroll";
+import { useShallow } from "zustand/shallow";
 
 const FileViewerModal = dynamic(
   () => import("./fileViewModal").then((mod) => mod.FileViewerModal),
@@ -60,44 +61,45 @@ export function AiKnowledgePage({
     handleRenameSuccess,
   } = useKnowledgeFiles(teamId);
 
-  const aiDiscussionId = useMemo(() => getTeamAiDiscussionId(teamId), [teamId]);
+  const aiDiscussionId: string = useMemo(
+    () => getTeamAiDiscussionId(teamId),
+    [teamId]
+  );
 
   const chatboxRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
-  const store = useChatStore();
-
-  // 2. SỬA LỖI Ở ĐÂY: Dùng hằng số đã cache
-  const messages = useChatStore(
-    (state) => state.messages[aiDiscussionId] || []
-  );
-
-  // Các selector này an toàn
-  const messagesLoaded = useChatStore(
-    (state) => state.messages[aiDiscussionId] !== undefined
-  );
-  const isHistoryLoading = useChatStore(
-    (state) => state.historyLoading[aiDiscussionId] || false
-  );
-  const hasMore = useChatStore(
-    (state) => state.hasMoreMessages[aiDiscussionId] !== false
+  const {
+    messages,
+    messagesLoaded,
+    isHistoryLoading,
+    hasMore,
+    loadMessages,
+    sendAiMessage,
+    summarizeAiDocument,
+    setSelectedDiscussion,
+  } = useChatStore(
+    useShallow((state) => ({
+      messages: state.messages,
+      messagesLoaded: state.messages !== undefined,
+      isHistoryLoading: state.isHistoryLoading || false,
+      hasMore: state.hasMoreMessages!== false,
+      loadMessages: state.loadMessages,
+      sendAiMessage: state.sendAiMessage,
+      summarizeAiDocument: state.summarizeAiDocument,
+      setSelectedDiscussion: state.setSelectedDiscussion,
+    }))
   );
 
   useEffect(() => {
     if (aiDiscussionId && !messagesLoaded) {
       setIsLoadingInitial(true);
-      store
-        .loadInitialAiMessages(aiDiscussionId, currentUser, teamId)
-        .finally(() => {
-          setIsLoadingInitial(false);
-        });
     } else {
       setIsLoadingInitial(false);
     }
-  }, [aiDiscussionId, messagesLoaded, store, currentUser, teamId]);
+  }, [aiDiscussionId, messagesLoaded, currentUser, teamId]);
 
-  // ... (các useEffect và handler khác giữ nguyên)
   useEffect(() => {
     if (!isLoadingInitial) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,7 +108,7 @@ export function AiKnowledgePage({
 
   const handleSend = () => {
     if (socket) {
-      store.sendAiMessage(aiDiscussionId, currentUser, socket, teamId);
+      sendAiMessage(aiDiscussionId, currentUser, socket, teamId);
     }
   };
 
@@ -117,7 +119,7 @@ export function AiKnowledgePage({
     const oldScrollHeight = container.scrollHeight;
     const oldScrollTop = container.scrollTop;
 
-    const newMessagesCount = await store.loadMoreAiMessages(aiDiscussionId);
+    const newMessagesCount = await loadMoreAiMessages(aiDiscussionId);
 
     if (newMessagesCount > 0) {
       requestAnimationFrame(() => {
@@ -125,17 +127,11 @@ export function AiKnowledgePage({
           container.scrollHeight - oldScrollHeight + oldScrollTop;
       });
     }
-  }, [isHistoryLoading, hasMore, store, aiDiscussionId, chatboxRef]);
+  }, [isHistoryLoading, hasMore, aiDiscussionId, chatboxRef]);
 
   const handleSummarize = (file: KnowledgeFile) => {
     if (socket) {
-      store.summarizeAiDocument(
-        aiDiscussionId,
-        currentUser,
-        socket,
-        file,
-        teamId
-      );
+      summarizeAiDocument(aiDiscussionId, currentUser, socket, file, teamId);
     }
   };
 

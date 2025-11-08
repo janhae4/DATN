@@ -43,15 +43,40 @@ export class AiDiscussionController {
     errorHandler: customErrorHandler
   })
   async findConversation(payload: {
+    discussionId: string;
     userId: string;
     page: number;
     limit: number;
     teamId?: string
   }) {
     return await this.aiDiscussionService.findDiscussion(
+      payload.discussionId,
       payload.userId,
       payload.page,
       payload.limit
+    );
+  }
+
+  @RabbitRPC({
+    exchange: CHATBOT_EXCHANGE,
+    routingKey: CHATBOT_PATTERN.GET_MESSAGES,
+    queue: CHATBOT_PATTERN.GET_MESSAGES,
+    errorHandler: customErrorHandler
+  })
+  async findDiscussionMessages(payload: {
+    userId: string;
+    page: number;
+    limit: number;
+    discussionId?: string;
+    teamId?: string
+  }) {
+    console.log(payload)
+    return await this.aiDiscussionService.findDiscussionMessage(
+      payload.userId,
+      payload.page,
+      payload.limit,
+      payload.discussionId,
+      payload.teamId
     );
   }
 
@@ -130,7 +155,7 @@ export class AiDiscussionController {
     );
   }
 
-  @RabbitSubscribe({
+  @RabbitRPC({
     exchange: CHATBOT_EXCHANGE,
     routingKey: CHATBOT_PATTERN.CREATE,
     queue: CHATBOT_PATTERN.CREATE,
@@ -141,6 +166,7 @@ export class AiDiscussionController {
     message: string,
     metadata?: MessageMetadataDto
   }) {
+    console.log(payload)
     return await this.aiDiscussionService.saveAiMessage(
       payload.discussionId,
       payload.message,

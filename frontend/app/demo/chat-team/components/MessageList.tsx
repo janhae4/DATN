@@ -7,10 +7,10 @@ import { CurrentUser } from "../types/type";
 
 export function MessageList({
   currentUser,
-  selectedConversationId,
+  selectedDiscussionId,
 }: {
   currentUser: CurrentUser;
-  selectedConversationId: string;
+  selectedDiscussionId: string;
 }) {
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -21,7 +21,7 @@ export function MessageList({
     isLoadingOlderMessages,
     currentHasMore,
     loadOlderMessages,
-  } = useMessageLoader(selectedConversationId, chatContainerRef);
+  } = useMessageLoader(selectedDiscussionId, chatContainerRef);
 
   const handleScroll = useCallback(() => {
     const container = chatContainerRef.current;
@@ -60,14 +60,13 @@ export function MessageList({
         if (!msg || !msg.sender) return null;
         return (
           <Message
-            key={msg._id || msg.createdAt}
+            key={msg._id}
             message={msg}
             isCurrentUser={msg.sender._id === currentUser.id}
           />
         );
       })}
 
-      {/* Thẻ div trống để cuộn xuống dưới cùng */}
       <div ref={messagesEndRef} style={{ height: "1px" }} />
     </main>
   );

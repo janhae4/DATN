@@ -46,7 +46,7 @@ export class SenderSnapshot {
 export const SenderSnapshotSchema = SchemaFactory.createForClass(SenderSnapshot);
 
 
-@Schema({ timestamps: { createdAt: 'timestamp' } })
+@Schema({ timestamps: true })
 export class AiMessage {
   _id?: Types.ObjectId;
 
@@ -64,7 +64,7 @@ export class AiMessage {
   @Prop({ required: true })
   content: string;
 
-  timestamp: Date;
+  createdDate: Date
 
   @Prop({ type: MessageMetadataSchema })
   metadata?: MessageMetadata;

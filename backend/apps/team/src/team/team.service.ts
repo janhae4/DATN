@@ -778,6 +778,8 @@ export class TeamService {
         relations: ['team'],
       });
 
+      console.log(membersFromDb);
+
       if (membersFromDb.length === 0) {
         this.logger.log(`No members found for team ${teamId}.`);
         return memberIds;
@@ -899,12 +901,52 @@ export class TeamService {
   }
 
   async findParticipantRoles(userId: string, teamId: string) {
-    return unwrapRpcResult(await this.amqp.request<{ teamId: string; role: MemberRole }[]>({
-      exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.GET_USER_ROLE,
-      payload: { userId, teamId },
-      timeout: 2000,
-    }))
+    let rolesFromCache: { teamId: string; role: MemberRole }[] | null = null;
+    try {
+      this.logger.log(`[Cache] GET user roles: ${userId} in ${teamId}`);
+      const rpcResult = await this.amqp.request({
+        exchange: REDIS_EXCHANGE,
+        routingKey: REDIS_PATTERN.GET_USER_ROLE,
+        payload: { userId, teamId },
+        timeout: 2000,
+      });
+      rolesFromCache = unwrapRpcResult(rpcResult);
+      this.logger.log(`[Cache] HIT for user roles: ${userId} in ${teamId}`);
+    } catch (error) {
+      this.logger.warn(`[Cache] MISS (Error): ${error.message}. Fallback to DB.`);
+    }
+
+    if (rolesFromCache) {
+      this.logger.log(`[Cache] HIT for user roles: ${userId} in ${teamId}`);
+      console.log(rolesFromCache)
+      return rolesFromCache;
+    }
+
+    this.logger.log(`[DB] Fallback: Getting roles for user ${userId} in ${teamId}`);
+
+    const team = await this.teamRepo.findOne({
+      where: { id: teamId, members: { userId } },
+      relations: ['members'],
+    })
+
+
+    console.log(team)
+
+    if (team && team.members && team.members.length > 0) {
+      this.amqp.publish(
+        REDIS_EXCHANGE,
+        REDIS_PATTERN.SET_USER_ROLE,
+        {
+          userId,
+          teamId,
+          role: team.members[0].role,
+        }
+      ).catch(err => {
+        console.error(`[Cache] FAILED TO SET cache for user ${userId}:`, err.message);
+      });
+
+      return team.members[0].role;
+    }
   }
 
   async sendNotification(userId: string, teamId: string, message: NotificationEventDto) {

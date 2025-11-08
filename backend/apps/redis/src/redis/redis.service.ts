@@ -195,6 +195,12 @@ export class RedisService {
     return data;
   }
 
+  async setUserRole(userId: string, teamId: string, role: string) {
+    const key = `user:roles:${userId}`;
+    await this.redis.hset(key, teamId, role);
+    this.logger.log('Stored user role for user:', userId);
+  }
+
   async getManyUserInfo(userIds: string[]) {
     const keys = userIds.map((id) => `user:profile:${id}`);
     const results = await this.redis.mget(keys)

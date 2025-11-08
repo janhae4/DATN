@@ -15,7 +15,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ChatbotService } from './chatbot.service';
+import { AiDiscussionService } from './ai-discussion.service';
 import { ApiBearerAuth, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { Role } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
@@ -28,8 +28,8 @@ import { CurrentUser } from '../common/role/current-user.decorator';
 @Controller('ai-discussions')
 @ApiBearerAuth()
 @UseGuards(RoleGuard)
-export class ChatbotController {
-  constructor(private readonly chatbotService: ChatbotService) { }
+export class AiDiscussionController {
+  constructor(private readonly aiDiscussionService: AiDiscussionService) { }
 
   @Post('files')
   @Roles(Role.USER)
@@ -54,8 +54,8 @@ export class ChatbotController {
       throw new BadRequestException('File is empty.');
     }
 
-    const fileName = await this.chatbotService.uploadFile(file, userId, teamId);
-    this.chatbotService.processDocument(fileName, userId, teamId);
+    const fileName = await this.aiDiscussionService.uploadFile(file, userId, teamId);
+    this.aiDiscussionService.processDocument(fileName, userId, teamId);
 
     return {
       message: 'File is processing',
@@ -71,7 +71,7 @@ export class ChatbotController {
     @CurrentUser('id') userId: string,
     @Query('teamId') teamId?: string,
   ) {
-    return await this.chatbotService.getFilesPrefix(userId, teamId);
+    return await this.aiDiscussionService.getFilesPrefix(userId, teamId);
   }
 
   @Get('files/:id')
@@ -84,7 +84,7 @@ export class ChatbotController {
     @Res() res: Response,
     @Query('teamId') teamId?: string,
   ) {
-    const payload = await this.chatbotService.getFile(id, userId, teamId);
+    const payload = await this.aiDiscussionService.getFile(id, userId, teamId);
     const { data, contentType } = payload;
     res.set({
       'Content-Type': contentType,
@@ -102,7 +102,7 @@ export class ChatbotController {
     @Query('teamId') teamId?: string,
   ) {
     console.log("TEAMID", teamId)
-    return await this.chatbotService.deleteFile(id, userId, teamId);
+    return await this.aiDiscussionService.deleteFile(id, userId, teamId);
   }
 
   @Patch('files/:id/content')
@@ -125,7 +125,7 @@ export class ChatbotController {
     @CurrentUser('id') userId: string,
     @Query('teamId') teamId?: string,
   ) {
-    return await this.chatbotService.updateFile(file, id, userId, teamId);
+    return await this.aiDiscussionService.updateFile(file, id, userId, teamId);
   }
 
   @Patch('files/:id/rename')
@@ -138,7 +138,7 @@ export class ChatbotController {
     @CurrentUser('id') userId: string,
     @Query('teamId') teamId?: string,
   ) {
-    return await this.chatbotService.renameFile(id, newName, userId, teamId);
+    return await this.aiDiscussionService.renameFile(id, newName, userId, teamId);
   }
 
   @Get()
@@ -151,12 +151,12 @@ export class ChatbotController {
     @Query('limit') limit: number = 15,
   ) {
     console.log
-    return await this.chatbotService.findAllConversation(
+    return await this.aiDiscussionService.findAllDiscussion(
       userId, page, limit
     );
   }
 
-  @Post(':id')
+  @Post(':id/messages')
   @Roles(Role.USER, Role.ADMIN)
   @ApiParam({ name: 'id', type: 'string' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
@@ -165,30 +165,30 @@ export class ChatbotController {
     @Body('message') message: string,
     @CurrentUser('id') userId: string,
   ) {
-    return await this.chatbotService.sendMessage({
+    return await this.aiDiscussionService.sendMessage({
       userId,
-      conversationId: id,
+      discussionId: id,
       message,
     });
   }
 
-  @Post('/teams/:id')
+  @Post('/teams/:id/messages')
   @Roles(Role.USER, Role.ADMIN)
   @ApiParam({ name: 'id', type: 'string' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   async handleTeamMessage(
     @Param('id') id: string,
-    @Body('message') message: string,
+    @Body('content') content: string,
     @CurrentUser('id') userId: string,
   ) {
-    return await this.chatbotService.sendMessage({
+    return await this.aiDiscussionService.sendMessage({
       userId,
       teamId: id,
-      message,
+      message: content,
     });
   }
 
-  @Get('/teams/:id')
+  @Get('/teams/:id/messages')
   @Roles(Role.USER)
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: 'number' })
@@ -199,42 +199,64 @@ export class ChatbotController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 15,
   ) {
-    return await this.chatbotService.findTeamConversation(
-      userId, teamId, page, limit
+    return await this.aiDiscussionService.getMessages(
+      userId, page, limit, undefined, teamId
     );
   }
 
-  @Get('/:id')
+  @Get(':id')
   @Roles(Role.USER)
   @ApiParam({ name: 'id', type: 'string' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: 'number' })
   @ApiQuery({ name: 'limit', required: false, type: 'number' })
-  async findConversationById(
+  async findDiscussionById(
     @CurrentUser('id') userId: string,
-    @Param('id') id: string,
+    @Param('id') discussionId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 15,
     @Query('teamId') teamId?: string,
   ) {
-    return await this.chatbotService.findConversation(
+    return await this.aiDiscussionService.findDiscussion(
       userId,
-      id,
       page,
       limit,
+      discussionId,
       teamId,
     );
   }
 
-  @Delete('/:id')
+  @Get(':id/messages')
   @Roles(Role.USER)
   @ApiParam({ name: 'id', type: 'string' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
-  async deleteConversation(
+  @ApiQuery({ name: 'page', required: false, type: 'number' })
+  @ApiQuery({ name: 'limit', required: false, type: 'number' })
+  async getMessages(
+    @Param('id') discussionId: string,
+    @CurrentUser('id') userId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @Query('teamId') teamId?: string,
+  ) {
+    return await this.aiDiscussionService.getMessages(
+      userId,
+      page,
+      limit,
+      discussionId,
+      teamId,
+    );
+  }
+
+  @Delete(':id')
+  @Roles(Role.USER)
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  async deleteDiscussion(
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
     @Query('teamId') teamId?: string,
   ) {
-    return await this.chatbotService.deleteConversation(id, userId, teamId);
+    return await this.aiDiscussionService.deleteDiscussion(id, userId, teamId);
   }
 }

@@ -5,6 +5,8 @@ import { AiPromptInput } from "./AiPromptInput";
 import { AiMessageList } from "./AiMessageList";
 import { useChatStore } from "../store/useChatStore";
 import { CurrentUser } from "../types/type";
+import { useShallow } from "zustand/shallow";
+import { MessageList } from "./MessageList";
 
 interface AiChatWindowProps {
   chatboxRef: React.RefObject<HTMLDivElement | null>;
@@ -26,30 +28,24 @@ export function AiChatWindow({
   handleSendAiMessage,
   handleLoadMoreMessages,
 }: AiChatWindowProps) {
-  const selector = useCallback(
-    (state: any) => ({
-      prompt: state.prompts[discussionId] || "",
-      isStreaming: state.streamingResponses[discussionId] || false,
+  console.log("Rendering AiChatWindow for discussionId:", discussionId);
+  const { prompt, isStreaming, setPrompt } = useChatStore(
+    useShallow((state) => ({
+      prompt: state.currentPrompt || "",
+      isStreaming: state.isStreamingResponse || false,
       setPrompt: state.setPrompt,
-    }),
-    [discussionId]
+    }))
   );
-
-  const { prompt, isStreaming, setPrompt } = useChatStore(selector);
 
   return (
     <div className="flex-1 flex flex-col bg-gray-100">
-      <AiMessageList
-        chatboxRef={chatboxRef}
-        messagesEndRef={messagesEndRef}
+      <MessageList
         currentUser={currentUser}
-        discussionId={discussionId} // ĐÃ THAY ĐỔI
-        isLoadingInitialMessages={isLoadingInitialMessages}
-        handleLoadMoreMessages={handleLoadMoreMessages}
+        selectedConversationId={discussionId}
       />
       <AiPromptInput
         prompt={prompt}
-        setPrompt={(e) => setPrompt(discussionId, e)}
+        setPrompt={(e) => setPrompt(e)}
         isStreaming={isStreaming}
         handleSendAiMessage={handleSendAiMessage}
       />

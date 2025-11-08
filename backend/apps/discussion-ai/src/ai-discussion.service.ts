@@ -27,6 +27,7 @@ import {
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { AiDiscussion, TeamSnapshot } from './schema/ai-discussion.schema';
 import { AiMessage } from './schema/message.schema';
+import { unwrapRpcResult } from '@app/common';
 
 @Injectable()
 export class AiDiscussionService {
@@ -48,7 +49,7 @@ export class AiDiscussionService {
       content: messageDoc.content,
       sender: messageDoc.sender as SenderSnapshotDto,
       metadata: messageDoc.metadata as MessageMetadataDto,
-      createdAt: messageDoc.timestamp,
+      createdAt: messageDoc.createdDate,
     };
   }
 
@@ -77,59 +78,94 @@ export class AiDiscussionService {
     userId: string;
     discussionId?: string;
     teamId?: string;
-  }
-  ): Promise<AiDiscussion> {
+  }): Promise<AiDiscussion> {
     const { userId, discussionId, teamId } = options;
-    console.log("Checking discussion auth with options:", options);
-    let discussion: AiDiscussion | null;
-    if (!discussionId) {
-      if (!teamId) {
-        discussion = await this.aiDiscussionModel.findOne({ ownerId: userId, teamId: { $exists: false } });
+
+    console.log("\n===========================");
+    console.log("🔎 CHECK DISCUSSION AUTH");
+    console.log("➡️  Input:", { userId, discussionId, teamId });
+
+    let discussion: AiDiscussion | null = null;
+
+    try {
+      if (!discussionId) {
+        console.log("❓ No discussionId provided → Try find by team/personal mode");
+
+        if (!teamId) {
+          console.log("➡️ Searching PERSONAL AI discussion of user:", userId);
+          discussion = await this.aiDiscussionModel.findOne({
+            ownerId: userId,
+            teamId: { $exists: false },
+          });
+        } else {
+          console.log("➡️ Searching TEAM AI discussion with teamId:", teamId);
+          discussion = await this.aiDiscussionModel.findOne({ teamId });
+        }
+      } else {
+        console.log("➡️ Searching discussion by discussionId:", discussionId);
+        discussion = await this.aiDiscussionModel.findById(discussionId);
       }
-      else {
-        discussion = await this.aiDiscussionModel.findOne({ teamId: teamId });
-      }
-    }
-    else {
-      discussion = await this.aiDiscussionModel.findById(discussionId);
+
+      console.log("✅ DB Query Result:", discussion ? discussion._id : "null");
+    } catch (dbError) {
+      console.error("❌ DB ERROR while fetching discussion:", dbError);
+      throw dbError;
     }
 
     if (!discussion || discussion.isDeleted) {
-      throw new NotFoundException('Discussion not found or deleted');
+      console.warn("⛔ Discussion not found OR deleted");
+      throw new NotFoundException("Discussion not found or deleted");
     }
 
+    // ✅ PERSONAL AI
     if (!discussion.teamId) {
+      console.log("👤 Personal AI discussion detected");
+      console.log("➡️ Owner:", discussion.ownerId, "------ User:", userId);
+
       if (discussion.ownerId === userId) {
+        console.log("✅ AUTHORIZED: user is the owner");
         return discussion;
       }
+      console.warn("⛔ FORBIDDEN: user is NOT the owner of personal discussion");
     }
 
     if (discussion.teamId) {
+      console.log("👥 Team AI discussion detected → Checking RabbitMQ role");
+      console.log("➡️ Team ID:", discussion.teamId);
+
       try {
-        const role = await this.amqp.request({
+        const role = unwrapRpcResult(await this.amqp.request({
           exchange: TEAM_EXCHANGE,
           routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-          payload: { userId, teamId: discussion.teamId },
-        })
+          payload: { userId, teamId },
+        }));
+
+        console.log("🔁 Role response from AMQP:", role);
 
         if (role) {
+          console.log("✅ AUTHORIZED: user belongs to the team");
           return discussion;
         }
+
+        console.warn("⛔ FORBIDDEN: user is NOT in team members");
       } catch (error) {
-        this.logger.error(`Failed to check role via AMQP: ${error.message}`);
+        console.error("❌ AMQP ERROR:", error.message);
       }
     }
 
-    throw new ForbiddenException('You do not have permission to access this discussion.');
+    console.warn("🚫 FINAL RESULT: ACCESS DENIED");
+    console.warn("===========================\n");
+    throw new ForbiddenException("You do not have permission to access this discussion.");
   }
+
 
   private async getSenderSnapshot(userId: string): Promise<SenderSnapshotDto> {
     try {
-      const senders = await this.amqp.request<SenderSnapshotDto[]>({
+      const senders = unwrapRpcResult(await this.amqp.request<SenderSnapshotDto[]>({
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
         payload: { userIds: [userId], forDiscussion: true },
-      });
+      }));
 
       if (!senders || senders.length === 0) {
         throw new NotFoundException(`User with ID ${userId} not found.`);
@@ -144,38 +180,62 @@ export class AiDiscussionService {
   private async saveMessageToDiscussion(
     sender: SenderSnapshotDto,
     message: string,
-    teamId: string | undefined,
-    metadata: MessageMetadataDto | undefined,
-    discussionId: string | undefined,
+    teamId?: string,
+    metadata?: MessageMetadataDto,
+    discussionId?: string,
   ): Promise<AiDiscussion> {
+
+    this.logger.debug(">>> saveMessageToDiscussion called", {
+      sender: sender._id,
+      discussionId,
+      teamId,
+    });
+
     if (discussionId) {
+      this.logger.debug(`Adding message to existing discussion: ${discussionId}`);
       return this.addMessageToExistingDiscussion(
         sender,
         discussionId,
         message,
         metadata,
       );
-    } else {
-      this.logger.log("Creating new discussion with message...");
-      const discussion = await this.createNewDiscussionWithMessage(
-        sender,
-        teamId,
-        message,
-        metadata,
-      );
-      this.logger.log(`New discussion created with ID: ${discussion._id}`);
-      return discussion;
     }
+
+    if (teamId) {
+      this.logger.debug(`Looking for existing team discussion in team: ${teamId}`);
+
+      const existingDiscussion = await this.aiDiscussionModel.findOne({
+        teamId,
+        isDeleted: false,
+      });
+
+      if (existingDiscussion) {
+        this.logger.debug(`Found existing team discussion: ${existingDiscussion._id}`);
+        return this.addMessageToExistingDiscussion(
+          sender,
+          existingDiscussion._id.toString(),
+          message,
+          metadata,
+        );
+      }
+
+      this.logger.debug("No existing discussion, creating new discussion under team");
+      return this.createNewDiscussionWithMessage(sender, teamId, message, metadata);
+    }
+
+    this.logger.debug("Creating new PERSONAL AI discussion (no team)");
+    return this.createNewDiscussionWithMessage(sender, undefined, message, metadata);
   }
+
 
   private async getMembersToNotify(discussion: AiDiscussion): Promise<string[]> {
     if (discussion.teamId) {
       try {
-        const memberIds = await this.amqp.request<string[]>({
+        const memberIds = unwrapRpcResult(await this.amqp.request<string[]>({
           exchange: TEAM_EXCHANGE,
           routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
-          payload: { teamId: discussion.teamId },
-        });
+          payload: discussion.teamId,
+        }));
         return memberIds || [];
       } catch (error) {
         this.logger.error(`Failed to get team members for ${discussion.teamId}: ${error.message}`);
@@ -277,6 +337,7 @@ export class AiDiscussionService {
         aiDiscussion.latestMessageSnapshot as AiMessageSnapshot,
       );
 
+      console.log(aiDiscussion)
       return aiDiscussion;
 
     } catch (error) {
@@ -297,6 +358,7 @@ export class AiDiscussionService {
     message: string,
     metadata?: MessageMetadataDto,
   ) {
+    this.logger.log("Saving AI message...");
     const messageDoc = new this.aiMessageModel({
       discussionId,
       sender: {
@@ -309,7 +371,29 @@ export class AiDiscussionService {
       metadata,
     });
     const savedMessage = await messageDoc.save();
-
+    this.logger.log(`Message saved with ID: ${savedMessage._id}`);
+    await this.aiDiscussionModel.updateOne(
+      { _id: discussionId },
+      {
+        $set: {
+          latestMessage: savedMessage._id,
+          latestMessageSnapshot: {
+            _id: savedMessage._id.toString(),
+            sender: {
+              _id: SENDER_SNAPSHOT_AI.id,
+              name: SENDER_SNAPSHOT_AI.name,
+              avatar: SENDER_SNAPSHOT_AI.avatar,
+              status: MemberShip.ACTIVE
+            },
+            content: message,
+            createdAt: savedMessage.createdDate,
+            metadata
+          }
+        }
+      },
+      { upsert: true },
+    )
+    this.logger.log("AI message saved.");
     return savedMessage;
   }
 
@@ -317,7 +401,7 @@ export class AiDiscussionService {
     sender: SenderSnapshotDto,
     discussionId: string,
     message: string,
-    metadata: MessageMetadataDto | undefined,
+    metadata?: MessageMetadataDto,
   ): Promise<AiDiscussion> {
     const discussion = await this.checkDiscussionAuth({ userId: sender._id, discussionId });
     const session = await this.connection.startSession();
@@ -330,7 +414,7 @@ export class AiDiscussionService {
         metadata,
       });
       const [savedMessage] = await this.aiMessageModel.create([messageDoc], { session });
-
+      console.log("Saved message:", savedMessage);
       const latestSnapshot = this.createLatestMessageSnapshot(savedMessage);
 
       const updatedDiscussion = await this.aiDiscussionModel.findByIdAndUpdate(
@@ -417,6 +501,7 @@ export class AiDiscussionService {
         discussionId: discussion._id?.toString(),
         teamId: discussion.teamId,
         metadata: message.metadata,
+        createdAt: message.createdAt
       };
 
       this.amqp.publish(
@@ -501,7 +586,7 @@ export class AiDiscussionService {
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean() 
+      .lean()
       .exec();
 
     const totalQuery = this.aiDiscussionModel.countDocuments(query);
@@ -518,13 +603,45 @@ export class AiDiscussionService {
     };
   }
 
+  async findDiscussionMessage(
+    userId: string,
+    page: number = 1,
+    limit: number = 15,
+    discussionId?: string,
+    teamId?: string
+  ) {
+    console.log(`Finding discussion messages for discussion ${discussionId} for user ${userId} with teamId:`, teamId);
+    const skip = (page - 1) * limit;
+
+    const discussion = await this.checkDiscussionAuth({ userId, discussionId, teamId });
+    console.log("Discussion found:", discussion);
+    const messagesQuery = this.aiMessageModel
+      .find({ discussionId: discussion._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalQuery = this.aiMessageModel.countDocuments({ discussionId: discussion._id });
+
+    const [messages, totalMessages] = await Promise.all([messagesQuery, totalQuery]);
+
+    return {
+      data: messages,
+      page,
+      limit,
+      totalPages: Math.ceil(totalMessages / limit),
+    };
+  }
+
 
   async findDiscussion(
+    discussionId: string,
     userId: string,
     page: number = 1,
     limit: number = 15,
     teamId?: string
   ) {
+    console.log(`Finding discussion for user ${userId} with teamId:`, teamId);
     const skip = (page - 1) * limit;
 
     const discussion = await this.checkDiscussionAuth({ userId, teamId });

@@ -258,11 +258,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
   }
 
-  // Giả định 'AuthenticatedSocket' đã được định nghĩa ở trên
-  // Giả định 'ResponseStreamDto' (từ RAG) chứa 'membersToNotify'
-
-  handleStreamResponse(response: ResponseStreamDto) {
-    const { discussionId, socketId, content, type, membersToNotify } = response;
+  async handleStreamResponse(response: ResponseStreamDto) {
+    const { discussionId, socketId, content, type, membersToNotify, teamId } = response;
+    console.log(response)
 
     const client = this.server.sockets.sockets.get(socketId) as
       | AuthenticatedSocket
@@ -283,14 +281,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const emitToAll = (event: string, data: any) => {
       membersToNotify.forEach(userId => {
-        this.server.to(userId).emit(event, data);
+        this.server.to(userId).emit(event, {
+          ...data,
+          discussionId,
+          teamId
+        });
       });
     };
 
     if (type === 'chunk') {
       const currentMessage = client.data.accumulatedMessage || '';
       client.data.accumulatedMessage = currentMessage + content;
-      emitToAll(CHATBOT_PATTERN.RESPONSE_CHUNK, content);
+      emitToAll(CHATBOT_PATTERN.RESPONSE_CHUNK, { content });
     } else if (type === 'start') {
       emitToAll(CHATBOT_PATTERN.RESPONSE_START, content);
     } else if (type === 'error') {
@@ -303,20 +305,25 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.data.streamMetadata = { error: "Invalid metadata received" };
       }
     } else if (type === 'end') {
-      emitToAll(CHATBOT_PATTERN.RESPONSE_END, content);
 
       const fullMessage = client.data.accumulatedMessage || '';
+      console.log(fullMessage)
 
       if (fullMessage.trim().length > 0) {
-        this.amqpConnection.publish(
-          CHATBOT_EXCHANGE,
-          CHATBOT_PATTERN.CREATE,
-          {
+        const savedMessage = await this.amqpConnection.request<AiDiscussionDto>({
+          exchange: CHATBOT_EXCHANGE,
+          routingKey: CHATBOT_PATTERN.CREATE,
+          payload: {
             discussionId,
             message: fullMessage,
             metadata: client.data.streamMetadata,
           },
-        );
+        });
+
+        console.log(savedMessage)
+
+        emitToAll(CHATBOT_PATTERN.RESPONSE_END, { id: savedMessage._id });
+
         this.logger.log(
           `Saved streamed AI message for ${socketId} to discussion ${discussionId}.`,
         );

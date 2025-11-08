@@ -19,7 +19,7 @@ export function useSocketHandler() {
                 return `team_ai_${data.teamId}`;
             }
             if (data.discussionId) {
-                const personalId = useChatStore.getState().personalAiDiscussionId;
+                const personalId = store.personalAiDiscussionId;
                 if (data.discussionId === personalId) {
                     return "personal_ai";
                 }
@@ -31,7 +31,7 @@ export function useSocketHandler() {
         };
 
         const handleNewMessage = (data: NewMessageEvent) => {
-            store.appendMessage(data.discussionId, data.message);
+            store.appendMessage(data.message);
             store.upsertDiscussionMeta(data);
         };
 
@@ -40,8 +40,8 @@ export function useSocketHandler() {
         ) => {
             const storeId = getStoreDiscussionId(data);
             if (storeId) {
-                store.setStreaming(storeId, true);
-                store.appendStreamingPlaceholder(storeId);
+                store.setStreaming(true);
+                store.appendStreamingPlaceholder();
             }
         };
 
@@ -50,7 +50,7 @@ export function useSocketHandler() {
         ) => {
             const storeId = getStoreDiscussionId(data);
             if (storeId) {
-                store.updateStreamingMessage(storeId, data.content);
+                store.updateStreamingMessage(data.content);
             }
         };
 
@@ -59,7 +59,7 @@ export function useSocketHandler() {
         ) => {
             const storeId = getStoreDiscussionId(data);
             if (storeId) {
-                store.setStreaming(storeId, false);
+                store.setStreaming(false);
             }
         };
 
@@ -68,15 +68,15 @@ export function useSocketHandler() {
         ) => {
             const storeId = getStoreDiscussionId(data);
             if (storeId) {
-                store.handleStreamingError(storeId, data.content);
-                store.setStreaming(storeId, false);
+                store.handleStreamingError(data.content);
+                store.setStreaming(false);
             }
         };
 
         const handleAiMessageSaved = (savedMessage: AiMessage) => {
             const storeId = getStoreDiscussionId(savedMessage);
             if (storeId) {
-                store.finalizeStreamingMessage(storeId, savedMessage);
+                store.finalizeStreamingMessage(savedMessage);
             }
         };
 
@@ -85,7 +85,7 @@ export function useSocketHandler() {
         };
 
         const handleNewAiMessage = (aiMessage: AiMessage) => {
-            store.appendMessage(aiMessage.discussionId || "personal_ai", {
+            store.appendMessage({
                 _id: aiMessage._id,
                 sender: aiMessage.sender,
                 content: aiMessage.content,

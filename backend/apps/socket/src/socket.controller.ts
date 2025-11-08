@@ -67,7 +67,7 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   handleCreateTeam(payload: CreateTeamEventPayload) {
-    const { membersToNotify, createdAt, owner, teamSnapshot} = payload;
+    const { membersToNotify, createdAt, owner, teamSnapshot } = payload;
     const createAtDate = new Date(createdAt);
     membersToNotify.map((m) =>
       this.socketGateway.sendNotificationToUser({
@@ -230,8 +230,8 @@ export class SocketController {
     queue: CHATBOT_PATTERN.STREAM_RESPONSE,
     errorHandler: customErrorHandler
   })
-  handleStreamResponse(response: ResponseStreamDto) {
-    this.socketGateway.handleStreamResponse(response);
+  async handleStreamResponse(response: ResponseStreamDto) {
+    await this.socketGateway.handleStreamResponse(response);
   }
 
   @RabbitSubscribe({
@@ -240,7 +240,7 @@ export class SocketController {
     queue: 'events_socket_file_status',
     errorHandler: customErrorHandler
   })
-  handleFileStatus(payload: { fileId: string, fileName: string, status: FileStatus ,userId: string, teamId?: string }) {
+  handleFileStatus(payload: { fileId: string, fileName: string, status: FileStatus, userId: string, teamId?: string }) {
     console.log(payload)
     this.socketGateway.handleFileStatus(
       payload.fileId,

@@ -1,5 +1,6 @@
 import React from "react";
 import { Discussion, CurrentUser } from "../types/type";
+import { useChatStore } from "../store/useChatStore";
 
 interface DiscussionItemProps {
   discussion: Discussion;
@@ -9,8 +10,9 @@ interface DiscussionItemProps {
 }
 export const DiscussionItem: React.FC<DiscussionItemProps> = React.memo(
   ({ discussion, selected, onClick, currentUser }) => {
+    const { chatMode } = useChatStore();
     const getDisplayData = () => {
-      if (discussion.isGroup) {
+      if (chatMode === 'ai' || discussion.isGroup) {
         return {
           name: discussion.name || "Group Chat",
           avatar:
