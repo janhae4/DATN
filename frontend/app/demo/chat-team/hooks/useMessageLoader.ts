@@ -4,7 +4,7 @@ import { ApiService } from "../services/api-service";
 import { shallow, useShallow } from "zustand/shallow";
 import { useInfiniteScroll } from "./useInfiniteroll";
 
-const MESSAGE_LIMIT = 20;
+const MESSAGE_LIMIT = 10;
 
 export function useMessageLoader(
     selectedConversationId: string,
@@ -63,8 +63,6 @@ export function useMessageLoader(
 
             console.log("Đang tải tin nhắn TEAM cũ hơn...");
             await loadMessages(
-                chatMode,
-                selectedConversationId,
                 nextPage,
                 MESSAGE_LIMIT
             );

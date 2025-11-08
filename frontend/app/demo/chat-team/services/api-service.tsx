@@ -116,7 +116,7 @@ export const ApiService = {
   getMessages: (
     discussionId: string,
     page = 1,
-    limit = 20,
+    limit = 10,
     chatMode: "team" | "ai" = "team"
   ): Promise<PaginatedResponse<MessageData>> =>
     ApiService.request(
@@ -128,7 +128,7 @@ export const ApiService = {
   getTeamAiMessages: (
     teamId: string,
     page = 1,
-    limit = 20
+    limit = 10
   ): Promise<PaginatedResponse<MessageData>> =>
     ApiService.request(
       `/ai-discussions/teams/${teamId}/messages?page=${page}&limit=${limit}`

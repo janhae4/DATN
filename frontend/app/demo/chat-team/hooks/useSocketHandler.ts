@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useSocket, CHATBOT_PATTERN } from "@/app/SocketContext";
 import { useChatStore } from "../store/useChatStore";
-import { AiMessage, MessageData, NewMessageEvent, TeamRole } from "../types/type";
+import { AiMessage, AiNewMessageEvent, MessageData, NewMessageEvent, TeamRole } from "../types/type";
 import { useShallow } from "zustand/shallow";
 import { useInfiniteScroll } from "./useInfiniteroll";
 
@@ -59,19 +59,34 @@ export function useSocketHandler() {
     useEffect(() => {
         if (!socket) return;
 
-        const handleNewMessage = (data: NewMessageEvent) => {
+        const handleNewMessage = (data: NewMessageEvent | AiNewMessageEvent) => {
             console.log("🔥 [SOCKET] NEW_MESSAGE", data);
 
-            if (isEventForCurrentDiscussion({ discussionId: data.discussionId })) {
-                console.log("✅ → Append message to UI");
-                storeActions.appendMessage(data.message);
-            } else {
-                console.log("⛔ Event NOT for current discussion, skip append");
+            const isAIMessage = !("discussionId" in data && "participants" in data);
+            if (isAIMessage) {
+                console.log("🤖 [AI MESSAGE]");
+                if (isEventForCurrentDiscussion({ teamId: data.teamId })) {
+                    console.log("✅ → Append AI message to UI");
+                    storeActions.appendMessage(data.message);
+                } else {
+                    console.log("⛔ AI event NOT for current discussion");
+                }
+                return;
             }
 
-            console.log("🔄 → Update discussion meta");
+            console.log("👥 [USER MESSAGE]");
+
+            if (isEventForCurrentDiscussion({ discussionId: data.discussionId })) {
+                console.log("✅ → Append user message to UI");
+                storeActions.appendMessage(data.message);
+            } else {
+                console.log("⛔ User event NOT for current discussion");
+            }
+
+            console.log("🔄 → Update discussion meta (user)");
             storeActions.upsertDiscussionMeta(data);
         };
+
 
         const handleStreamStart = (data: { teamId?: string; discussionId?: string }) => {
             console.log("🟢 [SOCKET] STREAM_START", data);

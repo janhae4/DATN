@@ -187,7 +187,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Forwarding ask_question from User ${user.id} to AiDiscussionService`);
 
     try {
-      const savedDiscussion = await this.amqpConnection.request<AiDiscussionDto>({
+      const { discussion: savedDiscussion, membersToNotify } = await this.amqpConnection.request<{ discussion: AiDiscussionDto, membersToNotify: string[] }>({
         exchange: CHATBOT_EXCHANGE,
         routingKey: CHATBOT_PATTERN.HANDLE_MESSAGE,
         payload: {
@@ -204,10 +204,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new Error('Failed to save message');
       }
 
-      const broadcastRoom = teamId || discussionId;
-      client.broadcast
-        .to(broadcastRoom)
-        .emit('new_user_message', savedDiscussion);
+      this.logger.debug('Members to notify:', membersToNotify);
+      this.logger.debug('Saved discussion:', savedDiscussion);
+      membersToNotify.forEach(userId => {
+        this.server.to(userId).emit('new_message', {
+          _id: savedDiscussion.latestMessage,
+          message: savedDiscussion.latestMessageSnapshot,
+          teamId,
+        });
+      });
 
       return {
         event: 'message_saved',
@@ -260,7 +265,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleStreamResponse(response: ResponseStreamDto) {
     const { discussionId, socketId, content, type, membersToNotify, teamId } = response;
-    console.log(response)
 
     const client = this.server.sockets.sockets.get(socketId) as
       | AuthenticatedSocket
@@ -276,8 +280,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit(CHATBOT_PATTERN.RESPONSE_ERROR, { content: "Lỗi: Không tìm thấy người nhận stream (stream session error)." });
       return;
     }
-
-    this.logger.debug(`handleStreamResponse for ${client.id}, type: ${type}`);
 
     const emitToAll = (event: string, data: any) => {
       membersToNotify.forEach(userId => {
@@ -307,7 +309,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else if (type === 'end') {
 
       const fullMessage = client.data.accumulatedMessage || '';
-      console.log(fullMessage)
 
       if (fullMessage.trim().length > 0) {
         const savedMessage = await this.amqpConnection.request<AiDiscussionDto>({
@@ -320,7 +321,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           },
         });
 
-        console.log(savedMessage)
 
         emitToAll(CHATBOT_PATTERN.RESPONSE_END, { id: savedMessage._id });
 

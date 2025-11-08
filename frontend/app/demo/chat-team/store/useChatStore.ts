@@ -81,8 +81,7 @@ export interface ChatState {
     summarizeAiDocument: (currentUser: CurrentUser, socket: Socket, file: FileStatusEvent, teamId?: string) => void;
     prependMessages: (messages: MessageData[]) => void;
     removeTempMessage: (tempId: string) => void;
-    loadMessages: (chatMode: 'team' | 'ai', discussionId: string, page: number, limit: number) => Promise<number>;
-    loadAiTeamMessages: (teamId: string, page: number, limit: number) => Promise<number>;
+    loadMessages: (page: number, limit: number, mode?: 'team' | 'ai') => Promise<number>;
     sendAiMessage: (currentUser: CurrentUser, socket: Socket, teamId?: string) => void;
 
     loadInitialDiscussions: (chatMode: 'team' | 'ai') => Promise<void>;
@@ -228,51 +227,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
         socket.emit(CHATBOT_PATTERN.SUMMARIZE_DOCUMENT, payload);
     },
 
-    loadMessages: async (chatMode, discussionId, page, limit) => {
-        const { setHistoryLoading, prependMessages, setMessagePage, setHasMoreMessages } = get();
+    loadMessages: async (page, limit, mode?: "team" | "ai") => {
+        const { setHistoryLoading, prependMessages, setMessagePage, setHasMoreMessages, setMessagesForDiscussion, selectedDiscussion, chatMode } = get();
 
+        if (!selectedDiscussion) return 0;
         setHistoryLoading(true);
 
         try {
-            const response = await ApiService.getMessages(discussionId, page, limit, chatMode);
+            let response;
+            const actualMode = mode || chatMode;
+            console.log("Actual mode:", actualMode);
+            if (actualMode === "ai" && selectedDiscussion.teamId) {
+                response = await ApiService.getTeamAiMessages(selectedDiscussion.teamId, page, limit);
+            } else {
+                response = await ApiService.getMessages(selectedDiscussion._id, page, limit);
+            }
+
+            console.log(response)
 
             const reversedMessages = response.data.reverse();
             const hasMore = response.totalPages > page;
 
-            prependMessages(reversedMessages);
+            if (page === 1) {
+                setMessagesForDiscussion(reversedMessages, page, hasMore);
+            } else {
+                prependMessages(reversedMessages);
+            }
             setMessagePage(page);
             setHasMoreMessages(hasMore);
 
             return reversedMessages.length;
 
         } catch (error) {
-            console.error(`Failed to load more messages for ${discussionId}:`, error);
-            setHasMoreMessages(false);
-            return 0;
-        } finally {
-            setHistoryLoading(false);
-        }
-    },
-
-    loadAiTeamMessages: async (teamId: string, page: number, limit: number) => {
-        const { setHistoryLoading, setMessagePage, setHasMoreMessages, setMessagesForDiscussion, setSelectedDiscussion } = get();
-
-        setHistoryLoading(true);
-
-        try {
-            const response = await ApiService.getTeamAiMessages(teamId, page, limit);
-
-            const reversedMessages = response.data.reverse();
-            const hasMore = response.totalPages > page;
-
-            setMessagesForDiscussion(reversedMessages, page, hasMore);
-            setMessagePage(page);
-            setHasMoreMessages(hasMore);
-
-            return reversedMessages.length;
-
-        } catch (error) {
-            console.error(`Failed to load more messages for ${teamId}:`, error);
+            console.error(`Failed to load more messages for ${selectedDiscussion._id}:`, error);
             setHasMoreMessages(false);
             return 0;
         } finally {

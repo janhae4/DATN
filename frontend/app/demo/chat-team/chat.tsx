@@ -17,6 +17,8 @@ export function ChatPage({
 }) {
   useSocketHandler();
 
+  const [activeTab, setActiveTab] = useState<"team" | "ai">("team");
+
   const { selectedDiscussion, visibleDiscussions } = useChatStore(
     useShallow((state) => ({
       selectedDiscussion: state.selectedDiscussion,
@@ -36,13 +38,19 @@ export function ChatPage({
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans antialiased">
-      <ChatSidebar currentUser={currentUser} onLogout={onLogout} />
+      <ChatSidebar
+        currentUser={currentUser}
+        onLogout={onLogout}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
       <main className="flex-1 flex flex-col bg-gray-100">
         {selectedDiscussion ? (
           <ChatWindow
             currentUser={currentUser}
             selectedDiscussion={selectedDiscussion}
+            activeTab={activeTab}
           />
         ) : (
           teamChatPlaceholder

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ApiService } from "../services/api-service";
 import { useSocket } from "@/app/SocketContext";
-import { FileStatus, KnowledgeFile, PaginatedResponse, FileStatusEvent, PaginatedResponseT, KnowledgeFileResponse } from "../types/type";
+import { FileStatus, KnowledgeFile, PaginatedResponse, FileStatusEvent, KnowledgeFileResponse } from "../types/type";
 import axios from "axios";
 import { useInfiniteScroll } from "./useInfiniteroll";
 
@@ -20,7 +20,7 @@ const mapApiFileToKnowledgeFile = (apiFile: KnowledgeFileResponse): KnowledgeFil
     name: apiFile.originalName,
     status: apiFile.status,
     createdAt: apiFile.createdAt,
-    size:  0,
+    size: 0,
     type: determineFileType(apiFile.originalName),
 });
 
@@ -52,7 +52,7 @@ export function useKnowledgeFiles(teamId?: string) {
         if (pageToFetch === 1) setIsLoadingFiles(true);
         else setIsLoadingMore(true);
         try {
-            const response: PaginatedResponseT<KnowledgeFileResponse> = await ApiService.getKnowledgeFiles(
+            const response: PaginatedResponse<KnowledgeFileResponse> = await ApiService.getKnowledgeFiles(
                 teamId,
                 pageToFetch,
                 15
@@ -63,9 +63,9 @@ export function useKnowledgeFiles(teamId?: string) {
                 pageToFetch === 1 ? mappedFiles : [...prev, ...mappedFiles]
             );
             setPagination({
-                page: response.pagination.currentPage,
-                totalPages: response.pagination.totalPages,
-                totalItems: response.pagination.totalItems,
+                page: response.page,
+                totalPages: response.totalPages,
+                totalItems: response.totalItems || 0,
             });
             fileContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (err) { console.error("Failed to load knowledge files:", err); }
@@ -167,7 +167,7 @@ export function useKnowledgeFiles(teamId?: string) {
 
         setIsUploading(true);
         setUploadStatus(`Đang lấy link cho '${file.name}'...`);
-        let tempFileId = ''; 
+        let tempFileId = '';
 
         try {
             const { uploadUrl, fileId } = await ApiService.initiateUpload(file.name, teamId);

@@ -7,20 +7,21 @@ import { SearchPanel } from "./SearchPanel";
 import { useChatStore } from "../store/useChatStore";
 import { ManageMembersModal } from "./modals/ManageMemberModal";
 import { MessageList } from "./MessageList";
-import { AiKnowledgePage } from "./AiKnowledge";
 import { Discussion, CurrentUser, Team } from "../types/type";
 import { useShallow } from "zustand/shallow";
+import { useKnowledgeFiles } from "../hooks/useKnowledgeFile";
+import { KnowledgeSidebar } from "./KnowledgeSidebar";
 
 export function ChatWindow({
   currentUser,
   selectedDiscussion,
+  activeTab,
 }: {
   currentUser: CurrentUser;
   selectedDiscussion: Discussion;
+  activeTab: "team" | "ai";
 }) {
-  const [subActiveTab, setSubActiveTab] = useState<"discussion" | "ai">(
-    "discussion"
-  );
+  const [subActiveTab, setSubActiveTab] = useState<"discussion" | "ai">();
   const [isManageMembersModalOpen, setIsManageMembersModalOpen] =
     useState(false);
 
@@ -29,17 +30,14 @@ export function ChatWindow({
   const {
     loadInitialDiscussions,
     updateDiscussionInList,
-    loadAiTeamMessages,
     loadMessages,
     setSelectedDiscussion,
     setChatMode,
-    setMessageForDiscussion,
     chatMode,
   } = useChatStore(
     useShallow((state) => ({
       loadInitialDiscussions: state.loadInitialDiscussions,
       updateDiscussionInList: state.updateDiscussionInList,
-      loadAiTeamMessages: state.loadAiTeamMessages,
       loadMessages: state.loadMessages,
       setSelectedDiscussion: state.setSelectedDiscussion,
       setChatMode: state.setChatMode,
@@ -47,6 +45,24 @@ export function ChatWindow({
       chatMode: state.chatMode,
     }))
   );
+
+  const {
+    files,
+    isLoadingFiles,
+    isUploading,
+    uploadStatus,
+    fileInputRef,
+    fileContainerRef,
+    endFileRef,
+    isViewerOpen,
+    viewingFile,
+    isLoadingMore,
+    handleFileUpload,
+    handleFileDelete,
+    handleOpenFileViewer,
+    handleCloseFileViewer,
+    handleRenameSuccess,
+  } = useKnowledgeFiles(selectedDiscussion.teamId);
 
   const onDiscussionUpdated = useCallback(
     (updatedDiscussion: Team) => {
@@ -64,19 +80,19 @@ export function ChatWindow({
   }, [setSelectedDiscussion, loadInitialDiscussions]);
 
   useEffect(() => {
-    setMessageForDiscussion([], 1, true);
-
-    if (chatMode === "team") {
-      if (subActiveTab === "ai") {
-        setSubActiveTab("ai");
-        loadAiTeamMessages(selectedDiscussion?.teamId!, 1, 10);
-      } else if (subActiveTab === "discussion") {
-        setSubActiveTab("discussion");
-        loadMessages("team", selectedDiscussion._id, 1, 10);
-      }
-    } else {
-      loadMessages("ai", selectedDiscussion?._id, 1, 10);
+    if (activeTab === "team") {
+      setSubActiveTab("discussion");
     }
+  }, [activeTab]);
+
+  useEffect(() => {
+    console.log("CHAT WINDOW RENDERED");
+    if (!selectedDiscussion?._id) return;
+    const mode = subActiveTab === "discussion" ? "team" : "ai";
+    console.log("Mode:", mode);
+    console.log(subActiveTab);
+    setChatMode(mode);
+    loadMessages(1, 10, mode);
   }, [subActiveTab, selectedDiscussion, chatMode]);
 
   return (
@@ -99,7 +115,7 @@ export function ChatWindow({
         onSearch={() => setIsSearchActive(true)}
       />
 
-      {chatMode === "team" &&
+      {activeTab === "team" &&
         selectedDiscussion &&
         selectedDiscussion!.isGroup && (
           <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 pt-2 flex items-center gap-4">
@@ -133,15 +149,34 @@ export function ChatWindow({
           onClose={() => setIsSearchActive(false)}
         />
       )}
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <MessageList
-          currentUser={currentUser}
-          selectedDiscussionId={selectedDiscussion?._id}
-        />
-        <MessageInput
-          currentUser={currentUser}
-          selectedDiscussion={selectedDiscussion}
-        />
+      <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <MessageList
+            currentUser={currentUser}
+            selectedDiscussionId={selectedDiscussion?._id}
+          />
+          <MessageInput
+            currentUser={currentUser}
+            selectedDiscussion={selectedDiscussion}
+          />
+        </div>
+
+        {chatMode === "ai" && (
+          <KnowledgeSidebar
+            files={files}
+            isLoadingFiles={false}
+            isUploading={false}
+            uploadStatus={""}
+            fileInputRef={fileInputRef}
+            fileContainerRef={fileContainerRef}
+            endFileRef={endFileRef}
+            isLoadingMore={false}
+            handleFileUpload={handleFileUpload}
+            handleFileDelete={handleFileDelete}
+            handleOpenFileViewer={handleOpenFileViewer}
+            handleSummarize={() => {}}
+          />
+        )}
       </div>
     </>
   );

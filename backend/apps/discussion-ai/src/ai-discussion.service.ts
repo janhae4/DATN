@@ -338,7 +338,10 @@ export class AiDiscussionService {
       );
 
       console.log(aiDiscussion)
-      return aiDiscussion;
+      return {
+        discussion: aiDiscussion,
+        membersToNotify
+      };
 
     } catch (error) {
       this.logger.error(
@@ -624,6 +627,9 @@ export class AiDiscussionService {
     const totalQuery = this.aiMessageModel.countDocuments({ discussionId: discussion._id });
 
     const [messages, totalMessages] = await Promise.all([messagesQuery, totalQuery]);
+
+    this.logger.debug('Total messages:', totalMessages);
+    this.logger.debug(Math.ceil(totalMessages / limit))
 
     return {
       data: messages,

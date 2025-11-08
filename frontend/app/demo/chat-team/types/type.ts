@@ -156,7 +156,14 @@ export interface NewMessageEvent {
   message: MessageData;
   teamSnapshot?: TeamSnapshot;
   participants: Participant[];
+  teamId?: string;
   latestMessageSnapshot?: MessageData
+}
+
+export interface AiNewMessageEvent {
+  _id: string;
+  message: MessageData;
+  teamId: string;
 }
 
 export interface CreateTeam {
@@ -185,7 +192,7 @@ export type KnowledgeFileResponse = {
   createdAt: string;
 }
 
-export interface FileStatusEvent  {
+export interface FileStatusEvent {
   id: string;
   status: FileStatus;
   name: string

@@ -17,13 +17,16 @@ import { useShallow } from "zustand/shallow";
 export function ChatSidebar({
   currentUser,
   onLogout,
+  activeTab,
+  setActiveTab,
 }: {
   currentUser: CurrentUser;
   onLogout: () => void;
+  activeTab: "team" | "ai";
+  setActiveTab: (tab: "team" | "ai") => void;
 }) {
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"team" | "ai">("team");
 
   const {
     ensureDiscussionVisible,
@@ -31,7 +34,7 @@ export function ChatSidebar({
     setSelectedDiscussion,
     setChatMode,
     loadInitialDiscussions,
-    chatMode
+    chatMode,
   } = useChatStore(
     useShallow((state) => ({
       ensureDiscussionVisible: state.ensureDiscussionVisible,
@@ -39,13 +42,13 @@ export function ChatSidebar({
       setSelectedDiscussion: state.setSelectedDiscussion,
       setChatMode: state.setChatMode,
       loadInitialDiscussions: state.loadInitialDiscussions,
-      chatMode: state.chatMode
+      chatMode: state.chatMode,
     }))
   );
 
   useEffect(() => {
     loadInitialDiscussions(activeTab);
-  }, [activeTab, loadInitialDiscussions]);
+  }, [activeTab]);
 
   const handleChatCreated = useCallback(
     (newTeam: CreateTeam) => {
@@ -124,7 +127,7 @@ export function ChatSidebar({
           <DiscussionList
             currentUser={currentUser}
             onSelectDiscussion={(discussion) => {
-              setSelectedDiscussion({discussion, chatMode});
+              setSelectedDiscussion({ discussion, chatMode });
             }}
           />
         </div>

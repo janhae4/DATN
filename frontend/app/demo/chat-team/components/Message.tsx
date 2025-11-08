@@ -10,7 +10,7 @@ interface MessageProps {
 export const Message: React.FC<MessageProps> = ({ message, isCurrentUser }) => {
   if (
     message.sender?.role === TeamRole.SYSTEM ||
-    message.sender?._id === "system"
+    message.sender?._id === "SYSTEM_ID"
   ) {
     return (
       <div className="flex justify-center items-center my-3 w-full">

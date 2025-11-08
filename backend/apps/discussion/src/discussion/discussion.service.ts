@@ -432,6 +432,9 @@ export class DiscussionService {
 
     const totalPages = Math.ceil(totalItems / numericLimit);
 
+    this.logger.debug('Total messages:', totalItems, numericPage, numericLimit);
+    this.logger.debug(Math.ceil(totalItems / numericLimit))
+
     return {
       data: messages,
       page: numericPage,
