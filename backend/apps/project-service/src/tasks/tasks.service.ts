@@ -1,8 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { CreateTaskDto, UpdateTaskDto } from '@contracts';
+import { CreateTaskDto, NOTIFICATION_PATTERN, UpdateTaskDto } from '@app/contracts';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ClientProxy } from '@nestjs/microservices';
-import { NotificationPatterns } from '@contracts/notification';
 
 @Injectable()
 export class TasksService implements OnModuleInit {
@@ -10,7 +9,7 @@ export class TasksService implements OnModuleInit {
     private prisma: PrismaService,
     @Inject('NOTIFICATION_SERVICE_CLIENT')
     private notificationClient: ClientProxy,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     await this.notificationClient.connect();
@@ -24,8 +23,8 @@ export class TasksService implements OnModuleInit {
         ...rest,
         labels: labelIds
           ? {
-              connect: labelIds.map((id) => ({ id })),
-            }
+            connect: labelIds.map((id) => ({ id })),
+          }
           : undefined,
       },
       include: { labels: true }, // Return task with labels
@@ -33,7 +32,7 @@ export class TasksService implements OnModuleInit {
 
     // Send notification if task is assigned
     if (task.assigneeIds && task.assigneeIds.length > 0) {
-      this.notificationClient.emit(NotificationPatterns.taskAssigned, {
+      this.notificationClient.emit(NOTIFICATION_PATTERN.TASK_ASSIGNED, {
         taskId: task.id,
         taskTitle: task.title,
         assigneeIds: task.assigneeIds,
@@ -77,19 +76,19 @@ export class TasksService implements OnModuleInit {
         ...rest,
         labels: labelIds
           ? {
-              set: labelIds.map((id) => ({ id })),
-            }
+            set: labelIds.map((id) => ({ id })),
+          }
           : undefined,
       },
       include: { labels: true },
     });
 
     const newAssignees = updatedTask.assigneeIds.filter(
-      (id) => !oldTask.assigneeIds.includes(id),
+      (id) => !oldTask?.assigneeIds?.includes(id),
     );
 
     if (newAssignees.length > 0) {
-      this.notificationClient.emit(NotificationPatterns.taskAssigned, {
+      this.notificationClient.emit(NOTIFICATION_PATTERN.TASK_ASSIGNED, {
         taskId: updatedTask.id,
         taskTitle: updatedTask.title,
         assigneeIds: newAssignees,
@@ -105,3 +104,5 @@ export class TasksService implements OnModuleInit {
       where: { id: taskId },
     });
   }
+
+}

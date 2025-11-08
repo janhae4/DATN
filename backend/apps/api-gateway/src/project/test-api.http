@@ -1,0 +1,46 @@
+### Khai báo biến (chỉnh port nếu của mày khác 3000)
+@baseUrl = http://localhost:3000
+@email = nguyen@example.com
+@password = 1234567890@
+
+### 1. Đăng ký (Sign Up)
+# Gửi request để tạo user mới
+POST {{baseUrl}}/auth/account
+Content-Type: application/json
+
+{
+  "username": "nguyen",
+  "email": "nguyen@example.com",
+  "password": "1234567890@",
+  "name": "nguyen",
+}
+
+### -------------------------------------------
+# Dấu "###" này dùng để ngăn cách các request
+
+### 2. Đăng nhập (Login)
+# Request này sẽ trả về một cookie tên là 'accessToken'
+# Dòng "@name" ở dưới sẽ tự động lưu cái cookie đó vào biến
+@name loginRequest
+POST {{baseUrl}}/auth/session
+Content-Type: application/json
+
+{
+  "email": "nguynne",
+  "password": "123123"
+}
+
+### -------------------------------------------
+
+### 3. Tạo Project (CÓ KÈM ACCESS TOKEN)
+# Request này sẽ tự động "đính kèm" cái cookie đã lưu từ request số 2
+# (Vì VS Code REST Client nó "thông minh" tự làm vậy)
+POST {{baseUrl}}/project
+Content-Type: application/json
+# Cookie sẽ được gửi tự động bởi REST Client
+
+{
+  "name": "My First Project (via HTTP test)",
+  "description": "Cái này được tạo tự động để test luồng auth"
+
+}

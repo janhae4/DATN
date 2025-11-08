@@ -1,46 +1,40 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices'; // <-- Hàng "chính chủ"
+import { PROJECT_PATTERNS, CreateProjectDto, UpdateProjectDto } from '@app/contracts';
 import { ProjectsService } from './projects.service';
-import { CreateProjectDto, ProjectPatterns, UpdateProjectDto } from '@app/contracts'; // Import từ Libs
 
-@Controller() // Bỏ prefix '/projects'
+@Controller()
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(private readonly projectService: ProjectsService) {}
 
-  @MessagePattern(ProjectPatterns.create)
-  create(
-    @Payload()
-    payload: { createProjectDto: CreateProjectDto; ownerId: string },
-  ) {
-    return this.projectsService.create(
-      payload.createProjectDto,
-      payload.ownerId,
-    );
+  // --- CREATE ---
+  @MessagePattern(PROJECT_PATTERNS.CREATE) 
+  create(@Payload() createProjectDto: CreateProjectDto) {
+    console.log("createProjectDto in Service",createProjectDto);
+    return this.projectService.create(createProjectDto);
+
+  }
+  
+  // --- READ ---
+  @MessagePattern(PROJECT_PATTERNS.GET_BY_ID)
+  async findOne(@Payload() payload: { id: string }) {
+    const project = await this.projectService.findOne(payload.id);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+    return project;
   }
 
-  @MessagePattern(ProjectPatterns.findAll)
-  findAll(@Payload() payload: { userId: string }) {
-    return this.projectsService.findAllByUser(payload.userId);
+  // --- UPDATE ---
+  @MessagePattern(PROJECT_PATTERNS.UPDATE)
+  update(@Payload() payload: { id: string; updateProjectDto: UpdateProjectDto }) {
+    const { id, updateProjectDto } = payload;
+    return this.projectService.update(id, updateProjectDto);
   }
 
-  @MessagePattern(ProjectPatterns.getById)
-  findOne(@Payload() payload: { projectId: string }) {
-    return this.projectsService.findOne(payload.projectId);
-  }
-
-  @MessagePattern(ProjectPatterns.update)
-  update(
-    @Payload()
-    payload: { projectId: string; updateProjectDto: UpdateProjectDto },
-  ) {
-    return this.projectsService.update(
-      payload.projectId,
-      payload.updateProjectDto,
-    );
-  }
-
-  @MessagePattern(ProjectPatterns.remove)
-  remove(@Payload() payload: { projectId: string }) {
-    return this.projectsService.remove(payload.projectId);
+  // --- DELETE ---
+  @MessagePattern(PROJECT_PATTERNS.REMOVE)
+  remove(@Payload() payload: { id: string }) {
+    return this.projectService.remove(payload.id);
   }
 }

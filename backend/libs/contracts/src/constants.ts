@@ -6,8 +6,8 @@ export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
 export const REDIS_CLIENT_PORT = 6379;
 export const NOTIFICATION_CLIENT = Symbol('NOTIFICATION_CLIENT');
 export const NOTIFICATION_CLIENT_PORT = 4001;
-export const TASK_CLIENT = Symbol('TASK_CLIENT');
-export const TASK_CLIENT_PORT = 3003;
+export const PROJECT_CLIENT = Symbol('PROJECT_CLIENT');
+export const PROJECT_CLIENT_PORT = 3003;
 export const GMAIL_CLIENT = Symbol('GMAIL_CLIENT');
 export const GMAIL_CLIENT_PORT = 3005;
 export const TASK_NER_CLIENT = Symbol('TASK_NER_CLIENT');
@@ -57,5 +57,5 @@ export const EVENTS_CHATBOT_QUEUE = 'events_chatbot_queue';
 export const DIRECT_EXCHANGE = 'direct_exchange';
 export const TOPIC_EXCHANGE = 'topic_exchange';
 export const FILE_EXCHANGE = 'file_exchange';
-
+export const PROJECT_EXCHANGE = 'project_exchange';
 export const RPC_TIMEOUT = 10000;
