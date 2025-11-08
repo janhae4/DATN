@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RmqOptions, Transport } from '@nestjs/microservices';
+import { get } from 'http';
+import { string } from 'joi';
 @Injectable()
 export class ClientConfigService {
   constructor(private config: ConfigService) { }
@@ -8,7 +10,7 @@ export class ClientConfigService {
   /*
   DATABASE
   */
- get databaseTeamUrl(): string {
+  get databaseTeamUrl(): string {
     return this.config.get<string>(
       'DATABASE_TEAM_URL',
       'mongodb://localhost:27017/team',
@@ -474,5 +476,29 @@ export class ClientConfigService {
       'DATABASE_FILE_URL',
       'mongodb://localhost:27017/file',
     );
+  }
+
+  /*
+  -------------------------
+  ------ PROJECT CLIENT -----
+  -------------------------
+  */
+  getProjectClientPort(): number {
+    return this.config.get<number>('PROJECT_CLIENT_PORT', 3003);
+  }
+  getProjectQueue(): string {
+    return this.config.get<string>('PROJECT_QUEUE', 'project_service_queue');
+  }
+
+  // ĐÂY LÀ CÁI TA SẼ DÙNG
+  get projectClientOptions(): any { 
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getProjectQueue(), 
+        queueOptions: { durable: true },
+      },
+    };
   }
 }

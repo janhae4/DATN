@@ -16,5 +16,9 @@ export class CreateProjectDto {
   @IsString({ each: true })
   @IsOptional()
   memberIds?: string[] = [];
-  // ownerId sẽ được service thêm vào từ user đã xác thực
+
+  @IsString()
+  @IsOptional()
+  ownerId?: string;
 }
+
