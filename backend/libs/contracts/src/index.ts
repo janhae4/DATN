@@ -3,6 +3,13 @@ export * from './constants';
 export * from './pagination.dto';
 export * from './enum';
 
+export * from './label/label.errors';
+
+export * from './status/status.errors';
+export * from './status/status.patterns';
+export * from './status/create-status.dto';
+export * from './status/update-status.dto';
+
 /*----
 AUTH
 -----*/

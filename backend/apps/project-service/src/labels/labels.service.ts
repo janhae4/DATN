@@ -6,11 +6,21 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class LabelsService {
   constructor(private prisma: PrismaService) {}
 
-  create(createLabelDto: CreateLabelDto, projectId: string) {
+  create(createLabelDto: CreateLabelDto) {
+    if (!createLabelDto) {
+      throw new Error('CreateLabelDto is required');
+    }
+    if (!createLabelDto.name) {
+      throw new Error('Label name is required');
+    }
+    if (!createLabelDto.projectId) {
+      throw new Error('Project ID is required');
+    }
     return this.prisma.label.create({
       data: {
-        ...createLabelDto,
-        projectId,
+        name: createLabelDto.name,
+        projectId: createLabelDto.projectId,
+        color: createLabelDto.color || '#EFE9E3',
       },
     });
   }

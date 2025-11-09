@@ -11,55 +11,45 @@ import { SprintStatus, StatusEnum } from '@prisma/client'; // Import thêm Statu
 export class SprintsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createSprintDto: CreateSprintDto, userId: string) {
-    // 1. Kiểm tra quyền (Đúng)
+  async create(createSprintDto: CreateSprintDto) {
+    if (!createSprintDto.userId) {
+      throw new ForbiddenException(
+        'You do not have access to this project',
+      );
+    }
     const project = await this.prisma.projectMember.findUnique({
       where: {
         projectId_userId: {
           projectId: createSprintDto.projectId,
-          userId,
+          userId: createSprintDto.userId,
         },
       },
     });
 
     if (!project) {
       throw new ForbiddenException(
-        'Bạn không có quyền tạo sprint cho dự án này',
+        'You do not have access to this project',
       );
     }
 
-    // 2. Tạo Sprint (Đúng)
     return this.prisma.sprint.create({
       data: {
         title: createSprintDto.title,
         goal: createSprintDto.goal,
-        start_date: new Date(createSprintDto.start_date), // Giữ nguyên
-        end_date: new Date(createSprintDto.end_date),     // Giữ nguyên
+        start_date: new Date(createSprintDto.start_date),
+        end_date: new Date(createSprintDto.end_date),     
         projectId: createSprintDto.projectId,
-        status: createSprintDto.status || 'planned',
+        status: createSprintDto.status,
       },
     });
   }
 
-  async findAllByProjectId(projectId: string, userId: string) {
-    // 1. Kiểm tra quyền (Đúng)
-    const hasAccess = await this.prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: {
-          projectId,
-          userId,
-        },
-      },
-    });
+  async findAllByProjectId(projectId: string) {
+   
 
-    if (!hasAccess) {
-      throw new ForbiddenException('Bạn không có quyền truy cập dự án này');
-    }
-
-    // 2. Lấy Sprints (Sửa lỗi orderBy và include)
     return this.prisma.sprint.findMany({
       where: { projectId },
-      orderBy: { start_date: 'desc' }, // Sửa: startDate -> start_date
+      orderBy: { start_date: 'desc' }, 
       include: {
         tasks: {
           include: {
@@ -95,9 +85,8 @@ export class SprintsService {
       throw new NotFoundException(`Sprint với ID ${id} không tìm thấy`);
     }
 
-    // 3. Kiểm tra quyền (Đúng)
     if (sprint.project.members.length === 0) {
-      throw new ForbiddenException('Bạn không có quyền truy cập sprint này');
+      throw new ForbiddenException('You do not have access to this sprint');
     }
 
     const { project, ...result } = sprint; 
@@ -105,7 +94,6 @@ export class SprintsService {
   }
 
   async update(id: string, updateSprintDto: UpdateSprintDto, userId: string) {
-    // 1. Kiểm tra quyền (Đúng)
     const sprint = await this.prisma.sprint.findUnique({
       where: { id },
       include: {
@@ -165,7 +153,6 @@ export class SprintsService {
   }
 
   async remove(id: string, userId: string) {
-    // 1. Kiểm tra quyền (Đúng, logic này yêu cầu OWNER)
     const sprint = await this.prisma.sprint.findUnique({
       where: { id },
       include: {
@@ -200,7 +187,6 @@ export class SprintsService {
   }
 
   async getActiveSprint(projectId: string, userId: string) {
-    // 1. Kiểm tra quyền (Đúng)
     const hasAccess = await this.prisma.projectMember.findUnique({
       where: {
         projectId_userId: {
@@ -234,7 +220,6 @@ export class SprintsService {
   }
 
   async startSprint(id: string, userId: string) {
-    // 1. Kiểm tra quyền (Đúng)
     const sprint = await this.prisma.sprint.findUnique({
       where: { id },
       include: {

@@ -7,8 +7,8 @@ export class EpicsController {
   constructor(private readonly epicsService: EpicsService) {}
 
   @MessagePattern(EPIC_PATTERNS.CREATE)
-  create(@Payload() payload: { createEpicDto: CreateEpicDto; ownerId: string }) {
-    return this.epicsService.create(payload.createEpicDto, payload.ownerId);
+  create(@Payload() payload: { createEpicDto: CreateEpicDto;}) {
+    return this.epicsService.create(payload.createEpicDto);
   }
 
   @MessagePattern(EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID)

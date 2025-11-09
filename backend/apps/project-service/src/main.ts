@@ -13,6 +13,6 @@ async function bootstrap() {
   );
 
   await microservice.listen();
-  console.log('Project microservice is listening on port ' + configService.getProjectClientPort());
+  console.log('Project microservice is listening on port ' + configService.getProjectServiceClientPort());
 }
 bootstrap();

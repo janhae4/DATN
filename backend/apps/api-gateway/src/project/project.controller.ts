@@ -4,7 +4,6 @@ import { CreateProjectDto, JwtDto, Role, UpdateProjectDto } from '@app/contracts
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 @Controller('project')
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) { }

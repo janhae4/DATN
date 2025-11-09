@@ -1,23 +1,21 @@
 import { Module } from '@nestjs/common';
+import { ClientsModule } from '@nestjs/microservices';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
 import { PrismaModule } from '../../prisma/prisma.module';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ClientConfigModule, ClientConfigService } from '@app/contracts';
 
 @Module({
   imports: [
     PrismaModule,
-    ClientsModule.register([
+    ClientConfigModule,
+    ClientsModule.registerAsync([
       {
         name: 'NOTIFICATION_SERVICE_CLIENT',
-        transport: Transport.RMQ,
-        options: {
-          urls: [process.env.RMQ_URL || 'amqp://localhost:5672'],
-          queue: process.env.NOTIFICATION_SERVICE_QUEUE || 'notification_queue',
-          queueOptions: {
-            durable: true,
-          },
-        },
+        imports: [ClientConfigModule],
+        inject: [ClientConfigService],
+        useFactory: (configService: ClientConfigService) => 
+          configService.notificationClientOptions,
       },
     ]),
   ],

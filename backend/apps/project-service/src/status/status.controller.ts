@@ -8,18 +8,18 @@ export class StatusController {
   constructor(private readonly statusService: StatusService) {}
 
   @MessagePattern(STATUS_PATTERNS.CREATE)
-  create(@Payload() payload: { createStatusDto: CreateStatusDto; userId: string }) {
-    return this.statusService.create(payload.createStatusDto, payload.userId);
+  create(@Payload() payload: { createStatusDto: CreateStatusDto }) {
+    return this.statusService.create(payload.createStatusDto);
   }
 
   @MessagePattern(STATUS_PATTERNS.FIND_ALL_BY_PROJECT_ID)
   findAllByProjectId(@Payload() payload: { projectId: string; userId: string }) {
-    return this.statusService.findAllByProject(payload.projectId, payload.userId);
+    return this.statusService.findAllByProject(payload.projectId);
   }
 
   @MessagePattern(STATUS_PATTERNS.FIND_ONE_BY_ID)
   findOneById(@Payload() payload: { id: string; userId: string }) {
-    return this.statusService.findOne(payload.id, payload.userId);
+    return this.statusService.findOne(payload.id);
   }
 
   @MessagePattern(STATUS_PATTERNS.UPDATE)
@@ -34,7 +34,6 @@ export class StatusController {
     return this.statusService.update(
       payload.id,
       payload.updateStatusDto,
-      payload.userId,
     );
   }
 

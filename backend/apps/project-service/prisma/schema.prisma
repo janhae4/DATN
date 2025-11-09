@@ -141,7 +141,6 @@ model Epic {
   description String?
   status      EpicStatus @default(todo)
   priority    Priority?
-  ownerId     String
   projectId   String
   sprintId    String?
   start_date  DateTime?
