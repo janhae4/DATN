@@ -10,18 +10,21 @@ export class ProjectsService {
 
   // --- CREATE ---
   async create(createProjectDto: CreateProjectDto) {
+    if (!createProjectDto.ownerId) {
+      throw new Error('Owner ID is required');
+    }
     const { memberIds, ownerId, ...restOfDto } = createProjectDto;
 
-
-    const membersToCreate = (memberIds || [])
+    const membersToCreate: { userId: string; role: ProjectRole }[] = (memberIds || [])
       .map((id) => ({
         userId: id,
         role: ProjectRole.MEMBER
       }))
 
-    if (!ownerId) {
-      throw new Error('Owner ID is required');
-    }
+    membersToCreate.push({
+      userId: ownerId,
+      role: ProjectRole.OWNER
+    })
 
     const project = await this.prisma.project.create({
       data: {

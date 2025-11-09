@@ -1,56 +1,117 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateStatusDto, UpdateStatusDto } from '@app/contracts';
+import { ProjectRole } from '@prisma/client';
 
 @Injectable()
 export class StatusService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
-  async create(createStatusDto: CreateStatusDto, userId: string) {
-    const hasAccess = await this.prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: {
-          projectId: createStatusDto.projectId,
-          userId,
-        },
-      },
-    });
-
-    if (!hasAccess) {
-      throw new ForbiddenException('You do not have permission to create statuses for this project');
+  // check if the user role is owner or admin
+  private async checkUserRole(projectId: string, userId: string) {
+    // Validate inputs
+    if (!projectId) {
+      throw new Error('Project ID is required');
+    }
+    if (!userId) {
+      throw new Error('User ID is required');
     }
 
-    // Get the highest order value for this project
-    const lastStatus = await this.prisma.status.findFirst({
-      where: { projectId: createStatusDto.projectId },
-      orderBy: { order: 'desc' },
-      select: { order: true },
-    });
+    // Trim and validate UUID format
+    const trimmedProjectId = projectId.trim();
+    const trimmedUserId = userId.trim();
 
-    const newOrder = lastStatus ? lastStatus.order + 1 : 1;
+    console.log(`Checking user role - Project: ${trimmedProjectId}, User: ${trimmedUserId}`);
 
-    return this.prisma.status.create({
-      data: {
-        ...createStatusDto,
-        order: newOrder,
-      },
-    });
+    try {
+      const userRole = await this.prisma.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId: trimmedProjectId,
+            userId: trimmedUserId,
+          },
+        },
+        select: {
+          role: true
+        }
+      });
+
+      console.log('User role query result:', userRole);
+
+      if (!userRole) {
+        throw new ForbiddenException('You do not have access to this project');
+      }
+
+      return userRole.role;
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new Error('Error verifying user access: ' + (error.message || 'Unknown error'));
+    }
   }
 
-  async findAllByProject(projectId: string, userId: string) {
-    // Verify user has access to the project
-    const hasAccess = await this.prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: {
-          projectId,
-          userId,
-        },
-      },
-    });
+  async create(createStatusDto: CreateStatusDto) {
+    try {
+      console.log('Received create status request with data:', createStatusDto);
+      
+      // Input validation
+      if (!createStatusDto) {
+        throw new Error('Request body is required');
+      }
+      
+      const { projectId, userId, ...statusData } = createStatusDto;
+      
+      if (!projectId) {
+        throw new Error('projectId is required');
+      }
+      
+      if (!userId) {
+        throw new Error('userId is required');
+      }
 
-    if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this project');
+      console.log(`Verifying user ${userId} access to project ${projectId}`);
+      
+      // Verify user has access to the project
+      const userRole = await this.checkUserRole(projectId, userId);
+      if (userRole !== ProjectRole.OWNER && userRole !== ProjectRole.ADMIN) {
+        throw new ForbiddenException('You do not have permission to create statuses for this project');
+      }
+
+      // Get the highest order value for this project
+      const lastStatus = await this.prisma.status.findFirst({
+        where: { projectId },
+        orderBy: { order: 'desc' },
+      });
+
+      const order = lastStatus ? lastStatus.order + 1 : 0;
+
+      console.log(`Creating status with order ${order} in project ${projectId}`);
+      
+      // Create the status
+      const newStatus = await this.prisma.status.create({
+        data: {
+          ...statusData,
+          projectId,
+          order,
+        },
+      });
+
+      console.log('Successfully created status:', newStatus.id);
+      return newStatus;
+      
+    } catch (error) {
+      console.error('Error creating status:', error);
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new Error(error.message || 'Failed to create status');
     }
+  }
+
+  async findAllByProject(projectId: string) {
+    // Verify user has access to the project
 
     return this.prisma.status.findMany({
       where: { projectId },
@@ -58,14 +119,14 @@ export class StatusService {
     });
   }
 
-  async findOne(id: string, userId: string) {
+  async findOne(id: string) {
     const status = await this.prisma.status.findUnique({
       where: { id },
       include: {
         project: {
           include: {
             members: {
-              where: { userId },
+              where: { userId: id },
             },
           },
         },
@@ -85,7 +146,7 @@ export class StatusService {
     return result;
   }
 
-  async update(id: string, updateStatusDto: UpdateStatusDto, userId: string) {
+  async update(id: string, updateStatusDto: UpdateStatusDto) {
     // First verify the status exists and user has access
     const status = await this.prisma.status.findUnique({
       where: { id },
@@ -93,7 +154,7 @@ export class StatusService {
         project: {
           include: {
             members: {
-              where: { userId },
+              where: { userId: updateStatusDto.userId },
             },
           },
         },
@@ -120,7 +181,6 @@ export class StatusService {
   }
 
   async remove(id: string, userId: string) {
-    // First verify the status exists and user has access
     const status = await this.prisma.status.findUnique({
       where: { id },
       include: {
@@ -129,12 +189,12 @@ export class StatusService {
             members: {
               where: {
                 userId,
-                role: 'OWNER',
-              },
-            },
-          },
-        },
-      },
+                role: 'OWNER'
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!status) {

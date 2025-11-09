@@ -8,13 +8,13 @@ export class SprintsController {
   constructor(private readonly sprintsService: SprintsService) {}
 
   @MessagePattern(SPRINT_PATTERNS.CREATE)
-  create(@Payload() payload: { createSprintDto: CreateSprintDto; userId: string }) {
-    return this.sprintsService.create(payload.createSprintDto, payload.userId);
+  create(@Payload() payload: { createSprintDto: CreateSprintDto }) {
+    return this.sprintsService.create(payload.createSprintDto);
   }
 
   @MessagePattern(SPRINT_PATTERNS.FIND_ALL_BY_PROJECT_ID)
-  findAllByProjectId(@Payload() payload: { projectId: string; userId: string }) {
-    return this.sprintsService.findAllByProjectId(payload.projectId, payload.userId);
+  findAllByProjectId(@Payload() payload: { projectId: string }) {
+    return this.sprintsService.findAllByProjectId(payload.projectId);
   }
 
   @MessagePattern(SPRINT_PATTERNS.FIND_ONE_BY_ID)

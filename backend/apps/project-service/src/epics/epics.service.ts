@@ -6,12 +6,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class EpicsService {
   constructor(private prisma: PrismaService) {}
 
-  create(createEpicDto: CreateEpicDto, ownerId: string) {
+  create(createEpicDto: CreateEpicDto) {
     return this.prisma.epic.create({
-      data: {
-        ...createEpicDto,
-        ownerId: ownerId,
-      },
+      data: createEpicDto,
     });
   }
 

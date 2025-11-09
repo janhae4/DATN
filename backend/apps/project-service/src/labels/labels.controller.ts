@@ -8,8 +8,9 @@ export class LabelsController {
   constructor(private readonly labelsService: LabelsService) {}
 
   @MessagePattern(LABEL_PATTERNS.CREATE)
-  create(@Payload() payload: { createLabelDto: CreateLabelDto; projectId: string }) {
-    return this.labelsService.create(payload.createLabelDto, payload.projectId);
+  create(@Payload() payload: { createLabelDto: CreateLabelDto }) {
+    console.log('createLabelDto in Service', payload.createLabelDto);
+    return this.labelsService.create(payload.createLabelDto);
   }
 
   @MessagePattern(LABEL_PATTERNS.FIND_ALL_BY_PROJECT_ID)

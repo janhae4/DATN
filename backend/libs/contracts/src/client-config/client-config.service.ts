@@ -480,24 +480,22 @@ export class ClientConfigService {
 
   /*
   -------------------------
-  ------ PROJECT CLIENT -----
+  ------ PROJECT SERVICE CLIENT -----
   -------------------------
   */
-  getProjectClientPort(): number {
+  getProjectServiceClientPort(): number {
     return this.config.get<number>('PROJECT_CLIENT_PORT', 3003);
   }
   getProjectQueue(): string {
     return this.config.get<string>('PROJECT_QUEUE', 'project_service_queue');
   }
 
-  // ĐÂY LÀ CÁI TA SẼ DÙNG
-  get projectClientOptions(): any { 
+
+  get projectClientOptions(): any {
     return {
-      transport: Transport.RMQ,
+      transport: Transport.TCP,
       options: {
-        urls: [this.getRMQUrl()],
-        queue: this.getProjectQueue(), 
-        queueOptions: { durable: true },
+        port: this.getProjectServiceClientPort(),
       },
     };
   }

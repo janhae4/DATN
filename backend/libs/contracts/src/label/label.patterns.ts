@@ -4,4 +4,5 @@ export const LABEL_PATTERNS = {
   UPDATE: 'label.update',
   REMOVE: 'label.remove',
   FIND_ONE_BY_ID: 'label.findOneById',
+  
 };

@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
+import { ClientsModule } from '@nestjs/microservices';
+import { 
+  ClientConfigModule, 
+  ClientConfigService, 
+  PROJECT_CLIENT, 
+} from '@app/contracts';
+import { AuthModule } from '../auth/auth.module';
 import { ProjectController } from './project.controller';
 import { ProjectService } from './project.service';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ClientConfigModule, ClientConfigService, PROJECT_CLIENT } from '@app/contracts';
-import { AuthModule } from '../auth/auth.module';
-
 @Module({
   imports: [
     ClientConfigModule,
