@@ -43,4 +43,10 @@ export class TasksController {
     return this.tasksService.remove(payload.taskId);
   }
 
+  @MessagePattern(TASK_PATTERNS.ADD_FILES)
+  addFiles(
+    @Payload() payload: { taskId: string; fileIds: string[] },
+  ) {
+    return this.tasksService.addFilesToTask(payload.taskId, payload.fileIds);
+  }
 }

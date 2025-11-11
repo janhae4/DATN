@@ -55,4 +55,13 @@ export class TaskService {
       }),
     );
   }
+
+  async addFiles(taskId: string, fileIds: string[]) {
+    return firstValueFrom(
+      this.projectClient.send(TASK_PATTERNS.ADD_FILES, {
+        taskId,
+        fileIds,
+      }),
+    );
+  }
 }

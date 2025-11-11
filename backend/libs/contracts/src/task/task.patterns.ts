@@ -9,4 +9,5 @@ export const TASK_PATTERNS = {
   UPDATE: 'task.update',
   REMOVE: 'task.remove',
   FIND_GOOGLE_EVENTS: 'task.findGoogleEvents',
+  ADD_FILES: 'task.addFiles',
 };
