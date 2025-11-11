@@ -33,6 +33,7 @@ import { ProjectMemberModule } from '../project-member/project-member.module';
     EpicModule,
     TaskModule,
     ProjectModule,
+    
     ProjectMemberModule,
     WebhooksModule
   ],
