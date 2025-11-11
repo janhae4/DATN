@@ -92,6 +92,16 @@ export class CreateTaskDto {
   assigneeIds?: string[];
 
   @ApiPropertyOptional({
+    description: 'Array of file IDs associated with this task',
+    type: [String],
+    example: ['123e4567-e89b-12d3-a456-426614174000'],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  fileIds?: string[];
+
+  @ApiPropertyOptional({
     description: 'Array of label IDs associated with this task',
     type: [String],
     example: ['123e4567-e89b-12d3-a456-426614174000'],

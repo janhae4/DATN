@@ -65,4 +65,14 @@ export class TaskController {
   ) {
     return this.taskService.remove(id);
   }
+
+  @Post(':id/files')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  addFiles(
+    @Param('id') taskId: string,
+    @Body() addFilesDto: { fileIds: string[] },
+  ) {
+    return this.taskService.addFiles(taskId, addFilesDto.fileIds);
+  }
 }

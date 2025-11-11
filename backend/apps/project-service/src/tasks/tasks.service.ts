@@ -99,10 +99,34 @@ export class TasksService implements OnModuleInit {
     return updatedTask;
   }
 
-  remove(taskId: string) {
+  async remove(id: string) {
     return this.prisma.task.delete({
-      where: { id: taskId },
+      where: { id },
     });
   }
 
+  async addFilesToTask(taskId: string, fileIds: string[]) {
+    // First, get the current task to verify it exists
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      select: { id: true, fileIds: true },
+    });
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Merge existing fileIds with new ones and remove duplicates
+    const updatedFileIds = [...new Set([...(task.fileIds || []), ...fileIds])];
+
+    // Update the task with the new fileIds
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        fileIds: {
+          set: updatedFileIds,
+        },
+      },
+    });
+  }
 }
