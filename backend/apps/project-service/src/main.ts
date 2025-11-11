@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ProjectServiceModule } from './project-service.module';
-import { ClientConfigService } from '@app/contracts'; // Phải import config service
+import { ClientConfigService } from '@app/contracts'; 
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(ProjectServiceModule);

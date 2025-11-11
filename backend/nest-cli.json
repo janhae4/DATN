@@ -145,14 +145,25 @@
         "tsConfigPath": "apps/user/tsconfig.app.json"
       }
     },
-    "video-chat": {
-      "type": "application",
-      "root": "apps/video-chat",
-      "entryFile": "main",
-      "sourceRoot": "apps/video-chat/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/video-chat/tsconfig.app.json"
+      "video-chat": {
+        "type": "application",
+        "root": "apps/video-chat",
+        "entryFile": "main",
+        "sourceRoot": "apps/video-chat/src",
+        "compilerOptions": {
+          "tsConfigPath": "apps/video-chat/tsconfig.app.json"
+        }
+      }, 
+      "project-service": {
+        "type": "application",
+        "root": "apps/project-service",
+        "entryFile": "main",
+        "sourceRoot": "apps/project-service/src",
+        "compilerOptions": {
+          "tsConfigPath": "apps/project-service/tsconfig.app.json"
+        }
       }
-    }
+      
+
   }
 }
