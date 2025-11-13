@@ -1,7 +1,16 @@
 // lib/utils/backlog-utils.ts
 import { db } from "@/public/mock-data/mock-data"
-import { Status } from "@/types/status.interaface";
+import { Status } from "@/types/status.interface";
 import { Task } from "@/types/task.type"
+import { Flag } from "lucide-react"
+
+// Priority mapping
+export const priorityMap = {
+  'high': { label: 'High', icon: Flag, color: 'text-red-500' },
+  'medium': { label: 'Medium', icon: Flag, color: 'text-yellow-500' },
+  'low': { label: 'Low', icon: Flag, color: 'text-green-500' },
+  'none': { label: 'None', icon: Flag, color: 'text-gray-500' }
+} as const;
 
 // Lọc status cho Project 1
 export const statusesForProject1: Status[] = db.statuses

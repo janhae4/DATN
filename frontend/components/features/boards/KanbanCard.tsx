@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Task } from "@/types/task.type"
-import { Status } from "@/types/status.interaface"
+import { Status } from "@/types/status.interface"
 import { User } from "@/types/user.interface" // Import User type
 import { Label } from "@/types/label.interface" // Import Label type
 import { Card, CardContent } from "@/components/ui/card"
@@ -13,7 +13,7 @@ import { useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import { db } from "@/public/mock-data/mock-data" // Import db để lấy user, label
-import LabelTag from "@/components/ui/LabelTag"
+import LabelTag from "@/components/shared/label/LabelTag"
 import { getAssigneeInitial } from "@/lib/backlog-utils"
 
 interface KanbanCardProps {

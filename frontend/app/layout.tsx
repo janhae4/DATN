@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { Roboto } from 'next/font/google';
 import './globals.css';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const roboto = Roboto({
-  subsets: ['latin', 'vietnamese'], 
+  subsets: ['latin', 'vietnamese'],
   weight: ['400', '500', '700'],
   display: 'swap',
-  variable: '--font-roboto',  
+  variable: '--font-roboto',
 });
 
 export const metadata: Metadata = {
@@ -21,7 +22,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${roboto.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

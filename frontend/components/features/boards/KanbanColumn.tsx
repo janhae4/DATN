@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Task } from "@/types/task.type"
-import { Status } from "@/types/status.interaface"
+import { Status } from "@/types/status.interface"
 import { KanbanCard } from "./KanbanCard"
 import { useDroppable } from "@dnd-kit/core"
 import {

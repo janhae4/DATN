@@ -14,7 +14,6 @@ import { db } from "@/public/mock-data/mock-data"
 import { TaskTitle } from "./TaskTitle"
 import { TaskDescription } from "./TaskDescription"
 import { TaskMetaBox } from "./TaskMetaBox"
-import { TaskLabels } from "./TaskLabels"
 import { AttachmentsBox } from "@/components/shared/AttachmentsBox"
 
 type TaskDetailModalProps = {
@@ -88,8 +87,10 @@ export function TaskDetailModal({
                     <SheetTitle className="sr-only">Task Details: {task.title}</SheetTitle>
                     <TaskTitle
                         title={title}
-                        onTitleChange={setTitle}
-                        onBlur={() => handleTaskTitleChange(title)}
+                        onTitleChange={(newTitle) => {
+                            setTitle(newTitle);
+                            handleTaskTitleChange(newTitle);
+                        }}
                     />
                 </SheetHeader>
 
@@ -113,9 +114,6 @@ export function TaskDetailModal({
                         onPriorityChange={handleTaskPriorityChange}
                         getAssigneeInitial={getAssigneeInitial}
                     />
-
-                    {/* Labels Section */}
-                    <TaskLabels labelIds={task.labelIds || []} />
 
                     {/* Attachment Section */}
                     <AttachmentsBox />

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Icon } from '@iconify-icon/react';
 import styles from '@/app/(secondary)/auth/auth.module.css';
-
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import GoogleIcon from '@/public/assets/login_signup_resources/google_icon.jpg';
 import FacebookIcon from '@/public/assets/login_signup_resources/facebook_icon.jpg';
 import XIcon from '@/public/assets/login_signup_resources/x_icon.jpg';
@@ -16,13 +17,28 @@ interface LoginFormProps {
 }
 
 export const LoginForm = ({ isActive }: LoginFormProps) => {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const { login } = useAuth(); 
+    const router = useRouter();
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Login attempt:', { email, password });
+        setIsLoading(true);
+        setError(null);
+        login({ username, password })
+            .then(() => {
+                setIsLoading(false);
+                router.push('/dashboard');
+            })
+            .catch((error) => {
+                setIsLoading(false);
+                setError(error.message);
+            });
     };
 
     const handleGoogleLogin = () => {
@@ -39,16 +55,20 @@ export const LoginForm = ({ isActive }: LoginFormProps) => {
             </div>
             <div className={styles.separator}><span>or</span></div>
             <form onSubmit={handleSubmit} className={styles.form}>
-                <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
                 <div className={styles.input_wrapper}>
                     <Input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
                     <span className={styles.eye_icon} onClick={() => setShowPassword(!showPassword)}>
                         <Icon icon={showPassword ? "iconoir:eye-closed" : "iconoir:eye"} width="20" height="20" />
                     </span>
                 </div>
-                <Button type="submit" className={styles.submit_button}>Log In</Button>
+                <Button type="submit" className={styles.submit_button} disabled={isLoading}>
+                    {isLoading ? 'Logging in...' : 'Log In'}
+                </Button>
+                <div className={styles.forgot_password_link}>
+                    <a href="/auth/forgot-password">Forgot password?</a>
+                </div>
             </form>
-            {/* Sử dụng thẻ <a> để thay đổi URL hash */}
             <p className={styles.switch_form_link}> Do not have an account? <a href="#signup"><u>Create now</u></a></p>
         </div>
     );

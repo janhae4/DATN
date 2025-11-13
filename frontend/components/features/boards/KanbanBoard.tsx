@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/core"
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
 import { Task } from "@/types/task.type"
-import { Status } from "@/types/status.interaface"
+import { Status } from "@/types/status.interface"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 import { statusesForProject1 } from "@/lib/backlog-utils" // Lấy danh sách status
 import { KanbanColumn } from "./KanbanColumn";

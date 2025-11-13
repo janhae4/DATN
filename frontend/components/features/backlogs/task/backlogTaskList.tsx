@@ -1,12 +1,12 @@
-"use client"
-
 import * as React from "react"
-import { Table, TableBody } from "@/components/ui/table"
+import { Table } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { PlusIcon } from "lucide-react"
-import { AddNewTaskRow } from "./BacklogTaskRow"
-import TaskTreeList from "./TaskTreeList"
+import { AddNewTaskRow } from "./AddNewTaskRow"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
+import { TaskRowList } from "./TaskRowList"
+import { useDroppable } from "@dnd-kit/core"
+import { cn } from "@/lib/utils"
 
 type BacklogTaskListProps = {
   statuses?: any
@@ -17,42 +17,48 @@ export function BacklogTaskList({ statuses }: BacklogTaskListProps) {
     data,
     isAddingNewRow,
     setIsAddingNewRow,
+    handleRowClick, 
   } = useTaskManagementContext()
 
+  const backlogTasks = React.useMemo(
+    () => data.filter((task) => !task.sprintId),
+    [data]
+  )
+  
   const statusesList = statuses ?? []
 
-  const allSubtaskIds = React.useMemo(() => {
-    const ids = new Set<string>()
-    data.forEach((task) => {
-      task.subtaskIds?.forEach((id) => ids.add(id))
-    })
-    return ids
-  }, [data])
-
-  const topLevelTasks = React.useMemo(() => {
-    return data.filter((task) => !allSubtaskIds.has(task.id))
-  }, [data, allSubtaskIds])
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'backlog-drop-area',
+    data: {
+      type: 'backlog-drop-area'
+    }
+  });
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-lg ">
-        <Table>
-          <TaskTreeList
-            topLevelTasks={topLevelTasks}
+    <div className="flex flex-col">
+      <div className="rounded-lg">
+        <div 
+          ref={setNodeRef}
+          className={cn(
+            isOver && "ring-2 ring-primary/40 bg-primary/10"
+          )}
+        >
+          <Table>
+          <TaskRowList
+            tasks={backlogTasks}
             statuses={statusesList}
             isDraggable={true}
-          />
-
-          {isAddingNewRow && (
-            <TableBody>
+            isSortable={true} 
+            onRowClick={handleRowClick}
+          >
+            {isAddingNewRow && (
               <AddNewTaskRow
-                level={0}
-                parentId={null}
                 statuses={statusesList}
               />
-            </TableBody>
-          )}
-        </Table>
+            )}
+          </TaskRowList>
+          </Table>
+        </div>
       </div>
 
       {!isAddingNewRow && (

@@ -6,14 +6,16 @@ import { Task } from "@/types/task.type"
 import { db } from "@/public/mock-data/mock-data"
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useTaskManagement } from "@/hooks/useTaskManagement"
+import { TaskFilters, useTaskManagement } from "@/hooks/useTaskManagement"
 
 // Context type definition
 interface TaskManagementContextType {
   data: Task[]
+  allData: Task[]
+  filters: TaskFilters
+  setFilters: (filters: TaskFilters) => void
   selectedTask: Task | null
   isAddingNewRow: boolean
-  addingSubtaskTo: string | null
   newRowTitle: string
   newTaskPriority: Task["priority"]
   newTaskDueDate: Date | null
@@ -28,16 +30,24 @@ interface TaskManagementContextType {
   handlePriorityChange: (taskId: string, priority: Task["priority"]) => void
   handleStatusChange: (taskId: string, statusId: string) => void
   handleRowClick: (task: Task) => void
-  handleAddNewRow: (parentId: string | null) => void
-  handleInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, parentId: string | null) => void
+  handleAddNewRow: (parentId: string | null, sprintId?: string) => void
+  handleInputKeyDown: (
+    e: React.KeyboardEvent<HTMLInputElement>, 
+    parentId: string | null, 
+    options?: { 
+      sprintId?: string; 
+      onCancel?: () => void; 
+    }
+  ) => void
   handleDragEnd: (event: DragEndEvent) => void
   handleEpicChange: (taskId: string, epicId: string | null) => void
-  handleSprintChange: (taskId: string, sprintId: string | null) => void 
+  handleSprintChange: (taskId: string, sprintId: string | null) => void
+  handleLabelChange: (taskId: string, labelIds: string[]) => void
+  handleReorderTask: (activeId: string, overId: string) => void
 
   // Setters
   setNewRowTitle: (title: string) => void
   setIsAddingNewRow: (isAdding: boolean) => void
-  setAddingSubtaskTo: (id: string | null) => void
   setSelectedTask: (task: Task | null) => void
   setNewTaskPriority: (priority: Task["priority"]) => void
   setNewTaskDueDate: (date: Date | null) => void

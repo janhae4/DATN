@@ -4,7 +4,7 @@ import { Epic } from "@/types/epic.type";
 import { Label } from "@/types/label.interface";
 import { Project } from "@/types/project.type";
 import { Sprint } from "@/types/sprint.type";
-import { Status, statusEnum } from "@/types/status.interaface";
+import { Status, statusEnum } from "@/types/status.interface";
 import { Task } from "@/types/task.type";
 import { User } from "@/types/user.interface";
 import { Provider } from "@/types/user.interface";
@@ -15,6 +15,7 @@ const USER_2_ID = "user-2";
 const PROJECT_1_ID = "project-1";
 const SPRINT_1_ID = "sprint-1";
 const SPRINT_2_ID = "sprint-2";
+const SPRINT_3_ID = "sprint-3";
 const STATUS_1_ID = "status-1-todo";
 const STATUS_2_ID = "status-2-inprogress";
 const STATUS_3_ID = "status-3-done";
@@ -37,6 +38,7 @@ const STATUS_5_ID = "status-5-backlog"; // Mới cho Project 2
 const STATUS_6_ID = "status-6-p2-done"; // Mới cho Project 2
 const LABEL_3_ID = "label-3-design";
 const LABEL_4_ID = "label-4-backend";
+const LABEL_5_ID = "label-5-backend";
 const EPIC_2_ID = "epic-2-payment";
 const TASK_5_ID = "task-5-payment-api";
 const TASK_6_ID = "task-6-payment-ui";
@@ -194,18 +196,29 @@ const sprints: Sprint[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  {
-    id: SPRINT_2_ID,
-    title: "Sprint 2.0 - Auth",
-    goal: "Hoàn thành tính năng xác thực",
-    start_date: new Date("2025-10-15T00:00:00Z").toISOString(),
-    end_date: new Date("2025-10-28T23:59:59Z").toISOString(),
-    projectId: PROJECT_1_ID,
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+    {
+      id: SPRINT_2_ID,
+      title: "Sprint 2.0 - Auth",
+      goal: "Hoàn thành tính năng xác thực",
+      start_date: new Date("2025-10-15T00:00:00Z").toISOString(),
+      end_date: new Date("2025-10-28T23:59:59Z").toISOString(),
+      projectId: PROJECT_1_ID,
+      status: "active",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: SPRINT_3_ID,
+      title: "Sprint 3.0 - Payment",
+      goal: "Triển khai tính năng thanh toán",
+      start_date: new Date("2025-10-29T00:00:00Z").toISOString(),
+      end_date: new Date("2025-11-11T23:59:59Z").toISOString(),
+      projectId: PROJECT_1_ID,
+      status: "planned",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
 
 // --- Bảng Labels (cho Project 1) ---
 const labels: Label[] = [
@@ -235,14 +248,24 @@ const labels: Label[] = [
     updatedAt: new Date().toISOString(),
   },
   // --- THÊM MỚI (7) ---
-  {
-    id: LABEL_4_ID,
-    name: "Backend",
-    color: "#FDCB6E",
-    projectId: PROJECT_1_ID,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
+    {
+      id: LABEL_4_ID,
+      name: "Backend",
+      color: "#FDCB6E",
+      projectId: PROJECT_1_ID,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: LABEL_5_ID,
+      name: "Frontend",
+      color: "#FDCB6E",
+      projectId: PROJECT_1_ID,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    
+
 ];
 
 // --- Bảng Epics (cho Project 1) ---
@@ -290,11 +313,10 @@ const tasks: Task[] = [
     priority: "medium",
     assigneeIds: [USER_1_ID],
     due_date: new Date("2025-10-10T23:59:59Z").toISOString(),
-    subtaskIds: [TASK_2_ID, TASK_3_ID],
     epicId: EPIC_1_ID,
     projectId: PROJECT_1_ID,
     sprintId: SPRINT_1_ID,
-    labelIds: [LABEL_2_ID, LABEL_3_ID], // Thêm label Design
+    labelIds: [LABEL_2_ID, LABEL_3_ID, LABEL_4_ID, LABEL_5_ID], // Thêm label Design
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -305,8 +327,6 @@ const tasks: Task[] = [
     priority: null,
     assigneeIds: [USER_1_ID],
     due_date: null,
-    subtaskIds: [],
-    epicId: EPIC_1_ID,
     projectId: PROJECT_1_ID,
     sprintId: SPRINT_1_ID,
     labelIds: [],
@@ -320,8 +340,6 @@ const tasks: Task[] = [
     priority: null,
     assigneeIds: [USER_1_ID],
     due_date: null,
-    subtaskIds: [TASK_4_ID],
-    epicId: EPIC_1_ID,
     projectId: PROJECT_1_ID,
     sprintId: SPRINT_1_ID,
     labelIds: [],
@@ -336,7 +354,6 @@ const tasks: Task[] = [
     priority: "high",
     assigneeIds: [USER_2_ID],
     due_date: new Date("2025-10-20T23:59:59Z").toISOString(),
-    subtaskIds: [TASK_5_ID],
     epicId: EPIC_1_ID,
     projectId: PROJECT_1_ID,
     sprintId: SPRINT_2_ID,
@@ -353,7 +370,6 @@ const tasks: Task[] = [
     priority: "high",
     assigneeIds: [USER_2_ID], // Giao cho Bob
     due_date: null,
-    subtaskIds: [],
     epicId: EPIC_2_ID, // Thuộc Epic Payment
     projectId: PROJECT_1_ID,
     sprintId: SPRINT_2_ID, // Làm trong Sprint 2
@@ -370,7 +386,6 @@ const tasks: Task[] = [
     priority: "medium",
     assigneeIds: [USER_1_ID, USER_3_ID], // Giao cho Alice và Charlie
     due_date: null,
-    subtaskIds: [],
     epicId: EPIC_2_ID, // Thuộc Epic Payment
     projectId: PROJECT_1_ID,
     sprintId: null, // Chưa vào sprint
@@ -387,7 +402,6 @@ const tasks: Task[] = [
     priority: "low",
     assigneeIds: [USER_3_ID], // Giao cho Charlie
     due_date: null,
-    subtaskIds: [],
     epicId: null,
     projectId: PROJECT_2_ID, // Thuộc Project 2
     sprintId: null,

@@ -1,5 +1,5 @@
 export * from "./sprint.type";
-export * from "./status.interaface";
+export * from "./status.interface";
 export * from "./task.type";
 export * from "./label.interface";
 export * from "./project.type";

@@ -16,8 +16,9 @@ import {
   DragEndEvent,
   DragStartEvent,
   DragOverlay,
-  closestCenter
+closestCenter
 } from "@dnd-kit/core"
+import { arrayMove } from "@dnd-kit/sortable"
 import { Task } from "@/types/task.type"
 import { Epic } from "@/types/epic.type"
 import { Sprint } from "@/types/sprint.type"
@@ -26,9 +27,11 @@ import { db } from "@/public/mock-data/mock-data"
 
 import { BacklogTaskList } from "./task/backlogTaskList"
 import { EpicList } from "./epic/epicList"
-import { SprintList } from "./sprint/sprintList"
+import { SprintList } from "./sprint/SprintLists"
 import { TaskManagementProvider, useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 import { TaskDragOverlay } from "./task/TaskDragOverlay"
+import { EpicPicker } from "@/components/shared/epic/EpicPicker"
+import { BacklogFilterBar } from "./BacklogFilterBar"
 
 export default function Backlogs() {
   return (
@@ -47,9 +50,10 @@ function BacklogsContent() {
     handleDateChange,
     handlePriorityChange,
     handleUpdateCell,
-    handleDescriptionChange,
+    handleReorderTask,
     handleEpicChange,
     handleSprintChange,
+    handleDescriptionChange,
   } = useTaskManagementContext()
 
   const backlogTaskCount = React.useMemo(() => {
@@ -78,32 +82,59 @@ function BacklogsContent() {
       setActiveTask(task)
     }
   }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
+    setActiveTask(null)
+
     if (!over) {
-      setActiveTask(null)
       return
     }
+
     const task = active.data.current?.task as Task | undefined
     if (!task) {
-      setActiveTask(null)
       return
     }
+
     const dropType = over.data.current?.type
+
+    // Handle dropping onto Epic
     if (dropType === "epic-drop-area") {
       const epic = over.data.current?.epic as Epic | undefined
       if (epic && task.epicId !== epic.id) {
         handleEpicChange(task.id, epic.id)
       }
+      return
     }
-    else if (dropType === "sprint-drop-area") {
+    
+    // Handle dropping onto Sprint
+    if (dropType === "sprint-drop-area") {
       const sprint = over.data.current?.sprint as Sprint | undefined
       if (sprint && task.sprintId !== sprint.id) {
         handleSprintChange(task.id, sprint.id)
       }
+      return
     }
-    setActiveTask(null)
+
+    // Handle dropping onto Backlog (when dropping on the backlog area)
+    if (over.id === 'backlog-drop-area' && task.sprintId) {
+      handleSprintChange(task.id, null)
+      return
+    }
+
+    // Handle reordering tasks
+    const overTask = over.data.current?.task as Task | undefined
+    if (task && overTask && task.id !== overTask.id) {
+      // Allow reordering if:
+      // 1. Both tasks are in the backlog (no sprintId)
+      // 2. Both tasks are in the same sprint
+      if ((!task.sprintId && !overTask.sprintId) || 
+          (task.sprintId && task.sprintId === overTask.sprintId)) {
+        handleReorderTask(task.id, overTask.id)
+      }
+    }
   }
+
   function handleDragCancel() {
     setActiveTask(null)
   }
@@ -115,7 +146,6 @@ function BacklogsContent() {
       onDragCancel={handleDragCancel}
       collisionDetection={closestCenter}
     >
-
       {/* --- Drag Overlay (Không đổi) --- */}
       <DragOverlay dropAnimation={null}>
         {activeTask ? (
@@ -124,7 +154,6 @@ function BacklogsContent() {
       </DragOverlay>
 
       <div className="flex flex-col gap-8 py-4">
-        {/* --- Task detail modal (Không đổi) --- */}
         <TaskDetailModal
           task={selectedTask}
           open={!!selectedTask}
@@ -138,16 +167,18 @@ function BacklogsContent() {
           onDescriptionChange={handleDescriptionChange}
         />
 
-        {/* --- BẮT ĐẦU NÂNG CẤP UI ACCORDION --- */}
+
         <Accordion
           type="multiple"
           defaultValue={["backlog", "sprints", "epics"]}
           className="w-full flex flex-col gap-4 "
         >
+          <BacklogFilterBar/>
+
           {/* Phần Backlog */}
           <AccordionItem value="backlog" className="rounded-lg border">
             <AccordionTrigger
-              className="flex w-full items-center justify-between gap-4 rounded-lg px-4 py-3 font-medium transition-all hover:bg-muted/50 hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-muted/50"
+              className="flex w-full items-center justify-between gap-4 rounded-lg  px-4 py-3 font-medium transition-all hover:bg-muted/50 hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-muted/50"
             >
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2">
@@ -164,43 +195,9 @@ function BacklogsContent() {
             </AccordionContent>
           </AccordionItem>
 
-          {/* Phần Epics */}
-          <AccordionItem value="epics" className="rounded-lg ">
-            <AccordionTrigger
-              className="flex w-full border items-center justify-between gap-4 rounded-lg px-4 py-3 font-medium transition-all hover:bg-muted/50 hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-muted/50"
-            >
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-muted-foreground" />
-                  <span>Epics</span>
-                </div>
-                <Badge variant="secondary">{epicsCount} epics</Badge>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="py-2">
-              <EpicList
-                statuses={statusesForProject1}
-              />
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Phần Sprints */}
-          <AccordionItem value="sprints" className="rounded-lg  ">
-            <AccordionTrigger
-              className="border flex w-full items-center justify-between gap-4 rounded-lg px-4 py-3 font-medium transition-all hover:bg-muted/50 hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-muted/50"
-            >
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <Rocket className="h-5 w-5 text-muted-foreground" />
-                  <span>Sprints</span>
-                </div>
-                <Badge variant="secondary">{activeSprintsCount} sprints</Badge>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="py-2">
+            {/* Phần Sprints */}
+        
               <SprintList />
-            </AccordionContent>
-          </AccordionItem>
 
 
         </Accordion>

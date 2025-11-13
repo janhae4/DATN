@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Icon } from '@iconify-icon/react';
 import styles from '@/app/(secondary)/auth/auth.module.css';
-
+import { useRouter } from 'next/navigation'; // <--- IMPORT
+import { useAuth } from '@/contexts/AuthContext'; // <--- IMPORT
 import GoogleIcon from '@/public/assets/login_signup_resources/google_icon.jpg';
 import FacebookIcon from '@/public/assets/login_signup_resources/facebook_icon.jpg';
 import XIcon from '@/public/assets/login_signup_resources/x_icon.jpg';
@@ -16,14 +17,48 @@ interface SignupFormProps {
 }
 
 export const SignupForm = ({ isActive }: SignupFormProps) => {
-    const [fullName, setFullName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [formData, setFormData] = useState<{
+        username: string;
+        email: string;
+        password: string;
+        name: string;
+        phone?: string;
+    }>({
+        username: '',
+        email: '',
+        password: '',
+        name: '',
+    });
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const { register } = useAuth();
+    const router = useRouter();
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Signup attempt:', { fullName, email, password });
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            await register(formData);
+            router.push('/dashboard');
+        } catch (error: any) {
+            // The error should now be properly propagated from authService
+            setError(error.message || 'Registration failed. Please check your information and try again.');
+            console.error('Signup error:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleGoogleLogin = () => {
@@ -40,17 +75,57 @@ export const SignupForm = ({ isActive }: SignupFormProps) => {
             </div>
             <div className={styles.separator}><span>or</span></div>
             <form onSubmit={handleSubmit} className={styles.form}>
-                <Input type="text" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input 
+                    type="text" 
+                    name="name"
+                    placeholder="Full Name" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                    required 
+                />
+                <Input 
+                    type="text" 
+                    name="username"
+                    placeholder="Username" 
+                    value={formData.username} 
+                    onChange={handleChange} 
+                    required 
+                />
+                <Input 
+                    type="email" 
+                    name="email"
+                    placeholder="Email" 
+                    value={formData.email} 
+                    onChange={handleChange} 
+                    required 
+                />
                 <div className={styles.input_wrapper}>
-                    <Input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <Input 
+                        type={showPassword ? 'text' : 'password'} 
+                        name="password"
+                        placeholder="Password" 
+                        value={formData.password} 
+                        onChange={handleChange} 
+                        required 
+                        minLength={6}
+                    />
                     <span className={styles.eye_icon} onClick={() => setShowPassword(!showPassword)}>
                         <Icon icon={showPassword ? "iconoir:eye-closed" : "iconoir:eye"} width="20" height="20" />
                     </span>
                 </div>
-                <Button type="submit" className={styles.submit_button}>Get Started</Button>
+                {error && (
+                    <div className="text-red-500 text-sm mb-4 text-center">
+                        {error}
+                    </div>
+                )}
+                <Button 
+                    type="submit" 
+                    className={styles.submit_button}
+                    disabled={isLoading}
+                >
+                    {isLoading ? 'Creating Account...' : 'Get Started'}
+                </Button>
             </form>
-            {/* Sử dụng thẻ <a> để thay đổi URL hash */}
             <p className={styles.switch_form_link}>Already have an account? <a href="#login">Log in</a></p>
         </div>
     );
