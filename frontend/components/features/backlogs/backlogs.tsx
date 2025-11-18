@@ -27,11 +27,11 @@ import { db } from "@/public/mock-data/mock-data"
 
 import { BacklogTaskList } from "./task/backlogTaskList"
 import { EpicList } from "./epic/epicList"
-import { SprintList } from "./sprint/SprintLists"
 import { TaskManagementProvider, useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 import { TaskDragOverlay } from "./task/TaskDragOverlay"
 import { EpicPicker } from "@/components/shared/epic/EpicPicker"
 import { BacklogFilterBar } from "./BacklogFilterBar"
+import { SprintList } from "./sprint/sprintLists"
 
 export default function Backlogs() {
   return (
