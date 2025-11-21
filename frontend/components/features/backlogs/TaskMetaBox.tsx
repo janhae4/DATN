@@ -1,35 +1,38 @@
 import * as React from "react";
 import { Clock, User as UserIcon, CalendarIcon, FlagIcon, Network, Tag, Plus } from "lucide-react";
-import { Status } from "@/types/status.interface";
+import { List } from "@/types";
 import { LabelTag } from "@/components/shared/label/LabelTag";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { PriorityPicker } from "@/components/shared/PriorityPicker";
-import { StatusPicker } from "@/components/shared/status/StatusPicker";
+import { ListPicker } from "@/components/shared/list/ListPicker";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DetailRow } from "@/components/shared/DetailRow";
-import { Task } from "@/types/task.type";
+import { Task } from "@/types";
 import { LabelPopover } from "@/components/shared/label/LabelPopover";
-import { Label } from "@/types/label.interface";
+import { Label } from "@/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { db } from "@/public/mock-data/mock-data";
+import { AssigneePicker } from "@/components/shared/assignee/AssigneePicker";
 
 interface TaskMetaBoxProps {
   task: Task;
-  statuses: Status[];
-  onStatusChange: (statusId: string) => void;
+  lists: List[];
+  onListChange: (listId: string) => void;
   onDateChange: (date: Date | undefined) => void;
   onPriorityChange: (priority: Task["priority"]) => void;
+  onAssigneeChange: (assigneeIds: string[]) => void;
   getAssigneeInitial: (id: string) => string;
   onLabelsChange?: (labelIds: string[]) => void;
 }
 
 export function TaskMetaBox({
   task,
-  statuses,
-  onStatusChange,
+  lists,
+  onListChange,
   onDateChange,
   onPriorityChange,
+  onAssigneeChange,
   getAssigneeInitial,
   onLabelsChange,
 }: TaskMetaBoxProps) {
@@ -45,26 +48,25 @@ export function TaskMetaBox({
       <h3 className="text-sm font-medium">Details</h3>
       <div className="space-y-4 rounded-md border p-4">
         <DetailRow icon={<Clock className="h-4 w-4" />} label="Status">
-          <StatusPicker
-            statuses={statuses}
-            value={task.statusId || undefined}
-            onChange={onStatusChange}
+          <ListPicker
+            lists={lists}
+            value={task.listId || undefined}
+            onChange={onListChange}
           />
         </DetailRow>
 
         <DetailRow icon={<UserIcon className="h-4 w-4" />} label="Assignees">
           <div className="flex -space-x-2">
-            {task.assigneeIds.map((id) => (
-              <Avatar key={id} className="h-8 w-8 border-2 border-background">
-                <AvatarFallback>{getAssigneeInitial(id)}</AvatarFallback>
-              </Avatar>
-            ))}
+            <AssigneePicker
+              value={task.assigneeIds || []}
+              onChange={onAssigneeChange}
+            />
           </div>
         </DetailRow>
 
         <DetailRow icon={<CalendarIcon className="h-4 w-4" />} label="Due date">
           <DatePicker
-            date={task.due_date || undefined}
+            date={task.dueDate ? new Date(task.dueDate) : undefined}
             onDateSelect={onDateChange}
           />
         </DetailRow>

@@ -17,16 +17,17 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { getAssigneeInitial, priorityMap, statusesForProject1 } from "@/lib/backlog-utils"
-import { Check, ChevronDown, PlusCircle, User, Flag, CheckCircle2, X } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getAssigneeInitial, priorityMap } from "@/lib/backlog-utils"
+import { Check, ChevronDown, PlusCircle, User, Flag, CheckCircle2, X, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { TaskFilters } from "@/hooks/useTaskManagement"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
-import { Task } from "@/types/task.type"
+import { Task, List } from "@/types"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { useList } from "@/hooks/useList"
 
 // Lấy list priority từ map
 const priorityList = Object.entries(priorityMap).map(([key, value]) => ({
@@ -35,21 +36,20 @@ const priorityList = Object.entries(priorityMap).map(([key, value]) => ({
   icon: value.icon,
 }))
 
-// Lấy list status
-const statusList = statusesForProject1.map(s => ({
-  value: s.id,
-  label: s.name,
-  icon: () => <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-}))
-
 // Lấy list user
 const userList = [
   ...db.users,
   { id: "unassigned", name: "Unassigned" } // Thêm option "Unassigned"
 ]
 
-export function BacklogFilterBar() {
-  const { filters, setFilters } = useTaskManagementContext()
+interface BacklogFilterBarProps {
+  showCreateSprint?: boolean
+  showStatusFilter?: boolean
+}
+
+export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = true }: BacklogFilterBarProps) {
+  const { filters, setFilters, projectId, epics } = useTaskManagementContext()
+  const { lists } = useList(projectId)
 
   // Dùng state local để control UI, sau đó "debounce" update context
   const [searchText, setSearchText] = React.useState(filters.searchText)
@@ -80,7 +80,8 @@ export function BacklogFilterBar() {
       searchText: "",
       assigneeIds: [],
       priorities: [],
-      statusIds: [],
+      listIds: [],
+      epicIds: [],
     })
   }
 
@@ -88,10 +89,25 @@ export function BacklogFilterBar() {
     filters.searchText.length > 0 ||
     filters.assigneeIds.length > 0 ||
     filters.priorities.length > 0 ||
-    filters.statusIds.length > 0
+    filters.listIds.length > 0 ||
+    filters.epicIds.length > 0
+
+  // Lấy list status options
+  const listOptions = lists.map(l => ({
+    value: l.id,
+    label: l.name,
+    icon: () => <span className="h-2 w-2 rounded-full" style={{ backgroundColor: l.color }} />
+  }))
+
+  // Lấy list epic options
+  const epicOptions = epics.map(e => ({
+    value: e.id,
+    label: e.title,
+    icon: () => <div className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: e.color || "#a1a1aa" }} />
+  }))
 
   return (
-    <div className="flex w-full items-center gap-2 px-1 py-2">
+    <div className="flex w-full items-center gap-2  py-2">
       {/* Search Input */}
       <div className="flex-1">
         <Input
@@ -111,7 +127,12 @@ export function BacklogFilterBar() {
           label: u.name,
           icon: u.id === "unassigned" 
             ? () => <User className="h-4 w-4 text-muted-foreground" />
-            : () => <Avatar className="h-5 w-5"><AvatarFallback className="text-[10px]">{getAssigneeInitial(u.id)}</AvatarFallback></Avatar>
+            : () => (
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={(u as any).avatar} alt={u.name} />
+                  <AvatarFallback className="text-[10px]">{getAssigneeInitial(u.id)}</AvatarFallback>
+                </Avatar>
+              )
         }))}
         selectedValues={filters.assigneeIds}
         onSelectionChange={(values) => handleFilterChange("assigneeIds", values)}
@@ -121,18 +142,29 @@ export function BacklogFilterBar() {
       <MultiSelectFilter
         label="Priority"
         icon={<Flag className="h-3.5 w-3.5" />}
-        options={priorityList}
-        selectedValues={filters.priorities}
-        onSelectionChange={(values) => handleFilterChange("priorities", values)}
+        options={priorityList as any}
+        selectedValues={filters.priorities as any}
+        onSelectionChange={(values) => handleFilterChange("priorities", values as any)}
       />
 
       {/* Status Filter */}
+      {showStatusFilter && (
+        <MultiSelectFilter
+          label="Status"
+          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+          options={listOptions}
+          selectedValues={filters.listIds}
+          onSelectionChange={(values) => handleFilterChange("listIds", values)}
+        />
+      )}
+
+      {/* Epic Filter */}
       <MultiSelectFilter
-        label="Status"
-        icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-        options={statusList}
-        selectedValues={filters.statusIds}
-        onSelectionChange={(values) => handleFilterChange("statusIds", values)}
+        label="Epic"
+        icon={<Layers className="h-3.5 w-3.5" />}
+        options={epicOptions}
+        selectedValues={filters.epicIds}
+        onSelectionChange={(values) => handleFilterChange("epicIds", values)}
       />
 
       {/* Clear Button */}
@@ -148,7 +180,7 @@ export function BacklogFilterBar() {
         </Button>
       )}
 
-      <Button variant="default" size="sm" className="h-9 px-3">Create Sprint</Button>
+      {showCreateSprint && <Button variant="default" size="sm" className="h-9 px-3">Create Sprint</Button>}
     </div>
   )
 }
@@ -193,7 +225,7 @@ function MultiSelectFilter<T extends string | null>({
           <span className="text-sm font-normal">{label}</span>
           {selectedValues.length > 0 && (
             <>
-              <CommandSeparator className="h-4 mx-1" />
+              <Separator orientation="vertical" className="h-4 mx-1" />
               <Badge
                 variant="secondary"
                 className="rounded-md px-1.5 py-0 text-xs"

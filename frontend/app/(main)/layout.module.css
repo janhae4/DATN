@@ -1,18 +1,26 @@
     .mainLayout {
       display: flex;
-      height: 100vh;
+      height: 100%;
       flex: 1;
+      width: 100%;
+      overflow: hidden;
     }
 
     .content {
       flex-grow: 1;
       display: flex;
       flex-direction: column;
-      overflow-y: auto; /* Cho phép cuộn nếu nội dung dài */
+      overflow: hidden;
+      min-width: 0;
     }
 
     .pageWrapper {
       padding: 1.5rem;
       flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
     

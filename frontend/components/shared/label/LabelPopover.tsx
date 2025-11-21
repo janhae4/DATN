@@ -4,7 +4,7 @@ import * as React from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Tags } from "lucide-react"
-import { Label } from "@/types/label.interface"
+import { Label } from "@/types"
 import { db } from "@/public/mock-data/mock-data"
 import { LabelInput } from "./LabelInput"
 // Bỏ LabelTag vì không dùng ở list nữa

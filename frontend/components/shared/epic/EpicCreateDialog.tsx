@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select"
 import { db } from "@/public/mock-data/mock-data"
 import { toast } from "sonner"
-import { Epic } from "@/types/epic.type"
+import { Epic, EpicStatus, Priority } from "@/types"
 // --- 2. BỎ IMPORT PriorityPicker ---
 // import { PriorityPicker } from "../PriorityPicker"
 import { DateRangePicker } from "../DateRangePicker"
@@ -42,21 +42,22 @@ import {
 } from "lucide-react"
 
 // --- 4. ĐỊNH NGHĨA MAP CHO STATUS (GIỐNG FILE EDIT) ---
-const statusMap: Record<Epic["status"], { label: string; icon: React.ElementType; color: string }> = {
-  "todo": { label: "To do", icon: Circle, color: "text-neutral-500" },
-  "in_progress": { label: "In Progress", icon: CircleEllipsis, color: "text-blue-500" },
-  "done": { label: "Done", icon: CheckCircle2, color: "text-green-500" },
-  "canceled": { label: "Canceled", icon: XCircle, color: "text-red-500" },
+const statusMap: Record<EpicStatus, { label: string; icon: React.ElementType; color: string }> = {
+  [EpicStatus.TODO]: { label: "To do", icon: Circle, color: "text-neutral-500" },
+  [EpicStatus.IN_PROGRESS]: { label: "In Progress", icon: CircleEllipsis, color: "text-blue-500" },
+  [EpicStatus.DONE]: { label: "Done", icon: CheckCircle2, color: "text-green-500" },
+  [EpicStatus.CANCELED]: { label: "Canceled", icon: XCircle, color: "text-red-500" },
 }
-const statusOptions = Object.keys(statusMap) as Epic["status"][]
+const statusOptions = Object.values(EpicStatus)
 
 // --- 5. ĐỊNH NGHĨA MAP CHO PRIORITY (GIỐNG FILE EDIT) ---
-const priorityMap: Record<NonNullable<Epic["priority"]>, { label: string; icon: React.ElementType; color: string }> = {
-  "high": { label: "High", icon: Flag, color: "text-red-500" },
-  "medium": { label: "Medium", icon: Flag, color: "text-yellow-500" },
-  "low": { label: "Low", icon: Flag, color: "text-blue-500" },
+const priorityMap: Record<Priority, { label: string; icon: React.ElementType; color: string }> = {
+  [Priority.HIGH]: { label: "High", icon: Flag, color: "text-red-500" },
+  [Priority.MEDIUM]: { label: "Medium", icon: Flag, color: "text-yellow-500" },
+  [Priority.LOW]: { label: "Low", icon: Flag, color: "text-blue-500" },
+  [Priority.URGENT]: { label: "Urgent", icon: Flag, color: "text-red-600" },
 }
-const priorityOptions = Object.keys(priorityMap) as NonNullable<Epic["priority"]>[]
+const priorityOptions = Object.values(Priority)
 
 const nullPriority = {
   label: "No priority",
@@ -78,8 +79,8 @@ export function EpicCreateDialog({
   // --- 6. SỬA STATE CHO DATE ---
   const [title, setTitle] = React.useState("")
   const [description, setDescription] = React.useState("")
-  const [status, setStatus] = React.useState<Epic["status"]>("todo")
-  const [priority, setPriority] = React.useState<Epic["priority"]>(null) // Mặc định là null
+  const [status, setStatus] = React.useState<EpicStatus>(EpicStatus.TODO)
+  const [priority, setPriority] = React.useState<Priority>(Priority.MEDIUM) // Mặc định là MEDIUM
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
     undefined
   )
@@ -90,8 +91,8 @@ export function EpicCreateDialog({
     if (open) {
       setTitle("")
       setDescription("")
-      setStatus("todo")
-      setPriority(null) // Reset về null
+      setStatus(EpicStatus.TODO)
+      setPriority(Priority.MEDIUM) // Reset về MEDIUM
       setDateRange(undefined) // Reset date
     }
   }, [open])
@@ -112,11 +113,8 @@ export function EpicCreateDialog({
         description: description.trim() || undefined,
         status: status,
         priority: priority, // State đã chuẩn
-        start_date: dateRange?.from ? dateRange.from.toISOString() : null,
-        due_date: dateRange?.to ? dateRange.to.toISOString() : null,
-        ownerId: "user-1",
-        memberIds: [],
-        projectId: "project-1",
+        startDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+        dueDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -144,7 +142,7 @@ export function EpicCreateDialog({
     </div>
   )
   
-  const getPriorityInfo = (p: Epic["priority"]) => {
+  const getPriorityInfo = (p: Priority) => {
     if (!p) return nullPriority;
     return priorityMap[p];
   }
@@ -191,7 +189,7 @@ export function EpicCreateDialog({
               {/* STATUS (ĐÃ "TÂN TRANG") */}
               <div className="space-y-2 w-full">
                 <Label htmlFor="status">Status</Label>
-                <Select value={status} onValueChange={(v: Epic["status"]) => setStatus(v)}>
+                <Select value={status} onValueChange={(v: EpicStatus) => setStatus(v)}>
                   <SelectTrigger id="status" className="w-full">
                     <SelectValue asChild>
                        {renderOption(currentStatusInfo.icon, currentStatusInfo.label, currentStatusInfo.color)}
@@ -211,8 +209,8 @@ export function EpicCreateDialog({
               <div className="space-y-2 w-full">
                 <Label htmlFor="priority">Priority</Label>
                 <Select
-                  value={priority || "null"}
-                  onValueChange={(v) => setPriority(v === "null" ? null : (v as Epic["priority"]))}
+                  value={priority}
+                  onValueChange={(v) => setPriority(v as Priority)}
                 >
                   <SelectTrigger id="priority" className="w-full">
                     <SelectValue asChild>
@@ -220,9 +218,6 @@ export function EpicCreateDialog({
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="null">
-                       {renderOption(nullPriority.icon, nullPriority.label, nullPriority.color)}
-                    </SelectItem>
                     {priorityOptions.map((p) => (
                       <SelectItem key={p} value={p}>
                         {renderOption(priorityMap[p].icon, priorityMap[p].label, priorityMap[p].color)}

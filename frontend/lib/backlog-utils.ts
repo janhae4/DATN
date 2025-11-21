@@ -1,7 +1,7 @@
 // lib/utils/backlog-utils.ts
 import { db } from "@/public/mock-data/mock-data"
-import { Status } from "@/types/status.interface";
-import { Task } from "@/types/task.type"
+import { List } from "@/types";
+import { Task } from "@/types"
 import { Flag } from "lucide-react"
 
 // Priority mapping
@@ -13,9 +13,15 @@ export const priorityMap = {
 } as const;
 
 // Lọc status cho Project 1
-export const statusesForProject1: Status[] = db.statuses
-  .filter(s => s.projectId === "project-1")
-  .sort((a, b) => a.order - b.order);
+export const statusesForProject1: List[] = db.lists
+    .filter(s => s.projectId === "project-phoenix-1")
+  .sort((a, b) => a.position - b.position);
+
+export const getListsForProject1 = (): List[] => {
+  return db.lists
+    .filter(s => s.projectId === "project-phoenix-1")
+    .sort((a, b) => a.position - b.position);
+}
 
 // Helper format ngày
 export const formatDate = (dateString: string | null | undefined): string => {

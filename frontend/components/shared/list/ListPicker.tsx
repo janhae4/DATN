@@ -1,12 +1,7 @@
 "use client"
 
 import * as React from "react"
-// BỎ IMPORT CÁC COMPONENT DIALOG Ở ĐÂY
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-// ...
-import { Status, statusEnum } from "@/types/status.interface"
 import { db } from "@/public/mock-data/mock-data"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -22,54 +17,56 @@ import { Separator } from "@/components/ui/separator" // THÊM SEPARATOR
 // import { StatusSettingsPopover } from "./StatusSettingsPopover"
 
 // IMPORT 2 DIALOG MỚI
-import { StatusCreateDialog } from "./StatusCreateDialog"
-import { StatusEditDialog } from "./StatusEditDialog"
+import { ListCreateDialog } from "./ListCreateDialog"
+import { ListEditDialog } from "./ListEditDialog"
+import { List } from "@/types/project/list.interface"
+import { ListCategoryEnum } from "@/types/common/enums"
 
 // Map này để render cái <Select> cho đẹp
 const categoryMap = {
-  [statusEnum.todo]: "To do",
-  [statusEnum.in_progress]: "In progress",
-  [statusEnum.done]: "Done",
+  [ListCategoryEnum.TODO]: "To do",
+  [ListCategoryEnum.IN_PROGRESS]: "In progress",
+  [ListCategoryEnum.DONE]: "Done",
 }
 
-type StatusPickerProps = {
-  statuses: Status[]
+type ListPickerProps = {
+  lists: List[]
   value?: string | null
-  onChange: (statusId: string) => void
+  onChange: (listId: string) => void
   disabled?: boolean
 }
 
-export function StatusPicker({
-  statuses: initialStatuses,
+export function ListPicker({
+  lists: initialLists,
   value,
   onChange,
   disabled,
-}: StatusPickerProps) {
-  const [statuses, setStatuses] = React.useState<Status[]>(initialStatuses)
+}: ListPickerProps) {
+  const [lists, setLists] = React.useState<List[]>(initialLists)
 
   React.useEffect(() => {
-    setStatuses(initialStatuses)
-  }, [initialStatuses])
+    setLists(initialLists)
+  }, [initialLists])
 
   const grouped = React.useMemo(() => {
     return {
-      todo: statuses.filter((s) => s.status === statusEnum.todo),
-      in_progress: statuses.filter(
-        (s) => s.status === statusEnum.in_progress
+      todo: lists.filter((s) => s.category === ListCategoryEnum.TODO),
+      in_progress: lists.filter(
+        (s) => s.category === ListCategoryEnum.IN_PROGRESS
       ),
-      done: statuses.filter((s) => s.status === statusEnum.done),
+      done: lists.filter((s) => s.category === ListCategoryEnum.DONE),
     }
-  }, [statuses])
+  }, [lists])
 
   const [open, setOpen] = React.useState(false)
   const [refreshKey, setRefreshKey] = React.useState(0)
 
   const handleSave = () => {
-    setStatuses([...db.statuses])
+    setLists([...db.lists])
     setRefreshKey((k) => k + 1)
   }
 
-  const renderSection = (title: string, items: Status[]) => {
+  const renderSection = (title: string, items: List[]) => {
     if (!items || items.length === 0) return null
     return (
       <div className="py-1">
@@ -115,8 +112,8 @@ export function StatusPicker({
           className="h-7 px-2 flex items-center gap-2"
         >
           {(() => {
-            const selected = statuses.find((s) => s.id === value)
-            if (!selected) return <span>Status</span>
+            const selected = lists.find((s) => s.id === value)
+            if (!selected) return <span>List</span>
             return (
               <>
                 <span
@@ -139,7 +136,7 @@ export function StatusPicker({
 
           <Separator />
           <div className="p-2">
-            <StatusCreateDialog onSave={handleSave}>
+            <ListCreateDialog onSave={handleSave}>
               <Button
                 type="button"
                 variant="ghost"
@@ -147,11 +144,11 @@ export function StatusPicker({
                 onClick={(e) => e.stopPropagation()} // Prevent popover from closing
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Create status
+                Create list
               </Button>
-            </StatusCreateDialog>
+            </ListCreateDialog>
 
-            <StatusEditDialog key={refreshKey} onSave={handleSave}>
+            <ListEditDialog key={refreshKey} onSave={handleSave}>
               <Button
                 type="button"
                 variant="ghost"
@@ -159,9 +156,9 @@ export function StatusPicker({
                 onClick={(e) => e.stopPropagation()} // Prevent popover from closing
               >
                 <Edit className="h-4 w-4 mr-2" />
-                Edit status
+                Edit list
               </Button>
-            </StatusEditDialog>
+            </ListEditDialog>
           </div>
         </div>
       </PopoverContent>

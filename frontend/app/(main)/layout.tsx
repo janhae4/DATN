@@ -2,7 +2,7 @@
 import { AppSidebar } from '@/components/sidebar/app-sidebar';
 import styles from './layout.module.css';
 import Header from '@/components/layout/header';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 export default function MainLayout({
     children,
 }: {
@@ -11,7 +11,7 @@ export default function MainLayout({
     return (
         <SidebarProvider>
             <AppSidebar />
-            <SidebarInset>
+            <SidebarInset className="overflow-hidden">
                 <div className={styles.mainLayout}>
                     <main className={styles.content}>
                         <Header />

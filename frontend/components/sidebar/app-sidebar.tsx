@@ -134,7 +134,21 @@ const data = {
 
 }
 
+import { useProjects } from "@/hooks/useProjects"
+
+// ...existing code...
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { projects } = useProjects()
+
+  const formattedProjects = React.useMemo(() => {
+    return projects.map((project) => ({
+      name: project.name,
+      url: `/dashboard?projectId=${project.id}`,
+      icon: Frame, // Default icon
+    }))
+  }, [projects])
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -143,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavProjects projects={formattedProjects} />
       </SidebarContent>
       {/* <SidebarFooter>
         <NavUser user={data.user} />

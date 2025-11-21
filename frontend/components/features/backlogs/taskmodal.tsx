@@ -9,7 +9,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet"
-import { Task } from "@/types/task.type"
+import { Task } from "@/types"
 import { db } from "@/public/mock-data/mock-data"
 import { TaskTitle } from "./TaskTitle"
 import { TaskDescription } from "./TaskDescription"
@@ -20,9 +20,10 @@ type TaskDetailModalProps = {
     task: Task | null
     open?: boolean
     onOpenChange?: (open: boolean) => void
-    onStatusChange: (taskId: string, statusId: string) => void
+    onListChange: (taskId: string, listId: string) => void
     onDateChange: (taskId: string, newDate: Date | undefined) => void
     onPriorityChange: (taskId: string, priority: Task["priority"]) => void
+    onAssigneeChange: (taskId: string, assigneeIds: string[]) => void
     onTitleChange: (taskId: string, columnId: "title", value: string) => void
     onDescriptionChange: (taskId: string, description: string) => void
 }
@@ -31,9 +32,10 @@ export function TaskDetailModal({
     task: initialTask,
     open: propOpen = false,
     onOpenChange: propOnOpenChange,
-    onStatusChange,
+    onListChange,
     onDateChange,
     onPriorityChange,
+    onAssigneeChange,
     onTitleChange,
     onDescriptionChange
 }: TaskDetailModalProps) {
@@ -55,9 +57,9 @@ export function TaskDetailModal({
         }
     }, [initialTask])
 
-    // Get statuses for the current project
-    const statuses = React.useMemo(
-        () => db.statuses.filter(s => s.projectId === task?.projectId).sort((a, b) => a.order - b.order),
+    // Get lists for the current project
+    const lists = React.useMemo(
+        () => db.lists.filter(l => l.projectId === task?.projectId).sort((a, b) => a.position - b.position),
         [task?.projectId]
     )
 
@@ -71,9 +73,10 @@ export function TaskDetailModal({
     if (!task) return null
 
     // Handler functions
-    const handleStatusChange = (statusId: string) => onStatusChange(task.id, statusId)
+    const handleListChange = (listId: string) => onListChange(task.id, listId)
     const handleTaskDateChange = (date: Date | undefined) => onDateChange(task.id, date)
     const handleTaskPriorityChange = (priority: Task["priority"]) => onPriorityChange(task.id, priority)
+    const handleTaskAssigneeChange = (assigneeIds: string[]) => onAssigneeChange(task.id, assigneeIds)
     const handleTaskTitleChange = (title: string) => onTitleChange(task.id, "title", title)
     const handleTaskDescriptionChange = (description: string) => onDescriptionChange(task.id, description)
 
@@ -108,15 +111,15 @@ export function TaskDetailModal({
                     {/* Task Meta Information */}
                     <TaskMetaBox
                         task={task}
-                        statuses={statuses}
-                        onStatusChange={handleStatusChange}
+                        lists={lists}
+                        onListChange={handleListChange}
                         onDateChange={handleTaskDateChange}
                         onPriorityChange={handleTaskPriorityChange}
+                        onAssigneeChange={handleTaskAssigneeChange}
                         getAssigneeInitial={getAssigneeInitial}
                     />
 
                     {/* Attachment Section */}
-                    <AttachmentsBox />
                 </div>  
             </SheetContent>
         </Sheet>

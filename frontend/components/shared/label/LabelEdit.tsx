@@ -11,23 +11,19 @@ import { Separator } from "@/components/ui/separator"
 // --- THÊM 2 IMPORT NÀY VÀO ---
 import { db } from "@/public/mock-data/mock-data"
 import { toast } from "sonner"
+import { Label } from "@/types"
 // --- KẾT THÚC THÊM IMPORT ---
 
-export interface LabelType {
-    id: string
-    name: string
-    color: string
-}
 
 const PRESET_COLORS = [
     "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF",
     "#FFA500", "#800080", "#008000", "#000080", "#800000", "#808000"
 ]
 
-export function LabelEdit({ data }: { data: LabelType }) {
+export function LabelEdit({ data }: { data: Label }) {
     // State local (không đổi)
     const [name, setName] = React.useState(data.name)
-    const [color, setColor] = React.useState(data.color)
+    const [color, setColor] = React.useState(data.color || "#000000")
     const [tempColor, setTempColor] = React.useState(color) // Temporary color state
     const [isParentOpen, setIsParentOpen] = React.useState(false)
     const [isPickerOpen, setIsPickerOpen] = React.useState(false)
@@ -35,8 +31,9 @@ export function LabelEdit({ data }: { data: LabelType }) {
     // Sync state (không đổi)
     React.useEffect(() => {
         setName(data.name)
-        setColor(data.color)
-        setTempColor(data.color)
+        const newColor = data.color || "#000000"
+        setColor(newColor)
+        setTempColor(newColor)
     }, [data])
 
     const stopPropagation = (e: React.MouseEvent | React.FocusEvent) => {

@@ -1,449 +1,832 @@
-// Các import này được lấy từ nội dung bạn cung cấp
-import { Attachment } from "@/types/attachment.interface";
-import { Epic } from "@/types/epic.type";
-import { Label } from "@/types/label.interface";
-import { Project } from "@/types/project.type";
-import { Sprint } from "@/types/sprint.type";
-import { Status, statusEnum } from "@/types/status.interface";
-import { Task } from "@/types/task.type";
-import { User } from "@/types/user.interface";
-import { Provider } from "@/types/user.interface";
+import {
+  Project,
+  List,
+  Task,
+  Sprint,
+  Epic,
+  Label,
+  Attachment,
+  TaskAssignee,
+  TaskLabel,
+} from "@/types/project";
+import {
+  User,
+  IAccount,
+  Follow,
+} from "@/types/auth";
+import {
+  Team,
+  TeamMember,
+} from "@/types/social";
+import {
+  Role,
+  Provider,
+  TeamStatus,
+  MemberRole,
+  ProjectVisibility,
+  SprintStatus,
+  EpicStatus,
+  Priority,
+  ListCategoryEnum,
+} from "@/types/common/enums";
 
-// --- Định nghĩa ID cố định để liên kết ---
-const USER_1_ID = "user-1";
-const USER_2_ID = "user-2";
-const PROJECT_1_ID = "project-1";
-const SPRINT_1_ID = "sprint-1";
-const SPRINT_2_ID = "sprint-2";
-const SPRINT_3_ID = "sprint-3";
-const STATUS_1_ID = "status-1-todo";
-const STATUS_2_ID = "status-2-inprogress";
-const STATUS_3_ID = "status-3-done";
-const LABEL_1_ID = "label-1-bug";
-const LABEL_2_ID = "label-2-feature";
-const EPIC_1_ID = "epic-1-auth";
-const TASK_1_ID = "task-1-parent";
-const TASK_2_ID = "task-2-subtask";
-const TASK_3_ID = "task-3-subtask";
-const TASK_4_ID = "task-4-bug";
-const ATTACHMENT_1_ID = "attachment-1";
+// ==========================================
+// 1. CONSTANT IDs
+// ==========================================
 
-// --- ID MỚI ---
-const USER_3_ID = "user-3";
-const PROJECT_2_ID = "project-2";
-const STATUS_4_ID = "status-4-review"; // Mới cho Project 1
-const STATUS_7_ID = "status-7-code-review"; // Mới: Code Review
-const STATUS_8_ID = "status-8-testing"; // Mới: Testing
-const STATUS_5_ID = "status-5-backlog"; // Mới cho Project 2
-const STATUS_6_ID = "status-6-p2-done"; // Mới cho Project 2
-const LABEL_3_ID = "label-3-design";
-const LABEL_4_ID = "label-4-backend";
-const LABEL_5_ID = "label-5-backend";
-const EPIC_2_ID = "epic-2-payment";
-const TASK_5_ID = "task-5-payment-api";
-const TASK_6_ID = "task-6-payment-ui";
-const TASK_7_ID = "task-7-no-epic";
-const ATTACHMENT_2_ID = "attachment-2";
+// --- Users & Teams ---
+const USER_ALICE_ID = "user-alice-1";
+const USER_BOB_ID = "user-bob-2";
+const USER_CHARLIE_ID = "user-charlie-3";
+const TEAM_ALPHA_ID = "team-alpha-1";
 
-// --- Bảng Users ---
+// --- Project 1: Phoenix ---
+const PROJECT_PHOENIX_ID = "project-phoenix-1";
+const PHOENIX_LIST_TODO_ID = "list-phoenix-todo-1";
+const PHOENIX_LIST_INPROGRESS_ID = "list-phoenix-inprogress-2";
+const PHOENIX_LIST_REVIEW_ID = "list-phoenix-review-3";
+const PHOENIX_LIST_DONE_ID = "list-phoenix-done-4";
+const PHOENIX_SPRINT_1_ID = "sprint-phoenix-1";
+const PHOENIX_SPRINT_2_ID = "sprint-phoenix-2";
+const PHOENIX_EPIC_AUTH_ID = "epic-phoenix-auth-1";
+const PHOENIX_EPIC_PAYMENT_ID = "epic-phoenix-payment-2";
+const PHOENIX_LABEL_BUG_ID = "label-phoenix-bug-1";
+const PHOENIX_LABEL_FEATURE_ID = "label-phoenix-feature-2";
+const PHOENIX_TASK_1_ID = "task-phoenix-1";
+const PHOENIX_TASK_2_ID = "task-phoenix-2";
+const PHOENIX_TASK_3_ID = "task-phoenix-3";
+const PHOENIX_TASK_4_ID = "task-phoenix-4";
+const PHOENIX_TASK_5_ID = "task-phoenix-5";
+const PHOENIX_TASK_5_1_ID = "task-phoenix-5-1";
+const PHOENIX_TASK_5_2_ID = "task-phoenix-5-2";
+const PHOENIX_TASK_6_ID = "task-phoenix-6";
+const PHOENIX_TASK_7_ID = "task-phoenix-7";
+const PHOENIX_TASK_8_ID = "task-phoenix-8";
+const PHOENIX_TASK_9_ID = "task-phoenix-9";
+const PHOENIX_TASK_10_ID = "task-phoenix-10";
+
+const PHOENIX_LABEL_DESIGN_ID = "label-phoenix-design-3";
+const PHOENIX_LABEL_BACKEND_ID = "label-phoenix-backend-4";
+const PHOENIX_LABEL_FRONTEND_ID = "label-phoenix-frontend-5";
+const PHOENIX_LABEL_DOCS_ID = "label-phoenix-docs-6";
+
+// --- Project 2: Pegasus ---
+const PROJECT_PEGASUS_ID = "project-pegasus-2";
+const PEGASUS_LIST_TODO_ID = "list-pegasus-todo-1";
+const PEGASUS_LIST_INPROGRESS_ID = "list-pegasus-inprogress-2";
+const PEGASUS_LIST_DONE_ID = "list-pegasus-done-3";
+const PEGASUS_SPRINT_1_ID = "sprint-pegasus-1";
+const PEGASUS_EPIC_DATA_ID = "epic-pegasus-data-1";
+const PEGASUS_LABEL_AI_ID = "label-pegasus-ai-1";
+const PEGASUS_LABEL_DATA_ID = "label-pegasus-data-2";
+const PEGASUS_TASK_1_ID = "task-pegasus-1";
+const PEGASUS_TASK_2_ID = "task-pegasus-2";
+const PEGASUS_TASK_3_ID = "task-pegasus-3";
+
+// --- Project 3: Empty ---
+const PROJECT_EMPTY_ID = "project-empty-3";
+
+// ==========================================
+// 2. MOCK DATA GENERATION
+// ==========================================
+
+// --- Users ---
 const users: User[] = [
   {
-    id: USER_1_ID,
-    name: "Alice",
+    id: USER_ALICE_ID,
     email: "alice@example.com",
-    username: "alice",
-    provider: Provider.GOOGLE,
-    avatar: "https://example.com/avatar/alice.png",
+    name: "Alice",
+    avatar: "https://i.pravatar.cc/150?u=alice",
+    role: Role.ADMIN,
+    isBan: false,
+    isActive: true,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
   },
   {
-    id: USER_2_ID,
-    name: "Bob",
+    id: USER_BOB_ID,
     email: "bob@example.com",
-    username: "bob",
-    provider: Provider.LOCAL,
-    phone: "0987654321",
+    name: "Bob",
+    phone: "123456789",
+    role: Role.USER,
+    isBan: false,
+    isActive: true,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (1) ---
   {
-    id: USER_3_ID,
-    name: "Charlie",
+    id: USER_CHARLIE_ID,
     email: "charlie@example.com",
-    username: "charlie",
-    provider: Provider.LOCAL,
-    avatar: "https://example.com/avatar/charlie.png",
+    name: "Charlie",
+    avatar: "https://i.pravatar.cc/150?u=charlie",
+    role: Role.USER,
+    isBan: false,
+    isActive: true,
+    isVerified: false,
+    createdAt: new Date().toISOString(),
   },
 ];
 
-// --- Bảng Projects ---
+// --- Accounts ---
+const accounts: IAccount[] = [
+  {
+    id: "account-1",
+    provider: Provider.GOOGLE,
+    providerId: "google-123",
+    email: "alice@example.com",
+    userId: USER_ALICE_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "account-2",
+    provider: Provider.LOCAL,
+    providerId: "local-456",
+    email: "bob@example.com",
+    userId: USER_BOB_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// --- Teams & Members ---
+const teams: Team[] = [
+  {
+    id: TEAM_ALPHA_ID,
+    name: "Alpha Team",
+    ownerId: USER_ALICE_ID,
+    status: TeamStatus.ACTIVE,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+const team_members: TeamMember[] = [
+  {
+    id: "member-1",
+    teamId: TEAM_ALPHA_ID,
+    userId: USER_ALICE_ID,
+    role: MemberRole.OWNER,
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+  },
+  {
+    id: "member-2",
+    teamId: TEAM_ALPHA_ID,
+    userId: USER_BOB_ID,
+    role: MemberRole.MEMBER,
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+  },
+];
+
+// --- Projects ---
 const projects: Project[] = [
   {
-    id: PROJECT_1_ID,
+    id: PROJECT_PHOENIX_ID,
     name: "Project Phoenix",
-    description: "Dự án quản lý công việc thế hệ mới.",
-    ownerId: USER_1_ID, // Alice là owner
+    key: "PHX",
+    description: "A next-generation project management tool.",
+    icon: "🚀",
+    visibility: ProjectVisibility.TEAM,
+    teamId: TEAM_ALPHA_ID,
+    isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (2) ---
   {
-    id: PROJECT_2_ID,
-    name: "Mobile App (Project 2)",
-    description: "Dự án app di động.",
-    ownerId: USER_3_ID, // Charlie là owner
+    id: PROJECT_PEGASUS_ID,
+    name: "Project Pegasus",
+    key: "PEG",
+    description: "AI-powered analytics platform.",
+    icon: "🤖",
+    visibility: ProjectVisibility.PUBLIC,
+    teamId: TEAM_ALPHA_ID,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PROJECT_EMPTY_ID,
+    name: "Project Empty",
+    key: "EMP",
+    description: "An empty project for testing initialization.",
+    icon: "👻",
+    visibility: ProjectVisibility.PRIVATE,
+    teamId: TEAM_ALPHA_ID,
+    isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
-// --- Bảng Status (cho Project 1 & 2) ---
-const statuses: Status[] = [
+// --- Lists (Workflow for Project Phoenix) ---
+const lists: List[] = [
   {
-    id: STATUS_1_ID,
+    id: PHOENIX_LIST_TODO_ID,
     name: "To Do",
-    color: "#CCCCCC",
-    order: 0,
-    status: statusEnum.todo,
-    projectId: PROJECT_1_ID,
+    position: 1,
+    color: "#A1A1AA",
+    projectId: PROJECT_PHOENIX_ID,
+    category: ListCategoryEnum.TODO,
+    isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
-    id: STATUS_2_ID,
+    id: PHOENIX_LIST_INPROGRESS_ID,
     name: "In Progress",
-    color: "#007BFF",
-    order: 1,
-    status: statusEnum.in_progress,
-    projectId: PROJECT_1_ID,
+    position: 2,
+    color: "#3B82F6",
+    projectId: PROJECT_PHOENIX_ID,
+    category: ListCategoryEnum.IN_PROGRESS,
+    isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (3) --- (Thêm trạng thái Review cho Project 1)
   {
-    id: STATUS_4_ID,
+    id: PHOENIX_LIST_REVIEW_ID,
     name: "In Review",
-    color: "#F0AD4E",
-    order: 2,
-    status: statusEnum.in_progress,
-    projectId: PROJECT_1_ID,
+    position: 3,
+    color: "#F59E0B",
+    projectId: PROJECT_PHOENIX_ID,
+    category: ListCategoryEnum.IN_PROGRESS,
+    isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
-    id: STATUS_7_ID,
-    name: "Code Review",
-    color: "#8B5CF6",
-    order: 3,
-    status: statusEnum.in_progress,
-    projectId: PROJECT_1_ID,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: STATUS_8_ID,
-    name: "Testing",
-    color: "#F97316",
-    order: 4,
-    status: statusEnum.in_progress,
-    projectId: PROJECT_1_ID,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  // --- CẬP NHẬT (order) --- (Cập nhật order của Done)
-  {
-    id: STATUS_3_ID,
+    id: PHOENIX_LIST_DONE_ID,
     name: "Done",
-    color: "#28A745",
-    order: 5, // Cập nhật order để nằm sau the new in-progress stages
-    status: statusEnum.done,
-    projectId: PROJECT_1_ID,
+    position: 4,
+    color: "#10B981",
+    projectId: PROJECT_PHOENIX_ID,
+    category: ListCategoryEnum.DONE,
+    isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (4) --- (Status cho Project 2)
+  // --- Lists (Workflow for Project Pegasus) ---
   {
-    id: STATUS_5_ID,
-    name: "Backlog",
-    color: "#5BC0DE",
-    order: 0,
-    status: statusEnum.todo,
-    projectId: PROJECT_2_ID,
+    id: PEGASUS_LIST_TODO_ID,
+    name: "To Do",
+    position: 1,
+    color: "#A1A1AA",
+    projectId: PROJECT_PEGASUS_ID,
+    category: ListCategoryEnum.TODO,
+    isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (5) --- (Status cho Project 2)
   {
-    id: STATUS_6_ID,
+    id: PEGASUS_LIST_INPROGRESS_ID,
+    name: "In Progress",
+    position: 2,
+    color: "#3B82F6",
+    projectId: PROJECT_PEGASUS_ID,
+    category: ListCategoryEnum.IN_PROGRESS,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PEGASUS_LIST_DONE_ID,
     name: "Done",
-    color: "#28A745",
-    order: 1,
-    status: statusEnum.done,
-    projectId: PROJECT_2_ID,
+    position: 3,
+    color: "#10B981",
+    projectId: PROJECT_PEGASUS_ID,
+    category: ListCategoryEnum.DONE,
+    isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
-// --- Bảng Sprints (cho Project 1) ---
+// --- Sprints (for Project Phoenix) ---
 const sprints: Sprint[] = [
   {
-    id: SPRINT_1_ID,
-    title: "Sprint 1.0",
-    goal: "Hoàn thành setup dự án",
-    start_date: new Date("2025-10-01T00:00:00Z").toISOString(),
-    end_date: new Date("2025-10-14T23:59:59Z").toISOString(),
-    projectId: PROJECT_1_ID,
-    status: "completed",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-    {
-      id: SPRINT_2_ID,
-      title: "Sprint 2.0 - Auth",
-      goal: "Hoàn thành tính năng xác thực",
-      start_date: new Date("2025-10-15T00:00:00Z").toISOString(),
-      end_date: new Date("2025-10-28T23:59:59Z").toISOString(),
-      projectId: PROJECT_1_ID,
-      status: "active",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: SPRINT_3_ID,
-      title: "Sprint 3.0 - Payment",
-      goal: "Triển khai tính năng thanh toán",
-      start_date: new Date("2025-10-29T00:00:00Z").toISOString(),
-      end_date: new Date("2025-11-11T23:59:59Z").toISOString(),
-      projectId: PROJECT_1_ID,
-      status: "planned",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
-
-// --- Bảng Labels (cho Project 1) ---
-const labels: Label[] = [
-  {
-    id: LABEL_1_ID,
-    name: "Bug",
-    color: "#D73A4A",
-    projectId: PROJECT_1_ID,
+    id: PHOENIX_SPRINT_1_ID,
+    title: "Sprint 1.0 - Foundation",
+    goal: "Set up the project structure and auth.",
+    startDate: "2025-11-01T00:00:00Z",
+    endDate: "2025-11-14T23:59:59Z",
+    projectId: PROJECT_PHOENIX_ID,
+    status: SprintStatus.COMPLETED,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
-    id: LABEL_2_ID,
-    name: "Feature",
-    color: "#007BFF",
-    projectId: PROJECT_1_ID,
+    id: PHOENIX_SPRINT_2_ID,
+    title: "Sprint 2.0 - Core Features",
+    goal: "Implement core task management features.",
+    startDate: "2025-11-15T00:00:00Z",
+    endDate: "2025-11-28T23:59:59Z",
+    projectId: PROJECT_PHOENIX_ID,
+    status: SprintStatus.ACTIVE,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (6) ---
+  // --- Sprints (for Project Pegasus) ---
   {
-    id: LABEL_3_ID,
-    name: "Design",
-    color: "#A29BFE",
-    projectId: PROJECT_1_ID,
+    id: PEGASUS_SPRINT_1_ID,
+    title: "Sprint 1.0 - Inception",
+    goal: "Define data models and basic ingestion.",
+    startDate: "2025-11-20T00:00:00Z",
+    endDate: "2025-12-04T23:59:59Z",
+    projectId: PROJECT_PEGASUS_ID,
+    status: SprintStatus.ACTIVE,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (7) ---
-    {
-      id: LABEL_4_ID,
-      name: "Backend",
-      color: "#FDCB6E",
-      projectId: PROJECT_1_ID,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: LABEL_5_ID,
-      name: "Frontend",
-      color: "#FDCB6E",
-      projectId: PROJECT_1_ID,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    
-
 ];
 
-// --- Bảng Epics (cho Project 1) ---
+// --- Epics (for Project Phoenix) ---
 const epics: Epic[] = [
   {
-    id: EPIC_1_ID,
-    title: "Xây dựng tính năng Xác thực người dùng",
-    description: "Bao gồm đăng nhập, đăng ký, quên mật khẩu.",
-    status: "in_progress",
-    priority: "high",
-    ownerId: USER_1_ID,
-    memberIds: [USER_1_ID, USER_2_ID],
-    projectId: PROJECT_1_ID,
-    sprintId: SPRINT_2_ID,
-    start_date: new Date("2025-10-15T00:00:00Z").toISOString(),
-    due_date: new Date("2025-10-28T23:59:59Z").toISOString(),
+    id: PHOENIX_EPIC_AUTH_ID,
+    title: "User Authentication System",
+    color: "#6366F1",
+    description: "Implement login, registration, and password recovery.",
+    status: EpicStatus.IN_PROGRESS,
+    priority: Priority.HIGH,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (8) ---
   {
-    id: EPIC_2_ID,
-    title: "Tích hợp cổng thanh toán",
-    description: "Tích hợp Stripe và PayPal.",
-    status: "todo",
-    priority: "high",
-    ownerId: USER_1_ID,
-    memberIds: [USER_1_ID, USER_2_ID, USER_3_ID],
-    projectId: PROJECT_1_ID,
-    sprintId: null, // Chưa cho vào sprint nào
-    start_date: null,
-    due_date: null,
+    id: PHOENIX_EPIC_PAYMENT_ID,
+    title: "Payment Integration",
+    color: "#F97316",
+    description: "Integrate Stripe for subscription payments.",
+    status: EpicStatus.TODO,
+    priority: Priority.HIGH,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // --- Epics (for Project Pegasus) ---
+  {
+    id: PEGASUS_EPIC_DATA_ID,
+    title: "Data Pipeline",
+    color: "#8B5CF6",
+    description: "Build the data ingestion and processing pipeline.",
+    status: EpicStatus.IN_PROGRESS,
+    priority: Priority.HIGH,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
-// --- Bảng Tasks (cho Project 1) ---
+// --- Labels (for Project Phoenix) ---
+const labels: Label[] = [
+  {
+    id: PHOENIX_LABEL_BUG_ID,
+    name: "Bug",
+    color: "#EF4444",
+    projectId: PROJECT_PHOENIX_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_LABEL_FEATURE_ID,
+    name: "Feature",
+    color: "#3B82F6",
+    projectId: PROJECT_PHOENIX_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_LABEL_DESIGN_ID,
+    name: "Design",
+    color: "#EC4899",
+    projectId: PROJECT_PHOENIX_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_LABEL_BACKEND_ID,
+    name: "Backend",
+    color: "#8B5CF6",
+    projectId: PROJECT_PHOENIX_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_LABEL_FRONTEND_ID,
+    name: "Frontend",
+    color: "#14B8A6",
+    projectId: PROJECT_PHOENIX_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_LABEL_DOCS_ID,
+    name: "Documentation",
+    color: "#6B7280",
+    projectId: PROJECT_PHOENIX_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // --- Labels (for Project Pegasus) ---
+  {
+    id: PEGASUS_LABEL_AI_ID,
+    name: "AI Model",
+    color: "#EC4899",
+    projectId: PROJECT_PEGASUS_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PEGASUS_LABEL_DATA_ID,
+    name: "Data Engineering",
+    color: "#F59E0B",
+    projectId: PROJECT_PEGASUS_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// --- Tasks (for Project Phoenix) ---
 const tasks: Task[] = [
   {
-    id: TASK_1_ID,
-    title: "Thiết kế giao diện Login & Register",
-    description: "Thiết kế trên Figma",
-    statusId: STATUS_3_ID,
-    priority: "medium",
-    assigneeIds: [USER_1_ID],
-    due_date: new Date("2025-10-10T23:59:59Z").toISOString(),
-    epicId: EPIC_1_ID,
-    projectId: PROJECT_1_ID,
-    sprintId: SPRINT_1_ID,
-    labelIds: [LABEL_2_ID, LABEL_3_ID, LABEL_4_ID, LABEL_5_ID], // Thêm label Design
+    id: PHOENIX_TASK_1_ID,
+    title: "Design Login Page UI",
+    description: "Create a Figma design for the login page.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_DONE_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.MEDIUM,
+    sprintId: PHOENIX_SPRINT_1_ID,
+    epicId: PHOENIX_EPIC_AUTH_ID,
+    position: 1,
+    assigneeIds: ["member-1"],
+    labelIds: [PHOENIX_LABEL_FEATURE_ID],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
-    id: TASK_2_ID,
-    title: "[Subtask] Thiết kế trang Login",
-    statusId: STATUS_3_ID,
-    priority: null,
-    assigneeIds: [USER_1_ID],
-    due_date: null,
-    projectId: PROJECT_1_ID,
-    sprintId: SPRINT_1_ID,
-    labelIds: [],
+    id: PHOENIX_TASK_2_ID,
+    title: "Fix login API 500 error",
+    description: "The login endpoint crashes on invalid credentials.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_INPROGRESS_ID,
+    reporterId: USER_BOB_ID,
+    priority: Priority.URGENT,
+    sprintId: PHOENIX_SPRINT_2_ID,
+    epicId: PHOENIX_EPIC_AUTH_ID,
+    position: 1,
+    assigneeIds: ["member-2"],
+    labelIds: [PHOENIX_LABEL_BUG_ID],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
-    id: TASK_3_ID,
-    title: "[Subtask] Thiết kế trang Register",
-    statusId: STATUS_3_ID,
-    priority: null,
-    assigneeIds: [USER_1_ID],
-    due_date: null,
-    projectId: PROJECT_1_ID,
-    sprintId: SPRINT_1_ID,
-    labelIds: [],
+    id: PHOENIX_TASK_3_ID,
+    title: "Setup Database",
+    description: "Initialize PostgreSQL and MongoDB containers.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_DONE_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.HIGH,
+    sprintId: PHOENIX_SPRINT_1_ID,
+    epicId: PHOENIX_EPIC_AUTH_ID,
+    position: 2,
+    assigneeIds: ["member-1"],
+    labelIds: [PHOENIX_LABEL_BACKEND_ID],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
-    id: TASK_4_ID,
-    title: "API Login trả về lỗi 500",
-    description: "Khi nhập sai mật khẩu, server bị crash",
-    statusId: STATUS_2_ID,
-    priority: "high",
-    assigneeIds: [USER_2_ID],
-    due_date: new Date("2025-10-20T23:59:59Z").toISOString(),
-    epicId: EPIC_1_ID,
-    projectId: PROJECT_1_ID,
-    sprintId: SPRINT_2_ID,
-    labelIds: [LABEL_1_ID, LABEL_4_ID], // Thêm label Backend
+    id: PHOENIX_TASK_4_ID,
+    title: "Create API Endpoints",
+    description: "Implement RESTful APIs for user management.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_DONE_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.HIGH,
+    sprintId: PHOENIX_SPRINT_1_ID,
+    epicId: PHOENIX_EPIC_AUTH_ID,
+    position: 3,
+    assigneeIds: ["member-1", "member-2"],
+    labelIds: [PHOENIX_LABEL_BACKEND_ID],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (9) ---
   {
-    id: TASK_5_ID,
-    title: "Triển khai API thanh toán Stripe",
-    description: "Cần đọc document của Stripe",
-    statusId: STATUS_2_ID, // In Progress
-    priority: "high",
-    assigneeIds: [USER_2_ID], // Giao cho Bob
-    due_date: null,
-    epicId: EPIC_2_ID, // Thuộc Epic Payment
-    projectId: PROJECT_1_ID,
-    sprintId: SPRINT_2_ID, // Làm trong Sprint 2
-    labelIds: [LABEL_4_ID], // Label Backend
+    id: PHOENIX_TASK_5_ID,
+    title: "Implement Frontend Auth",
+    description: "Integrate authentication with the backend APIs.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_INPROGRESS_ID,
+    reporterId: USER_BOB_ID,
+    priority: Priority.HIGH,
+    sprintId: PHOENIX_SPRINT_2_ID,
+    epicId: PHOENIX_EPIC_AUTH_ID,
+    position: 2,
+    assigneeIds: ["member-2"],
+    labelIds: [PHOENIX_LABEL_FRONTEND_ID],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (10) ---
   {
-    id: TASK_6_ID,
-    title: "Thiết kế giao diện trang thanh toán",
-    description: "Thiết kế UI/UX cho trang checkout",
-    statusId: STATUS_1_ID, // To Do
-    priority: "medium",
-    assigneeIds: [USER_1_ID, USER_3_ID], // Giao cho Alice và Charlie
-    due_date: null,
-    epicId: EPIC_2_ID, // Thuộc Epic Payment
-    projectId: PROJECT_1_ID,
-    sprintId: null, // Chưa vào sprint
-    labelIds: [LABEL_3_ID], // Label Design
+    id: PHOENIX_TASK_5_1_ID,
+    title: "Login Form",
+    description: "Create the login form component with validation.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_INPROGRESS_ID,
+    reporterId: USER_BOB_ID,
+    priority: Priority.MEDIUM,
+    sprintId: PHOENIX_SPRINT_2_ID,
+    epicId: PHOENIX_EPIC_AUTH_ID,
+    parentId: PHOENIX_TASK_5_ID,
+    position: 1,
+    assigneeIds: ["member-2"],
+    labelIds: [PHOENIX_LABEL_FRONTEND_ID],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // --- THÊM MỚI (11) ---
   {
-    id: TASK_7_ID,
-    title: "Nâng cấp bảo mật cho Project 2",
-    description: "Task cho project 2, không thuộc epic nào",
-    statusId: STATUS_5_ID, // Backlog (của Project 2)
-    priority: "low",
-    assigneeIds: [USER_3_ID], // Giao cho Charlie
-    due_date: null,
+    id: PHOENIX_TASK_5_2_ID,
+    title: "Register Form",
+    description: "Create the registration form component.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_BOB_ID,
+    priority: Priority.MEDIUM,
+    sprintId: PHOENIX_SPRINT_2_ID,
+    epicId: PHOENIX_EPIC_AUTH_ID,
+    parentId: PHOENIX_TASK_5_ID,
+    position: 1,
+    assigneeIds: ["member-2"],
+    labelIds: [PHOENIX_LABEL_FRONTEND_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_6_ID,
+    title: "Design Dashboard",
+    description: "Create high-fidelity mockups for the main dashboard.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_REVIEW_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.MEDIUM,
+    sprintId: PHOENIX_SPRINT_2_ID,
     epicId: null,
-    projectId: PROJECT_2_ID, // Thuộc Project 2
-    sprintId: null,
-    labelIds: [],
+    position: 1,
+    assigneeIds: ["member-1"],
+    labelIds: [PHOENIX_LABEL_DESIGN_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_7_ID,
+    title: "Setup CI/CD",
+    description: "Configure GitHub Actions for automated testing and deployment.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_DONE_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.URGENT,
+    sprintId: PHOENIX_SPRINT_1_ID,
+    epicId: null,
+    position: 4,
+    assigneeIds: ["member-1"],
+    labelIds: [PHOENIX_LABEL_BACKEND_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_8_ID,
+    title: "Write Documentation",
+    description: "Document the API endpoints and project setup.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_CHARLIE_ID,
+    priority: Priority.LOW,
+    sprintId: PHOENIX_SPRINT_2_ID,
+    epicId: null,
+    position: 2,
+    assigneeIds: ["member-1"],
+    labelIds: [PHOENIX_LABEL_DOCS_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_9_ID,
+    title: "Fix Navigation Bug",
+    description: "Menu doesn't collapse on mobile devices.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_BOB_ID,
+    priority: Priority.MEDIUM,
+    sprintId: PHOENIX_SPRINT_2_ID,
+    epicId: null,
+    position: 3,
+    assigneeIds: ["member-2"],
+    labelIds: [PHOENIX_LABEL_BUG_ID, PHOENIX_LABEL_FRONTEND_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_10_ID,
+    title: "Optimize Images",
+    description: "Compress all static assets for better performance.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_CHARLIE_ID,
+    priority: Priority.LOW,
+    sprintId: PHOENIX_SPRINT_2_ID,
+    epicId: null,
+    position: 4,
+    assigneeIds: [],
+    labelIds: [PHOENIX_LABEL_FRONTEND_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // --- Tasks (for Project Pegasus) ---
+  {
+    id: PEGASUS_TASK_1_ID,
+    title: "Define Data Schema",
+    description: "Design the schema for user events.",
+    projectId: PROJECT_PEGASUS_ID,
+    listId: PEGASUS_LIST_DONE_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.HIGH,
+    sprintId: PEGASUS_SPRINT_1_ID,
+    epicId: PEGASUS_EPIC_DATA_ID,
+    position: 1,
+    assigneeIds: ["member-1"],
+    labelIds: [PEGASUS_LABEL_DATA_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PEGASUS_TASK_2_ID,
+    title: "Setup Kafka",
+    description: "Deploy Kafka cluster for event streaming.",
+    projectId: PROJECT_PEGASUS_ID,
+    listId: PEGASUS_LIST_INPROGRESS_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.URGENT,
+    sprintId: PEGASUS_SPRINT_1_ID,
+    epicId: PEGASUS_EPIC_DATA_ID,
+    position: 1,
+    assigneeIds: ["member-2"],
+    labelIds: [PEGASUS_LABEL_DATA_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PEGASUS_TASK_3_ID,
+    title: "Train Initial Model",
+    description: "Train the recommendation model with dummy data.",
+    projectId: PROJECT_PEGASUS_ID,
+    listId: PEGASUS_LIST_TODO_ID,
+    reporterId: USER_CHARLIE_ID,
+    priority: Priority.MEDIUM,
+    sprintId: PEGASUS_SPRINT_1_ID,
+    epicId: null,
+    position: 1,
+    assigneeIds: ["member-1", "member-2"],
+    labelIds: [PEGASUS_LABEL_AI_ID],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
-// --- Bảng Attachments ---
+// --- Task Assignees ---
+const task_assignees: TaskAssignee[] = [
+  {
+    taskId: PHOENIX_TASK_1_ID,
+    teamMemberId: "member-1", // Alice
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_2_ID,
+    teamMemberId: "member-2", // Bob
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_3_ID,
+    teamMemberId: "member-1",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_4_ID,
+    teamMemberId: "member-1",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_4_ID,
+    teamMemberId: "member-2",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_5_ID,
+    teamMemberId: "member-2",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_5_1_ID,
+    teamMemberId: "member-2",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_5_2_ID,
+    teamMemberId: "member-2",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_6_ID,
+    teamMemberId: "member-1",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_7_ID,
+    teamMemberId: "member-1",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_8_ID,
+    teamMemberId: "member-1",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PHOENIX_TASK_9_ID,
+    teamMemberId: "member-2",
+    assignedAt: new Date().toISOString(),
+  },
+  // --- Task Assignees (Pegasus) ---
+  {
+    taskId: PEGASUS_TASK_1_ID,
+    teamMemberId: "member-1",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PEGASUS_TASK_2_ID,
+    teamMemberId: "member-2",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PEGASUS_TASK_3_ID,
+    teamMemberId: "member-1",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: PEGASUS_TASK_3_ID,
+    teamMemberId: "member-2",
+    assignedAt: new Date().toISOString(),
+  },
+];
+
+// --- Task Labels ---
+const task_labels: TaskLabel[] = [
+  { taskId: PHOENIX_TASK_1_ID, labelId: PHOENIX_LABEL_FEATURE_ID },
+  { taskId: PHOENIX_TASK_2_ID, labelId: PHOENIX_LABEL_BUG_ID },
+  { taskId: PHOENIX_TASK_3_ID, labelId: PHOENIX_LABEL_BACKEND_ID },
+  { taskId: PHOENIX_TASK_4_ID, labelId: PHOENIX_LABEL_BACKEND_ID },
+  { taskId: PHOENIX_TASK_5_ID, labelId: PHOENIX_LABEL_FRONTEND_ID },
+  { taskId: PHOENIX_TASK_5_1_ID, labelId: PHOENIX_LABEL_FRONTEND_ID },
+  { taskId: PHOENIX_TASK_5_2_ID, labelId: PHOENIX_LABEL_FRONTEND_ID },
+  { taskId: PHOENIX_TASK_6_ID, labelId: PHOENIX_LABEL_DESIGN_ID },
+  { taskId: PHOENIX_TASK_7_ID, labelId: PHOENIX_LABEL_BACKEND_ID },
+  { taskId: PHOENIX_TASK_8_ID, labelId: PHOENIX_LABEL_DOCS_ID },
+  { taskId: PHOENIX_TASK_9_ID, labelId: PHOENIX_LABEL_BUG_ID },
+  { taskId: PHOENIX_TASK_9_ID, labelId: PHOENIX_LABEL_FRONTEND_ID },
+  { taskId: PHOENIX_TASK_10_ID, labelId: PHOENIX_LABEL_FRONTEND_ID },
+  // --- Task Labels (Pegasus) ---
+  { taskId: PEGASUS_TASK_1_ID, labelId: PEGASUS_LABEL_DATA_ID },
+  { taskId: PEGASUS_TASK_2_ID, labelId: PEGASUS_LABEL_DATA_ID },
+  { taskId: PEGASUS_TASK_3_ID, labelId: PEGASUS_LABEL_AI_ID },
+];
+
+// --- Attachments ---
 const attachments: Attachment[] = [
   {
-    id: ATTACHMENT_1_ID,
-    taskId: TASK_1_ID,
-    fileName: "design_login_v1.fig",
-    fileUrl: "https://example.com/files/design_login_v1.fig",
-    uploadedById: USER_1_ID,
+    id: "attachment-1",
+    taskId: PHOENIX_TASK_1_ID,
+    fileName: "login-design.fig",
+    fileUrl: "/mock/login-design.fig",
+    uploadedById: USER_ALICE_ID,
     uploadedAt: new Date().toISOString(),
-    fileType: "application/figma",
-    fileSize: 1024 * 512,
-  },
-  // --- THÊM MỚI (12) ---
-  {
-    id: ATTACHMENT_2_ID,
-    taskId: TASK_4_ID, // Đính kèm cho task "API Login trả về lỗi 500"
-    fileName: "error_screenshot.png",
-    fileUrl: "https://example.com/files/error_screenshot.png",
-    uploadedById: USER_2_ID, // Bob upload
-    uploadedAt: new Date().toISOString(),
-    fileType: "image/png",
-    fileSize: 1024 * 120, // 120 KB
+    fileType: "figma",
+    fileSize: 1024 * 500, // 500KB
   },
 ];
 
-// --- Export toàn bộ DB ---
+// ==========================================
+// 3. EXPORT DATABASE
+// ==========================================
+
 export const db = {
   users,
+  accounts,
+  teams,
+  team_members,
   projects,
-  statuses,
+  lists,
   sprints,
-  labels,
   epics,
+  labels,
   tasks,
+  task_assignees,
+  task_labels,
   attachments,
 };

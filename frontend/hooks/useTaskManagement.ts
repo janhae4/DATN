@@ -1,7 +1,9 @@
 // hooks/useTaskManagement.ts
 import * as React from "react"
-import { Task } from "@/types/task.type"
-import { db } from "@/public/mock-data/mock-data" 
+import { Task, Sprint, Epic } from "@/types"
+import { useTasks } from "@/hooks/useTasks"
+import { useSprints } from "@/hooks/useSprints"
+import { useEpics } from "@/hooks/useEpics"
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 
@@ -9,18 +11,40 @@ export interface TaskFilters {
   searchText: string
   assigneeIds: string[]
   priorities: (Task["priority"])[]
-  statusIds: string[]
+  listIds: string[]
+  epicIds: string[]
 }
 
 const INITIAL_FILTERS: TaskFilters = {
   searchText: "",
   assigneeIds: [],
   priorities: [],
-  statusIds: [],
+  listIds: [],
+  epicIds: [],
 }
 
-export const useTaskManagement = () => {
-  const [data, setData] = React.useState<Task[]>(db.tasks)
+export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
+  const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask } = useTasks(projectId)
+  const { sprints: serverSprints } = useSprints(projectId)
+  const { epics: serverEpics } = useEpics(projectId)
+
+  const [data, setData] = React.useState<Task[]>([])
+  const [sprints, setSprints] = React.useState<Sprint[]>([])
+  const [epics, setEpics] = React.useState<Epic[]>([])
+  
+  // Sync data from server
+  React.useEffect(() => {
+    setData(serverTasks)
+  }, [serverTasks])
+
+  React.useEffect(() => {
+    setSprints(serverSprints)
+  }, [serverSprints])
+
+  React.useEffect(() => {
+    setEpics(serverEpics)
+  }, [serverEpics])
+
   const [selectedTask, setSelectedTask] = React.useState<Task | null>(null)
   const [filters, setFilters] = React.useState<TaskFilters>(INITIAL_FILTERS)
   const [isAddingNewRow, setIsAddingNewRow] = React.useState(false)
@@ -28,9 +52,10 @@ export const useTaskManagement = () => {
   const [newTaskPriority, setNewTaskPriority] = React.useState<Task["priority"]>(null)
   const [newTaskDueDate, setNewTaskDueDate] = React.useState<Date | null>(null)
   const [newTaskAssignees, setNewTaskAssignees] = React.useState<string[]>([])
-  const [newTaskStatus, setNewTaskStatus] = React.useState<string>("todo")
+  const [newTaskListId, setNewTaskListId] = React.useState<string>("todo")
 
   const updateTask = React.useCallback((taskId: string, updates: Partial<Task>) => {
+    // Optimistic update
     setData((currentData) =>
       currentData.map((task) =>
         task.id === taskId ? { ...task, ...updates } : task
@@ -39,7 +64,9 @@ export const useTaskManagement = () => {
     setSelectedTask(prevTask => 
       prevTask && prevTask.id === taskId ? { ...prevTask, ...updates } : prevTask
     )
-  }, []) 
+    // Server update
+    serverUpdateTask(taskId, updates)
+  }, [serverUpdateTask]) 
 
   const handleUpdateCell = React.useCallback((taskId: string, columnId: "title", value: string) => {
     updateTask(taskId, { [columnId]: value })
@@ -50,7 +77,7 @@ export const useTaskManagement = () => {
   }, [updateTask])
 
   const handleDateChange = React.useCallback((taskId: string, newDate: Date | undefined) => {
-    updateTask(taskId, { due_date: newDate ? newDate.toISOString() : null })
+    updateTask(taskId, { dueDate: newDate ? newDate.toISOString() : null })
   }, [updateTask])
 
   const handlePriorityChange = React.useCallback((taskId: string, priority: Task["priority"]) => {
@@ -61,8 +88,12 @@ export const useTaskManagement = () => {
     updateTask(taskId, { labelIds });
   }, [updateTask])
 
-  const handleStatusChange = React.useCallback((taskId: string, statusId: string) => {
-    updateTask(taskId, { statusId })
+  const handleAssigneeChange = React.useCallback((taskId: string, assigneeIds: string[]) => {
+    updateTask(taskId, { assigneeIds });
+  }, [updateTask])
+
+  const handleListChange = React.useCallback((taskId: string, listId: string) => {
+    updateTask(taskId, { listId })
   }, [updateTask])
 
   const handleRowClick = React.useCallback((task: Task) => {
@@ -105,30 +136,37 @@ export const useTaskManagement = () => {
       id: `TASK-${Date.now()}`,
       title: newRowTitle.trim(),
       description: "",
-      statusId: newTaskStatus,
+      listId: newTaskListId, 
       priority: newTaskPriority,
       assigneeIds: newTaskAssignees,
-      due_date: newTaskDueDate ? newTaskDueDate.toISOString() : null,
-      projectId: db.projects[0]?.id || "project-1",
+      dueDate: newTaskDueDate ? newTaskDueDate.toISOString() : null,
+      projectId: projectId,
       sprintId: sprintId || null,
       epicId: parentId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
 
+    // Optimistic update
     setData((prev) => [...prev, newTask])
+    
+    // Server update
+    serverCreateTask(newTask)
 
     // Reset fields
     setNewRowTitle("")
     setNewTaskPriority(null)
     setNewTaskDueDate(null)
     setNewTaskAssignees([])
-    setNewTaskStatus("todo")
+    setNewTaskListId("todo")
     setIsAddingNewRow(false)
-  }, [newRowTitle, newTaskPriority, newTaskDueDate, newTaskAssignees, newTaskStatus])
+  }, [newRowTitle, newTaskPriority, newTaskDueDate, newTaskAssignees, newTaskListId, projectId, serverCreateTask])
 
   const handleInputKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>, parentId: string | null, options?: { sprintId?: string, onCancel?: () => void }) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevent form submission
       handleAddNewRow(parentId, options?.sprintId)
+      if (options?.onCancel) options.onCancel()
     }
     if (e.key === "Escape") {
       setIsAddingNewRow(false)
@@ -162,7 +200,7 @@ export const useTaskManagement = () => {
 
   // Filter tasks based on current filters
   const filteredData = React.useMemo(() => {
-    const { searchText, assigneeIds, priorities, statusIds } = filters
+    const { searchText, assigneeIds, priorities, listIds } = filters
     const lowerSearchText = searchText.toLowerCase()
 
     return data.filter((task) => {
@@ -191,8 +229,13 @@ export const useTaskManagement = () => {
       }
 
       // Filter by Status
-      if (statusIds.length > 0 && task.statusId) {
-        if (!statusIds.includes(task.statusId)) return false
+      if (listIds.length > 0 && task.listId) {
+        if (!listIds.includes(task.listId)) return false
+      }
+
+      // Filter by Epic
+      if (filters.epicIds.length > 0) {
+        if (!task.epicId || !filters.epicIds.includes(task.epicId)) return false
       }
 
       return true // Passed all filters
@@ -202,6 +245,8 @@ export const useTaskManagement = () => {
   return {
     data: filteredData,
     allData: data,
+    sprints,
+    epics,
     filters,
     setFilters,
     selectedTask,
@@ -210,7 +255,7 @@ export const useTaskManagement = () => {
     newTaskPriority,
     newTaskDueDate,
     newTaskAssignees,
-    newTaskStatus,
+    newTaskListId,
     dataIds: React.useMemo(() => data.map(({ id }) => id), [data]),
     
     // Hàm xử lý
@@ -219,7 +264,8 @@ export const useTaskManagement = () => {
     handleDateChange,
     handlePriorityChange,
     handleLabelChange,
-    handleStatusChange,
+    handleAssigneeChange,
+    handleListChange,
     handleRowClick,
     handleAddNewRow,
     handleInputKeyDown,
@@ -235,6 +281,7 @@ export const useTaskManagement = () => {
     setNewTaskPriority,
     setNewTaskDueDate,
     setNewTaskAssignees,
-    setNewTaskStatus,
+    setNewTaskListId,
+    projectId,
   }
 }

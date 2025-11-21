@@ -22,45 +22,46 @@ import {
 } from "@/components/ui/select"
 import { db } from "@/public/mock-data/mock-data"
 import { toast } from "sonner"
-import { Status, statusEnum } from "@/types/status.interface"
+import { List } from "@/types/project/list.interface";
 import { Circle, CircleEllipsis, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ListCategoryEnum } from "@/types"
 
 const categoryMap = {
-  [statusEnum.todo]: {
+  [ListCategoryEnum.TODO]: {
     label: "To do",
     icon: Circle,
     color: "text-neutral-500",
   },
-  [statusEnum.in_progress]: {
+  [ListCategoryEnum.IN_PROGRESS]: {
     label: "In progress",
     icon: CircleEllipsis,
     color: "text-blue-500",
   },
-  [statusEnum.done]: {
+  [ListCategoryEnum.DONE]: {
     label: "Done",
     icon: CheckCircle2,
     color: "text-green-500",
   },
 }
 
-interface StatusCreateDialogProps {
+interface ListCreateDialogProps {
   children: React.ReactNode
   onSave: () => void
 }
 
-export function StatusCreateDialog({
+export function ListCreateDialog({
   children,
   onSave,
-}: StatusCreateDialogProps) {
+}: ListCreateDialogProps) {
   const [open, setOpen] = React.useState(false)
   const [name, setName] = React.useState("")
-  const [category, setCategory] = React.useState<statusEnum>(statusEnum.todo)
+  const [category, setCategory] = React.useState<ListCategoryEnum>(ListCategoryEnum.TODO)
 
   React.useEffect(() => {
     if (open) {
       setName("")
-      setCategory(statusEnum.todo)
+      setCategory(ListCategoryEnum.TODO)
     }
   }, [open])
 
@@ -72,31 +73,32 @@ export function StatusCreateDialog({
     }
     
     try {
-      const newStatus: Status = {
-        id: `status-${Date.now()}`,
+      const newList: List = {
+        id: `list-${Date.now()}`,
         name: name.trim(),
-        status: category,
+        category: category,
         color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
         projectId: "project-1",
-        order: db.statuses.length,
+        position: db.lists.length,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        isArchived: false
       }
       
-      db.statuses.push(newStatus)
+      db.lists.push(newList)
       
-      toast.success(`Status "${name}" created!`)
+      toast.success(`List "${name}" created!`)
       
       onSave()
       
       setOpen(false)
       
       setName("")
-      setCategory(statusEnum.todo)
+      setCategory(ListCategoryEnum.TODO)
       
     } catch (error) {
-      console.error("Error creating status:", error)
-      toast.error("Failed to create status. Please try again.")
+      console.error("Error creating list:", error)
+      toast.error("Failed to create list. Please try again.")
     }
   }
 
@@ -106,9 +108,9 @@ export function StatusCreateDialog({
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>Create status</DialogTitle>
+            <DialogTitle>Create list</DialogTitle>
             <DialogDescription>
-              Add a new status to your workflow
+              Add a new list to your workflow
             </DialogDescription>
           </DialogHeader>
 
@@ -120,7 +122,7 @@ export function StatusCreateDialog({
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter status name"
+                placeholder="Enter list name"
                 className="w-full"
               />
             </div>
@@ -130,7 +132,7 @@ export function StatusCreateDialog({
               <Label htmlFor="category">Category *</Label>
               <Select
                 value={category}
-                onValueChange={(value: statusEnum) => setCategory(value)}
+                onValueChange={(value: ListCategoryEnum) => setCategory(value)}
               >
                 <SelectTrigger className="w-full">
                   {/* 4. UPDATE SELECT TRIGGER (THÊM MÀU) */}
@@ -145,7 +147,7 @@ export function StatusCreateDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {/* 5. UPDATE SELECT CONTENT (THÊM MÀU) */}
-                  {Object.values(statusEnum).map((enumValue) => {
+                  {Object.values(ListCategoryEnum).map((enumValue) => {
                     const categoryInfo = categoryMap[enumValue]
                     return (
                       <SelectItem key={enumValue} value={enumValue}>

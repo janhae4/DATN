@@ -5,14 +5,13 @@ import { PlusIcon } from "lucide-react"
 import { AddNewTaskRow } from "./AddNewTaskRow"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 import { TaskRowList } from "./TaskRowList"
-import { useDroppable } from "@dnd-kit/core"
-import { cn } from "@/lib/utils"
+import { List } from "@/types"
 
 type BacklogTaskListProps = {
-  statuses?: any
+  lists?: List[]
 }
 
-export function BacklogTaskList({ statuses }: BacklogTaskListProps) {
+export function BacklogTaskList({ lists }: BacklogTaskListProps) {
   const {
     data,
     isAddingNewRow,
@@ -25,43 +24,44 @@ export function BacklogTaskList({ statuses }: BacklogTaskListProps) {
     [data]
   )
   
-  const statusesList = statuses ?? []
+  const listsList = lists ?? []
 
-  const { setNodeRef, isOver } = useDroppable({
-    id: 'backlog-drop-area',
-    data: {
-      type: 'backlog-drop-area'
-    }
-  });
+  const isEmpty = backlogTasks.length === 0 && !isAddingNewRow;
 
   return (
     <div className="flex flex-col">
       <div className="rounded-lg">
-        <div 
-          ref={setNodeRef}
-          className={cn(
-            isOver && "ring-2 ring-primary/40 bg-primary/10"
+        <div>
+          {isEmpty ? (
+            <div
+              className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed text-muted-foreground hover:bg-muted/50 hover:border-primary/50 hover:text-primary transition-all"
+              onClick={() => setIsAddingNewRow(true)}
+            >
+              <PlusIcon className="h-8 w-8 opacity-50" />
+              <p className="text-sm font-medium">Your backlog is empty</p>
+              <p className="text-xs opacity-70">Click here to create a new task</p>
+            </div>
+          ) : (
+            <Table>
+              <TaskRowList
+                tasks={backlogTasks}
+                lists={listsList}
+                isDraggable={true}
+                isSortable={true} 
+                onRowClick={handleRowClick}
+              >
+                {isAddingNewRow && (
+                  <AddNewTaskRow
+                    lists={listsList}
+                  />
+                )}
+              </TaskRowList>
+            </Table>
           )}
-        >
-          <Table>
-          <TaskRowList
-            tasks={backlogTasks}
-            statuses={statusesList}
-            isDraggable={true}
-            isSortable={true} 
-            onRowClick={handleRowClick}
-          >
-            {isAddingNewRow && (
-              <AddNewTaskRow
-                statuses={statusesList}
-              />
-            )}
-          </TaskRowList>
-          </Table>
         </div>
       </div>
 
-      {!isAddingNewRow && (
+      {!isAddingNewRow && !isEmpty && (
         <Button
           variant="ghost"
           className="w-fit justify-start gap-2 px-1 text-muted-foreground"

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Epic } from "@/types/epic.type"
+import { Epic } from "@/types"
 import { db } from "@/public/mock-data/mock-data"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -57,7 +57,10 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
             }}
         >
             <div className="flex items-center gap-2 truncate">
-                <Target className="h-4 w-4 text-[#E06B80]" />
+                <div 
+                    className="h-4 w-4 rounded-sm flex-shrink-0" 
+                    style={{ backgroundColor: epic.color || '#E06B80' }} 
+                />
                 <span className="truncate">{epic.title}</span>
             </div>
             {value === epic.id && <Check className="h-4 w-4 text-primary" />}
@@ -75,15 +78,20 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
             )
         }
         return (
-
-            <div className="flex items-center px-2 py-0.5 border rounded text-[#450693] bg-[#450693]/10 font-medium uppercase">
+            <div 
+                className="flex items-center px-2 py-0.5 border rounded font-medium uppercase"
+                style={{
+                    color: selectedEpic.color || '#450693',
+                    backgroundColor: selectedEpic.color ? `${selectedEpic.color}1A` : '#4506931A',
+                    borderColor: selectedEpic.color ? `${selectedEpic.color}33` : undefined
+                }}
+            >
                 <span className="truncate max-w-[150px] text-xs">
                     {selectedEpic.title.length > 20
                         ? `${selectedEpic.title.substring(0, 20)}...`
                         : selectedEpic.title}
                 </span>
             </div>
-
         )
     }
 
@@ -119,7 +127,7 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
                             }}
                         >
                             <div className="flex items-center gap-2 text-muted-foreground">
-                                <Target className="h-4 w-4" />
+                                <div className="h-4 w-4 rounded-sm border-2 border-muted-foreground/30" />
                                 <span>No epic</span>
                             </div>
                             {value === null && <Check className="h-4 w-4 text-primary" />}

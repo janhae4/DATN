@@ -3,7 +3,6 @@ import { renderAsync } from "docx-preview";
 import { FileText, Download } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import * as XLSX from "xlsx"
 
 
 const getFriendlyExtension = (fileType: string, fileName: string): string => {
@@ -117,13 +116,7 @@ export default function FilePreview({ file }: { file: Attachment }) {
                             if (!arrayBuffer) {
                                 throw new Error("File reading failed");
                             }
-                            
-                            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                            const firstSheetName = workbook.SheetNames[0];
-                            // --- FIX LỖI CÚ PHÁP: THÊM LẠI 3 DÒNG BỊ MẤT ---
-                            const worksheet = workbook.Sheets[firstSheetName];
-                            const html = XLSX.utils.sheet_to_html(worksheet);
-
+                    
                             const styledHtml = `
                                 <style>
                                     table { 
@@ -147,7 +140,6 @@ export default function FilePreview({ file }: { file: Attachment }) {
                                         background-color: #f2f2f2;
                                     }
                                 </style>
-                                ${html}
                             `; // <-- ĐÓNG CÁI TEMPLATE LẠI
 
                             container.innerHTML = styledHtml; // <-- SET CÁI HTML VÀO

@@ -3,8 +3,8 @@
 
 import * as React from "react"
 import { db } from "@/public/mock-data/mock-data"
-import { Sprint } from "@/types/sprint.type"
-import { Task } from "@/types/task.type"
+import { Sprint } from "@/types"
+import { Task } from "@/types"
 import {
   Accordion,
   AccordionContent,
@@ -42,7 +42,7 @@ export function SprintList() {
         const isLast = index === activeSprints.length - 1
 
         const sprintTasks = (data as Task[]).filter((t) => t.sprintId === sprint.id)
-        const completedTasks = sprintTasks.filter(t => statusesList.find((s:any) => s.id === t.statusId)?.status === 'done').length;
+        const completedTasks = sprintTasks.filter(t => statusesList.find((s:any) => s.id === t.listId)?.id === 'done').length;
         const totalTasks = sprintTasks.length;
         
 
@@ -82,7 +82,7 @@ export function SprintList() {
                       {sprint.title}
                     </span>
                  <p className="text-sm text-muted-foreground pr-8"> {/* Thêm padding phải */}
-                   {formatDate(sprint.start_date)} - {formatDate(sprint.end_date)}
+                   {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
                  </p>
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-4">
@@ -119,20 +119,20 @@ export function SprintList() {
                   <Table>
                     <TaskRowList
                       tasks={sprintTasks}
-                      statuses={statusesList as any}
+                      lists={statusesList as any}
                       isDraggable={true}
                       onRowClick={handleRowClick}
                     >
                       {addingNewRowToSprint === sprint.id ? (
                         <AddNewTaskRow
-                          statuses={statusesList}
+                          lists={statusesList}
                           sprintId={sprint.id}
                           onCancel={() => setAddingNewRowToSprint(null)}
                         />
                       ) : (
                         <TableRow className="group hover:bg-transparent">
                           <TableCell colSpan={5} className="p-0">
-                            <div className="flex items-center gap-1 pl-10 py-1.5">
+                            <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select"
 import { db } from "@/public/mock-data/mock-data"
 import { toast } from "sonner"
-import { Epic } from "@/types/epic.type"
+import { Epic, EpicStatus, Priority } from "@/types"
 import { Target } from "lucide-react"
 // --- 1. BỎ IMPORT PriorityPicker ---
 // import { PriorityPicker } from "../PriorityPicker"
@@ -42,21 +42,22 @@ import {
 } from "lucide-react"
 
 // --- 3. ĐỊNH NGHĨA MAP CHO STATUS ---
-const statusMap: Record<Epic["status"], { label: string; icon: React.ElementType; color: string }> = {
-  "todo": { label: "To do", icon: Circle, color: "text-neutral-500" },
-  "in_progress": { label: "In Progress", icon: CircleEllipsis, color: "text-blue-500" },
-  "done": { label: "Done", icon: CheckCircle2, color: "text-green-500" },
-  "canceled": { label: "Canceled", icon: XCircle, color: "text-red-500" },
+const statusMap: Record<EpicStatus, { label: string; icon: React.ElementType; color: string }> = {
+  [EpicStatus.TODO]: { label: "To do", icon: Circle, color: "text-neutral-500" },
+  [EpicStatus.IN_PROGRESS]: { label: "In Progress", icon: CircleEllipsis, color: "text-blue-500" },
+  [EpicStatus.DONE]: { label: "Done", icon: CheckCircle2, color: "text-green-500" },
+  [EpicStatus.CANCELED]: { label: "Canceled", icon: XCircle, color: "text-red-500" },
 }
-const statusOptions = Object.keys(statusMap) as Epic["status"][]
+const statusOptions = Object.values(EpicStatus)
 
 // --- 4. ĐỊNH NGHĨA MAP CHO PRIORITY ---
-const priorityMap: Record<NonNullable<Epic["priority"]>, { label: string; icon: React.ElementType; color: string }> = {
-  "high": { label: "High", icon: Flag, color: "text-red-500" },
-  "medium": { label: "Medium", icon: Flag, color: "text-yellow-500" },
-  "low": { label: "Low", icon: Flag, color: "text-blue-500" },
+const priorityMap: Record<Priority, { label: string; icon: React.ElementType; color: string }> = {
+  [Priority.HIGH]: { label: "High", icon: Flag, color: "text-red-500" },
+  [Priority.MEDIUM]: { label: "Medium", icon: Flag, color: "text-yellow-500" },
+  [Priority.LOW]: { label: "Low", icon: Flag, color: "text-blue-500" },
+  [Priority.URGENT]: { label: "Urgent", icon: Flag, color: "text-red-600" },
 }
-const priorityOptions = Object.keys(priorityMap) as NonNullable<Epic["priority"]>[]
+const priorityOptions = Object.values(Priority)
 
 // Helper cho priority "null"
 const nullPriority = {
@@ -84,8 +85,8 @@ export function EpicEditDialog({
 
   const [title, setTitle] = React.useState("")
   const [description, setDescription] = React.useState("")
-  const [status, setStatus] = React.useState<Epic["status"]>("todo")
-  const [priority, setPriority] = React.useState<Epic["priority"]>(null)
+  const [status, setStatus] = React.useState<EpicStatus>(EpicStatus.TODO)
+  const [priority, setPriority] = React.useState<Priority>(Priority.MEDIUM)
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
     undefined
   )
@@ -100,8 +101,8 @@ export function EpicEditDialog({
       setStatus(epicToEdit.status)
       setPriority(epicToEdit.priority)
       setDateRange({
-        from: epicToEdit.start_date ? new Date(epicToEdit.start_date) : undefined,
-        to: epicToEdit.due_date ? new Date(epicToEdit.due_date) : undefined,
+        from: epicToEdit.startDate ? new Date(epicToEdit.startDate) : undefined,
+        to: epicToEdit.dueDate ? new Date(epicToEdit.dueDate) : undefined,
       })
     }
   }, [selectedId, allEpics])
@@ -128,8 +129,8 @@ export function EpicEditDialog({
         description: description || undefined,
         status: status,
         priority: priority,
-        start_date: dateRange?.from ? dateRange.from.toISOString() : null,
-        due_date: dateRange?.to ? dateRange.to.toISOString() : null,
+        startDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+        dueDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
         updatedAt: new Date().toISOString(),
       }
       toast.success(`Epic "${title}" updated!`)
@@ -154,7 +155,7 @@ export function EpicEditDialog({
   )
   
   // (Helper để lấy info cho priority, kể cả 'null')
-  const getPriorityInfo = (p: Epic["priority"]) => {
+  const getPriorityInfo = (p: Priority) => {
     if (!p) return nullPriority;
     return priorityMap[p];
   }
@@ -186,7 +187,10 @@ export function EpicEditDialog({
                   {allEpics.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
                       <div className="flex items-center gap-2">
-                        <Target className="h-4 w-4 text-[#E06B80]" />
+                        <div 
+                          className="h-4 w-4 rounded-sm" 
+                          style={{ backgroundColor: e.color || '#E06B80' }} 
+                        />
                         <span>{e.title}</span>
                       </div>
                     </SelectItem>
@@ -223,7 +227,7 @@ export function EpicEditDialog({
                 <Label htmlFor="status-edit">Status</Label>
                 <Select
                   value={status}
-                  onValueChange={(v: Epic["status"]) => setStatus(v)}
+                  onValueChange={(v: EpicStatus) => setStatus(v)}
                   disabled={!selectedId}
                 >
                   <SelectTrigger id="status-edit" className="w-full">
@@ -245,8 +249,8 @@ export function EpicEditDialog({
               <div className="space-y-2 w-full">
                 <Label htmlFor="priority-edit">Priority</Label>
                 <Select
-                  value={priority || "null"} // Giá trị 'null'
-                  onValueChange={(v) => setPriority(v === "null" ? null : (v as Epic["priority"]))}
+                  value={priority}
+                  onValueChange={(v) => setPriority(v as Priority)}
                   disabled={!selectedId}
                 >
                   <SelectTrigger id="priority-edit" className="w-full">
@@ -255,9 +259,6 @@ export function EpicEditDialog({
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="null">
-                      {renderOption(nullPriority.icon, nullPriority.label, nullPriority.color)}
-                    </SelectItem>
                     {priorityOptions.map((p) => (
                       <SelectItem key={p} value={p}>
                         {renderOption(priorityMap[p].icon, priorityMap[p].label, priorityMap[p].color)}

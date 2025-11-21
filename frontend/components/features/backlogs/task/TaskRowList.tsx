@@ -3,8 +3,7 @@
 
 import * as React from "react"
 import { TableBody } from "@/components/ui/table"
-import { Task } from "@/types/task.type"
-import { Status } from "@/types/status.interface"
+import { Task, List } from "@/types"
 import { BacklogTaskRow } from "./BacklogTaskRow"
 import {
   SortableContext,
@@ -13,7 +12,7 @@ import {
 
 type TaskRowListProps = {
   tasks: Task[]
-  statuses: Status[]
+  lists: List[]
   isDraggable?: boolean
   isSortable?: boolean
   onRowClick: (task: Task) => void
@@ -22,7 +21,7 @@ type TaskRowListProps = {
 
 export function TaskRowList({
   tasks,
-  statuses,
+  lists,
   isDraggable = false,
   isSortable = false,
   onRowClick,
@@ -34,7 +33,7 @@ export function TaskRowList({
     <BacklogTaskRow
       key={task.id}
       task={task}
-      statuses={statuses}
+      lists={lists}
       isDraggable={isDraggable}
       onRowClick={onRowClick}
       data-sortable={isSortable}

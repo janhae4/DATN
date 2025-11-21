@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Label } from "@/types/label.interface"
+import { Label } from "@/types"
 import { cn } from "@/lib/utils"
 import { XIcon, Loader2 } from "lucide-react"
 import { LabelEdit } from "./LabelEdit"

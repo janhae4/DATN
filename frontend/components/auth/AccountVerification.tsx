@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mail, RotateCw } from 'lucide-react';
+import { Loader2, RotateCw } from 'lucide-react';
 import { verifyAccount, resendVerificationCode } from '@/services/authService';
 
 const verificationSchema = z.object({

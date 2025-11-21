@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/select"
 import { db } from "@/public/mock-data/mock-data"
 import { toast } from "sonner"
-import { statusEnum } from "@/types/status.interface"
+import { List } from "@/types/project/list.interface";
+import { ListCategoryEnum } from "@/types/common/enums";
 // 1. IMPORT ICON
 import { Circle, CircleEllipsis, CheckCircle2 } from "lucide-react"
 // 2. IMPORT CN (ĐỂ NỐI CLASS)
@@ -30,85 +31,88 @@ import { cn } from "@/lib/utils"
 
 // 3. UPDATE CATEGORY MAP (THÊM CLASS MÀU)
 const categoryMap = {
-  [statusEnum.todo]: {
+  [ListCategoryEnum.TODO]: {
     label: "To do",
     icon: Circle,
     color: "text-neutral-500", // Màu xám
   },
-  [statusEnum.in_progress]: {
+  [ListCategoryEnum.IN_PROGRESS]: {
     label: "In progress",
     icon: CircleEllipsis,
     color: "text-blue-500", // Màu xanh dương
   },
-  [statusEnum.done]: {
+  [ListCategoryEnum.DONE]: {
     label: "Done",
     icon: CheckCircle2,
     color: "text-green-500", // Màu xanh lá
   },
 }
 
-interface StatusEditDialogProps {
+interface ListEditDialogProps {
   children: React.ReactNode
   onSave: () => void
-  key?: any
+  listId?: string
 }
 
-export function StatusEditDialog({
+export function ListEditDialog({
   children,
   onSave,
-}: StatusEditDialogProps) {
+  listId,
+}: ListEditDialogProps) {
   const [open, setOpen] = React.useState(false)
-  const [statuses, setStatuses] = React.useState(db.statuses)
+  const [lists, setLists] = React.useState(db.lists)
   const [selectedId, setSelectedId] = React.useState<string | undefined>(
-    statuses[0]?.id
+    listId || lists[0]?.id
   )
-  const [name, setName] = React.useState(statuses[0]?.name || "")
-  const [category, setCategory] = React.useState<statusEnum>(
-    statuses[0]?.status || statusEnum.todo
+  const [name, setName] = React.useState(lists[0]?.name || "")
+  const [category, setCategory] = React.useState<ListCategoryEnum>(
+    lists[0]?.category || ListCategoryEnum.TODO
   )
 
   // Tất cả logic useEffect và handleSubmit giữ nguyên
   React.useEffect(() => {
     if (open) {
-      const currentStatuses = db.statuses
-      setStatuses(currentStatuses)
-      if (!selectedId && currentStatuses.length > 0) {
-        setSelectedId(currentStatuses[0].id)
-      } else {
-        const statusToEdit = currentStatuses.find((s) => s.id === selectedId)
-        if (statusToEdit) {
-          setName(statusToEdit.name)
-          setCategory(statusToEdit.status)
-        }
+      const currentLists = db.lists
+      setLists(currentLists)
+      
+      const targetId = listId || selectedId || currentLists[0]?.id;
+      
+      if (targetId) {
+         setSelectedId(targetId);
+         const listToEdit = currentLists.find((s) => s.id === targetId)
+         if (listToEdit) {
+           setName(listToEdit.name)
+           setCategory(listToEdit.category)
+         }
       }
     }
-  }, [open, selectedId])
+  }, [open, listId]) // Removed selectedId from dependency to avoid loop if we wanted, but logic above handles it.
 
   React.useEffect(() => {
     if (!selectedId) return
-    const statusToEdit = statuses.find((s) => s.id === selectedId)
-    if (statusToEdit) {
-      setName(statusToEdit.name)
-      setCategory(statusToEdit.status)
+    const listToEdit = lists.find((s) => s.id === selectedId)
+    if (listToEdit) {
+      setName(listToEdit.name)
+      setCategory(listToEdit.category)
     }
-  }, [selectedId, statuses])
+  }, [selectedId, lists])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Logic Edit
-    const statusIndex = db.statuses.findIndex((s) => s.id === selectedId)
-    if (statusIndex !== -1) {
-      db.statuses[statusIndex] = {
-        ...db.statuses[statusIndex],
+    const listIndex = db.lists.findIndex((s) => s.id === selectedId)
+    if (listIndex !== -1) {
+      db.lists[listIndex] = {
+        ...db.lists[listIndex],
         name: name,
-        status: category,
+        category: category,
         updatedAt: new Date().toISOString(),
       }
-      toast.success(`Status "${name}" updated!`)
+      toast.success(`List "${name}" updated!`)
       onSave()
       setOpen(false)
     } else {
-      toast.error("Status not found")
+      toast.error("List not found")
     }
   }
 
@@ -118,22 +122,22 @@ export function StatusEditDialog({
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>Edit status</DialogTitle>
+            <DialogTitle>Edit list</DialogTitle>
             <DialogDescription>
-              Update an existing status
+              Update an existing list
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* 1. Dropdown chọn Status (giữ nguyên) */}
             <div className="space-y-2">
-              <Label htmlFor="status-select">Status *</Label>
+              <Label htmlFor="status-select">List *</Label>
               <Select value={selectedId} onValueChange={setSelectedId}>
                 <SelectTrigger id="status-select" className="w-full">
-                  <SelectValue placeholder="Select a status to edit" />
+                  <SelectValue placeholder="Select a list to edit" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statuses.map((s) => (
+                  {lists.map((s) => (
                     <div
                       key={s.id}
                       className="flex items-center gap-2 px-2 py-1.5"
@@ -159,7 +163,7 @@ export function StatusEditDialog({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={!selectedId}
-                placeholder="Enter status name"
+                placeholder="Enter list name"
                 className="w-full"
               />
             </div>
@@ -169,7 +173,7 @@ export function StatusEditDialog({
               <Label htmlFor="category">Category *</Label>
               <Select
                 value={category}
-                onValueChange={(value: statusEnum) => setCategory(value)}
+                onValueChange={(value: ListCategoryEnum) => setCategory(value)}
                 disabled={!selectedId}
               >
                 <SelectTrigger id="category" className="w-full">
@@ -185,7 +189,7 @@ export function StatusEditDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {/* 5. UPDATE SELECT CONTENT (THÊM MÀU) */}
-                  {Object.values(statusEnum).map((enumValue) => {
+                  {Object.values(ListCategoryEnum).map((enumValue) => {
                     const categoryInfo = categoryMap[enumValue]
                     return (
                       <SelectItem key={enumValue} value={enumValue}>
