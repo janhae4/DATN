@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Clock, User as UserIcon, CalendarIcon, FlagIcon, Network, Tag, Plus } from "lucide-react";
 import { List } from "@/types";
-import { LabelTag } from "@/components/shared/label/LabelTag";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { PriorityPicker } from "@/components/shared/PriorityPicker";
 import { ListPicker } from "@/components/shared/list/ListPicker";
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { db } from "@/public/mock-data/mock-data";
 import { AssigneePicker } from "@/components/shared/assignee/AssigneePicker";
+import LabelTag from "@/components/shared/label/LabelTag";
 
 interface TaskMetaBoxProps {
   task: Task;

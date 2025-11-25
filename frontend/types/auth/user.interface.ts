@@ -1,5 +1,5 @@
 // types/user.interface.ts
-import { Role } from "../common/enums";
+import { Role, Provider } from "../common/enums";
 
 export interface User {
   id: string;
@@ -8,6 +8,7 @@ export interface User {
   avatar?: string;
   phone?: string;
   role: Role;
+  provider?: Provider;
   isBan: boolean;
   isActive: boolean;
   isVerified: boolean;

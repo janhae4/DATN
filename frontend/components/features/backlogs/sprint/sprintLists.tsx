@@ -8,6 +8,7 @@ import { Accordion } from "@/components/ui/accordion"
 import { statusesForProject1 } from "@/lib/backlog-utils"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 import { SprintItem } from "./SprintItem"
+import { SprintStatus } from "@/types/common/enums"
 
 export function SprintList() {
   const { data, handleRowClick, sprints } = useTaskManagementContext()
@@ -16,7 +17,7 @@ export function SprintList() {
 
   const activeSprints = React.useMemo(() =>
     sprints.filter(
-      s => s.status !== "completed"
+      s => s.status === SprintStatus.ACTIVE || s.status === SprintStatus.PLANNED
     ),
     [sprints]
   );

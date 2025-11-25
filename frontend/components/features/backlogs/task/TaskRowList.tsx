@@ -9,6 +9,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
+import { Button } from "@/components/ui/button"
 
 type TaskRowListProps = {
   tasks: Task[]
@@ -26,8 +27,21 @@ export function TaskRowList({
   isSortable = false,
   onRowClick,
   children,
-}: TaskRowListProps) {
-  
+  onDeleteMultiple,
+}: TaskRowListProps & { onDeleteMultiple?: (ids: string[]) => void }) {
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+
+  const handleSelect = (taskId: string, checked: boolean) => {
+    setSelectedIds((prev) =>
+      checked ? [...prev, taskId] : prev.filter((id) => id !== taskId)
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    if (onDeleteMultiple) onDeleteMultiple(selectedIds);
+    setSelectedIds([]);
+  };
+
   // 1. Tạo ra 1 mảng các component <BacklogTaskRow>
   const taskRows = tasks.map((task) => (
     <BacklogTaskRow
@@ -36,6 +50,8 @@ export function TaskRowList({
       lists={lists}
       isDraggable={isDraggable}
       onRowClick={onRowClick}
+      selected={selectedIds.includes(task.id)}
+      onSelect={handleSelect}
       data-sortable={isSortable}
     />
   ))
@@ -50,6 +66,16 @@ export function TaskRowList({
           items={taskIds}
           strategy={verticalListSortingStrategy}
         >
+          {/* Delete button for selected tasks */}
+          {selectedIds.length > 0 && (
+            <tr>
+              <td colSpan={10} className="py-2">
+                <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
+                  Delete Selected ({selectedIds.length})
+                </Button>
+              </td>
+            </tr>
+          )}
           {taskRows}
           {children && React.Children.map(children, (child) => 
             React.isValidElement(child) ? React.cloneElement(child, { 'data-sortable': false } as any) : child

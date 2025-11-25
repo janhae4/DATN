@@ -16,7 +16,8 @@ export function BacklogTaskList({ lists }: BacklogTaskListProps) {
     data,
     isAddingNewRow,
     setIsAddingNewRow,
-    handleRowClick, 
+    handleRowClick,
+    handleDeleteTask,
   } = useTaskManagementContext()
 
   const backlogTasks = React.useMemo(
@@ -26,7 +27,11 @@ export function BacklogTaskList({ lists }: BacklogTaskListProps) {
   
   const listsList = lists ?? []
 
-  const isEmpty = backlogTasks.length === 0 && !isAddingNewRow;
+  const isEmpty = backlogTasks.length === 0 && !isAddingNewRow
+
+  const handleDeleteMultiple = (ids: string[]) => {
+    ids.forEach((id) => handleDeleteTask(id))
+  }
 
   return (
     <div className="flex flex-col">
@@ -49,6 +54,7 @@ export function BacklogTaskList({ lists }: BacklogTaskListProps) {
                 isDraggable={true}
                 isSortable={true} 
                 onRowClick={handleRowClick}
+                onDeleteMultiple={handleDeleteMultiple}
               >
                 {isAddingNewRow && (
                   <AddNewTaskRow

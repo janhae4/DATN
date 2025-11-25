@@ -10,9 +10,30 @@ import {
   VerifyAccountDto,
   ConfirmResetPasswordDto
 } from '@/types/auth';
-import { Provider } from '@/types/user.interface';
+import { db } from "@/public/mock-data/mock-data";
 
 export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+  // MOCK LOGIN
+  const mockCred = db.credentials.find(c => c.email === credentials.username && c.password === credentials.password);
+  if (mockCred) {
+      const user = db.users.find(u => u.id === mockCred.userId);
+      if (user) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const accessToken = "mock_access_token_" + user.id;
+          
+          // Ensure token is saved for getMe to work in mock mode
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('accessToken', accessToken);
+          }
+
+          return {
+              accessToken: accessToken,
+              refreshToken: "mock_refresh_token_" + user.id,
+              user: user,
+          } as any;
+      }
+  }
+
   try {
     const response = await apiClient.post<LoginResponse>('/auth/session', credentials);
     return response.data; 
@@ -23,129 +44,87 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
 };
 
 export const register = async (userData: RegisterData): Promise<{ message: string }> => {
-  try {
-    const response = await apiClient.post<{ message: string }>('/auth/account', userData);
-    return response.data;
-  } catch (error: any) {
-    console.error('Registration failed', error);
-    // Check if this is an Axios error with response
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        const errorMessage = error.response.data?.message || 'Registration failed';
-        throw new Error(errorMessage);
-      } else if (error.request) {
-        // The request was made but no response was received
-        throw new Error('No response from server. Please check your connection.');
-      }
-    }
-    // Something happened in setting up the request that triggered an Error
-    throw new Error(error.message || 'Registration failed. Please try again.');
-  }
+  // MOCK REGISTER
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const newUser = {
+      id: `user-${Date.now()}`,
+      email: userData.email,
+      name: userData.name,
+      role: 'USER', // Default role
+      isBan: false,
+      isActive: true,
+      isVerified: false,
+      createdAt: new Date().toISOString(),
+  };
+  // @ts-ignore
+  db.users.push(newUser);
+  return { message: "Registration successful. Please check your email to verify your account." };
 };
 
 export const getMe = async (): Promise<UserProfile> => {
-  try {
-    const response = await apiClient.get<UserProfile>('/auth/me');
-    return response.data;
-  } catch (error) {
-    console.error('Failed to fetch user profile', error);
-    throw error;
+  // MOCK ME
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      if (token && token.startsWith('mock_access_token_')) {
+          const userId = token.replace('mock_access_token_', '');
+          const user = db.users.find(u => u.id === userId);
+          if (user) {
+               return user as any;
+          }
+      }
   }
+
+  // Simulate 401 Unauthorized if no valid mock token found
+  throw new Error("Unauthorized");
 };
 
 export const logout = async (): Promise<void> => {
-  try {
-    await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/auth/logout`,
-      {}, 
-      { withCredentials: true } 
-    );
-  } catch (err) {
-    console.warn('Logout API call failed, but redirecting anyway.', err);
-  } finally {
-    if (typeof window !== 'undefined') {
+  // MOCK LOGOUT
+  await new Promise(resolve => setTimeout(resolve, 500));
+  if (typeof window !== 'undefined') {
       console.log('Redirecting to login...');
       window.location.href = '/auth#login'; 
-    }
   }
 };
 
 // Account Verification
 export const verifyEmail = async (token: string) => {
-  try {
-    const response = await apiClient.get(`/auth/verify-email?token=${token}`);
-    return response.data;
-  } catch (error) {
-    console.error('Email verification failed', error);
-    throw error;
-  }
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { message: "Email verified successfully" };
 };
 
 export const verifyAccount = async (code: string) => {
-  try {
-    const response = await apiClient.post('/auth/account/verification-code', { code });
-    return response.data;
-  } catch (error) {
-    console.error('Account verification failed', error);
-    throw error;
-  }
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { message: "Account verified successfully" };
 };
 
 export const resendVerificationCode = async () => {
-  try {
-    const response = await apiClient.post('/auth/account/verification-code/resend');
-    return response.data;
-  } catch (error) {
-    console.error('Failed to resend verification code', error);
-    throw error;
-  }
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { message: "Verification code sent" };
 };
 
 // Password Management
 export const changePassword = async (data: ChangePasswordDto) => {
-  try {
-    const response = await apiClient.patch('/auth/account/password', data);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to change password', error);
-    throw error;
-  }
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { message: "Password changed successfully" };
 };
 
 export const forgotPassword = async (email: string) => {
-  try {
-    const response = await apiClient.post('/auth/password-reset/request', { email });
-    return response.data;
-  } catch (error) {
-    console.error('Failed to request password reset', error);
-    throw error;
-  }
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { message: "Password reset email sent" };
 };
 
 export const resetPassword = async (token: string, password: string) => {
-  try {
-    const response = await apiClient.post('/auth/password-reset/confirm', { 
-      token, 
-      password 
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Failed to reset password', error);
-    throw error;
-  }
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { message: "Password reset successfully" };
 };
 
 // Session Management
 export const refreshToken = async () => {
-  try {
-    const response = await apiClient.post('/auth/session/refresh');
-    return response.data;
-  } catch (error) {
-    console.error('Failed to refresh token', error);
-    throw error;
-  }
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { accessToken: "mock_access_token_refreshed", refreshToken: "mock_refresh_token_refreshed" };
 };
 
 // Google Auth

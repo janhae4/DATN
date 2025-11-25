@@ -1,9 +1,10 @@
 // hooks/useTaskManagement.ts
 import * as React from "react"
-import { Task, Sprint, Epic } from "@/types"
+import { Task, Sprint, Epic, Label } from "@/types"
 import { useTasks } from "@/hooks/useTasks"
 import { useSprints } from "@/hooks/useSprints"
 import { useEpics } from "@/hooks/useEpics"
+import { useLabels } from "@/hooks/useLabels"
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 
@@ -13,6 +14,8 @@ export interface TaskFilters {
   priorities: (Task["priority"])[]
   listIds: string[]
   epicIds: string[]
+  labelIds: string[]
+  sprintIds: string[]
 }
 
 const INITIAL_FILTERS: TaskFilters = {
@@ -21,16 +24,22 @@ const INITIAL_FILTERS: TaskFilters = {
   priorities: [],
   listIds: [],
   epicIds: [],
+  labelIds: [],
+  sprintIds: [],
 }
+
+import { SprintStatus } from "@/types/common/enums"
 
 export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
   const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask } = useTasks(projectId)
-  const { sprints: serverSprints } = useSprints(projectId)
+  const { sprints: serverSprints, updateSprint: serverUpdateSprint } = useSprints(projectId)
   const { epics: serverEpics } = useEpics(projectId)
+  const { labels: serverLabels } = useLabels()
 
   const [data, setData] = React.useState<Task[]>([])
   const [sprints, setSprints] = React.useState<Sprint[]>([])
   const [epics, setEpics] = React.useState<Epic[]>([])
+  const [labels, setLabels] = React.useState<Label[]>([])
   
   // Sync data from server
   React.useEffect(() => {
@@ -44,6 +53,25 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
   React.useEffect(() => {
     setEpics(serverEpics)
   }, [serverEpics])
+
+  React.useEffect(() => {
+    setLabels(serverLabels)
+  }, [serverLabels])
+
+  const activeSprint = React.useMemo(() => {
+    return sprints.find(s => s.status === SprintStatus.ACTIVE) || null
+  }, [sprints])
+
+  const startSprint = React.useCallback(async (sprintId: string) => {
+    // Deactivate other sprints if any (though logic says only one active)
+    // For now just activate the target sprint
+    const sprint = sprints.find(s => s.id === sprintId)
+    if (sprint) {
+      // Optimistic update
+      setSprints(prev => prev.map(s => s.id === sprintId ? { ...s, status: SprintStatus.ACTIVE } : s))
+      await serverUpdateSprint(sprintId, { status: SprintStatus.ACTIVE })
+    }
+  }, [sprints, serverUpdateSprint])
 
   const [selectedTask, setSelectedTask] = React.useState<Task | null>(null)
   const [filters, setFilters] = React.useState<TaskFilters>(INITIAL_FILTERS)
@@ -198,6 +226,14 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
     }
   }, [updateTask, handleSprintChange])
 
+  // --- DELETE TASK ---
+  const handleDeleteTask = React.useCallback((taskId: string) => {
+    setData((prev) => prev.filter((task) => task.id !== taskId));
+    // Optionally, call server delete if available
+    // serverDeleteTask(taskId);
+  }, []);
+  // --- END DELETE TASK ---
+
   // Filter tasks based on current filters
   const filteredData = React.useMemo(() => {
     const { searchText, assigneeIds, priorities, listIds } = filters
@@ -238,6 +274,16 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
         if (!task.epicId || !filters.epicIds.includes(task.epicId)) return false
       }
 
+      // Filter by Label
+      if (filters.labelIds.length > 0) {
+        if (!task.labelIds || !task.labelIds.some(id => filters.labelIds.includes(id))) return false
+      }
+
+      // Filter by Sprint
+      if (filters.sprintIds.length > 0) {
+        if (!task.sprintId || !filters.sprintIds.includes(task.sprintId)) return false
+      }
+
       return true // Passed all filters
     })
   }, [data, filters])
@@ -247,6 +293,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
     allData: data,
     sprints,
     epics,
+    labels,
     filters,
     setFilters,
     selectedTask,
@@ -257,6 +304,9 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
     newTaskAssignees,
     newTaskListId,
     dataIds: React.useMemo(() => data.map(({ id }) => id), [data]),
+    
+    activeSprint,
+    startSprint,
     
     // Hàm xử lý
     handleUpdateCell,
@@ -273,6 +323,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
     handleEpicChange,
     handleSprintChange,
     handleReorderTask,
+    handleDeleteTask,
     
     // Hàm set state 
     setNewRowTitle,

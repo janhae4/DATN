@@ -11,7 +11,7 @@ import { KanbanBoard } from "./features/boards/KanbanBoard"
 export function TabsNav() {
     return (
         <div className="flex w-full h-full flex-col gap-6 overflow-hidden">
-            <Tabs defaultValue="backlogs" className="h-full flex flex-col">
+            <Tabs defaultValue="backlogs" className="h-full flex flex-col w-full">
                 <TabsList>
                     <TabsTrigger value="backlogs">Backlogs</TabsTrigger>
                     <TabsTrigger value="summary">Summary</TabsTrigger>
@@ -24,7 +24,7 @@ export function TabsNav() {
                 <TabsContent value="summary" className="flex-1 overflow-hidden">
                     <Summary />
                 </TabsContent>
-                <TabsContent value="boards" className="flex-1 overflow-hidden">
+                <TabsContent value="boards" className="flex-1 overflow-hidden min-w-0">
                     <KanbanBoard />
                 </TabsContent>
                 <TabsContent value="timeline" className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent">

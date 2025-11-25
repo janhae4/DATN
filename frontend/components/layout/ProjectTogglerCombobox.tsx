@@ -20,10 +20,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { useProjects } from "@/hooks/useProjects"
+import { useTeamContext } from "@/contexts/TeamContext"
 
 export function ProjectTogglerCombobox() {
   const [open, setOpen] = React.useState(false)
-  const { projects, isLoading } = useProjects()
+  const { activeTeam } = useTeamContext()
+  const { projects, isLoading } = useProjects(activeTeam?.id)
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentProjectId = searchParams.get("projectId") || "project-phoenix-1"

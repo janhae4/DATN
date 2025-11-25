@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Task, Sprint, Epic } from "@/types"
+import { Task, Sprint, Epic, Label } from "@/types"
 import { db } from "@/public/mock-data/mock-data"
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
@@ -14,6 +14,7 @@ interface TaskManagementContextType {
   allData: Task[]
   sprints: Sprint[]
   epics: Epic[]
+  labels: Label[]
   filters: TaskFilters
   setFilters: (filters: TaskFilters) => void
   selectedTask: Task | null
@@ -25,6 +26,9 @@ interface TaskManagementContextType {
   newTaskListId: string
   dataIds: string[]
   projectId: string
+
+  activeSprint: Sprint | null
+  startSprint: (sprintId: string) => Promise<void>
 
   // Handlers
   handleUpdateCell: (taskId: string, columnId: "title", value: string) => void
@@ -48,6 +52,7 @@ interface TaskManagementContextType {
   handleLabelChange: (taskId: string, labelIds: string[]) => void
   handleAssigneeChange: (taskId: string, assigneeIds: string[]) => void
   handleReorderTask: (activeId: string, overId: string) => void
+  handleDeleteTask: (taskId: string) => void
 
   // Setters
   setNewRowTitle: (title: string) => void
@@ -67,7 +72,10 @@ export function TaskManagementProvider({ children, projectId }: { children: Reac
   const taskManagementData = useTaskManagement(projectId)
 
   return (
-    <TaskManagementContext.Provider value={taskManagementData}>
+    <TaskManagementContext.Provider value={{
+      ...taskManagementData,
+      handleDeleteTask: taskManagementData.handleDeleteTask,
+    }}>
       {children}
     </TaskManagementContext.Provider>
   )

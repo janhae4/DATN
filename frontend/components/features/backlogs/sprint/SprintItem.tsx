@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils"
 import { TaskRowList } from "../task/TaskRowList"
 import { Button } from "@/components/ui/button"
 import { AddNewTaskRow } from "../task/AddNewTaskRow"
+import { StartSprintDialog } from "./StartSprintDialog"
+import { CompleteSprintDialog } from "./CompleteSprintDialog"
+import { SprintStatus } from "@/types/common/enums"
 
 interface SprintItemProps {
   sprint: Sprint
@@ -71,7 +74,7 @@ export function SprintItem({
           <div className="flex w-full flex-col gap-2 ">
             <div className="flex w-full items-center justify-between gap-4">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Rocket className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                <Rocket className="h-5 w-5 text-foreground/50 flex-shrink-0" />
                 <span
                   className="text-base font-medium truncate"
                   title={sprint.title}
@@ -83,28 +86,21 @@ export function SprintItem({
                 </p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-4">
-                <Badge
-                  variant={
-                    sprint.status === "active"
-                      ? "default"
-                      : sprint.status === "completed"
-                      ? "destructive"
-                      : sprint.status === "planned"
-                      ? "default"
-                      : sprint.status === "archived"
-                      ? "outline"
-                      : "secondary"
-                  }
-                  className={cn(
-                    "capitalize",
-                    sprint.status === "planned" &&
-                      "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200",
-                    sprint.status === "archived" &&
-                      "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200"
-                  )}
-                >
-                  {sprint.status}
-                </Badge>
+                {sprint.status === SprintStatus.PLANNED && (
+                  <StartSprintDialog sprint={sprint}>
+                    <Button size="sm" variant="outline" >
+                      Start Sprint
+                    </Button>
+                  </StartSprintDialog>
+                )}
+                {sprint.status === SprintStatus.ACTIVE && (
+                  <CompleteSprintDialog sprint={sprint}>
+                    <Button size="sm" variant="outline" >
+                      Complete Sprint
+                    </Button>
+                  </CompleteSprintDialog>
+                )}
+               
                 <span className="text-sm font-normal text-muted-foreground">
                   {totalTasks} {totalTasks === 1 ? "task" : "tasks"}
                 </span>

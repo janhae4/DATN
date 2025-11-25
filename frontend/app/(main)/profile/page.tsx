@@ -6,9 +6,8 @@ import {
     Settings,
 } from "lucide-react"
 
-import { mockUser } from './data'
-import { ProfileHeaderAndGeneral } from '../../../components/profile/ProfileHeaderAndGeneral'
-import { AccountSecurity } from '../../../components/profile/AccountSecurity'
+import { ProfileHeaderAndGeneral } from '@/components/profile/ProfileHeaderAndGeneral'
+import { AccountSecurity } from '@/components/profile/AccountSecurity'
 
 
 export default function UserProfilePage() {
@@ -21,8 +20,8 @@ export default function UserProfilePage() {
             </div>
 
             <div className="space-y-8">
-                <ProfileHeaderAndGeneral user={mockUser} />
-                <AccountSecurity user={mockUser} />
+                <ProfileHeaderAndGeneral />
+                <AccountSecurity />
             </div>
 
         </div>

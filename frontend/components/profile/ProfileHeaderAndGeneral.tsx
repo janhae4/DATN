@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Provider } from '../../types/user.interface'
+import { Provider } from '@/types/common/enums'
 import { useAuth } from '@/contexts/AuthContext';
 
 export function ProfileHeaderAndGeneral() {

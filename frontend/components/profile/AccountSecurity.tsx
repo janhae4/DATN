@@ -13,7 +13,7 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Provider } from '../../types/user.interface'
+import { Provider } from '@/types/common/enums'
 import { useAuth } from '@/contexts/AuthContext';
 
 export function AccountSecurity() {

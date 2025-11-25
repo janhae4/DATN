@@ -1,8 +1,9 @@
-import { Attachment } from "@/types/attachment.interface";
+import { Attachment } from "@/types";
 import { renderAsync } from "docx-preview";
 import { FileText, Download } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import * as XLSX from "xlsx";
 
 
 const getFriendlyExtension = (fileType: string, fileName: string): string => {
@@ -39,7 +40,7 @@ export default function FilePreview({ file }: { file: Attachment }) {
     const docxRef = useRef<HTMLDivElement>(null);
     const excelRef = useRef<HTMLDivElement>(null);
 
-    const isDocx = (fileType.includes("word") || fileType.includes("document")) || fileName.endsWith('.docx');
+    const isDocx = ((fileType.includes("word") || fileType.includes("document")) && !fileType.includes("spreadsheet") && !fileType.includes("excel")) || fileName.endsWith('.docx');
     const isExcel = (fileType.includes("excel") || fileType.includes("spreadsheet")) || fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
     const isPdf = (fileType === "application/pdf") || fileName.endsWith('.pdf');
     const isImage = fileType.startsWith("image/") || fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.gif') || fileName.endsWith('.webp');
@@ -117,6 +118,16 @@ export default function FilePreview({ file }: { file: Attachment }) {
                                 throw new Error("File reading failed");
                             }
                     
+                            // Parse the workbook
+                            const wb = XLSX.read(arrayBuffer, { type: 'array' });
+                            
+                            // Get the first sheet
+                            const sheetName = wb.SheetNames[0];
+                            const ws = wb.Sheets[sheetName];
+                            
+                            // Convert to HTML
+                            const html = (XLSX.utils as any).sheet_to_html(ws);
+                            
                             const styledHtml = `
                                 <style>
                                     table { 
@@ -130,21 +141,16 @@ export default function FilePreview({ file }: { file: Attachment }) {
                                         padding: 6px; 
                                         text-align: left;
                                     }
-                                    th { 
-                                        background-color: #f8f9fa; 
-                                        font-weight: 600;
-                                        position: sticky; /* Cho header nó dính */
-                                        top: 0;
-                                    }
                                     tr:nth-child(even) {
                                         background-color: #f2f2f2;
                                     }
                                 </style>
-                            `; // <-- ĐÓNG CÁI TEMPLATE LẠI
+                                ${html}
+                            `; 
 
-                            container.innerHTML = styledHtml; // <-- SET CÁI HTML VÀO
+                            container.innerHTML = styledHtml; 
 
-                        } catch (err) { // <-- SỬA LẠI BIẾN LỖI
+                        } catch (err) { 
                              console.error("Error rendering Excel:", err);
                              if(container) container.innerHTML = "<p>Error previewing file (read failed).</p>";
                         }
@@ -153,7 +159,7 @@ export default function FilePreview({ file }: { file: Attachment }) {
                         console.error("FileReader error:", err);
                         if(container) container.innerHTML = "<p>Error reading file blob.</p>";
                     }
-                    reader.readAsArrayBuffer(blob); // <-- BẮT ĐẦU ĐỌC
+                    reader.readAsArrayBuffer(blob); 
                     // --- KẾT THÚC FILE READER ---
                 })
                 .catch(e => {

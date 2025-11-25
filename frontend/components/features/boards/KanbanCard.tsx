@@ -11,7 +11,7 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import { db } from "@/public/mock-data/mock-data"
-import LabelTag from "@/components/shared/label/LabelTag"
+
 import { getAssigneeInitial } from "@/lib/backlog-utils"
 
 import { Calendar, Paperclip, MoreHorizontal } from "lucide-react"
@@ -21,6 +21,7 @@ import { AvatarImage } from "@/components/ui/avatar"
 import { EpicPicker } from "@/components/shared/epic/EpicPicker"
 import { AssigneePicker } from "@/components/shared/assignee/AssigneePicker"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
+import { LabelTag } from "@/components/shared/label/LabelTag"
 
 interface KanbanCardProps {
   task: Task

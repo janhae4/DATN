@@ -42,6 +42,8 @@ import {
 import { BacklogFilterBar } from "../backlogs/BacklogFilterBar";
 import { TaskDetailModal } from "../backlogs/taskmodal";
 
+import { KanbanSprintSelection } from "./KanbanSprintSelection";
+
 const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({
     styles: {
@@ -71,7 +73,10 @@ export function KanbanBoard() {
     handleDescriptionChange,
     handleDateChange,
     handlePriorityChange,
-    handleAssigneeChange
+    handleAssigneeChange,
+    activeSprint,
+    sprints,
+    startSprint
   } = useTaskManagementContext();
   const { lists, createList, reorderLists, fetchLists, deleteList, updateList } = useList(projectId);
 
@@ -84,8 +89,12 @@ export function KanbanBoard() {
   const [newListCategory, setNewListCategory] = React.useState<ListCategoryEnum>(ListCategoryEnum.TODO);
 
   React.useEffect(() => {
-    setItems(data);
-  }, [data]);
+    if (activeSprint) {
+      setItems(data.filter(t => t.sprintId === activeSprint.id));
+    } else {
+      setItems([]);
+    }
+  }, [data, activeSprint]);
 
   const handleAddList = async () => {
     if (!newListName.trim()) return;
@@ -226,7 +235,7 @@ export function KanbanBoard() {
             particleCount: 100,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ["#10B981", "#34D399", "#6EE7B7", "#059669"], // Green shades
+            colors: ["#10B981", "#34D399", "#6EE7B7", "#059669"], 
           });
         }
       }
@@ -245,15 +254,18 @@ export function KanbanBoard() {
         setOverColumnId(null);
       }}
     >
-      <div className="h-full w-full min-w-0 overflow-hidden relative group/board flex flex-col">
-        <div className="px-4 py-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+      <div className="h-full w-full min-w-0 relative group/board flex flex-col">
+        <div className=" py-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
           <BacklogFilterBar showCreateSprint={false} showStatusFilter={false} />
         </div>
         <div
           ref={scrollContainerRef}
-          className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent pb-2"
+          className="flex-1 w-full overflow-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent pb-2"
         >
-          <div className="flex h-full gap-6 w-max px-4 pt-4">
+          <div className="flex w-max gap-6 pt-4 ">
+            {!activeSprint && (
+              <KanbanSprintSelection sprints={sprints} onStartSprint={startSprint} />
+            )}
             {lists.map((list) => (
               <KanbanColumn
                 key={list.id}

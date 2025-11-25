@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/command"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getAssigneeInitial, priorityMap } from "@/lib/backlog-utils"
-import { Check, ChevronDown, PlusCircle, User, Flag, CheckCircle2, X, Layers } from "lucide-react"
+import { Check, ChevronDown, PlusCircle, User, Flag, CheckCircle2, X, Layers, Tag, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { TaskFilters } from "@/hooks/useTaskManagement"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
@@ -28,6 +28,8 @@ import { Task, List } from "@/types"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useList } from "@/hooks/useList"
+import { SprintCreateDialog } from "./sprint/SprintCreateDialog"
+import { SprintStatus } from "@/types/common/enums"
 
 // Lấy list priority từ map
 const priorityList = Object.entries(priorityMap).map(([key, value]) => ({
@@ -48,7 +50,7 @@ interface BacklogFilterBarProps {
 }
 
 export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = true }: BacklogFilterBarProps) {
-  const { filters, setFilters, projectId, epics } = useTaskManagementContext()
+  const { filters, setFilters, projectId, epics, sprints, labels } = useTaskManagementContext()
   const { lists } = useList(projectId)
 
   // Dùng state local để control UI, sau đó "debounce" update context
@@ -82,6 +84,8 @@ export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = t
       priorities: [],
       listIds: [],
       epicIds: [],
+      labelIds: [],
+      sprintIds: [],
     })
   }
 
@@ -90,7 +94,9 @@ export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = t
     filters.assigneeIds.length > 0 ||
     filters.priorities.length > 0 ||
     filters.listIds.length > 0 ||
-    filters.epicIds.length > 0
+    filters.epicIds.length > 0 ||
+    filters.labelIds.length > 0 ||
+    filters.sprintIds.length > 0
 
   // Lấy list status options
   const listOptions = lists.map(l => ({
@@ -105,6 +111,21 @@ export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = t
     label: e.title,
     icon: () => <div className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: e.color || "#a1a1aa" }} />
   }))
+
+  // Lấy list label options
+  const labelOptions = labels.map(l => ({
+    value: l.id,
+    label: l.name,
+    icon: () => <div className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: l.color || "#a1a1aa" }} />
+  }))
+
+  // Lấy list sprint options (chỉ active sprint)
+  const activeSprint = sprints.find(s => s.status === SprintStatus.ACTIVE)
+  const sprintOptions = activeSprint ? [{
+    value: activeSprint.id,
+    label: activeSprint.title,
+    icon: () => <Calendar className="h-3 w-3 text-muted-foreground" />
+  }] : []
 
   return (
     <div className="flex w-full items-center gap-2  py-2">
@@ -167,6 +188,24 @@ export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = t
         onSelectionChange={(values) => handleFilterChange("epicIds", values)}
       />
 
+      {/* Label Filter */}
+      <MultiSelectFilter
+        label="Label"
+        icon={<Tag className="h-3.5 w-3.5" />}
+        options={labelOptions}
+        selectedValues={filters.labelIds}
+        onSelectionChange={(values) => handleFilterChange("labelIds", values)}
+      />
+
+      {/* Sprint Filter */}
+      <MultiSelectFilter
+        label="Sprint"
+        icon={<Calendar className="h-3.5 w-3.5" />}
+        options={sprintOptions}
+        selectedValues={filters.sprintIds}
+        onSelectionChange={(values) => handleFilterChange("sprintIds", values)}
+      />
+
       {/* Clear Button */}
       {isFiltered && (
         <Button
@@ -180,7 +219,11 @@ export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = t
         </Button>
       )}
 
-      {showCreateSprint && <Button variant="default" size="sm" className="h-9 px-3">Create Sprint</Button>}
+      {showCreateSprint && (
+        <SprintCreateDialog onSave={() => window.location.reload()}>
+          <Button variant="default" size="sm" className="h-9 px-3">Create Sprint</Button>
+        </SprintCreateDialog>
+      )}
     </div>
   )
 }

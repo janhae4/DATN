@@ -19,6 +19,10 @@ import {
   TeamMember,
 } from "@/types/social";
 import {
+  Discussion,
+  Message,
+} from "@/types/communication";
+import {
   Role,
   Provider,
   TeamStatus,
@@ -34,11 +38,34 @@ import {
 // 1. CONSTANT IDs
 // ==========================================
 
+// ==========================================
+// TEST ACCOUNTS
+// ==========================================
+// 1. Alice (Admin)
+//    Email: alice@example.com
+//    Password: password123
+//
+// 2. Bob (User)
+//    Email: bob@example.com
+//    Password: password123
+//
+// 3. Charlie (User)
+//    Email: charlie@example.com
+//    Password: password123
+// ==========================================
+
 // --- Users & Teams ---
 const USER_ALICE_ID = "user-alice-1";
 const USER_BOB_ID = "user-bob-2";
 const USER_CHARLIE_ID = "user-charlie-3";
 const TEAM_ALPHA_ID = "team-alpha-1";
+const TEAM_BETA_ID = "team-beta-2";
+const TEAM_GAMMA_ID = "team-gamma-3";
+const TEAM_DELTA_ID = "team-delta-4";
+
+// --- Discussions ---
+const DISCUSSION_ALPHA_GENERAL_ID = "discussion-alpha-general-1";
+const DISCUSSION_ALPHA_DEV_ID = "discussion-alpha-dev-2";
 
 // --- Project 1: Phoenix ---
 const PROJECT_PHOENIX_ID = "project-phoenix-1";
@@ -48,6 +75,9 @@ const PHOENIX_LIST_REVIEW_ID = "list-phoenix-review-3";
 const PHOENIX_LIST_DONE_ID = "list-phoenix-done-4";
 const PHOENIX_SPRINT_1_ID = "sprint-phoenix-1";
 const PHOENIX_SPRINT_2_ID = "sprint-phoenix-2";
+const PHOENIX_SPRINT_3_ID = "sprint-phoenix-3";
+const PHOENIX_SPRINT_4_ID = "sprint-phoenix-4";
+const PHOENIX_SPRINT_5_ID = "sprint-phoenix-5";
 const PHOENIX_EPIC_AUTH_ID = "epic-phoenix-auth-1";
 const PHOENIX_EPIC_PAYMENT_ID = "epic-phoenix-payment-2";
 const PHOENIX_LABEL_BUG_ID = "label-phoenix-bug-1";
@@ -64,6 +94,12 @@ const PHOENIX_TASK_7_ID = "task-phoenix-7";
 const PHOENIX_TASK_8_ID = "task-phoenix-8";
 const PHOENIX_TASK_9_ID = "task-phoenix-9";
 const PHOENIX_TASK_10_ID = "task-phoenix-10";
+const PHOENIX_TASK_11_ID = "task-phoenix-11";
+const PHOENIX_TASK_12_ID = "task-phoenix-12";
+const PHOENIX_TASK_13_ID = "task-phoenix-13";
+const PHOENIX_TASK_14_ID = "task-phoenix-14";
+const PHOENIX_TASK_15_ID = "task-phoenix-15";
+const PHOENIX_TASK_16_ID = "task-phoenix-16";
 
 const PHOENIX_LABEL_DESIGN_ID = "label-phoenix-design-3";
 const PHOENIX_LABEL_BACKEND_ID = "label-phoenix-backend-4";
@@ -85,6 +121,17 @@ const PEGASUS_TASK_3_ID = "task-pegasus-3";
 
 // --- Project 3: Empty ---
 const PROJECT_EMPTY_ID = "project-empty-3";
+
+// --- Project 4: Test Alpha ---
+const PROJECT_TEST_ID = "project-test-alpha-1";
+const TEST_LIST_TODO_ID = "list-test-todo-1";
+const TEST_LIST_INPROGRESS_ID = "list-test-inprogress-2";
+const TEST_LIST_DONE_ID = "list-test-done-3";
+const TEST_SPRINT_1_ID = "sprint-test-1";
+const TEST_SPRINT_2_ID = "sprint-test-2";
+const TEST_SPRINT_3_ID = "sprint-test-3";
+const TEST_TASK_1_ID = "task-test-1";
+const TEST_TASK_2_ID = "task-test-2";
 
 // ==========================================
 // 2. MOCK DATA GENERATION
@@ -159,6 +206,30 @@ const teams: Team[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: TEAM_BETA_ID,
+    name: "Beta Squad",
+    ownerId: USER_BOB_ID,
+    status: TeamStatus.ACTIVE,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: TEAM_GAMMA_ID,
+    name: "Gamma Group",
+    ownerId: USER_CHARLIE_ID,
+    status: TeamStatus.ACTIVE,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: TEAM_DELTA_ID,
+    name: "Delta Force",
+    ownerId: USER_ALICE_ID,
+    status: TeamStatus.ACTIVE,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 const team_members: TeamMember[] = [
@@ -175,6 +246,57 @@ const team_members: TeamMember[] = [
     teamId: TEAM_ALPHA_ID,
     userId: USER_BOB_ID,
     role: MemberRole.MEMBER,
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+  },
+  // Beta Team Members
+  {
+    id: "member-beta-1",
+    teamId: TEAM_BETA_ID,
+    userId: USER_BOB_ID,
+    role: MemberRole.OWNER,
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+  },
+  {
+    id: "member-beta-2",
+    teamId: TEAM_BETA_ID,
+    userId: USER_ALICE_ID,
+    role: MemberRole.MEMBER,
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+  },
+  // Gamma Team Members
+  {
+    id: "member-gamma-1",
+    teamId: TEAM_GAMMA_ID,
+    userId: USER_CHARLIE_ID,
+    role: MemberRole.OWNER,
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+  },
+  {
+    id: "member-gamma-2",
+    teamId: TEAM_GAMMA_ID,
+    userId: USER_BOB_ID,
+    role: MemberRole.MEMBER,
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+  },
+  {
+    id: "member-gamma-3",
+    teamId: TEAM_GAMMA_ID,
+    userId: USER_ALICE_ID,
+    role: MemberRole.MEMBER,
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+  },
+  // Delta Team Members
+  {
+    id: "member-delta-1",
+    teamId: TEAM_DELTA_ID,
+    userId: USER_ALICE_ID,
+    role: MemberRole.OWNER,
     isActive: true,
     joinedAt: new Date().toISOString(),
   },
@@ -212,6 +334,18 @@ const projects: Project[] = [
     key: "EMP",
     description: "An empty project for testing initialization.",
     icon: "👻",
+    visibility: ProjectVisibility.PRIVATE,
+    teamId: TEAM_ALPHA_ID,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PROJECT_TEST_ID,
+    name: "Test Project Alpha",
+    key: "TPA",
+    description: "A project for testing sprints and tasks.",
+    icon: "🧪",
     visibility: ProjectVisibility.PRIVATE,
     teamId: TEAM_ALPHA_ID,
     isArchived: false,
@@ -300,6 +434,40 @@ const lists: List[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  // --- Lists (Workflow for Project Test Alpha) ---
+  {
+    id: TEST_LIST_TODO_ID,
+    name: "To Do",
+    position: 1,
+    color: "#A1A1AA",
+    projectId: PROJECT_TEST_ID,
+    category: ListCategoryEnum.TODO,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: TEST_LIST_INPROGRESS_ID,
+    name: "In Progress",
+    position: 2,
+    color: "#3B82F6",
+    projectId: PROJECT_TEST_ID,
+    category: ListCategoryEnum.IN_PROGRESS,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: TEST_LIST_DONE_ID,
+    name: "Done",
+    position: 3,
+    color: "#10B981",
+    projectId: PROJECT_TEST_ID,
+    category: ListCategoryEnum.DONE,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 // --- Sprints (for Project Phoenix) ---
@@ -326,6 +494,39 @@ const sprints: Sprint[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: PHOENIX_SPRINT_3_ID,
+    title: "Sprint 3.0 - Advanced Features",
+    goal: "Implement advanced reporting and analytics.",
+    startDate: "2025-11-29T00:00:00Z",
+    endDate: "2025-12-12T23:59:59Z",
+    projectId: PROJECT_PHOENIX_ID,
+    status: SprintStatus.PLANNED,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_SPRINT_4_ID,
+    title: "Sprint 4.0 - Optimization",
+    goal: "Performance tuning and bug bashing.",
+    startDate: "2025-12-13T00:00:00Z",
+    endDate: "2025-12-26T23:59:59Z",
+    projectId: PROJECT_PHOENIX_ID,
+    status: SprintStatus.PLANNED,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_SPRINT_5_ID,
+    title: "Sprint 5.0 - Launch Prep",
+    goal: "Final polish and marketing materials.",
+    startDate: "2025-12-27T00:00:00Z",
+    endDate: "2026-01-09T23:59:59Z",
+    projectId: PROJECT_PHOENIX_ID,
+    status: SprintStatus.PLANNED,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
   // --- Sprints (for Project Pegasus) ---
   {
     id: PEGASUS_SPRINT_1_ID,
@@ -335,6 +536,40 @@ const sprints: Sprint[] = [
     endDate: "2025-12-04T23:59:59Z",
     projectId: PROJECT_PEGASUS_ID,
     status: SprintStatus.ACTIVE,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // --- Sprints (for Project Test Alpha) ---
+  {
+    id: TEST_SPRINT_1_ID,
+    title: "Sprint 1 - Testing",
+    goal: "Testing sprint functionality.",
+    startDate: "2025-12-01T00:00:00Z",
+    endDate: "2025-12-14T23:59:59Z",
+    projectId: PROJECT_TEST_ID,
+    status: SprintStatus.PLANNED,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: TEST_SPRINT_2_ID,
+    title: "Sprint 2 - Testing",
+    goal: "More testing.",
+    startDate: "2025-12-15T00:00:00Z",
+    endDate: "2025-12-28T23:59:59Z",
+    projectId: PROJECT_TEST_ID,
+    status: SprintStatus.PLANNED,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: TEST_SPRINT_3_ID,
+    title: "Sprint 3 - Testing",
+    goal: "Even more testing.",
+    startDate: "2025-12-29T00:00:00Z",
+    endDate: "2026-01-11T23:59:59Z",
+    projectId: PROJECT_TEST_ID,
+    status: SprintStatus.PLANNED,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -640,6 +875,102 @@ const tasks: Task[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: PHOENIX_TASK_11_ID,
+    title: "Implement Analytics Dashboard",
+    description: "Create charts and graphs for project velocity.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.HIGH,
+    sprintId: PHOENIX_SPRINT_3_ID,
+    epicId: null,
+    position: 1,
+    assigneeIds: ["member-1"],
+    labelIds: [PHOENIX_LABEL_FEATURE_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_12_ID,
+    title: "Optimize Database Queries",
+    description: "Improve slow running queries for task retrieval.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_BOB_ID,
+    priority: Priority.URGENT,
+    sprintId: PHOENIX_SPRINT_4_ID,
+    epicId: null,
+    position: 1,
+    assigneeIds: ["member-2"],
+    labelIds: [PHOENIX_LABEL_BACKEND_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_13_ID,
+    title: "Prepare Marketing Assets",
+    description: "Create banners and social media posts.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_CHARLIE_ID,
+    priority: Priority.LOW,
+    sprintId: PHOENIX_SPRINT_5_ID,
+    epicId: null,
+    position: 1,
+    assigneeIds: [],
+    labelIds: [PHOENIX_LABEL_DESIGN_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_14_ID,
+    title: "Stripe Webhook Handler",
+    description: "Implement webhook handler for Stripe payment events.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.HIGH,
+    sprintId: null,
+    epicId: PHOENIX_EPIC_PAYMENT_ID,
+    position: 1,
+    assigneeIds: ["member-1"],
+    labelIds: [PHOENIX_LABEL_BACKEND_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_15_ID,
+    title: "Invoice Generation PDF",
+    description: "Generate PDF invoices for customers after payment.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_BOB_ID,
+    priority: Priority.MEDIUM,
+    sprintId: null,
+    epicId: PHOENIX_EPIC_PAYMENT_ID,
+    position: 2,
+    assigneeIds: ["member-2"],
+    labelIds: [PHOENIX_LABEL_BACKEND_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: PHOENIX_TASK_16_ID,
+    title: "Forgot Password Flow",
+    description: "Implement forgot password email and reset flow.",
+    projectId: PROJECT_PHOENIX_ID,
+    listId: PHOENIX_LIST_TODO_ID,
+    reporterId: USER_CHARLIE_ID,
+    priority: Priority.HIGH,
+    sprintId: null,
+    epicId: PHOENIX_EPIC_AUTH_ID,
+    position: 3,
+    assigneeIds: [],
+    labelIds: [PHOENIX_LABEL_FRONTEND_ID, PHOENIX_LABEL_BACKEND_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
   // --- Tasks (for Project Pegasus) ---
   {
     id: PEGASUS_TASK_1_ID,
@@ -686,6 +1017,39 @@ const tasks: Task[] = [
     position: 1,
     assigneeIds: ["member-1", "member-2"],
     labelIds: [PEGASUS_LABEL_AI_ID],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // --- Tasks (for Project Test Alpha) ---
+  {
+    id: TEST_TASK_1_ID,
+    title: "Test Task 1",
+    description: "This is a test task in the backlog/sprint.",
+    projectId: PROJECT_TEST_ID,
+    listId: TEST_LIST_TODO_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.MEDIUM,
+    sprintId: TEST_SPRINT_1_ID,
+    epicId: null,
+    position: 1,
+    assigneeIds: ["member-1"],
+    labelIds: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: TEST_TASK_2_ID,
+    title: "Test Task 2",
+    description: "Another test task.",
+    projectId: PROJECT_TEST_ID,
+    listId: TEST_LIST_TODO_ID,
+    reporterId: USER_ALICE_ID,
+    priority: Priority.LOW,
+    sprintId: TEST_SPRINT_1_ID,
+    epicId: null,
+    position: 2,
+    assigneeIds: ["member-1"],
+    labelIds: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -774,6 +1138,17 @@ const task_assignees: TaskAssignee[] = [
     teamMemberId: "member-2",
     assignedAt: new Date().toISOString(),
   },
+  // --- Task Assignees (Test Alpha) ---
+  {
+    taskId: TEST_TASK_1_ID,
+    teamMemberId: "member-1",
+    assignedAt: new Date().toISOString(),
+  },
+  {
+    taskId: TEST_TASK_2_ID,
+    teamMemberId: "member-2",
+    assignedAt: new Date().toISOString(),
+  },
 ];
 
 // --- Task Labels ---
@@ -811,6 +1186,104 @@ const attachments: Attachment[] = [
   },
 ];
 
+// --- Discussions ---
+const discussions: Discussion[] = [
+  {
+    id: DISCUSSION_ALPHA_GENERAL_ID,
+    name: "General",
+    ownerId: USER_ALICE_ID,
+    teamId: TEAM_ALPHA_ID,
+    isGroup: true,
+    isDeleted: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: DISCUSSION_ALPHA_DEV_ID,
+    name: "Development",
+    ownerId: USER_ALICE_ID,
+    teamId: TEAM_ALPHA_ID,
+    isGroup: true,
+    isDeleted: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// --- Messages ---
+const messages: Message[] = [
+  {
+    id: "msg-1",
+    discussionId: DISCUSSION_ALPHA_GENERAL_ID,
+    content: "Welcome to the Alpha Team!",
+    sender: {
+      id: USER_ALICE_ID,
+      name: "Alice",
+      avatar: "https://i.pravatar.cc/150?u=alice",
+    },
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+    updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+  },
+  {
+    id: "msg-2",
+    discussionId: DISCUSSION_ALPHA_GENERAL_ID,
+    content: "Thanks Alice! Excited to be here.",
+    sender: {
+      id: USER_BOB_ID,
+      name: "Bob",
+      avatar: null,
+    },
+    createdAt: new Date(Date.now() - 86400000 * 1.9).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 1.9).toISOString(),
+  },
+  {
+    id: "msg-3",
+    discussionId: DISCUSSION_ALPHA_DEV_ID,
+    content: "Has anyone checked the latest build?",
+    sender: {
+      id: USER_CHARLIE_ID,
+      name: "Charlie",
+      avatar: "https://i.pravatar.cc/150?u=charlie",
+    },
+    createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    updatedAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: "msg-4",
+    discussionId: DISCUSSION_ALPHA_DEV_ID,
+    content: "Yes, it looks stable on staging.",
+    sender: {
+      id: USER_ALICE_ID,
+      name: "Alice",
+      avatar: "https://i.pravatar.cc/150?u=alice",
+    },
+    createdAt: new Date(Date.now() - 1800000).toISOString(), // 30 mins ago
+    updatedAt: new Date(Date.now() - 1800000).toISOString(),
+  },
+];
+
+// --- Credentials (MOCK ONLY) ---
+const credentials = [
+  {
+    email: "alice@example.com",
+    password: "password123",
+    userId: USER_ALICE_ID,
+    role: Role.ADMIN,
+  },
+  {
+    email: "bob@example.com",
+    password: "password123",
+    userId: USER_BOB_ID,
+    role: Role.USER,
+  },
+  {
+    email: "charlie@example.com",
+    password: "password123",
+    userId: USER_CHARLIE_ID,
+    role: Role.USER,
+  },
+];
+
 // ==========================================
 // 3. EXPORT DATABASE
 // ==========================================
@@ -829,4 +1302,7 @@ export const db = {
   task_assignees,
   task_labels,
   attachments,
+  discussions,
+  messages,
+  credentials,
 };

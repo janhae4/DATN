@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import LabelTag from './LabelTag'
 import { Label } from '@/types'
+import LabelTag from './LabelTag';
 // Giả lập, mày nhớ xóa khi về local
 const LabelInputProp = (props: any) => <input {...props} />
 

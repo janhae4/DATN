@@ -1,103 +1,68 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Project } from "@/types";
 import { projectService } from "@/services/projectService";
 
 export function useProjects(teamId?: string) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
+  const queryKey = ["projects", teamId];
 
-  const fetchProjects = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await projectService.getProjects(teamId);
-      setProjects(data);
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [teamId]);
+  const {
+    data: projects = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey,
+    queryFn: () => projectService.getProjects(teamId),
+    enabled: !!teamId,
+  });
 
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+  const createProjectMutation = useMutation({
+    mutationFn: (project: Project) => projectService.createProject(project),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
-  const createProject = async (project: Project) => {
-    try {
-      const newProject = await projectService.createProject(project);
-      setProjects((prev) => [...prev, newProject]);
-      return newProject;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+  const updateProjectMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<Project> }) =>
+      projectService.updateProject(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
-  const updateProject = async (id: string, updates: Partial<Project>) => {
-    try {
-      const updatedProject = await projectService.updateProject(id, updates);
-      if (updatedProject) {
-        setProjects((prev) =>
-          prev.map((p) => (p.id === id ? updatedProject : p))
-        );
-      }
-      return updatedProject;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
-
-  const deleteProject = async (id: string) => {
-    try {
-      await projectService.deleteProject(id);
-      setProjects((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+  const deleteProjectMutation = useMutation({
+    mutationFn: (id: string) => projectService.deleteProject(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
   return {
     projects,
     isLoading,
-    error,
-    fetchProjects,
-    createProject,
-    updateProject,
-    deleteProject,
+    error: error as Error | null,
+    createProject: createProjectMutation.mutateAsync,
+    updateProject: (id: string, updates: Partial<Project>) =>
+      updateProjectMutation.mutateAsync({ id, updates }),
+    deleteProject: deleteProjectMutation.mutateAsync,
   };
 }
 
 export function useProject(projectId: string) {
-  const [project, setProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchProject = useCallback(async () => {
-    if (!projectId) return;
-    try {
-      setIsLoading(true);
-      const data = await projectService.getProjectById(projectId);
-      setProject(data || null);
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    fetchProject();
-  }, [fetchProject]);
-
-  return {
-    project,
+  const {
+    data: project,
     isLoading,
     error,
-    fetchProject,
+  } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => projectService.getProjectById(projectId),
+    enabled: !!projectId,
+  });
+
+  return {
+    project: project || null,
+    isLoading,
+    error: error as Error | null,
   };
 }

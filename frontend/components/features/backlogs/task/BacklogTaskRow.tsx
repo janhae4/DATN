@@ -15,7 +15,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, GripVertical, Edit, Plus } from "lucide-react";
 import { getAssigneeInitial } from "@/lib/backlog-utils";
 import { db } from "@/public/mock-data/mock-data";
-import { LabelTag } from "@/components/shared/label/LabelTag";
 import { LabelPopover } from "@/components/shared/label/LabelPopover";
 import { cn } from "@/lib/utils";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
@@ -26,12 +25,15 @@ import {
 } from "@/components/ui/tooltip";
 import { EpicPicker } from "@/components/shared/epic/EpicPicker";
 import { AssigneePicker } from "@/components/shared/assignee/AssigneePicker";
+import LabelTag from "@/components/shared/label/LabelTag";
 
 interface BacklogTaskRowProps {
   task: Task;
   lists: List[];
   isDraggable?: boolean;
   onRowClick?: (task: Task) => void;
+  selected?: boolean;
+  onSelect?: (taskId: string, checked: boolean) => void;
 }
 
 export function BacklogTaskRow({
@@ -39,6 +41,8 @@ export function BacklogTaskRow({
   lists,
   isDraggable = false,
   onRowClick,
+  selected = false,
+  onSelect,
 }: BacklogTaskRowProps) {
   const {
     handleUpdateCell,
@@ -131,6 +135,8 @@ export function BacklogTaskRow({
 
           <Checkbox
             className="h-4 w-4 flex-shrink-0"
+            checked={selected}
+            onCheckedChange={(checked) => onSelect?.(task.id, !!checked)}
             onClick={stopPropagation}
             onPointerDown={stopPropagation}
           />

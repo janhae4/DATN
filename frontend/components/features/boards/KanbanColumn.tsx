@@ -9,7 +9,6 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
@@ -95,7 +94,7 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 pb-3">
+      <div className="flex sticky bg-secondary!   rounded-xl   top-0 z-10 items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-2.5">
            {list.category === ListCategoryEnum.TODO && (
              <TooltipProvider>
@@ -235,7 +234,7 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1 px-3 pb-3">
+      <div className="flex-1 px-3 pb-3">
          <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
            <div className="flex flex-col gap-2.5 min-h-[100px]">
              {tasks.length > 0 ? (
@@ -282,7 +281,7 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
              </AnimatePresence>
            </div>
          </SortableContext>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

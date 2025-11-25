@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -6,12 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Tags } from "lucide-react"
 import { Label } from "@/types"
 import { db } from "@/public/mock-data/mock-data"
-import { LabelInput } from "./LabelInput"
+
 // Bỏ LabelTag vì không dùng ở list nữa
 // import { LabelTag } from "./LabelTag" 
 import { Separator } from "@/components/ui/separator"
 // --- IMPORT THÊM ---
 import { LabelEdit } from "./LabelEdit" // Import cái nút "..." (MoreHorizontalIcon)
+import { LabelInput } from "./LabelInput"
 
 // Prop interface (không đổi)
 export interface LabelPopoverProps {

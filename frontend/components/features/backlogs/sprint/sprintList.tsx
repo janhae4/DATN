@@ -77,7 +77,6 @@ export function SprintList() {
               <div className="flex w-full flex-col gap-2 ">
                 <div className="flex w-full items-center justify-between gap-4">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <Rocket className="h-5 w-5 text-blue-600 flex-shrink-0" /> {/* Icon màu xanh */}
                     <span className="text-base font-medium truncate" title={sprint.title}>
                       {sprint.title}
                     </span>
@@ -92,7 +91,7 @@ export function SprintList() {
                         sprint.status === "completed" ? "destructive" :
                         sprint.status === "planned" ? "default" :
                         sprint.status === "archived" ? "outline" :
-                        "secondary"
+                        "secondary" 
                       }
                       className={cn(
                         "capitalize",
