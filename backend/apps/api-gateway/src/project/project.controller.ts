@@ -1,20 +1,38 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, UseFilters, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseFilters,
+  UseGuards,
+} from '@nestjs/common';
 import { ProjectService } from './project.service';
-import { CreateProjectDto, JwtDto, Role, UpdateProjectDto } from '@app/contracts';
+import {
+  CreateProjectDto,
+  JwtDto,
+  Role,
+  UpdateProjectDto,
+} from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 @Controller('project')
 export class ProjectController {
-  constructor(private readonly projectService: ProjectService) { }
+  constructor(private readonly projectService: ProjectService) {}
 
-  @Post() 
+  @Post()
   @UseGuards(RoleGuard)
-  @Roles(Role.USER)
-  create(@Body() createProjectDto: CreateProjectDto, @CurrentUser('id') id: string) {
+  @Roles(Role.ADMIN, Role.USER)
+  create(
+    @Body() createProjectDto: CreateProjectDto,
+    @CurrentUser('id') id: string,
+  ) {
     const dtoWithUser = {
       ...createProjectDto,
-      ownerId: id
+      ownerId: id,
     };
     return this.projectService.create(dtoWithUser);
   }
@@ -25,10 +43,14 @@ export class ProjectController {
   }
 
   @Patch(':id') // UPDATE
-  update(@Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto, @CurrentUser() user: JwtDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateProjectDto: UpdateProjectDto,
+    @CurrentUser() user: JwtDto,
+  ) {
     const dtoWithUser = {
       ...updateProjectDto,
-      ownerId: user.id
+      ownerId: user.id,
     };
     return this.projectService.update(id, dtoWithUser);
   }

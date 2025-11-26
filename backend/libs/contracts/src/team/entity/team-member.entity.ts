@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { MemberRole } from "../dto/member.dto";
 import { Team } from "./team.entity";
+import { MemberRole } from "@app/contracts";
 
 @Entity()
 export class TeamMember {

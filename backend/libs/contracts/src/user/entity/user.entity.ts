@@ -9,11 +9,9 @@ import {
 } from 'typeorm';
 import { Account } from './account.entity';
 import { Follow } from './follow.entity';
+import { Role } from '@app/contracts/enums';
 
-export enum Role {
-  ADMIN = 'ADMIN',
-  USER = 'USER',
-}
+
 
 @Entity('users')
 export class User {

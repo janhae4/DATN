@@ -1,6 +1,5 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { MemberRole } from './member.dto';
-
+import { MemberRole } from '@app/contracts';
 export class ActionRole {
   @IsString()
   requesterId: string;

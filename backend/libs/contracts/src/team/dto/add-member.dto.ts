@@ -1,5 +1,4 @@
 import { ArrayMinSize, IsArray, IsNotEmpty, IsString } from 'class-validator';
-import { MemberDto } from './member.dto';
 import { EventUserSnapshot } from './create-team.dto';
 
 export class AddMember {

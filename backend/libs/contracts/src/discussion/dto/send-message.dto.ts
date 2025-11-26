@@ -1,5 +1,5 @@
-import { TeamSnapshot } from "@app/contracts";
-import { MemberShip } from "./participant.dto";
+import { MemberShip } from "@app/contracts/enums/membership.enum";
+import { TeamSnapshot } from "@app/contracts/team/dto/create-team.dto";
 
 class AttachmentDto {
   url: string;

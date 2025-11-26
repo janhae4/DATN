@@ -1,5 +1,4 @@
 import { ArrayMinSize, IsArray, IsOptional, IsString } from 'class-validator';
-import { MemberDto } from './member.dto';
 
 export class CreateTeamDto {
   @IsString()

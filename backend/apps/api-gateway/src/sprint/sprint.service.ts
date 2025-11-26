@@ -1,37 +1,35 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { CreateSprintDto, PROJECT_CLIENT, SPRINT_PATTERNS } from '@app/contracts';
+import { Injectable } from '@nestjs/common';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { CreateSprintDto, SPRINT_PATTERNS, UpdateSprintDto } from '@app/contracts';
+import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Injectable()
 export class SprintService {
-  constructor(
-    @Inject(PROJECT_CLIENT) private readonly projectClient: ClientProxy,
-  ) {}
+  constructor(private readonly amqp: AmqpConnection) {}
 
   async create(createSprintDto: CreateSprintDto) {
-    return firstValueFrom(
-      this.projectClient.send(SPRINT_PATTERNS.CREATE, {
-        createSprintDto,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'sprint_exchange',
+      routingKey: SPRINT_PATTERNS.CREATE,
+      payload: createSprintDto,
+    }));
   }
 
   async findAllByProjectId(projectId: string, userId: string) {
-    return firstValueFrom(
-      this.projectClient.send(SPRINT_PATTERNS.FIND_ALL_BY_PROJECT_ID, {
-        projectId,
-        userId,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'sprint_exchange',
+      routingKey: SPRINT_PATTERNS.FIND_ALL_BY_PROJECT_ID,
+      payload: { projectId, userId },
+    }));
   }
 
   async findOne(id: string, userId: string) {
-    return firstValueFrom(
-      this.projectClient.send(SPRINT_PATTERNS.FIND_ONE_BY_ID, {
-        id,
-        userId,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'sprint_exchange',
+      routingKey: SPRINT_PATTERNS.FIND_ONE_BY_ID,
+      payload: { id, userId },
+    }));
   }
+  
+  // (Cần thêm hàm update/remove trong gateway service nếu controller có dùng, tương tự mẫu trên)
 }

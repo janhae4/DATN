@@ -145,25 +145,59 @@
         "tsConfigPath": "apps/user/tsconfig.app.json"
       }
     },
-      "video-chat": {
-        "type": "application",
-        "root": "apps/video-chat",
-        "entryFile": "main",
-        "sourceRoot": "apps/video-chat/src",
-        "compilerOptions": {
-          "tsConfigPath": "apps/video-chat/tsconfig.app.json"
-        }
-      }, 
-      "project-service": {
-        "type": "application",
-        "root": "apps/project-service",
-        "entryFile": "main",
-        "sourceRoot": "apps/project-service/src",
-        "compilerOptions": {
-          "tsConfigPath": "apps/project-service/tsconfig.app.json"
-        }
+    "video-chat": {
+      "type": "application",
+      "root": "apps/video-chat",
+      "entryFile": "main",
+      "sourceRoot": "apps/video-chat/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/video-chat/tsconfig.app.json"
       }
-      
-
+    },
+    "project-service": {
+      "type": "application",
+      "root": "apps/project-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/project-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/project-service/tsconfig.app.json"
+      }
+    },
+    "sprint-service": {
+      "type": "application",
+      "root": "apps/sprint-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/sprint-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/sprint-service/tsconfig.app.json"
+      }
+    },
+    "epic-service": {
+      "type": "application",
+      "root": "apps/epic-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/epic-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/epic-service/tsconfig.app.json"
+      }
+    },
+    "label-service": {
+      "type": "application",
+      "root": "apps/label-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/label-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/label-service/tsconfig.app.json"
+      }
+    },
+    "list-service": {
+      "type": "application",
+      "root": "apps/list-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/list-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/list-service/tsconfig.app.json"
+      }
+    }
   }
 }

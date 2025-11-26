@@ -1,15 +1,15 @@
-// Dựa trên 'types/task.type.ts'
 import {
   IsArray,
   IsDateString,
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
 } from 'class-validator';
-import { Priority } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Priority } from '../enums/priority.enum';
 
 export class CreateTaskDto {
   @ApiProperty({
@@ -28,10 +28,32 @@ export class CreateTaskDto {
   @IsOptional()
   description?: string;
 
+  @ApiProperty({
+    description: 'ID of the project this task belongs to',
+    format: 'uuid',
+  })
+  @IsUUID()
+  projectId: string;
+
+  @ApiProperty({
+    description: 'ID of the status (column) this task is in',
+    format: 'uuid',
+  })
+  @IsUUID()
+  statusId: string;
+
+  @ApiPropertyOptional({
+    description: 'ID of the user who reported the task',
+    format: 'uuid',
+  })
+  @IsUUID()
+  @IsOptional()
+  reporterId?: string;
+
   @ApiPropertyOptional({
     description: 'Priority level of the task',
     enum: Priority,
-    example: Priority.medium,
+    default: Priority.MEDIUM,
   })
   @IsEnum(Priority)
   @IsOptional()
@@ -39,34 +61,21 @@ export class CreateTaskDto {
 
   @ApiPropertyOptional({
     description: 'Due date in ISO 8601 format',
-    example: '2025-12-31T23:59:59.999Z',
   })
   @IsDateString()
   @IsOptional()
-  due_date?: string;
+  due_date?: Date;
 
   @ApiPropertyOptional({
-    description: 'ID of the status',
-    format: 'uuid',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Start date in ISO 8601 format',
   })
-  @IsUUID()
-  @IsOptional() 
-  statusId?: string;
-
-  @ApiProperty({
-    description: 'ID of the project this task belongs to',
-    format: 'uuid',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  @IsUUID()
-  @IsNotEmpty()
-  projectId: string;
+  @IsDateString()
+  @IsOptional()
+  start_date?: Date;
 
   @ApiPropertyOptional({
     description: 'ID of the parent epic (if any)',
     format: 'uuid',
-    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsUUID()
   @IsOptional()
@@ -75,39 +84,20 @@ export class CreateTaskDto {
   @ApiPropertyOptional({
     description: 'ID of the sprint this task is assigned to',
     format: 'uuid',
-    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsUUID()
   @IsOptional()
   sprintId?: string;
 
   @ApiPropertyOptional({
-    description: 'Array of user IDs assigned to this task',
-    type: [String],
-    example: ['123e4567-e89b-12d3-a456-426614174000'],
+    description:
+      'The position of the task within its column, for ordering.',
+    example: 65535.0,
   })
-  @IsArray()
-  @IsString({ each: true })
+  @IsNumber()
   @IsOptional()
-  assigneeIds?: string[];
+  position?: number;
 
-  @ApiPropertyOptional({
-    description: 'Array of file IDs associated with this task',
-    type: [String],
-    example: ['123e4567-e89b-12d3-a456-426614174000'],
-  })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  fileIds?: string[];
-
-  @ApiPropertyOptional({
-    description: 'Array of label IDs associated with this task',
-    type: [String],
-    example: ['123e4567-e89b-12d3-a456-426614174000'],
-  })
-  @IsArray()
-  @IsUUID('all', { each: true })
-  @IsOptional()
-  labelIds?: string[];
+  // The following fields are for relations and are handled separately
+  // task_assignees, task_labels, attachments
 }

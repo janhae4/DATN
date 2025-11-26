@@ -1,25 +1,23 @@
 import { Module } from '@nestjs/common';
-import { TasksModule } from './tasks/tasks.module';
-import { StatusModule } from './status/status.module';
-import { SprintsModule } from './sprints/sprints.module';
-import { EpicsModule } from './epics/epics.module';
-import { LabelsModule } from './labels/labels.module';
-import { ClientConfigModule } from '@app/contracts';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ClientConfigModule, ClientConfigService } from '@app/contracts';
 import { ProjectsModule } from './projects/projects.module';
-import { ProjectMemberModule } from './project-member/project-member.module';
+import { Project } from '@app/contracts/project/entity/project.entity';
 
 @Module({
   imports: [
-    ClientConfigModule, 
-    ProjectsModule,
-    TasksModule,
-    StatusModule,
-    SprintsModule,
-    EpicsModule,
-    LabelsModule,
-    ProjectMemberModule,
+    ClientConfigModule,
+    TypeOrmModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (configService: ClientConfigService) => ({
+        type: 'postgres',
+        url: configService.databaseProjectUrl,
+        autoLoadEntities: true, 
+        synchronize: true,
+      }),
+    }),
+    ProjectsModule, 
   ],
-  controllers: [],
-  providers: [],
 })
 export class ProjectServiceModule {}

@@ -8,12 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { User } from './user.entity';
-
-export enum Provider {
-  LOCAL = 'LOCAL',
-  GOOGLE = 'GOOGLE',
-  FACEBOOK = 'FACEBOOK',
-}
+import { Provider } from '@app/contracts';
 
 @Entity('accounts')
 @Index(['provider', 'providerId'], { unique: true })

@@ -17,6 +17,49 @@ export class ClientConfigService {
     );
   }
 
+  get databaseProjectUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_PROJECT_URL',
+      'postgres://postgres:postgres@localhost:5432/project_db',
+    );
+  }
+  get databaseTaskUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_TASK_URL',
+      'postgres://postgres:postgres@localhost:5432/task_db',
+    );
+  }
+  get databaseLabelUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_LABEL_URL',
+      'postgres://postgres:postgres@localhost:5432/label_db',
+    );
+  }
+  get databaseListUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_LIST_URL',
+      'postgres://postgres:postgres@localhost:5432/list_db',
+    );
+  }
+  get databaseEpicUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_EPIC_URL',
+      'postgres://postgres:postgres@localhost:5432/epic_db',
+    );
+  }
+  get databaseSprintUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_SPRINT_URL',
+      'postgres://postgres:postgres@localhost:5432/sprint_db',
+    );
+  }
+
+
+
+
+
+
+
   get databaseDiscussionUrl(): string {
     return this.config.get<string>(
       'DATABASE_DISCUSSION_URL',
@@ -483,19 +526,92 @@ export class ClientConfigService {
   ------ PROJECT SERVICE CLIENT -----
   -------------------------
   */
-  getProjectServiceClientPort(): number {
-    return this.config.get<number>('PROJECT_CLIENT_PORT', 3003);
+ getProjectClientQueue(): string {
+    return this.config.get<string>('STATUS_QUEUE', 'status_service_queue');
   }
-  getProjectQueue(): string {
-    return this.config.get<string>('PROJECT_QUEUE', 'project_service_queue');
-  }
-
-
   get projectClientOptions(): any {
     return {
-      transport: Transport.TCP,
+      transport: Transport.RMQ,
       options: {
-        port: this.getProjectServiceClientPort(),
+        urls: [this.getRMQUrl()],
+        queue: this.getProjectClientQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  ----- STATUS CLIENT -----
+  -------------------------
+  */
+  getStatusQueue(): string {
+    return this.config.get<string>('STATUS_QUEUE', 'status_service_queue');
+  }
+  get statusClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getStatusQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  ------ EPIC CLIENT ----
+  -------------------------
+  */
+  getEpicQueue(): string {
+    return this.config.get<string>('EPIC_QUEUE', 'epic_service_queue');
+  }
+  get epicClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getEpicQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  ----- SPRINT CLIENT -----
+  -------------------------
+  */
+  getSprintQueue(): string {
+    return this.config.get<string>('SPRINT_QUEUE', 'sprint_service_queue');
+  }
+  get sprintClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getSprintQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
+  /*
+  -------------------------
+  ----- LABEL CLIENT ----
+  -------------------------
+  */
+  getLabelQueue(): string {
+    return this.config.get<string>('LABEL_QUEUE', 'label_service_queue');
+  }
+  get labelClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getLabelQueue(),
+        queueOptions: { durable: true },
       },
     };
   }

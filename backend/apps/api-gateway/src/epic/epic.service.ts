@@ -1,52 +1,49 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { CreateEpicDto, UpdateEpicDto, EPIC_PATTERNS, PROJECT_CLIENT } from '@app/contracts';
+import { Injectable } from '@nestjs/common';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { CreateEpicDto, UpdateEpicDto, EPIC_PATTERNS } from '@app/contracts';
+import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Injectable()
 export class EpicService {
-  constructor(
-    @Inject(PROJECT_CLIENT) private readonly projectClient: ClientProxy,
-  ) {}
+  constructor(private readonly amqp: AmqpConnection) {}
 
   async create(createEpicDto: CreateEpicDto) {
-    return firstValueFrom(
-      this.projectClient.send(EPIC_PATTERNS.CREATE, {
-        createEpicDto,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'epic_exchange',
+      routingKey: EPIC_PATTERNS.CREATE,
+      payload: createEpicDto,
+    }));
   }
 
   async findAllByProjectId(projectId: string) {
-    return firstValueFrom(
-      this.projectClient.send(EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID, {
-        projectId,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'epic_exchange',
+      routingKey: EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID,
+      payload: { projectId },
+    }));
   }
 
   async findOne(id: string) {
-    return firstValueFrom(
-      this.projectClient.send(EPIC_PATTERNS.FIND_ONE_BY_ID, {
-        id,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'epic_exchange',
+      routingKey: EPIC_PATTERNS.FIND_ONE_BY_ID,
+      payload: { epicId: id },
+    }));
   }
 
   async update(id: string, updateEpicDto: UpdateEpicDto) {
-    return firstValueFrom(
-      this.projectClient.send(EPIC_PATTERNS.UPDATE, {
-        id,
-        updateEpicDto,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'epic_exchange',
+      routingKey: EPIC_PATTERNS.UPDATE,
+      payload: { epicId: id, updateEpicDto },
+    }));
   }
 
   async remove(id: string) {
-    return firstValueFrom(
-      this.projectClient.send(EPIC_PATTERNS.REMOVE, {
-        id,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'epic_exchange',
+      routingKey: EPIC_PATTERNS.REMOVE,
+      payload: { epicId: id },
+    }));
   }
 }

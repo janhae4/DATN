@@ -1,3 +1,4 @@
+import { MemberShip } from '@app/contracts/enums/membership.enum';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -7,7 +8,6 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { MemberShip } from './participant.dto';
 
 export const SENDER_SNAPSHOT_SYSTEM: SenderSnapshotDto = {
   _id: 'SYSTEM_ID',

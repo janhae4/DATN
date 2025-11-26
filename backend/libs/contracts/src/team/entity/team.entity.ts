@@ -7,13 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { TeamMember } from './team-member.entity';
-
-export enum TeamStatus {
-  ACTIVE = 'ACTIVE',
-  ARCHIVED = 'ARCHIVED',
-  DISBANDED = 'DISBANDED',
-  DELETED = 'DELETED',
-}
+import { TeamStatus } from '@app/contracts';
 
 @Entity()
 export class Team {

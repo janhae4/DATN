@@ -10,4 +10,6 @@ export const TASK_PATTERNS = {
   REMOVE: 'task.remove',
   FIND_GOOGLE_EVENTS: 'task.findGoogleEvents',
   ADD_FILES: 'task.addFiles',
+  MOVE_INCOMPLETE_TASKS_TO_BACKLOG: 'task.moveIncompleteToBacklog',
+  UNASSIGN_TASKS_FROM_SPRINT: 'task.unassignFromSprint',
 };

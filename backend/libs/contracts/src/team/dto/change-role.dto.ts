@@ -1,5 +1,5 @@
+import { MemberRole } from '@app/contracts';
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { MemberRole } from './member.dto';
 
 export class ChangeRoleMember {
   @IsString()
