@@ -1,63 +1,49 @@
-import { Inject, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { 
-  CreateLabelDto, 
-  UpdateLabelDto, 
-  LABEL_PATTERNS,
-  PROJECT_CLIENT,
-  LabelErrorCode,
-} from '@app/contracts';
-import { catchError } from 'rxjs/operators';
-import { throwError } from 'rxjs';
+import { Injectable } from '@nestjs/common';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { CreateLabelDto, UpdateLabelDto, LABEL_PATTERNS } from '@app/contracts';
+import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Injectable()
-export class LabelService implements OnModuleInit {
-  constructor(
-    @Inject(PROJECT_CLIENT) private readonly client: ClientProxy,
-  ) {}
+export class LabelService {
+  constructor(private readonly amqp: AmqpConnection) {}
 
-  async onModuleInit() {
-    console.log('Label Client (API-Gateway) connected to RMQ');
+  async create(createLabelDto: CreateLabelDto) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'label_exchange',
+      routingKey: LABEL_PATTERNS.CREATE,
+      payload: createLabelDto,
+    }));
   }
 
-  // --- CREATE ---
-  create(createLabelDto: CreateLabelDto) {
-    return this.client.send(LABEL_PATTERNS.CREATE, { createLabelDto });
+  async findAllByProject(projectId: string) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'label_exchange',
+      routingKey: LABEL_PATTERNS.FIND_ALL_BY_PROJECT_ID,
+      payload: { projectId },
+    }));
   }
 
-  // --- READ ---
-  findOne(id: string) {
-    return this.client.send(LABEL_PATTERNS.FIND_ONE_BY_ID, { id }).pipe(
-      catchError((err) => {
-        if (err?.code === LabelErrorCode.LABEL_NOT_FOUND) {
-          return throwError(() => new NotFoundException(err.message));
-        }
-        return throwError(() => err);
-      }),
-    );
+  async findOne(id: string) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'label_exchange',
+      routingKey: LABEL_PATTERNS.FIND_ONE_BY_ID,
+      payload: { id },
+    }));
   }
 
-  // --- UPDATE ---
-  update(id: string, updateLabelDto: UpdateLabelDto) {
-    return this.client.send(LABEL_PATTERNS.UPDATE, { id, updateLabelDto }).pipe(
-      catchError((err) => {
-        if (err?.code === LabelErrorCode.LABEL_NOT_FOUND) {
-          return throwError(() => new NotFoundException(err.message));
-        }
-        return throwError(() => err);
-      }),
-    );
+  async update(id: string, updateLabelDto: UpdateLabelDto) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'label_exchange',
+      routingKey: LABEL_PATTERNS.UPDATE,
+      payload: { id, updateLabelDto },
+    }));
   }
 
-  // --- DELETE ---
-  remove(id: string) {
-    return this.client.send(LABEL_PATTERNS.REMOVE, { id }).pipe(
-      catchError((err) => {
-        if (err?.code === LabelErrorCode.LABEL_NOT_FOUND) {
-          return throwError(() => new NotFoundException(err.message));
-        }
-        return throwError(() => err);
-      }),
-    );
+  async remove(id: string) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'label_exchange',
+      routingKey: LABEL_PATTERNS.REMOVE,
+      payload: { id },
+    }));
   }
 }

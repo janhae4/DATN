@@ -1,25 +1,30 @@
 import { Module } from '@nestjs/common';
-import { ProjectsController } from './projects.controller';
-
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProjectsService } from './projects.service';
-import { PrismaModule } from 'apps/project-service/prisma/prisma.module';
-import { EpicsModule } from '../epics/epics.module';
-import { LabelsModule } from '../labels/labels.module';
-import { SprintsModule } from '../sprints/sprints.module';
-import { StatusModule } from '../status/status.module';
-import { TasksModule } from '../tasks/tasks.module';
+import { ProjectsController } from './projects.controller';
+import { Project } from '@app/contracts/project/entity/project.entity';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { ClientConfigModule, ClientConfigService, PROJECT_EXCHANGE, LIST_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
 
 @Module({
   imports: [
-    PrismaModule,
-    SprintsModule,
-    TasksModule,
-    EpicsModule,
-    LabelsModule,
-    StatusModule,
+    TypeOrmModule.forFeature([Project]),
+    
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
+        uri: config.getRMQUrl(),
+        connectionInitOptions: { wait: false },
+        exchanges: [
+          { name: PROJECT_EXCHANGE, type: 'topic' },
+          { name: LIST_EXCHANGE, type: 'topic' },
+          { name: USER_EXCHANGE, type: 'direct' },
+        ],
+      }),
+    }),
   ],
   controllers: [ProjectsController],
   providers: [ProjectsService],
-  exports: [ProjectsService],
 })
 export class ProjectsModule {}

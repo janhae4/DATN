@@ -1,67 +1,57 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { 
-  CreateTaskDto, 
-  UpdateTaskDto, 
-  TASK_PATTERNS, 
-  PROJECT_CLIENT 
-} from '@app/contracts';
+import { Injectable } from '@nestjs/common';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS } from '@app/contracts';
+import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Injectable()
 export class TaskService {
-  constructor(
-    @Inject(PROJECT_CLIENT) private readonly projectClient: ClientProxy,
-  ) {}
+  constructor(private readonly amqp: AmqpConnection) {}
 
   async create(createTaskDto: CreateTaskDto) {
-    
-    return firstValueFrom(
-      this.projectClient.send(TASK_PATTERNS.CREATE, {
-        createTaskDto,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'task_exchange',
+      routingKey: TASK_PATTERNS.CREATE,
+      payload: createTaskDto, // Gửi trực tiếp DTO, ko bọc {createTaskDto} nữa
+    }));
   }
 
   async findAllByProjectId(projectId: string) {
-    return firstValueFrom(
-      this.projectClient.send(TASK_PATTERNS.FIND_ALL, {
-        projectId,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'task_exchange',
+      routingKey: TASK_PATTERNS.FIND_ALL,
+      payload: { projectId },
+    }));
   }
 
   async findOne(id: string) {
-    return firstValueFrom(
-      this.projectClient.send(TASK_PATTERNS.FIND_ONE, {
-        id,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'task_exchange',
+      routingKey: TASK_PATTERNS.FIND_ONE,
+      payload: { id },
+    }));
   }
 
   async update(id: string, updateTaskDto: UpdateTaskDto) {
-    return firstValueFrom(
-      this.projectClient.send(TASK_PATTERNS.UPDATE, {
-        id,
-        updateTaskDto,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'task_exchange',
+      routingKey: TASK_PATTERNS.UPDATE,
+      payload: { id, updateTaskDto },
+    }));
   }
 
   async remove(id: string) {
-    return firstValueFrom(
-      this.projectClient.send(TASK_PATTERNS.REMOVE, {
-        id,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'task_exchange',
+      routingKey: TASK_PATTERNS.REMOVE,
+      payload: { id },
+    }));
   }
 
   async addFiles(taskId: string, fileIds: string[]) {
-    return firstValueFrom(
-      this.projectClient.send(TASK_PATTERNS.ADD_FILES, {
-        taskId,
-        fileIds,
-      }),
-    );
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: 'task_exchange',
+      routingKey: TASK_PATTERNS.ADD_FILES,
+      payload: { taskId, fileIds },
+    }));
   }
 }

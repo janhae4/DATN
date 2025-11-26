@@ -1,9 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { calendar_v3, google } from 'googleapis';
-import { Task } from './generated/prisma';
 import { ClientProxy } from '@nestjs/microservices';
 import { REDIS_CLIENT, REDIS_PATTERN } from '@app/contracts';
-
+import { Task } from '@app/contracts/task/entity/task.entity';
 @Injectable()
 export class GoogleCalendarService {
   private readonly logger = new Logger(GoogleCalendarService.name);
@@ -47,16 +46,16 @@ export class GoogleCalendarService {
     return {
       summary: task.title,
       description: task.description || '',
-      start: task.startTime
+      start: task.startDate
         ? {
-            dateTime: new Date(task.startTime).toISOString(),
+            dateTime: new Date(task.startDate).toISOString(),
             timeZone: 'Asia/Ho_Chi_Minh',
           }
         : undefined,
-      end: task.endTime
+      end: task.dueDate
         ? {
             dateTime: new Date(
-              new Date(task.endTime).getTime() + 60 * 60 * 1000,
+              new Date(task.dueDate).getTime() + 60 * 60 * 1000,
             ).toISOString(),
             timeZone: 'Asia/Ho_Chi_Minh',
           }

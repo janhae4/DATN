@@ -50,6 +50,7 @@ export class TeamService {
   }
 
   async create(createTeamDto: CreateTeamDto) {
+    console.log('Creating team with data:', createTeamDto);
     return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.CREATE,

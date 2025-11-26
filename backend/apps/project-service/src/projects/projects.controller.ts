@@ -1,40 +1,63 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices'; // <-- Hàng "chính chủ"
-import { PROJECT_PATTERNS, CreateProjectDto, UpdateProjectDto } from '@app/contracts';
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq'; // <-- Xài cái này
+import {
+  PROJECT_PATTERNS,
+  CreateProjectDto,
+  UpdateProjectDto,
+  PROJECT_EXCHANGE,
+} from '@app/contracts';
 import { ProjectsService } from './projects.service';
+import { customErrorHandler } from '@app/common';
 
 @Controller()
 export class ProjectsController {
   constructor(private readonly projectService: ProjectsService) {}
 
   // --- CREATE ---
-  @MessagePattern(PROJECT_PATTERNS.CREATE) 
-  create(@Payload() createProjectDto: CreateProjectDto) {
-    console.log("createProjectDto in Service",createProjectDto);
-    return this.projectService.create(createProjectDto);
-
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.CREATE,
+    queue: PROJECT_PATTERNS.CREATE,
+    
+    errorHandler: customErrorHandler,
+  })
+  async create(createProjectDto: CreateProjectDto) {
+    console.log('Received create request:', createProjectDto);
+    return await this.projectService.create(createProjectDto);
   }
-  
+
   // --- READ ---
-  @MessagePattern(PROJECT_PATTERNS.GET_BY_ID)
-  async findOne(@Payload() payload: { id: string }) {
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.GET_BY_ID,
+    queue: PROJECT_PATTERNS.GET_BY_ID,
+    errorHandler: customErrorHandler,
+  })
+  async findOne(payload: { id: string }) {
     const project = await this.projectService.findOne(payload.id);
-    if (!project) {
-      throw new Error('Project not found');
-    }
     return project;
   }
 
   // --- UPDATE ---
-  @MessagePattern(PROJECT_PATTERNS.UPDATE)
-  update(@Payload() payload: { id: string; updateProjectDto: UpdateProjectDto }) {
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.UPDATE,
+    queue: PROJECT_PATTERNS.UPDATE,
+    errorHandler: customErrorHandler,
+  })
+  async update(payload: { id: string; updateProjectDto: UpdateProjectDto }) {
     const { id, updateProjectDto } = payload;
-    return this.projectService.update(id, updateProjectDto);
+    return await this.projectService.update(id, updateProjectDto);
   }
 
   // --- DELETE ---
-  @MessagePattern(PROJECT_PATTERNS.REMOVE)
-  remove(@Payload() payload: { id: string }) {
-    return this.projectService.remove(payload.id);
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.REMOVE,
+    queue: PROJECT_PATTERNS.REMOVE,
+    errorHandler: customErrorHandler,
+  })
+  async remove(payload: { id: string }) {
+    return await this.projectService.remove(payload.id);
   }
 }

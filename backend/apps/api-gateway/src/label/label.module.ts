@@ -1,25 +1,21 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule } from '@nestjs/microservices';
-import { 
-  ClientConfigModule, 
-  ClientConfigService, 
-  PROJECT_CLIENT, 
-} from '@app/contracts';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { ClientConfigModule, ClientConfigService } from '@app/contracts';
 import { LabelController } from './label.controller';
 import { LabelService } from './label.service';
+
 @Module({
   imports: [
     ClientConfigModule,
-    ClientsModule.registerAsync([
-      {
-        name: PROJECT_CLIENT,
-        imports: [ClientConfigModule],
-        inject: [ClientConfigService],
-        useFactory: (configService: ClientConfigService) => (
-          configService.projectClientOptions
-        )
-      }
-    ])
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
+        exchanges: [{ name: 'label_exchange', type: 'topic' }],
+        uri: config.getRMQUrl(),
+        connectionInitOptions: { wait: false },
+      }),
+    }),
   ],
   controllers: [LabelController],
   providers: [LabelService],

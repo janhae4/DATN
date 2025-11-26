@@ -1,14 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions } from '@nestjs/microservices';
-import { TaskServiceModule } from './task-service.module';
-import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
-import { RpcExceptionFilter } from '@app/contracts/rpc-exception.filter';
+import { TasksModule } from './tasks/tasks.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(TaskServiceModule);
-  const cfg = app.get(ClientConfigService);
-  app.connectMicroservice(cfg.taskClientOptions as MicroserviceOptions);
-  app.useGlobalFilters(new RpcExceptionFilter());
-  await app.startAllMicroservices();
+  const app = await NestFactory.create(TasksModule);
+  await app.init(); // Tự động connect qua RabbitMQModule
+  console.log('Task microservice is listening (RPC Mode)');
 }
 bootstrap();

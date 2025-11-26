@@ -178,13 +178,14 @@ export class RedisService {
   }
 
   async getUserInfo(userIds: string[]) {
+    if (!Array.isArray(userIds)) {
+      userIds = typeof userIds === 'string' ? [userIds] : [];
+    }
     const keys = userIds.map((id) => `user:profile:${id}`);
     const dataList = await this.redis.mget(keys);
-    
     const profiles = dataList
       .map((data) => (data ? JSON.parse(data) : null))
       .filter(Boolean);
-
     return profiles;
   }
 
@@ -196,8 +197,11 @@ export class RedisService {
   }
 
   async getManyUserInfo(userIds: string[]) {
+    if (!Array.isArray(userIds)) {
+      userIds = typeof userIds === 'string' ? [userIds] : [];
+    }
     const keys = userIds.map((id) => `user:profile:${id}`);
-    const results = await this.redis.mget(keys)
+    const results = await this.redis.mget(keys);
     const profiles = results
       .filter(profile => profile != null)
       .map(profile => JSON.parse(profile))

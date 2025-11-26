@@ -1,9 +1,6 @@
-import { MemberRole } from '@app/contracts/team/dto/member.dto';
+import { MemberRole } from '@app/contracts/enums/member-role.enum';
+import { MemberShip } from '@app/contracts/enums/membership.enum';
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-export enum MemberShip {
-  ACTIVE = 'ACTIVE',
-  LEFT = 'LEFT'
-}
 
 
 export class ParticipantDto {

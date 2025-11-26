@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery, UpdateQuery } from 'mongoose';
-import { BadRequestException, Error as RpcError, MEMBER_ROLE, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS } from '@app/contracts';
+import { BadRequestException, Error as RpcError, MemberRole, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS } from '@app/contracts';
 import { FileDocument } from './schema/file.schema';
 import { MinioService } from './minio.service';
 import { randomUUID } from 'crypto';
@@ -33,7 +33,7 @@ export class FileService {
         return this.fileModel.updateOne(query, update).exec();
     }
 
-    async _verifyPermission(fileId: string, roles: MEMBER_ROLE[], userId: string, teamId?: string) {
+    async _verifyPermission(fileId: string, roles: MemberRole[], userId: string, teamId?: string) {
         const file = await this.fileModel.findOne({ _id: fileId }).exec();
         console.log(fileId, roles, userId, teamId);
         if (!file) {
@@ -100,7 +100,7 @@ export class FileService {
         teamId?: string,
     ) {
 
-        const file = await this._verifyPermission(fileId, [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER], userId, teamId);
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, teamId);
 
         await file.updateOne({
             $set: {
@@ -120,7 +120,7 @@ export class FileService {
 
     async deleteFile(fileId: string, userId: string, teamId?: string) {
         console.log(fileId, userId)
-        const file = await this._verifyPermission(fileId, [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER], userId, teamId);
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, teamId);
         try {
             await Promise.all([
                 this.fileModel.deleteOne({ _id: fileId }).exec(),
@@ -140,7 +140,7 @@ export class FileService {
     }
 
     async renameFile(fileId: string, newFileName: string, userId: string, teamId?: string) {
-        const file = await this._verifyPermission(fileId, [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER], userId, teamId);
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, teamId);
         try {
             await Promise.all([
                 file.updateOne({
@@ -277,7 +277,7 @@ export class FileService {
     }
 
     async getViewUrl(fileId: string, userId: string, teamId?: string) { // Đổi tên hàm
-        const file = await this._verifyPermission(fileId, [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER, MEMBER_ROLE.MEMBER], userId, teamId);
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER], userId, teamId);
 
         const fileExtension = path.extname(file.originalName).toLowerCase();
         const allowedViewTypes = ['.pdf', '.txt', '.jpg', '.jpeg', '.png', '.gif'];
@@ -294,7 +294,7 @@ export class FileService {
     }
 
     async getDownloadUrl(fileId: string, userId: string, teamId?: string) {
-        const file = await this._verifyPermission(fileId, [MEMBER_ROLE.ADMIN, MEMBER_ROLE.OWNER, MEMBER_ROLE.MEMBER], userId, teamId);
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER], userId, teamId);
 
         const downloadUrl = await this.minioService.getPreSignedDownloadUrl(
             file.storageKey,

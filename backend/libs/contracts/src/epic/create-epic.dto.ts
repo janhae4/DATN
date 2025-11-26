@@ -8,8 +8,11 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
-import { EpicStatus, Priority } from '@prisma/client';
+
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Priority } from '../enums/priority.enum';
+import { EpicStatus } from '../enums/epic-status.enum';
+
 
 export class CreateEpicDto {
   @ApiProperty({

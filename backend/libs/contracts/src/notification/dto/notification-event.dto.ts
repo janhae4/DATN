@@ -1,4 +1,4 @@
-import { NotificationType } from '../notification.enum';
+import { NotificationType } from "@app/contracts/enums/notification-type.enum";
 
 export class NotificationEventDto {
   title: string;

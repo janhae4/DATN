@@ -12,14 +12,14 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
 import { DiscussionModule } from '../dicussion/discussion.module';
 import { ProjectModule } from '../project/project.module';
 import { LabelModule } from '../label/label.module';
-import { StatusModule } from '../status/status.module';
+import { ListModule } from '../list/list.module';
 import { SprintModule } from '../sprint/sprint.module';
 import { EpicModule } from '../epic/epic.module';
 import { TaskModule } from '../task/task.module';
-import { ProjectMemberModule } from '../project-member/project-member.module';
 
 @Module({
   imports: [
+    
     AuthModule,
     TeamModule,
     ChatbotModule,
@@ -28,13 +28,12 @@ import { ProjectMemberModule } from '../project-member/project-member.module';
     DiscussionModule,
     FileModule,
     LabelModule,
-    StatusModule,
+    ListModule,
     SprintModule,
     EpicModule,
     TaskModule,
     ProjectModule,
     
-    ProjectMemberModule,
     WebhooksModule
   ],
   controllers: [ApiGatewayController],

@@ -1,10 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule } from '@nestjs/microservices';
-import { 
-  ClientConfigModule, 
-  ClientConfigService, 
-  PROJECT_CLIENT, 
-} from '@app/contracts';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { ClientConfigModule, ClientConfigService } from '@app/contracts';
 import { AuthModule } from '../auth/auth.module';
 import { EpicController } from './epic.controller';
 import { EpicService } from './epic.service';
@@ -13,16 +9,15 @@ import { EpicService } from './epic.service';
   imports: [
     ClientConfigModule,
     AuthModule,
-    ClientsModule.registerAsync([
-      {
-        name: PROJECT_CLIENT,
-        imports: [ClientConfigModule],
-        inject: [ClientConfigService],
-        useFactory: (configService: ClientConfigService) => (
-          configService.projectClientOptions
-        )
-      }
-    ])
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
+        exchanges: [{ name: 'epic_exchange', type: 'topic' }],
+        uri: config.getRMQUrl(),
+        connectionInitOptions: { wait: false },
+      }),
+    }),
   ],
   controllers: [EpicController],
   providers: [EpicService],

@@ -1,6 +1,5 @@
 import { IsArray, IsEnum, IsString } from "class-validator";
-import { MemberRole } from "./member.dto";
-
+import { MemberRole } from "@app/contracts";
 export class VerifyPermissionPayload {
     @IsString()
     teamId: string;

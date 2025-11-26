@@ -159,7 +159,14 @@ export class TeamService {
     const { name, memberIds = [], ownerId } = createTeamDto;
     this.logger.log(`Validating members for new team "${name}"...`);
 
-    const allUserIdsToValidate = Array.from(new Set([...memberIds, ownerId]));
+    // Validate ownerId
+    if (!ownerId) {
+      throw new BadRequestException('ownerId is required to create a team.');
+    }
+
+    // Ensure memberIds is an array
+    const safeMemberIds = Array.isArray(memberIds) ? memberIds : [];
+    const allUserIdsToValidate = Array.from(new Set([...safeMemberIds, ownerId]));
 
     let usersFromCache: EventUserSnapshot[] = [];
     try {
@@ -182,11 +189,13 @@ export class TeamService {
     if (missingIds.length > 0) {
       this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from DB...`);
 
-      usersFromDb = await this.amqp.request<User[]>({
+      const result = await this.amqp.request<User[]>({
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-        payload: missingIds,
+        payload: { userIds: missingIds },
       });
+      usersFromDb = Array.isArray(result) ? result : (result ? [result] : []);
+
 
       if (usersFromDb.length > 0) {
         this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, usersFromDb);
@@ -305,6 +314,13 @@ export class TeamService {
           routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
           payload: { userIds: missingIds },
         });
+        // const result = await this.amqp.request<User[]>({
+        //   exchange: USER_EXCHANGE,
+        //   routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+        //   payload: { userIds: missingIds }, 
+        // });
+
+        // usersFromDb = Array.isArray(result) ? result : (result ? [result] : []);
 
         if (usersFromDb.length > 0) {
           this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, {
@@ -379,17 +395,17 @@ export class TeamService {
     userMap: Map<string, User | EventUserSnapshot>,
     ownerId?: string
   ): Promise<{ cachedUsers: EventUserSnapshot[]; savedMembers: TeamMember[] }> {
-    const cachedUsers: EventUserSnapshot[] = []
+    const cachedUsers: EventUserSnapshot[] = [];
     const membersToCreate = newMemberIds.map((id) => {
-      const user = userMap.get(id)!;
-
+      const user = userMap.get(id);
+      if (!user) {
+        throw new BadRequestException(`User with ID ${id} not found in userMap.`);
+      }
       const cachedData = {
         name: user.name,
         avatar: user.avatar,
       };
-
-      cachedUsers.push({ ...cachedData, id })
-
+      cachedUsers.push({ ...cachedData, id });
       return memberRepo.create({
         team,
         userId: id,
@@ -398,7 +414,7 @@ export class TeamService {
     });
 
     const savedMembers = await memberRepo.save(membersToCreate);
-    return { cachedUsers, savedMembers }
+    return { cachedUsers, savedMembers };
   }
 
   async removeMember(payload: RemoveMember): Promise<Team> {

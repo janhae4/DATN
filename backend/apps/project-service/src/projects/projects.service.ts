@@ -1,82 +1,70 @@
 import { Injectable } from '@nestjs/common';
-import { CreateProjectDto, UpdateProjectDto } from '@app/contracts';
+import {
+  CreateProjectDto,
+  UpdateProjectDto,
+  LIST_PATTERNS,
+  LIST_EXCHANGE,
+} from '@app/contracts';
 import { defaultStatuses } from './constants/default-statuses';
-import { PrismaService } from 'apps/project-service/prisma/prisma.service';
-import { ProjectRole } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { Project } from '@app/contracts/project/entity/project.entity';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    @InjectRepository(Project)
+    private readonly projectRepository: Repository<Project>,
+    private readonly amqpConnection: AmqpConnection,
+  ) {}
 
   // --- CREATE ---
   async create(createProjectDto: CreateProjectDto) {
-    if (!createProjectDto.ownerId) {
-      throw new Error('Owner ID is required');
-    }
-    const { memberIds, ownerId, ...restOfDto } = createProjectDto;
+    // Permission checks (e.g., if the user is part of the teamId)
+    // should be handled in the API gateway or a dedicated auth guard
+    // before this service method is called.
 
-    const membersToCreate: { userId: string; role: ProjectRole }[] = (memberIds || [])
-      .map((id) => ({
-        userId: id,
-        role: ProjectRole.MEMBER
-      }))
+    const projectEntity = this.projectRepository.create(createProjectDto);
 
-    membersToCreate.push({
-      userId: ownerId,
-      role: ProjectRole.OWNER
-    })
+    const savedProject = await this.projectRepository.save(projectEntity);
 
-    const project = await this.prisma.project.create({
-      data: {
-        ...restOfDto,
-        ownerId,
-        statuses: {
-          createMany: {
-            data: defaultStatuses.map((status, index) => ({
-              ...status,
-              order: index,
-            })),
-          },
-        },
-
-        members: {
-          createMany: {
-            data: membersToCreate,
-          },
-        },
+    // After saving the project, create the default statuses via RabbitMQ
+    this.amqpConnection.publish(
+      LIST_EXCHANGE,
+      LIST_PATTERNS.CREATE_DEFAULT,
+      {
+        projectId: savedProject.id,
+        statuses: defaultStatuses,
       },
-      include: {
-        members: true,
-      },
-    });
-    return project;
+    );
+
+    return savedProject;
   }
 
   // --- READ ---
   async findOne(id: string) {
-    const project = await this.prisma.project.findUnique({
+    const project = await this.projectRepository.findOne({
       where: { id },
     });
     if (!project) {
-      throw new Error('Project not found'); // Sẽ được customErrorHandler bắt
+      throw new Error('Project not found');
     }
     return project;
   }
 
   // --- UPDATE ---
   async update(id: string, updateProjectDto: UpdateProjectDto) {
-    const project = await this.prisma.project.update({
-      where: { id },
-      data: updateProjectDto,
-    });
-    return project;
+    await this.projectRepository.update(id, updateProjectDto);
+    return this.findOne(id);
   }
 
   // --- DELETE ---
   async remove(id: string) {
-    await this.prisma.project.delete({
-      where: { id },
-    });
-    return { message: 'Project deleted successfully' };
+    // In a real-world scenario, you might want to soft-delete
+    // or archive the project instead of a hard delete.
+    // The new schema has `isArchived`, so we should use that.
+    await this.projectRepository.update(id, { isArchived: true });
+    return { message: 'Project archived successfully' };
   }
 }

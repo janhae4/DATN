@@ -1,67 +1,55 @@
-import { Inject, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import {
   CreateProjectDto,
   UpdateProjectDto,
-  PROJECT_CLIENT,
   PROJECT_PATTERNS,
+  PROJECT_EXCHANGE, // <-- Nhớ import Exchange
 } from '@app/contracts';
-import { catchError } from 'rxjs/operators';
-import { throwError } from 'rxjs';
-import { ProjectErrorCode } from '@app/contracts/project/project.errors';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq'; // <-- Xài cái này
+import { unwrapRpcResult } from '../common/helper/rpc'; // <-- Xài cái helper xịn xò này
 
 @Injectable()
-export class ProjectService implements OnModuleInit { 
+export class ProjectService { 
   constructor(
-    @Inject(PROJECT_CLIENT) private readonly client: ClientProxy,
+    private readonly amqpConnection: AmqpConnection, // Inject AmqpConnection
   ) {}
 
-  async onModuleInit() { 
-    await this.client.connect();
-    console.log('Project Client (API-Gateway) connected to RMQ');
-  }
-
   // --- CREATE ---
-  create(createProjectDto: CreateProjectDto) {
-    console.log("createProjectDto in API",createProjectDto);
-    return this.client.send(PROJECT_PATTERNS.CREATE, createProjectDto);
+  async create(createProjectDto: CreateProjectDto) {
+    console.log("createProjectDto in API ne", createProjectDto);
+    
+    // Request kiểu RPC: gửi đi và đợi kết quả
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: PROJECT_EXCHANGE,
+      routingKey: PROJECT_PATTERNS.CREATE,
+      payload: createProjectDto,
+    }));
   }
 
   // --- READ ---
-  findOne(id: string) {
-    return this.client.send(PROJECT_PATTERNS.GET_BY_ID, { id }).pipe(
-      catchError((err) => {
-        if (err?.code === ProjectErrorCode.PROJECT_NOT_FOUND) {
-          return throwError(() => new NotFoundException(err.message));
-        }
-        return throwError(() => err);
-      }),
-    );
+  async findOne(id: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: PROJECT_EXCHANGE,
+      routingKey: PROJECT_PATTERNS.GET_BY_ID,
+      payload: { id },
+    }));
   }
 
   // --- UPDATE ---
-  update(id: string, updateProjectDto: UpdateProjectDto) {
-    console.log(updateProjectDto);
-    return this.client.send(PROJECT_PATTERNS.UPDATE, { id, updateProjectDto }).pipe(
-      catchError((err) => {
-        if (err?.code === ProjectErrorCode.PROJECT_NOT_FOUND) {
-          return throwError(() => new NotFoundException(err.message));
-        }
-        return throwError(() => err);
-      }),
-    );
+  async update(id: string, updateProjectDto: UpdateProjectDto) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: PROJECT_EXCHANGE,
+      routingKey: PROJECT_PATTERNS.UPDATE,
+      payload: { id, updateProjectDto },
+    }));
   }
 
   // --- DELETE ---
-  remove(id: string) {
-    console.log(id);
-    return this.client.send(PROJECT_PATTERNS.REMOVE, { id }).pipe(
-      catchError((err) => {
-        if (err?.code === ProjectErrorCode.PROJECT_NOT_FOUND) {
-          return throwError(() => new NotFoundException(err.message));
-        }
-        return throwError(() => err);
-      }),
-    );
+  async remove(id: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: PROJECT_EXCHANGE,
+      routingKey: PROJECT_PATTERNS.REMOVE,
+      payload: { id },
+    }));
   }
 }

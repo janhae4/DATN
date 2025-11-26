@@ -14,7 +14,7 @@ export class NotificationService {
         userId: notification.userId,
         title: notification.title,
         message: notification.message,
-        type: notification.type,
+        type: notification.type as any,
       },
     });
     this.logger.log(`Notification created: ${notificationCreated.id}`);
@@ -27,7 +27,7 @@ export class NotificationService {
   ) {
     const notificationUpdated = await this.prisma.notification.update({
       where,
-      data,
+      data: data as any,
     });
     this.logger.log(`Notification updated: ${where.id}`);
     return notificationUpdated;
