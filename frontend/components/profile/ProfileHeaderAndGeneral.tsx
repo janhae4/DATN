@@ -19,11 +19,13 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { SettingsSectionProps, Provider } from '../../types/user.interface'
+import { Provider } from '@/types/common/enums'
+import { useAuth } from '@/contexts/AuthContext';
 
-export function ProfileHeaderAndGeneral({ user }: SettingsSectionProps) {
-    const [name, setName] = React.useState(user.name)
-    const [phone, setPhone] = React.useState(user.phone || "")
+export function ProfileHeaderAndGeneral() {
+    const { user } = useAuth();
+    const [name, setName] = React.useState(user?.name)
+    const [phone, setPhone] = React.useState(user?.phone || "")
 
     const handleSave = () => {
         console.log("Saving General settings:", { name, phone })
@@ -44,9 +46,9 @@ export function ProfileHeaderAndGeneral({ user }: SettingsSectionProps) {
 
                 <div className="flex items-center gap-6">
                     <Avatar className="size-20 border-2 border-background shadow-md">
-                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarImage src={user?.avatar} alt={user?.name} />
                         <AvatarFallback className="text-xl">
-                            {user.name.charAt(0).toUpperCase()}
+                            {user?.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col gap-2">
@@ -57,7 +59,7 @@ export function ProfileHeaderAndGeneral({ user }: SettingsSectionProps) {
                             </Button>
                             <Button variant="ghost" size="sm">Remove</Button>
                         </div>
-                        {user.provider === Provider.GOOGLE && (
+                        {user?.provider === Provider.GOOGLE && (
                             <p className="text-xs text-muted-foreground">
                                 Synced from Google
                             </p>
@@ -81,7 +83,7 @@ export function ProfileHeaderAndGeneral({ user }: SettingsSectionProps) {
                         <Label htmlFor="email">Email</Label>
                         <Input
                             id="email"
-                            value={user.email}
+                            value={user?.email}
                             disabled
                             className="bg-muted/50"
                         />
@@ -100,7 +102,7 @@ export function ProfileHeaderAndGeneral({ user }: SettingsSectionProps) {
                     </div>
                 </div>
             </CardContent>
-            <CardFooter className="border-t pt-4 justify-end">
+            <CardFooter className="border-t pt-4 justify-end cursor-pointer">
                 <Button onClick={handleSave}>
                     <Save className="h-4 w-4 mr-2" />
                     Save Changes

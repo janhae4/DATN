@@ -49,6 +49,9 @@ export class Task {
   @Column({ type: 'uuid', name: 'sprintId', nullable: true })
   sprintId: string | null;
 
+  @Column({ type: 'uuid', name: 'parentId', nullable: true })
+  parentId: string | null;
+
   @Column({ type: 'real', default: 65535, nullable: false })
   position: number;
 

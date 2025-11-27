@@ -6,7 +6,8 @@ import {
   Get, 
   Param, 
   Put, 
-  Delete 
+  Delete, 
+  Query
 } from '@nestjs/common';
 import { 
   CreateTaskDto, 
@@ -25,15 +26,15 @@ export class TaskController {
   @Post()
   @UseGuards(RoleGuard)
   @Roles(Role.USER)
-  create(@Body() createTaskDto: CreateTaskDto) {
-    return this.taskService.create(createTaskDto);
+  create(@Body() createTaskDto: CreateTaskDto, @CurrentUser('id') id: string,) {
+    return this.taskService.create({ ...createTaskDto, reporterId: id });
   }
 
-  @Get('project/:projectId')
+  @Get()
   @UseGuards(RoleGuard)
   @Roles(Role.USER)
   findAllByProjectId(
-    @Param('projectId') projectId: string,
+    @Query('projectId') projectId: string,
   ) {
     return this.taskService.findAllByProjectId(projectId);
   }

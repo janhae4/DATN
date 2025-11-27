@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { CreateTaskDto, UpdateTaskDto } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
 import { RabbitSubscribe, Nack } from '@golevelup/nestjs-rabbitmq';
@@ -19,23 +19,64 @@ export class TasksService {
   ) {}
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    // Here you would generate the `task_key` (e.g., "PROJ-123")
-    // This requires fetching the project key and the latest task number for that project.
-    // This logic is complex and depends on other services, so for now, we'll use a placeholder.
-    const task_key = await this.generateTaskKey(createTaskDto.projectId);
+    const { listId, position } = createTaskDto; //
+
+    let newPosition = position;
+
+    // Nếu client không gửi position (hoặc gửi null), ta tự tính để đưa xuống cuối
+    if (!newPosition) {
+      // 1. Tìm task đang nằm cuối cùng trong list này
+      const lastTask = await this.taskRepository.findOne({
+        where: { listId },
+        order: { position: 'DESC' }, // Lấy cái cao nhất
+        select: ['position'],
+      });
+
+      // 2. Tính position mới
+      // Nếu chưa có task nào, mặc định là 65535
+      // Nếu có rồi, cộng thêm 65535 (hoặc 1 đơn vị bất kỳ, miễn là tăng lên)
+      newPosition = lastTask ? lastTask.position + 65535 : 65535;
+    }
 
     const taskData = {
       ...createTaskDto,
-      task_key,
+      position: newPosition,
     };
 
     const newTask = this.taskRepository.create(taskData);
     return this.taskRepository.save(newTask);
   }
-
   async findAllByProject(projectId: string): Promise<Task[]> {
     return this.taskRepository.find({
       where: { projectId },
+      order: { position: 'ASC' },
+    });
+  }
+
+  async findAllBySprint(sprintId: string): Promise<Task[]> {
+    return this.taskRepository.find({
+      where: { sprintId },
+      order: { position: 'ASC' },
+    });
+  }
+
+  async findAllByList(listId: string): Promise<Task[]> {
+    return this.taskRepository.find({
+      where: { listId },
+      order: { position: 'ASC' },
+    });
+  }
+
+  async findAllByReporter(reporterId: string): Promise<Task[]> {
+    return this.taskRepository.find({
+      where: { reporterId },
+      order: { position: 'ASC' },
+    });
+  }
+
+  async findAllByBackLogs(projectId: string): Promise<Task[]> {
+    return this.taskRepository.find({
+      where: { projectId, sprintId: IsNull() },
       order: { position: 'ASC' },
     });
   }
@@ -47,6 +88,8 @@ export class TasksService {
     }
     return task;
   }
+
+
 
   async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
     const task = await this.findOne(id);
@@ -62,20 +105,12 @@ export class TasksService {
     return { success: true };
   }
 
-  private async generateTaskKey(projectId: string): Promise<string> {
-    // In a real implementation, you would:
-    // 1. Call the project-service to get the project's `key` (e.g., "DEV").
-    // 2. Query the task repository to find the highest task number for that project.
-    // 3. Increment the number and combine them: "DEV-101".
 
-    // For now, a simplified placeholder:
-    const count = await this.taskRepository.count({ where: { projectId } });
-    // This is NOT robust and is for demonstration only.
-    // A dedicated sequence or a call to another service is needed.
-    return `TASK-${count + 1}`;
-  }
 
-  async moveIncompleteTasksToBacklog(sprintId: string, backlogStatusId: string) {
+  async moveIncompleteTasksToBacklog(
+    sprintId: string,
+    backlogStatusId: string,
+  ) {
     // This method would be called when a sprint is completed.
     // It finds all tasks in the sprint that are not 'done' and moves them.
     // This requires knowing which status categories are considered "incomplete".
@@ -87,6 +122,8 @@ export class TasksService {
       { sprintId: null, listId: backlogStatusId },
     );
   }
+
+
 
   async unassignTasksFromSprint(sprintId: string) {
     // This would be called if a sprint is deleted or archived.

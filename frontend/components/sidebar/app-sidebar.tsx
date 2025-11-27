@@ -15,6 +15,7 @@ import {
   SquareTerminal,
   Star,
   Users,
+  MessageCircle
 } from "lucide-react"
 
 import { NavMain } from "@/components/sidebar/nav-main"
@@ -36,23 +37,7 @@ const data = {
     email: "m@example.com",
     avatar: "/avatars/shadcn.jpg",
   },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
+  
   projects: [
     {
       name: "Design Engineering",
@@ -124,6 +109,12 @@ const data = {
       icon: Users,
       isActive: true
     },
+    {
+      title: "Messages",
+      url: "chat",
+      icon: MessageCircle,
+      isActive: true
+    },
      {
       title: "AI Assistant",
       url: "ai-assistant",
@@ -134,20 +125,30 @@ const data = {
 
 }
 
+import { useProjects } from "@/hooks/useProjects"
+import { useTeamContext } from "@/contexts/TeamContext"
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { activeTeam } = useTeamContext()
+  const { projects } = useProjects(activeTeam?.id)
+
+  const formattedProjects = React.useMemo(() => {
+    return projects.map((project) => ({
+      name: project.name,
+      url: `/dashboard?projectId=${project.id}`,
+      icon: Frame, // Default icon
+    }))
+  }, [projects])
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
-        {/* <Image src={logo} alt={""} /> */}
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavProjects projects={formattedProjects} />
       </SidebarContent>
-      {/* <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter> */}
       <SidebarRail />
     </Sidebar>
   )

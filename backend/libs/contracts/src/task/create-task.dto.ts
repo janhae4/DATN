@@ -36,11 +36,11 @@ export class CreateTaskDto {
   projectId: string;
 
   @ApiProperty({
-    description: 'ID of the status (column) this task is in',
+    description: 'ID of the list (column) this task is in',
     format: 'uuid',
   })
   @IsUUID()
-  statusId: string;
+  listId: string;
 
   @ApiPropertyOptional({
     description: 'ID of the user who reported the task',
@@ -64,14 +64,14 @@ export class CreateTaskDto {
   })
   @IsDateString()
   @IsOptional()
-  due_date?: Date;
+  dueDate?: Date;
 
   @ApiPropertyOptional({
     description: 'Start date in ISO 8601 format',
   })
   @IsDateString()
   @IsOptional()
-  start_date?: Date;
+  startDate?: Date;
 
   @ApiPropertyOptional({
     description: 'ID of the parent epic (if any)',

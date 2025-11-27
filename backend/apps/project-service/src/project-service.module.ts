@@ -7,16 +7,6 @@ import { Project } from '@app/contracts/project/entity/project.entity';
 @Module({
   imports: [
     ClientConfigModule,
-    TypeOrmModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (configService: ClientConfigService) => ({
-        type: 'postgres',
-        url: configService.databaseProjectUrl,
-        autoLoadEntities: true, 
-        synchronize: true,
-      }),
-    }),
     ProjectsModule, 
   ],
 })

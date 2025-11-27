@@ -28,6 +28,8 @@ export class TasksController {
     return this.tasksService.findAllByProject(payload.projectId);
   }
 
+  
+
   @RabbitRPC({
     exchange: 'task_exchange',
     routingKey: TASK_PATTERNS.FIND_ONE,

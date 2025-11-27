@@ -1,18 +1,22 @@
-    .mainLayout {
-      display: flex;
-      height: 100vh;
-      flex: 1;
-    }
+.mainLayout {
+  display: flex;
+  height: 100%; 
+  width: 100%;
 
-    .content {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto; /* Cho phép cuộn nếu nội dung dài */
-    }
+}
 
-    .pageWrapper {
-      padding: 1.5rem;
-      flex-grow: 1;
-    }
-    
+.content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow-x: hidden;
+  min-height: 0; 
+}
+
+.pageWrapper {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  padding: 1.5rem;
+  min-height: 0; 
+}

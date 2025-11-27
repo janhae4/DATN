@@ -100,7 +100,7 @@ export class ClientConfigService {
   -------------------------
   */
   getRMQUrl(): string {
-    return this.config.get<string>('RMQ_URL', 'amqp://localhost:5672');
+    return this.config.get<string>('RMQ_URL', 'amqp://admin:admin123@localhost:5672');
   }
 
   /* 
@@ -527,7 +527,7 @@ export class ClientConfigService {
   -------------------------
   */
  getProjectClientQueue(): string {
-    return this.config.get<string>('STATUS_QUEUE', 'status_service_queue');
+    return this.config.get<string>('PROJECT_QUEUE', 'project_service_queue');
   }
   get projectClientOptions(): any {
     return {
@@ -542,18 +542,18 @@ export class ClientConfigService {
 
   /*
   -------------------------
-  ----- STATUS CLIENT -----
+  ----- LIST CLIENT -----
   -------------------------
   */
-  getStatusQueue(): string {
-    return this.config.get<string>('STATUS_QUEUE', 'status_service_queue');
+  getListQueue(): string {
+    return this.config.get<string>('LIST_QUEUE', 'list_service_queue');
   }
-  get statusClientOptions(): any {
+  get listClientOptions(): any {
     return {
       transport: Transport.RMQ,
       options: {
         urls: [this.getRMQUrl()],
-        queue: this.getStatusQueue(),
+        queue: this.getListQueue(),
         queueOptions: { durable: true },
       },
     };

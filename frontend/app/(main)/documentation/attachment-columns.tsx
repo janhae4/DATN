@@ -44,13 +44,10 @@ import {
 
 
 
-import { Provider, User } from "@/types/user.interface"
-import { Attachment } from "@/types/attachment.interface"
 import FilePreview from "./filePreview"
-
-
-
-
+import { Attachment } from "@/types"
+import { User, Provider } from "@/types"
+import { db } from "@/public/mock-data/mock-data"
 
 // 2. Helper function (Giữ nguyên)
 const formatBytes = (bytes: number | undefined, decimals = 2) => {
@@ -65,33 +62,7 @@ const formatBytes = (bytes: number | undefined, decimals = 2) => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
-// --- MOCK USER LOOKUP TABLE (Giữ nguyên) ---
-const userLookupTable: Record<string, User> = {
-    "user_nguyen_21": {
-        id: "user_nguyen_21",
-        name: "Nguyen (You)", // <-- DỊCH
-        email: "bi_nguyen@example.com",
-        username: "bi_nguyen_21",
-        provider: Provider.GOOGLE,
-        avatar: "https://placehold.co/100x100/DDA0DD/FFFFFF?text=BI"
-    },
-    "user_son_bo_nguyen": {
-        id: "user_son_bo_nguyen",
-        name: "Son (Your Friend)", // <-- DỊCH
-        email: "son_bo@example.com",
-        username: "son_bo",
-        provider: Provider.LOCAL,
-        avatar: "https://placehold.co/100x100/0000FF/FFFFFF?text=SON"
-    },
-    "user_456_tester": {
-        id: "user_456_tester",
-        name: "Tester", // <-- DỊCH
-        email: "tester@example.com",
-        username: "tester",
-        provider: Provider.LOCAL,
-        avatar: "" // Không có avatar
-    }
-};
+
 // --- END OF MOCK DATA ---
 
 
@@ -190,15 +161,14 @@ export const columns: ColumnDef<Attachment>[] = [
         header: "Uploaded By",
         cell: ({ row }) => {
             const userId = row.original.uploadedById;
-            const user = userLookupTable[userId];
-
+            const user = db.users.find(u => u.id === userId);
             if (!user) {
                 return <span className="text-gray-500">{userId}</span>
             }
 
             const fallback = user.name
                 .split(' ')
-                .map(n => n[0])
+                .map((n: string) => n[0])
                 .join('')
                 .substring(0, 2)
                 .toUpperCase() || "US";

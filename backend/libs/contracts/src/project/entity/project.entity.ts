@@ -16,9 +16,6 @@ export class Project {
   @Column()
   name: string;
 
-  @Column({ length: 10 })
-  key: string;
-
   @Column({ type: 'text', nullable: true })
   description: string;
 

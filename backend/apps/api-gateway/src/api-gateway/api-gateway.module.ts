@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ApiGatewayController } from './api-gateway.controller';
 import { ApiGatewayService } from './api-gateway.service';
+import { ClientConfigModule, ClientConfigService, PROJECT_EXCHANGE, LIST_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { UserModule } from '../user/user.module';
 import { AuthModule } from '../auth/auth.module';
 import { TeamModule } from '../team/team.module';
@@ -17,9 +19,23 @@ import { SprintModule } from '../sprint/sprint.module';
 import { EpicModule } from '../epic/epic.module';
 import { TaskModule } from '../task/task.module';
 
+
 @Module({
   imports: [
-    
+    ClientConfigModule,
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
+        uri: config.getRMQUrl(),
+        connectionInitOptions: { wait: true },
+        exchanges: [
+          { name: PROJECT_EXCHANGE, type: 'topic' },
+          { name: LIST_EXCHANGE, type: 'topic' },
+          { name: USER_EXCHANGE, type: 'direct' },
+        ],
+      }),
+    }),
     AuthModule,
     TeamModule,
     ChatbotModule,
@@ -33,7 +49,6 @@ import { TaskModule } from '../task/task.module';
     EpicModule,
     TaskModule,
     ProjectModule,
-    
     WebhooksModule
   ],
   controllers: [ApiGatewayController],
