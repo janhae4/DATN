@@ -1,5 +1,5 @@
-import { IsArray, IsNotEmpty, IsOptional, IsString, Length, IsEnum, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, Length, IsOptional, IsEnum, IsBoolean } from 'class-validator';
 import { ProjectVisibility } from '../enums/project-visibility.enum';
 
 export class CreateProjectDto {
@@ -8,12 +8,6 @@ export class CreateProjectDto {
   @IsNotEmpty()
   @Length(3, 100)
   name: string;
-
-  @ApiPropertyOptional({ example: 'ALPHA' })
-  @IsString()
-  @IsOptional()
-  @Length(1, 10)
-  key?: string;
 
   @ApiPropertyOptional({ example: 'This is a sample project for demonstration purposes.' })
   @IsString()
@@ -26,7 +20,7 @@ export class CreateProjectDto {
   @IsOptional()
   icon?: string;
 
-  @ApiPropertyOptional({ enum: ProjectVisibility, example: ProjectVisibility.TEAM })
+  @ApiPropertyOptional({ enum: ProjectVisibility, example: ProjectVisibility.PRIVATE })
   @IsEnum(ProjectVisibility)
   @IsOptional()
   visibility?: ProjectVisibility;
@@ -46,13 +40,7 @@ export class CreateProjectDto {
   @IsOptional()
   isArchived?: boolean;
 
-  @ApiPropertyOptional({ example: ['11111111-2222-3333-4444-555555555555', '66666666-7777-8888-9999-000000000000'] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  memberIds?: string[];
-
-  @ApiPropertyOptional({ example: '11111111-2222-3333-4444-555555555555' })
+  @ApiPropertyOptional({ example: 'd4c3b2a1-6f5e-0987-dcba-0987654321fe' })
   @IsString()
   @IsOptional()
   ownerId?: string;

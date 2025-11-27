@@ -30,19 +30,15 @@ export class ProjectController {
     @Body() createProjectDto: CreateProjectDto,
     @CurrentUser('id') id: string,
   ) {
-    const dtoWithUser = {
-      ...createProjectDto,
-      ownerId: id,
-    };
-    return this.projectService.create(dtoWithUser);
+    return this.projectService.create({ ...createProjectDto, ownerId: id });
   }
 
-  @Get(':id') // READ
+  @Get(':id')
   findOne(@Param('id') id: string) {
     return this.projectService.findOne(id);
   }
 
-  @Patch(':id') // UPDATE
+  @Patch(':id')
   update(
     @Param('id') id: string,
     @Body() updateProjectDto: UpdateProjectDto,
@@ -55,7 +51,7 @@ export class ProjectController {
     return this.projectService.update(id, dtoWithUser);
   }
 
-  @Delete(':id') // DELETE
+  @Delete(':id')
   remove(@Param('id') id: string) {
     return this.projectService.remove(id);
   }

@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import {
   CreateProjectDto,
   UpdateProjectDto,
@@ -7,49 +7,34 @@ import {
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq'; // <-- Xài cái này
 import { unwrapRpcResult } from '../common/helper/rpc'; // <-- Xài cái helper xịn xò này
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
-export class ProjectService { 
-  constructor(
-    private readonly amqpConnection: AmqpConnection, // Inject AmqpConnection
-  ) {}
+export class ProjectService {
+  constructor(@Inject(PROJECT_EXCHANGE) private readonly client: ClientProxy) {}
 
   // --- CREATE ---
   async create(createProjectDto: CreateProjectDto) {
-    console.log("createProjectDto in API ne", createProjectDto);
-    
-    // Request kiểu RPC: gửi đi và đợi kết quả
-    return unwrapRpcResult(await this.amqpConnection.request({
-      exchange: PROJECT_EXCHANGE,
-      routingKey: PROJECT_PATTERNS.CREATE,
-      payload: createProjectDto,
-    }));
+    console.log('Creating project with data:', createProjectDto);
+    return unwrapRpcResult(this.client.send(PROJECT_PATTERNS.CREATE, createProjectDto));
   }
 
   // --- READ ---
   async findOne(id: string) {
-    return unwrapRpcResult(await this.amqpConnection.request({
-      exchange: PROJECT_EXCHANGE,
-      routingKey: PROJECT_PATTERNS.GET_BY_ID,
-      payload: { id },
-    }));
+    return unwrapRpcResult(
+      this.client.send(PROJECT_PATTERNS.GET_BY_ID, { id }),
+    );
   }
 
   // --- UPDATE ---
   async update(id: string, updateProjectDto: UpdateProjectDto) {
-    return unwrapRpcResult(await this.amqpConnection.request({
-      exchange: PROJECT_EXCHANGE,
-      routingKey: PROJECT_PATTERNS.UPDATE,
-      payload: { id, updateProjectDto },
-    }));
+    return unwrapRpcResult(
+      this.client.send(PROJECT_PATTERNS.UPDATE, { id, updateProjectDto }),
+    );
   }
 
   // --- DELETE ---
-  async remove(id: string) {
-    return unwrapRpcResult(await this.amqpConnection.request({
-      exchange: PROJECT_EXCHANGE,
-      routingKey: PROJECT_PATTERNS.REMOVE,
-      payload: { id },
-    }));
+  async remove(id: String) {
+    return unwrapRpcResult(this.client.send(PROJECT_PATTERNS.REMOVE, { id }));
   }
 }

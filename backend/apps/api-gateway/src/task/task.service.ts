@@ -11,7 +11,7 @@ export class TaskService {
     return unwrapRpcResult(await this.amqp.request({
       exchange: 'task_exchange',
       routingKey: TASK_PATTERNS.CREATE,
-      payload: createTaskDto, // Gửi trực tiếp DTO, ko bọc {createTaskDto} nữa
+      payload: createTaskDto, 
     }));
   }
 

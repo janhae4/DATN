@@ -13,9 +13,11 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { SettingsSectionProps, Provider } from '../../types/user.interface'
+import { Provider } from '@/types/common/enums'
+import { useAuth } from '@/contexts/AuthContext';
 
-export function AccountSecurity({ user }: SettingsSectionProps) {
+export function AccountSecurity() {
+    const { user } = useAuth();
     const handleResetPassword = () => {
         console.log("Reset password requested.")
     }
@@ -34,14 +36,14 @@ export function AccountSecurity({ user }: SettingsSectionProps) {
             <CardContent className="space-y-4">
 
                 {/* Password/Login Method */}
-                <div className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 cursor-pointer transition-colors">
                     <div>
                         <p className="font-medium">Authentication Method</p>
                         <p className="text-sm text-muted-foreground">
-                            {user.provider === Provider.LOCAL ? "Local Password" : "Google SSO"}
+                            {user?.provider === Provider.LOCAL ? "Local Password" : "Google SSO"}
                         </p>
                     </div>
-                    {user.provider === Provider.LOCAL ? (
+                    {user?.provider === Provider.LOCAL ? (
                         <Button variant="outline" size="sm" onClick={handleResetPassword}>
                             Change Password
                         </Button>
@@ -50,14 +52,14 @@ export function AccountSecurity({ user }: SettingsSectionProps) {
                     )}
                 </div>
 
-                <div className="flex items-center justify-between p-3 border border-destructive rounded-md bg-destructive/10">
+                <div className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 cursor-pointer transition-colors ">
                     <div>
-                        <p className="font-medium text-destructive">Account Deletion</p>
-                        <p className="text-sm text-destructive/80">
+                        <p className="font-medium ">Account Deletion</p>
+                        <p className="text-sm ">
                             Warning: This action is permanent and cannot be undone.
                         </p>
                     </div>
-                    <Button variant="destructive" size="sm">
+                    <Button variant="outline" className="cursor-pointer" size="sm">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete Account
                     </Button>

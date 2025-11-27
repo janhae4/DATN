@@ -42,4 +42,15 @@ export class ListService {
     await this.listRepository.remove(list);
     return { success: true };
   }
+
+  createDefaultLists(projectId: string) {
+    const defaultLists: CreateListDto[] = [
+      { name: 'To Do', projectId, position: 1 },
+      { name: 'In Progress', projectId, position: 2 },
+      { name: 'Done', projectId, position: 3 },
+    ];
+
+    return Promise.all(defaultLists.map(this.create.bind(this)));
+  }
+
 }

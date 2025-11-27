@@ -1,49 +1,29 @@
-import { Injectable } from '@nestjs/common';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { CreateLabelDto, UpdateLabelDto, LABEL_PATTERNS } from '@app/contracts';
+import { Inject, Injectable } from '@nestjs/common';
+import { CreateLabelDto, UpdateLabelDto, LABEL_PATTERNS, LABEL_EXCHANGE } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class LabelService {
-  constructor(private readonly amqp: AmqpConnection) {}
+  constructor(@Inject(LABEL_EXCHANGE) private readonly client: ClientProxy) {}
 
   async create(createLabelDto: CreateLabelDto) {
-    return unwrapRpcResult(await this.amqp.request({
-      exchange: 'label_exchange',
-      routingKey: LABEL_PATTERNS.CREATE,
-      payload: createLabelDto,
-    }));
+    return unwrapRpcResult(await this.client.send(LABEL_PATTERNS.CREATE, createLabelDto));
   }
 
   async findAllByProject(projectId: string) {
-    return unwrapRpcResult(await this.amqp.request({
-      exchange: 'label_exchange',
-      routingKey: LABEL_PATTERNS.FIND_ALL_BY_PROJECT_ID,
-      payload: { projectId },
-    }));
+    return unwrapRpcResult(await this.client.send(LABEL_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId }));
   }
 
   async findOne(id: string) {
-    return unwrapRpcResult(await this.amqp.request({
-      exchange: 'label_exchange',
-      routingKey: LABEL_PATTERNS.FIND_ONE_BY_ID,
-      payload: { id },
-    }));
+    return unwrapRpcResult(await this.client.send(LABEL_PATTERNS.FIND_ONE_BY_ID, { id }));
   }
 
   async update(id: string, updateLabelDto: UpdateLabelDto) {
-    return unwrapRpcResult(await this.amqp.request({
-      exchange: 'label_exchange',
-      routingKey: LABEL_PATTERNS.UPDATE,
-      payload: { id, updateLabelDto },
-    }));
+    return unwrapRpcResult(await this.client.send(LABEL_PATTERNS.UPDATE, { id, updateLabelDto }));
   }
 
   async remove(id: string) {
-    return unwrapRpcResult(await this.amqp.request({
-      exchange: 'label_exchange',
-      routingKey: LABEL_PATTERNS.REMOVE,
-      payload: { id },
-    }));
+    return unwrapRpcResult(await this.client.send(LABEL_PATTERNS.REMOVE, { id }));
   }
 }

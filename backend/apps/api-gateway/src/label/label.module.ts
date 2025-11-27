@@ -1,22 +1,29 @@
 import { Module } from '@nestjs/common';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { ClientConfigModule, ClientConfigService } from '@app/contracts';
 import { LabelController } from './label.controller';
 import { LabelService } from './label.service';
+import {
+  ClientConfigModule,
+  ClientConfigService,
+  LABEL_EXCHANGE,
+} from '@app/contracts';
+import { AuthModule } from '../auth/auth.module';
+// THÊM ClientProvider để khai báo kiểu dữ liệu trả về
+import { ClientsModule } from '@nestjs/microservices';
 
 @Module({
   imports: [
+    AuthModule,
     ClientConfigModule,
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        exchanges: [{ name: 'label_exchange', type: 'topic' }],
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-      }),
-    }),
+    ClientsModule.registerAsync([
+      {
+        name: LABEL_EXCHANGE,
+        imports: [ClientConfigModule],
+        inject: [ClientConfigService],
+        useFactory: (config: ClientConfigService) => config.labelClientOptions,
+      },
+    ]),
   ],
+
   controllers: [LabelController],
   providers: [LabelService],
 })

@@ -2,58 +2,80 @@
 "use client"
 
 import * as React from "react"
-import { Task } from "@/types/task.type"
+import { Task, Sprint, Epic, Label } from "@/types"
 import { db } from "@/public/mock-data/mock-data"
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useTaskManagement } from "@/hooks/useTaskManagement"
+import { TaskFilters, useTaskManagement } from "@/hooks/useTaskManagement"
 
 // Context type definition
 interface TaskManagementContextType {
   data: Task[]
+  allData: Task[]
+  sprints: Sprint[]
+  epics: Epic[]
+  labels: Label[]
+  filters: TaskFilters
+  setFilters: (filters: TaskFilters) => void
   selectedTask: Task | null
   isAddingNewRow: boolean
-  addingSubtaskTo: string | null
   newRowTitle: string
   newTaskPriority: Task["priority"]
   newTaskDueDate: Date | null
   newTaskAssignees: string[]
-  newTaskStatus: string
+  newTaskListId: string
   dataIds: string[]
+  projectId: string
+
+  activeSprint: Sprint | null
+  startSprint: (sprintId: string) => Promise<void>
 
   // Handlers
   handleUpdateCell: (taskId: string, columnId: "title", value: string) => void
   handleDescriptionChange: (taskId: string, description: string) => void
   handleDateChange: (taskId: string, newDate: Date | undefined) => void
   handlePriorityChange: (taskId: string, priority: Task["priority"]) => void
-  handleStatusChange: (taskId: string, statusId: string) => void
+  handleListChange: (taskId: string, listId: string) => void
   handleRowClick: (task: Task) => void
-  handleAddNewRow: (parentId: string | null) => void
-  handleInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, parentId: string | null) => void
+  handleAddNewRow: (parentId: string | null, sprintId?: string) => void
+  handleInputKeyDown: (
+    e: React.KeyboardEvent<HTMLInputElement>, 
+    parentId: string | null, 
+    options?: { 
+      sprintId?: string; 
+      onCancel?: () => void; 
+    }
+  ) => void
   handleDragEnd: (event: DragEndEvent) => void
   handleEpicChange: (taskId: string, epicId: string | null) => void
-  handleSprintChange: (taskId: string, sprintId: string | null) => void 
+  handleSprintChange: (taskId: string, sprintId: string | null) => void
+  handleLabelChange: (taskId: string, labelIds: string[]) => void
+  handleAssigneeChange: (taskId: string, assigneeIds: string[]) => void
+  handleReorderTask: (activeId: string, overId: string) => void
+  handleDeleteTask: (taskId: string) => void
 
   // Setters
   setNewRowTitle: (title: string) => void
   setIsAddingNewRow: (isAdding: boolean) => void
-  setAddingSubtaskTo: (id: string | null) => void
   setSelectedTask: (task: Task | null) => void
   setNewTaskPriority: (priority: Task["priority"]) => void
   setNewTaskDueDate: (date: Date | null) => void
   setNewTaskAssignees: (assignees: string[]) => void
-  setNewTaskStatus: (status: string) => void
+  setNewTaskListId: (listId: string) => void
 }
 
 // Create context
 const TaskManagementContext = React.createContext<TaskManagementContextType | undefined>(undefined)
 
 // Provider component
-export function TaskManagementProvider({ children }: { children: React.ReactNode }) {
-  const taskManagementData = useTaskManagement()
+export function TaskManagementProvider({ children, projectId }: { children: React.ReactNode, projectId?: string }) {
+  const taskManagementData = useTaskManagement(projectId)
 
   return (
-    <TaskManagementContext.Provider value={taskManagementData}>
+    <TaskManagementContext.Provider value={{
+      ...taskManagementData,
+      handleDeleteTask: taskManagementData.handleDeleteTask,
+    }}>
       {children}
     </TaskManagementContext.Provider>
   )

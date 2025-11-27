@@ -10,4 +10,6 @@ export const LIST_PATTERNS = {
   FIND_ALL_BY_PROJECT: 'list.findAllByProject',
   UPDATE: 'list.update',
   REMOVE_BY_PROJECT: 'list.removeByProject',
+  UPDATE_POSITION: 'list.updatePosition',
+  
 };

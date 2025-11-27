@@ -3,27 +3,37 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProjectsService } from './projects.service';
 import { ProjectsController } from './projects.controller';
 import { Project } from '@app/contracts/project/entity/project.entity';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { ClientConfigModule, ClientConfigService, PROJECT_EXCHANGE, LIST_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
+import {
+  ClientConfigModule,
+  ClientConfigService,
+  LIST_EXCHANGE, 
+} from '@app/contracts';
+import { ClientsModule } from '@nestjs/microservices';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Project]),
-    
-    RabbitMQModule.forRootAsync({
+    TypeOrmModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-        exchanges: [
-          { name: PROJECT_EXCHANGE, type: 'topic' },
-          { name: LIST_EXCHANGE, type: 'topic' },
-          { name: USER_EXCHANGE, type: 'direct' },
-        ],
+      useFactory: (configService: ClientConfigService) => ({
+        type: 'postgres',
+        url: configService.databaseProjectUrl,
+        entities: [Project],
+        synchronize: true,
       }),
     }),
+    TypeOrmModule.forFeature([Project]),
+    
+    ClientsModule.registerAsync([
+      {
+        name: LIST_EXCHANGE,
+        imports: [ClientConfigModule],
+        inject: [ClientConfigService],
+        useFactory: (config: ClientConfigService) => config.listClientOptions, 
+      },
+    ]),
   ],
+
   controllers: [ProjectsController],
   providers: [ProjectsService],
 })

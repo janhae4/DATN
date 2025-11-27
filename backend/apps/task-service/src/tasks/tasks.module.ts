@@ -26,7 +26,7 @@ import { TaskLabel } from '../entities/task-label.entity';
         synchronize: true,
       })
     }),
-    // 2. THÊM TaskLabel VÀO DÒNG DƯỚI ĐÂY 👇
+
     TypeOrmModule.forFeature([Task, TaskLabel]), 
     
     ClientConfigModule,

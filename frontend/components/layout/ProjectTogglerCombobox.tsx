@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,33 +19,25 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-
-const projects = [
-  {
-    value: "next.js",
-    label: "Next.js",
-  },
-  {
-    value: "sveltekit",
-    label: "SvelteKit",
-  },
-  {
-    value: "nuxt.js",
-    label: "Nuxt.js",
-  },
-  {
-    value: "remix",
-    label: "Remix",
-  },
-  {
-    value: "astro",
-    label: "Astro",
-  },
-]
+import { useProjects } from "@/hooks/useProjects"
+import { useTeamContext } from "@/contexts/TeamContext"
 
 export function ProjectTogglerCombobox() {
   const [open, setOpen] = React.useState(false)
-  const [value, setValue] = React.useState("")
+  const { activeTeam } = useTeamContext()
+  const { projects, isLoading } = useProjects(activeTeam?.id)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const currentProjectId = searchParams.get("projectId") || "project-phoenix-1"
+
+  const selectedProject = React.useMemo(() => {
+    return projects.find((p) => p.id === currentProjectId)
+  }, [projects, currentProjectId])
+
+  const handleSelectProject = (projectId: string) => {
+    router.push(`/dashboard?projectId=${projectId}`)
+    setOpen(false)
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -56,12 +49,10 @@ export function ProjectTogglerCombobox() {
             aria-expanded={open}
             className="w-[200px] justify-between"
           >
-            {value
-              ? projects.find((project) => project.value === value)?.label
-              : "Select project..."}
+            {selectedProject ? selectedProject.name : "Select project..."}
             <ChevronsUpDown className="opacity-50" />
-          </Button></div>
-
+          </Button>
+        </div>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
         <Command>
@@ -71,18 +62,15 @@ export function ProjectTogglerCombobox() {
             <CommandGroup>
               {projects.map((project) => (
                 <CommandItem
-                  key={project.value}
-                  value={project.value}
-                  onSelect={(currentValue) => {
-                    setValue(currentValue === value ? "" : currentValue)
-                    setOpen(false)
-                  }}
+                  key={project.id}
+                  value={project.name} // CommandItem uses value for filtering, usually text
+                  onSelect={() => handleSelectProject(project.id)}
                 >
-                  {project.label}
+                  {project.name}
                   <Check
                     className={cn(
                       "ml-auto",
-                      value === project.value ? "opacity-100" : "opacity-0"
+                      currentProjectId === project.id ? "opacity-100" : "opacity-0"
                     )}
                   />
                 </CommandItem>

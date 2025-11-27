@@ -1,0 +1,114 @@
+'use client';
+
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import authService, { getMe } from '@/services/authService'; //
+import { UserProfile, LoginCredentials, RegisterData } from '@/types/auth'; //
+
+interface AuthContextType {
+  user: UserProfile | null;
+  isLoading: boolean;
+  login: (credentials: LoginCredentials) => Promise<UserProfile>; //
+  register: (data: RegisterData) => Promise<any>; //
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkUserSession = async () => {
+      try {
+        
+        const userProfile = await authService.getMe();
+        console.log("this is userProfile", userProfile);
+        setUser(userProfile);
+
+      } catch (error) {
+        console.error('Session check failed:', error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkUserSession();
+  }, []);
+
+  // Hàm login
+  const login = async (credentials: LoginCredentials) => {
+    try {
+      // 1. Gọi API login (BE sẽ set cookie)
+      const loginResponse = await authService.login(credentials);
+
+      // 2. Lấy thông tin user nếu cần
+      // Chỉ gọi getMe nếu không có thông tin user trong response
+      let userProfile = loginResponse.user;
+      if (!userProfile) {
+        userProfile = await authService.getMe();
+      }
+
+      // 3. Cập nhật state toàn cục
+      setUser(userProfile);
+
+      // 4. Redirect to dashboard after successful login
+      if (typeof window !== 'undefined') {
+        window.location.href = '/dashboard';
+      }
+
+      return userProfile;
+    } catch (error) {
+      setUser(null);
+      throw error; // Ném lỗi ra cho form xử lý
+    }
+  };
+
+  // Hàm register
+  const register = async (data: RegisterData) => {
+    try {
+      const response = await authService.register(data);
+      return response;
+    } catch (error: any) {
+      // Log the error for debugging
+      console.error('Registration error in AuthContext:', error);
+      // Re-throw the error to be handled by the component
+      throw new Error(error.message || 'Registration failed. Please try again.');
+    }
+  };
+
+  // Hàm logout
+  const logout = () => {
+    authService.logout(); //
+    setUser(null);
+    // authService.logout() đã tự redirect rồi
+  };
+
+  const value = {
+    user,
+    isLoading,
+    login,
+    register,
+    logout,
+  };
+
+  // Chỉ render khi đã check xong session
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

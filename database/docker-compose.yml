@@ -23,11 +23,24 @@ services:
     image: rabbitmq:management
     ports:
       - "5672:5672"
+      - "15672:15672"
     restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin      
+      - RABBITMQ_DEFAULT_PASS=admin123   
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
-  
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=masterkey
+    volumes:
+      - meili_data:/meili_data
+    restart: always
 volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
+  meili_data:

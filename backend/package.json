@@ -23,7 +23,6 @@
     "start:dev:gmail": "nest start gmail --watch",
     "start:dev:team": "nest start team --watch",
     "start:dev:socket": "nest start socket --watch",
-
     "start:dev:notification": "nest start notification --watch",
     "start:dev:video-chat": "nest start video-chat --watch",
     "start:dev:discussion": "nest start discussion --watch",

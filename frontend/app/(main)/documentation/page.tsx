@@ -3,7 +3,22 @@
 import * as React from "react"
 // THÊM IMPORTS MỚI
 import { useRef, useState, useCallback, useMemo } from "react" // <-- Thêm useMemo
-import { UploadCloud, File as FileIcon, X, CheckCircle, FileUp, Search } from "lucide-react" // <-- Thêm Search
+import { 
+  UploadCloud, 
+  File as FileIcon, 
+  X, 
+  CheckCircle, 
+  FileUp, 
+  Search,
+  FileText,
+  FileImage,
+  FileSpreadsheet,
+  FileCode,
+  FileArchive,
+  FileAudio,
+  FileVideo,
+  Presentation
+} from "lucide-react" // <-- Thêm Search
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input" // <-- Thêm Input
 import {
@@ -13,11 +28,14 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select" // <-- Thêm Select
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
 // END IMPORTS MỚI
 
 import { columns } from "./attachment-columns"
 import { DataTable } from "./data-table"
-import { Attachment } from "@/types/attachment.interface"
+import { Attachment } from "@/types"
 
 // Data mẫu (Giữ nguyên)
 async function getAttachmentData(): Promise<Attachment[]> {
@@ -76,6 +94,24 @@ const formatBytes = (bytes: number | undefined, decimals = 2) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
+
+// Helper function to get icon based on file type
+const getFileIcon = (file: File) => {
+  const type = file.type;
+  const name = file.name.toLowerCase();
+
+  if (type.includes('image')) return <FileImage className="h-5 w-5 text-blue-500" />;
+  if (type.includes('pdf')) return <FileText className="h-5 w-5 text-red-500" />;
+  if (type.includes('spreadsheet') || name.match(/\.(xlsx?|csv)$/)) return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
+  if (type.includes('word') || name.match(/\.docx?$/)) return <FileText className="h-5 w-5 text-blue-600" />;
+  if (type.includes('presentation') || name.match(/\.pptx?$/)) return <Presentation className="h-5 w-5 text-orange-500" />;
+  if (type.includes('zip') || type.includes('compressed') || name.match(/\.(zip|rar|7z|tar|gz)$/)) return <FileArchive className="h-5 w-5 text-yellow-600" />;
+  if (type.includes('audio')) return <FileAudio className="h-5 w-5 text-purple-500" />;
+  if (type.includes('video')) return <FileVideo className="h-5 w-5 text-pink-500" />;
+  if (type.includes('text') || name.match(/\.(txt|md|json|js|ts|html|css)$/)) return <FileCode className="h-5 w-5 text-gray-600" />;
+  
+  return <FileIcon className="h-5 w-5 text-gray-400" />;
+};
 
 export default function AttachmentPage() {
   const [allData, setAllData] = React.useState<Attachment[]>([]) // Master list
@@ -279,29 +315,68 @@ export default function AttachmentPage() {
         </div>
 
         {stagedFiles.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Files to upload ({stagedFiles.length})</h3>
-            <div className="space-y-3">
-              {stagedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-white border rounded-lg shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <FileIcon className="h-5 w-5 text-gray-500" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-gray-800">{file.name}</span>
-                      <span className="text-xs text-gray-500">{formatBytes(file.size)}</span>
+          <Card className="mt-6 animate-in fade-in-50 slide-in-from-bottom-5 duration-300">
+            <CardHeader className="flex flex-row items-center justify-between ">
+                <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <FileUp className="h-4 w-4 text-primary" />
                     </div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeStagedFile(file.name)}>
-                    <X className="h-4 w-4 text-gray-500" />
-                  </Button>
+                    <div>
+                        <CardTitle className="text-lg font-semibold">
+                            Files to upload
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            {stagedFiles.length} {stagedFiles.length > 1 ? 'files' : 'file'} selected
+                        </p>
+                    </div>
                 </div>
-              ))}
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setStagedFiles([])} 
+                    className="text-muted-foreground cursor-pointer h-8 px-2 lg:px-3"
+                >
+                    Clear all
+                </Button>
+            </CardHeader>
+            
+            <CardContent className="p-0">
+                <ScrollArea className="h-fit max-h-60 overflow-auto px-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {stagedFiles.map((file, index) => (
+                        <div key={index} className="flex items-start gap-3 p-3 bg-muted/40 border rounded-xl group hover:bg-muted/60 hover:border-primary/20 transition-all duration-200">
+                            <div className="h-10 w-10 rounded-lg bg-background border shadow-sm flex items-center justify-center shrink-0 text-primary">
+                                {getFileIcon(file)}
+                            </div>
+                            <div className="flex flex-col flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                    <span className="text-sm font-medium truncate w-full" title={file.name}>
+                                        {file.name}
+                                    </span>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-5 w-5 -mt-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive" 
+                                        onClick={() => removeStagedFile(file.name)}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                                <span className="text-xs text-muted-foreground mt-1">{formatBytes(file.size)}</span>
+                            </div>
+                        </div>
+                    ))}
+                    </div>
+                </ScrollArea>
+            </CardContent>
+            
+            <div className=" bg-muted/20  flex justify-end  px-4">
+                <Button size="lg" className="w-full rounded md:w-auto min-w-[200px] shadow-md" onClick={handleUpload}>
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    Upload {stagedFiles.length} {stagedFiles.length > 1 ? 'files' : 'file'}
+                </Button>
             </div>
-            <Button size="lg" className="mt-4 w-full" onClick={handleUpload}>
-              <CheckCircle className="mr-2 h-5 w-5" />
-              Upload {stagedFiles.length} {stagedFiles.length > 1 ? 'files' : 'file'}
-            </Button>
-          </div>
+          </Card>
         )}
       </div>
       {/* --- KẾT THÚC KHUNG UPLOAD --- */}

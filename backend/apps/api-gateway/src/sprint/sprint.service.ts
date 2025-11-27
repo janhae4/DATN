@@ -1,35 +1,30 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { CreateSprintDto, SPRINT_PATTERNS, UpdateSprintDto } from '@app/contracts';
+import { CreateSprintDto, SPRINT_EXCHANGE, SPRINT_PATTERNS, UpdateSprintDto } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
+import { ClientProxy } from '@nestjs/microservices/client/client-proxy';
 
 @Injectable()
 export class SprintService {
-  constructor(private readonly amqp: AmqpConnection) {}
+  constructor(@Inject(SPRINT_EXCHANGE) private readonly client: ClientProxy) {}
 
   async create(createSprintDto: CreateSprintDto) {
-    return unwrapRpcResult(await this.amqp.request({
-      exchange: 'sprint_exchange',
-      routingKey: SPRINT_PATTERNS.CREATE,
-      payload: createSprintDto,
-    }));
+    return unwrapRpcResult(await this.client.send(SPRINT_PATTERNS.CREATE, createSprintDto).toPromise());
   }
 
   async findAllByProjectId(projectId: string, userId: string) {
-    return unwrapRpcResult(await this.amqp.request({
-      exchange: 'sprint_exchange',
-      routingKey: SPRINT_PATTERNS.FIND_ALL_BY_PROJECT_ID,
-      payload: { projectId, userId },
-    }));
+    return unwrapRpcResult(await this.client.send(SPRINT_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId, userId }));
   }
 
   async findOne(id: string, userId: string) {
-    return unwrapRpcResult(await this.amqp.request({
-      exchange: 'sprint_exchange',
-      routingKey: SPRINT_PATTERNS.FIND_ONE_BY_ID,
-      payload: { id, userId },
-    }));
+    return unwrapRpcResult(await this.client.send(SPRINT_PATTERNS.FIND_ONE_BY_ID, { id, userId }));
+  }
+
+  async update(id: string, updateSprintDto: UpdateSprintDto, userId: string) {
+    return unwrapRpcResult(await this.client.send(SPRINT_PATTERNS.UPDATE, { id, updateSprintDto, userId }));
   }
   
-  // (Cần thêm hàm update/remove trong gateway service nếu controller có dùng, tương tự mẫu trên)
+  async remove(id: string, userId: string) {
+    return unwrapRpcResult(await this.client.send(SPRINT_PATTERNS.REMOVE, { id, userId }));
+  }
 }

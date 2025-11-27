@@ -1,26 +1,30 @@
 import { Module } from '@nestjs/common';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { ClientConfigModule, ClientConfigService } from '@app/contracts';
-import { AuthModule } from '../auth/auth.module';
 import { SprintController } from './sprint.controller';
 import { SprintService } from './sprint.service';
+import {
+  ClientConfigModule,
+  ClientConfigService,
+  SPRINT_EXCHANGE,
+} from '@app/contracts';
+import { AuthModule } from '../auth/auth.module';
+// THÊM ClientProvider để khai báo kiểu dữ liệu trả về
+import { ClientsModule } from '@nestjs/microservices';
 
 @Module({
   imports: [
-    ClientConfigModule,
     AuthModule,
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        exchanges: [{ name: 'sprint_exchange', type: 'topic' }],
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-      }),
-    }),
+    ClientConfigModule,
+    ClientsModule.registerAsync([
+      {
+        name: SPRINT_EXCHANGE,
+        imports: [ClientConfigModule],
+        inject: [ClientConfigService],
+        useFactory: (config: ClientConfigService) => config.sprintClientOptions,
+      },
+    ]),
   ],
+
   controllers: [SprintController],
   providers: [SprintService],
-  exports: [SprintService],
 })
 export class SprintModule {}
