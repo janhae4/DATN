@@ -16,7 +16,6 @@ import {
   SendEmailVerificationDto,
   JwtDto,
   REFRESH_TTL,
-  ACCESS_TTL,
   Account,
   BadRequestException,
   RefreshTokenDto,
@@ -68,7 +67,11 @@ export class AuthService {
       GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL,
       user,
     );
+
     this.logger.log(`Verification code sent for user ${user.id}.`);
+
+
+
     return {
       verifiedCode: code,
       verifiedUrl: url,

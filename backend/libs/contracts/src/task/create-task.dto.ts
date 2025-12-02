@@ -42,6 +42,14 @@ export class CreateTaskDto {
   @IsUUID()
   listId: string;
 
+   @ApiProperty({
+    description: 'IDs of the label this task is in',
+    format: 'uuid',
+  })
+  @IsUUID()
+  @IsOptional()
+  labelIds: string[];
+
   @ApiPropertyOptional({
     description: 'ID of the user who reported the task',
     format: 'uuid',

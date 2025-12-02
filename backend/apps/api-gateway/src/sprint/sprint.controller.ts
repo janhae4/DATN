@@ -1,5 +1,5 @@
-import { Controller, Post, Body, UseGuards, Get, Param } from '@nestjs/common';
-import { CreateSprintDto } from '@app/contracts';
+import { Controller, Post, Body, UseGuards, Get, Param, Delete, Put } from '@nestjs/common';
+import { CreateSprintDto, UpdateSprintDto } from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
@@ -38,5 +38,26 @@ export class SprintController {
     @CurrentUser('id') userId: string
   ) {
     return this.sprintService.findOne(id, userId);
+  }
+
+  @Put(':id')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  update(
+    @Param('id') id: string,
+    @Body() updateSprintDto: UpdateSprintDto,
+    @CurrentUser('id') userId: string
+  ) {
+    return this.sprintService.update(id, updateSprintDto, userId);
+  }
+
+  @Delete(':id')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  remove(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string
+  ) {
+    return this.sprintService.remove(id, userId);
   }
 }

@@ -5,11 +5,11 @@ import { Sprint, Task } from "@/types"
 import {
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from "@/components/ui/accordion"
+import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { Table, TableRow, TableCell } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Rocket, PlusIcon } from "lucide-react"
+import { Rocket, PlusIcon, ChevronDown } from "lucide-react"
 import { formatDate } from "@/lib/backlog-utils"
 import { useDroppable, useDndContext } from "@dnd-kit/core"
 import { cn } from "@/lib/utils"
@@ -27,6 +27,7 @@ interface SprintItemProps {
   handleRowClick: (task: Task) => void
   addingNewRowToSprint: string | null
   setAddingNewRowToSprint: (id: string | null) => void
+  onUpdateTask: (taskId: string, updates: any) => void; 
 }
 
 export function SprintItem({
@@ -36,6 +37,7 @@ export function SprintItem({
   handleRowClick,
   addingNewRowToSprint,
   setAddingNewRowToSprint,
+  onUpdateTask,
 }: SprintItemProps) {
   const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id)
   const totalTasks = sprintTasks.length
@@ -66,14 +68,13 @@ export function SprintItem({
       )}
     >
       <AccordionItem value={sprint.id} className="border-0">
-        <AccordionTrigger
-          className={cn(
-            "hover:no-underline px-4 py-2  text-left hover:bg-muted/50 cursor-pointer"
-          )}
-        >
-          <div className="flex w-full flex-col gap-2 ">
-            <div className="flex w-full items-center justify-between gap-4">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+        <AccordionPrimitive.Header className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 transition-colors">
+          <AccordionPrimitive.Trigger
+            className={cn(
+              "flex flex-1 items-center gap-2 text-left cursor-pointer hover:no-underline group [&[data-state=open]>svg]:rotate-180"
+            )}
+          >
+             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Rocket className="h-5 w-5 text-foreground/50 flex-shrink-0" />
                 <span
                   className="text-base font-medium truncate"
@@ -81,12 +82,14 @@ export function SprintItem({
                 >
                   {sprint.title}
                 </span>
-                <p className="text-sm text-muted-foreground pr-8">
+                <p className="text-sm text-muted-foreground">
                   {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
                 </p>
               </div>
-              <div className="flex flex-shrink-0 items-center gap-4">
-                {sprint.status === SprintStatus.PLANNED && (
+          </AccordionPrimitive.Trigger>
+
+          <div className="flex items-center gap-4">
+              {sprint.status === SprintStatus.PLANNED && totalTasks > 0 && (
                   <StartSprintDialog sprint={sprint}>
                     <Button size="sm" variant="outline" >
                       Start Sprint
@@ -104,10 +107,12 @@ export function SprintItem({
                 <span className="text-sm font-normal text-muted-foreground">
                   {totalTasks} {totalTasks === 1 ? "task" : "tasks"}
                 </span>
-              </div>
-            </div>
+
+                <AccordionPrimitive.Trigger className="[&[data-state=open]>svg]:rotate-180">
+                   <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 text-muted-foreground" />
+                </AccordionPrimitive.Trigger>
           </div>
-        </AccordionTrigger>
+        </AccordionPrimitive.Header>
 
         <AccordionContent className="border-t bg-background/50 p-0 data-[state=closed]:animate-none">
           <div className="p-1">
@@ -115,6 +120,7 @@ export function SprintItem({
               <>
                 <Table>
                   <TaskRowList
+                    onUpdateTask={onUpdateTask}
                     tasks={sprintTasks}
                     lists={statusesList}
                     isDraggable={true}

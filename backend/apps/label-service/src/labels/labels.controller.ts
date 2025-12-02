@@ -2,10 +2,16 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 import { LabelsService } from './labels.service';
 import { CreateLabelDto, LABEL_PATTERNS, UpdateLabelDto } from '@app/contracts';
+import { TaskLabel } from '@app/contracts/events/task-label.event';
 
 @Controller()
 export class LabelsController {
   constructor(private readonly labelsService: LabelsService) {}
+
+  @MessagePattern(TaskLabel.GET_DETAILS)
+  getLabelDetails(payload: { labelIds: string[] }) {
+    return this.labelsService.findByIds(payload.labelIds);
+  }
 
   @MessagePattern(LABEL_PATTERNS.CREATE)
   create(createLabelDto: CreateLabelDto) {
@@ -24,6 +30,7 @@ export class LabelsController {
 
   @MessagePattern(LABEL_PATTERNS.UPDATE)
   update(payload: { id: string; updateLabelDto: UpdateLabelDto }) {
+    console.log("updating label: ", payload)
     return this.labelsService.update(payload.id, payload.updateLabelDto);
   }
 

@@ -199,6 +199,15 @@
         "tsConfigPath": "apps/team/tsconfig.app.json"
       }
     },
+    "testing-service": {
+      "type": "application",
+      "root": "apps/testing-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/testing-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/testing-service/tsconfig.app.json"
+      }
+    },
     "user": {
       "type": "application",
       "root": "apps/user",

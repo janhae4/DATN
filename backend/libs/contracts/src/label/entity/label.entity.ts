@@ -25,4 +25,6 @@ export class Label {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  
 }

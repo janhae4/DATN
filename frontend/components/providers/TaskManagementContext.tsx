@@ -53,6 +53,7 @@ interface TaskManagementContextType {
   handleAssigneeChange: (taskId: string, assigneeIds: string[]) => void
   handleReorderTask: (activeId: string, overId: string) => void
   handleDeleteTask: (taskId: string) => void
+  updateTask: (taskId: string, updates: Partial<Task>) => void
 
   // Setters
   setNewRowTitle: (title: string) => void
@@ -72,10 +73,7 @@ export function TaskManagementProvider({ children, projectId }: { children: Reac
   const taskManagementData = useTaskManagement(projectId)
 
   return (
-    <TaskManagementContext.Provider value={{
-      ...taskManagementData,
-      handleDeleteTask: taskManagementData.handleDeleteTask,
-    }}>
+    <TaskManagementContext.Provider value={taskManagementData}>
       {children}
     </TaskManagementContext.Provider>
   )

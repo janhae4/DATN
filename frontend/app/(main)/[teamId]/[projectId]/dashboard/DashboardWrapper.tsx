@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useProjects } from "@/hooks/useProjects";
 import { EmptyProjectState } from "@/components/features/project/EmptyProjectState";
@@ -12,15 +12,14 @@ import { Loader2 } from "lucide-react";
 export function DashboardWrapper() {
   const { activeTeam } = useTeamContext();
   const { projects, isLoading } = useProjects(activeTeam?.id);
-  const searchParams = useSearchParams();
+  const params = useParams();
   const router = useRouter();
-  
-  const projectId = searchParams.get("projectId");
-
-  // Effect to auto-select first project if none selected but projects exist
+   
+  const projectId = params.projectId as string | undefined;
+  const teamId = params.teamId;
   React.useEffect(() => {
     if (!isLoading && projects.length > 0 && !projectId) {
-      router.replace(`/dashboard?projectId=${projects[0].id}`);
+      router.replace(`/${teamId}/${projects[0].id}/dashboard`);
     }
   }, [isLoading, projects, projectId, router]);
 
@@ -32,11 +31,8 @@ export function DashboardWrapper() {
     );
   }
 
-  if (projects.length === 0) {
-    return <EmptyProjectState />;
-  }
 
-  // If we have projects but no projectId yet (and effect hasn't run), show loading or nothing
+
   if (!projectId) {
     return null; 
   }
@@ -44,6 +40,6 @@ export function DashboardWrapper() {
   return (
     <TaskManagementProvider projectId={projectId}>
       <TabsNav />
-    </TaskManagementProvider>
+   </TaskManagementProvider>
   );
 }

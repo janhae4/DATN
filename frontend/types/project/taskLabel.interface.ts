@@ -1,7 +1,14 @@
-// types/task_label.interface.ts
-
-// Bảng trung gian cho Task và Label
 export interface TaskLabel {
-  taskId: string; // uuid
-  labelId: string; // uuid
+  id: string;
+
+  name: string;
+
+  color: string;
+
+  projectId: string;
+
+  taskId: string;
+
+  labelId: string;
+
 }

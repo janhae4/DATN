@@ -24,19 +24,18 @@ import {
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "@/types";
-import { db } from "@/public/mock-data/mock-data";
 
 interface AssigneePickerProps {
   value: string[]; // Array of assignee IDs
   onChange: (value: string[]) => void;
-  users?: User[];
+  users: User[];   // Real users passed from parent
   className?: string;
 }
 
 export function AssigneePicker({
   value = [],
   onChange,
-  users = db.users,
+  users = [],
   className,
 }: AssigneePickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -68,7 +67,7 @@ export function AssigneePicker({
         <div
           role="button"
           className={cn(
-            "cursor-pointer outline-none flex items-center",
+            "cursor-pointer outline-none flex items-center justify-center",
             className
           )}
           onClick={(e) => {
@@ -81,8 +80,6 @@ export function AssigneePicker({
                 {selectedUsers.slice(0, 3).map((user) => (
                   <Tooltip key={user.id}>
                     <TooltipTrigger asChild>
-
-                      {/*  */}
                       <Avatar className="h-6 w-6 border-2 border-background ring-1 ring-border/10 transition-transform hover:scale-110 hover:z-10">
                         <AvatarImage src={user.avatar} />
                         <AvatarFallback className="text-[10px] bg-primary/5 text-primary font-medium">
@@ -129,8 +126,8 @@ export function AssigneePicker({
             <CommandGroup>
               <CommandItem
                 onSelect={() => {
-                  onChange([]);
-                  setOpen(false);
+                  onChange([]); // Clear all
+                  // setOpen(false); // Optional: close on clear
                 }}
                 className="cursor-pointer"
               >
@@ -141,10 +138,7 @@ export function AssigneePicker({
                 <CommandItem
                   key={user.id}
                   value={user.name}
-                  onSelect={() => {
-                    toggleUser(user.id);
-                    // Keep open for multiple selection
-                  }}
+                  onSelect={() => toggleUser(user.id)}
                   className="cursor-pointer"
                 >
                   <div

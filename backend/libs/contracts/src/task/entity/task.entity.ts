@@ -3,13 +3,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { TaskLabel } from './task-label.entity';
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn('uuid')
@@ -37,6 +35,9 @@ export class Task {
   })
   priority: Priority;
 
+  @Column('uuid', { array: true, nullable: true, default: [] })
+  assigneeIds: string[];
+
   @Column({ type: 'timestamp', name: 'due_date', nullable: true })
   dueDate: Date | null;
 
@@ -60,5 +61,10 @@ export class Task {
 
   @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;
+
+  @OneToMany(() => TaskLabel, (taskLabel) => taskLabel.task, { 
+    cascade: true 
+  })
+  taskLabels: TaskLabel[];
 
 }

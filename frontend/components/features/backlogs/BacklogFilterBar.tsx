@@ -27,7 +27,7 @@ import { useTaskManagementContext } from "@/components/providers/TaskManagementC
 import { Task, List } from "@/types"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { useList } from "@/hooks/useList"
+import { useLists } from "@/hooks/useList"
 import { SprintCreateDialog } from "./sprint/SprintCreateDialog"
 import { SprintStatus } from "@/types/common/enums"
 
@@ -51,7 +51,7 @@ interface BacklogFilterBarProps {
 
 export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = true }: BacklogFilterBarProps) {
   const { filters, setFilters, projectId, epics, sprints, labels } = useTaskManagementContext()
-  const { lists } = useList(projectId)
+  const { lists } = useLists(projectId)
 
   // Dùng state local để control UI, sau đó "debounce" update context
   const [searchText, setSearchText] = React.useState(filters.searchText)
@@ -102,7 +102,7 @@ export function BacklogFilterBar({ showCreateSprint = true, showStatusFilter = t
   const listOptions = lists.map(l => ({
     value: l.id,
     label: l.name,
-    icon: () => <span className="h-2 w-2 rounded-full" style={{ backgroundColor: l.color }} />
+    icon: () => <span className="h-2 w-2 rounded-full" />
   }))
 
   // Lấy list epic options

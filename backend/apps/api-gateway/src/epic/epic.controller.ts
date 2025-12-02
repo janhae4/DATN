@@ -1,15 +1,22 @@
 import { Controller, Post, Body, UseGuards, Get, Param, Put, Delete } from '@nestjs/common';
 import { CreateEpicDto, UpdateEpicDto, EPIC_PATTERNS } from '@app/contracts';
-import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { Role } from '@app/contracts';
 import { EpicService } from './epic.service';
+import { Inject } from '@nestjs/common';
+import { EPIC_EXCHANGE } from '@app/contracts';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Controller('epics')
 export class EpicController {
-  constructor(private readonly epicService: EpicService) {}
+  constructor(private readonly epicService: EpicService,  @Inject(EPIC_EXCHANGE) private readonly client: ClientProxy) {}
 
+  @Post("hello")
+  async getHello(@Body() body: any) {
+    return this.client.send('hello', body);
+  }
+  
   @Post()
   @UseGuards(RoleGuard)
   @Roles(Role.USER)

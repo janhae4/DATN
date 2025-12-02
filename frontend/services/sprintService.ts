@@ -1,42 +1,67 @@
-import { db } from "@/public/mock-data/mock-data";
+import apiClient from "./apiClient";
 import { Sprint } from "@/types";
+// Import Enum SprintStatus nếu bạn đã định nghĩa trong frontend (thường là từ @/types/common/enums)
+// Nếu chưa có, bạn có thể dùng string hoặc định nghĩa tạm thời.
+import { SprintStatus } from "@/types/common/enums"; 
+
+// --- DTOs Matching Backend ---
+
+export interface CreateSprintDto {
+  title: string;
+  goal?: string;
+  start_date: string; // ISO Date string
+  end_date: string;   // ISO Date string
+  projectId: string;
+  status?: SprintStatus;
+  userId?: string;
+}
+
+export interface UpdateSprintDto extends Partial<CreateSprintDto> {}
+
 
 export const sprintService = {
+  /**
+   * Lấy danh sách Sprint theo Project
+   * GET /sprints/project/{projectId}
+   */
   getSprints: async (projectId: string): Promise<Sprint[]> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return db.sprints.filter((s) => s.projectId === projectId);
+    const response = await apiClient.get<Sprint[]>(`/sprints/project/${projectId}`);
+    return response.data;
   },
 
+  /**
+   * Lấy chi tiết Sprint
+   * GET /sprints/{id}
+   */
   getSprintById: async (id: string): Promise<Sprint | undefined> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return db.sprints.find((s) => s.id === id);
+    const response = await apiClient.get<Sprint>(`/sprints/${id}`);
+    return response.data;
   },
 
-  createSprint: async (sprint: Sprint): Promise<Sprint> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    db.sprints.push(sprint);
-    return sprint;
+  /**
+   * Tạo Sprint mới
+   * POST /sprints
+   */
+  createSprint: async (data: CreateSprintDto): Promise<Sprint> => {
+    const response = await apiClient.post<Sprint>('/sprints', data);
+    return response.data;
   },
 
-  updateSprint: async (
-    id: string,
-    updates: Partial<Sprint>
-  ): Promise<Sprint | undefined> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const index = db.sprints.findIndex((s) => s.id === id);
-    if (index !== -1) {
-      db.sprints[index] = { ...db.sprints[index], ...updates };
-      return db.sprints[index];
-    }
-    return undefined;
+  /**
+   * Cập nhật Sprint
+   * PUT /sprints/{id}
+   */
+  updateSprint: async (id: string, updates: UpdateSprintDto): Promise<Sprint> => {
+    // Dựa trên endpoint list bạn cung cấp trước đó là PUT
+    const response = await apiClient.put<Sprint>(`/sprints/${id}`, updates);
+    return response.data;
   },
 
+  /**
+   * Xóa Sprint
+   * DELETE /sprints/{id}
+   */
   deleteSprint: async (id: string): Promise<void> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const index = db.sprints.findIndex((s) => s.id === id);
-    if (index !== -1) {
-      db.sprints.splice(index, 1);
-    }
+    await apiClient.delete(`/sprints/${id}`);
   },
 };

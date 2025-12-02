@@ -1,43 +1,68 @@
-import { db } from "@/public/mock-data/mock-data";
+import apiClient from "./apiClient";
 import { Epic } from "@/types";
+import { EpicStatus, Priority } from "@/types/common/enums";
+
+// --- DTOs khớp với Backend ---
+// Dựa trên file src/epic/create-epic.dto.ts
+
+export interface CreateEpicDto {
+  title: string;
+  description?: string;
+  status?: EpicStatus;
+  color?: string;
+  priority?: Priority;
+  projectId: string;
+  startDate?: string; // ISO Date string
+  dueDate?: string;   // ISO Date string
+}
+
+export interface UpdateEpicDto extends Partial<CreateEpicDto> {}
+
+// --- Service Implementation ---
 
 export const epicService = {
-  getEpics: async (projectId?: string): Promise<Epic[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // Since Epic type doesn't have projectId, we return all for now
-    // or we could filter if we had a way to link them.
-    return db.epics;
+  /**
+   * Lấy danh sách Epic của một Project
+   * GET /epics/project/{projectId}
+   */
+  getEpics: async (projectId: string): Promise<Epic[]> => {
+    const response = await apiClient.get<Epic[]>(`/epics/project/${projectId}`);
+    return response.data;
   },
 
+  /**
+   * Lấy chi tiết Epic
+   * GET /epics/{id}
+   */
   getEpicById: async (id: string): Promise<Epic | undefined> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return db.epics.find((e) => e.id === id);
+    const response = await apiClient.get<Epic>(`/epics/${id}`);
+    return response.data;
   },
 
-  createEpic: async (epic: Epic): Promise<Epic> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    db.epics.push(epic);
-    return epic;
+  /**
+   * Tạo Epic mới
+   * POST /epics
+   */
+  createEpic: async (data: CreateEpicDto): Promise<Epic> => {
+    console.log("Creating epic with data:", data);
+    const response = await apiClient.post<Epic>('/epics', data);
+    return response.data;
   },
 
-  updateEpic: async (
-    id: string,
-    updates: Partial<Epic>
-  ): Promise<Epic | undefined> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const index = db.epics.findIndex((e) => e.id === id);
-    if (index !== -1) {
-      db.epics[index] = { ...db.epics[index], ...updates };
-      return db.epics[index];
-    }
-    return undefined;
+  /**
+   * Cập nhật Epic
+   * PUT /epics/{id}
+   */
+  updateEpic: async (id: string, updates: UpdateEpicDto): Promise<Epic> => {
+    const response = await apiClient.put<Epic>(`/epics/${id}`, updates);
+    return response.data;
   },
 
+  /**
+   * Xóa Epic
+   * DELETE /epics/{id}
+   */
   deleteEpic: async (id: string): Promise<void> => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const index = db.epics.findIndex((e) => e.id === id);
-    if (index !== -1) {
-      db.epics.splice(index, 1);
-    }
+    await apiClient.delete(`/epics/${id}`);
   },
 };

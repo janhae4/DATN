@@ -19,20 +19,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     }),
     TypeOrmModule.forFeature([Label]),
     LabelsModule,
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (configService: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: 'label_exchange',
-            type: 'topic',
-          },
-        ],
-        uri: configService.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-      }),
-    }),
   ],
 })
 export class LabelServiceModule {}

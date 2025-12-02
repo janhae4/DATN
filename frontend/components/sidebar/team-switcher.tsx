@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ChevronsUpDown, Plus, GalleryVerticalEnd } from "lucide-react"
+import { useRouter, useParams } from "next/navigation" // 1. Import useParams
 
 import {
   DropdownMenu,
@@ -18,12 +19,28 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { useTeamContext } from "@/contexts/TeamContext"
+import { useTeams } from "@/hooks/useTeam"
 
 export function TeamSwitcher() {
   const { isMobile } = useSidebar()
-  const { teams, activeTeam, setActiveTeam } = useTeamContext()
+  const router = useRouter()
+  const params = useParams() 
+  
+  const { data: teams, isLoading } = useTeams()
 
+  const activeTeam = React.useMemo(() => {
+    if (!teams || teams.length === 0) return undefined;
+    
+    const currentTeamId = params?.teamId as string;
+    
+    if (currentTeamId) {
+        return teams.find(t => t.id === currentTeamId) || teams[0];
+    }
+    
+    return teams[0];
+  }, [teams, params?.teamId]);
+
+  // Format teams for the UI
   const formattedTeams = React.useMemo(() => {
     return (teams || []).map((team) => ({
       name: team.name,
@@ -34,12 +51,17 @@ export function TeamSwitcher() {
   }, [teams])
 
   const activeFormattedTeam = React.useMemo(() => {
-    if (!activeTeam) return formattedTeams[0]
-    return formattedTeams.find(t => t.original.id === activeTeam.id) || formattedTeams[0]
-  }, [activeTeam, formattedTeams])
+    if (!activeTeam) return undefined;
+    return {
+      name: activeTeam.name,
+      logo: GalleryVerticalEnd,
+      plan: activeTeam.role,
+      original: activeTeam
+    }
+  }, [activeTeam])
 
-  if (!activeFormattedTeam) {
-    return null
+  if (isLoading || !activeFormattedTeam) {
+    return <div className="h-12 w-full animate-pulse bg-sidebar-accent/10 rounded-lg" /> // Simple loading state
   }
 
   return (
@@ -73,7 +95,10 @@ export function TeamSwitcher() {
             {formattedTeams.map((team, index) => (
               <DropdownMenuItem
                 key={team.name}
-                onClick={() => setActiveTeam(team.original)}
+                onClick={() => {
+                    // 6. Navigation is the only "state change" needed
+                    router.push(`/${team.original.id}/dashboard`); 
+                }}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-md border">
@@ -84,7 +109,10 @@ export function TeamSwitcher() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2">
+            <DropdownMenuItem 
+                className="gap-2 p-2 cursor-pointer" 
+                onClick={() => router.push("/teams/create")}
+            >
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                 <Plus className="size-4" />
               </div>

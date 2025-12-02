@@ -10,15 +10,11 @@ export const useUserProfile = () => {
     });
 };
 
-// Hook để thực hiện đăng nhập (dùng cho POST, PUT, DELETE)
 export const useLogin = () => {
     return useMutation({
         mutationFn: authService.login,
         onSuccess: (data) => {
-            // Xử lý khi đăng nhập thành công
             console.log('Đăng nhập thành công!', data);
-            //   localStorage.setItem('accessToken', data.accessToken);
-            // Có thể queryClient.invalidateQueries(['userProfile']) để fetch lại data user
         },
         onError: (error) => {
             // Xử lý khi có lỗi

@@ -2,6 +2,9 @@
 
 import * as React from "react"
 import { DateRange } from "react-day-picker"
+import { Loader2, Circle, CircleEllipsis, CheckCircle2, XCircle, Flag, CircleSlashIcon, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+
 import {
   Dialog,
   DialogContent,
@@ -11,6 +14,17 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,26 +36,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { db } from "@/public/mock-data/mock-data"
-import { toast } from "sonner"
-import { Epic, EpicStatus, Priority } from "@/types"
-import { Target } from "lucide-react"
-// --- 1. BỎ IMPORT PriorityPicker ---
-// import { PriorityPicker } from "../PriorityPicker"
-import { DateRangePicker } from "../DateRangePicker"
-import { cn } from "@/lib/utils" // Thêm cn
-
-// --- 2. THÊM IMPORT ICON ---
+import { cn } from "@/lib/utils"
 import {
-  Circle,
-  CircleEllipsis,
-  CheckCircle2,
-  XCircle,
-  Flag,
-  CircleSlashIcon,
-} from "lucide-react"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
-// --- 3. ĐỊNH NGHĨA MAP CHO STATUS ---
+import { DateRangePicker } from "../DateRangePicker"
+import { Epic, EpicStatus, Priority } from "@/types" 
+import { useEpics } from "@/hooks/useEpics"
+import { ColorPicker } from "../color-picker/ColorPicker"
+
+// --- Maps (Giữ nguyên) ---
 const statusMap: Record<EpicStatus, { label: string; icon: React.ElementType; color: string }> = {
   [EpicStatus.TODO]: { label: "To do", icon: Circle, color: "text-neutral-500" },
   [EpicStatus.IN_PROGRESS]: { label: "In Progress", icon: CircleEllipsis, color: "text-blue-500" },
@@ -50,7 +57,6 @@ const statusMap: Record<EpicStatus, { label: string; icon: React.ElementType; co
 }
 const statusOptions = Object.values(EpicStatus)
 
-// --- 4. ĐỊNH NGHĨA MAP CHO PRIORITY ---
 const priorityMap: Record<Priority, { label: string; icon: React.ElementType; color: string }> = {
   [Priority.HIGH]: { label: "High", icon: Flag, color: "text-red-500" },
   [Priority.MEDIUM]: { label: "Medium", icon: Flag, color: "text-yellow-500" },
@@ -59,7 +65,6 @@ const priorityMap: Record<Priority, { label: string; icon: React.ElementType; co
 }
 const priorityOptions = Object.values(Priority)
 
-// Helper cho priority "null"
 const nullPriority = {
   label: "No priority",
   icon: CircleSlashIcon,
@@ -68,98 +73,93 @@ const nullPriority = {
 
 interface EpicEditDialogProps {
   children: React.ReactNode
-  onSave: () => void
-  allEpics: Epic[]
-  key?: any
+  projectId: string
+  epics: Epic[] 
 }
 
-export function EpicEditDialog({
-  children,
-  onSave,
-  allEpics,
-}: EpicEditDialogProps) {
+export function EpicEditDialog({ children, projectId, epics }: EpicEditDialogProps) {
   const [open, setOpen] = React.useState(false)
-  const [selectedId, setSelectedId] = React.useState<string | undefined>(
-    allEpics[0]?.id
-  )
+  const { updateEpic, deleteEpic, isUpdating, isDeleting } = useEpics(projectId)
 
+  const [selectedId, setSelectedId] = React.useState<string | undefined>(epics[0]?.id)
   const [title, setTitle] = React.useState("")
   const [description, setDescription] = React.useState("")
   const [status, setStatus] = React.useState<EpicStatus>(EpicStatus.TODO)
   const [priority, setPriority] = React.useState<Priority>(Priority.MEDIUM)
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
-    undefined
-  )
+  const [color, setColor] = React.useState("#E06B80")
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined)
 
-  // Load data (giữ nguyên)
+  // Load data when selectedId changes
   React.useEffect(() => {
     if (!selectedId) return
-    const epicToEdit = allEpics.find((e) => e.id === selectedId)
+    const epicToEdit = epics.find((e) => e.id === selectedId)
     if (epicToEdit) {
       setTitle(epicToEdit.title)
       setDescription(epicToEdit.description || "")
-      setStatus(epicToEdit.status)
-      setPriority(epicToEdit.priority)
+      setStatus(epicToEdit.status as EpicStatus)
+      setPriority(epicToEdit.priority as Priority)
+      setColor(epicToEdit.color || "#E06B80")
       setDateRange({
         from: epicToEdit.startDate ? new Date(epicToEdit.startDate) : undefined,
         to: epicToEdit.dueDate ? new Date(epicToEdit.dueDate) : undefined,
       })
     }
-  }, [selectedId, allEpics])
+  }, [selectedId, epics])
 
-  // Reset khi mở (giữ nguyên)
+  // Reset/Init when open
   React.useEffect(() => {
-    if (open && allEpics.length > 0) {
-      if (!selectedId) {
-        setSelectedId(allEpics[0].id)
-      }
+    if (open && epics.length > 0 && !selectedId) {
+      setSelectedId(epics[0].id)
     }
-  }, [open, allEpics, selectedId])
+  }, [open, epics, selectedId])
 
-  // handleSubmit (giữ nguyên)
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedId) return
 
-    const epicIndex = db.epics.findIndex((e) => e.id === selectedId)
-    if (epicIndex !== -1) {
-      db.epics[epicIndex] = {
-        ...db.epics[epicIndex],
-        title: title,
-        description: description || undefined,
-        status: status,
-        priority: priority,
-        startDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
-        dueDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-        updatedAt: new Date().toISOString(),
-      }
+    try {
+      await updateEpic(selectedId, {
+            title,
+            description: description || undefined,
+            status,
+            priority,
+            color,
+            startDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+            dueDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+        }
+      )
+
       toast.success(`Epic "${title}" updated!`)
-      onSave()
       setOpen(false)
-    } else {
-      toast.error("Epic not found")
+    } catch (error: any) {
+        console.error("Error updating epic:", error)
+        toast.error("Failed to update epic.")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!selectedId) return
+    try {
+      await deleteEpic(selectedId)
+      toast.success(`Epic "${title}" deleted!`)
+      setOpen(false)
+      // Reset selectedId to the first available epic or undefined
+      const remainingEpics = epics.filter(e => e.id !== selectedId)
+      setSelectedId(remainingEpics[0]?.id)
+    } catch (error: any) {
+      console.error("Error deleting epic:", error)
+      toast.error("Failed to delete epic.")
     }
   }
   
-  // --- 5. TẠO HELPER RENDER ---
-  // (Component để render cái icon + text)
-  const renderOption = (
-    Icon: React.ElementType,
-    label: string,
-    color: string
-  ) => (
+  const renderOption = (Icon: React.ElementType, label: string, color: string) => (
     <div className="flex items-center gap-2">
       <Icon className={cn("h-4 w-4", color)} />
       <span className="capitalize">{label}</span>
     </div>
   )
   
-  // (Helper để lấy info cho priority, kể cả 'null')
-  const getPriorityInfo = (p: Priority) => {
-    if (!p) return nullPriority;
-    return priorityMap[p];
-  }
-  
+  const getPriorityInfo = (p: Priority) => priorityMap[p] || nullPriority;
   const currentPriorityInfo = getPriorityInfo(priority);
   const currentStatusInfo = statusMap[status];
 
@@ -167,30 +167,24 @@ export function EpicEditDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit} className="space-t-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
             <DialogTitle>Edit epics</DialogTitle>
-            <DialogDescription>
-              Update an existing epic
-            </DialogDescription>
+            <DialogDescription>Update or delete an existing epic</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-            {/* Select Epic, Title, Desc (giữ nguyên) */}
             <div className="space-y-2">
               <Label htmlFor="epic-select">Epic *</Label>
-              <Select value={selectedId} onValueChange={setSelectedId}>
+              <Select value={selectedId} onValueChange={setSelectedId} disabled={isUpdating || isDeleting}>
                 <SelectTrigger id="epic-select" className="w-full">
                   <SelectValue placeholder="Select an epic to edit" />
                 </SelectTrigger>
                 <SelectContent>
-                  {allEpics.map((e) => (
+                  {epics.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="h-4 w-4 rounded-sm" 
-                          style={{ backgroundColor: e.color || '#E06B80' }} 
-                        />
+                        <div className="h-4 w-4 rounded-sm" style={{ backgroundColor: e.color || '#E06B80' }} />
                         <span>{e.title}</span>
                       </div>
                     </SelectItem>
@@ -198,14 +192,14 @@ export function EpicEditDialog({
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                disabled={!selectedId}
-                placeholder="Enter epic title"
+                disabled={!selectedId || isUpdating || isDeleting}
               />
             </div>
             <div className="space-y-2">
@@ -214,22 +208,15 @@ export function EpicEditDialog({
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                disabled={!selectedId}
-                placeholder="Enter epic description (optional)"
+                disabled={!selectedId || isUpdating || isDeleting}
                 rows={4}
               />
             </div>
 
-            {/* --- 6. "ĐỘ" LẠI CÁI GRID NÀY --- */}
             <div className="flex gap-4 w-full">
-              {/* STATUS (ĐÃ "TÂN TRANG") */}
               <div className="space-y-2 w-full">
                 <Label htmlFor="status-edit">Status</Label>
-                <Select
-                  value={status}
-                  onValueChange={(v: EpicStatus) => setStatus(v)}
-                  disabled={!selectedId}
-                >
+                <Select value={status} onValueChange={(v: EpicStatus) => setStatus(v)} disabled={!selectedId || isUpdating || isDeleting}>
                   <SelectTrigger id="status-edit" className="w-full">
                     <SelectValue asChild>
                       {renderOption(currentStatusInfo.icon, currentStatusInfo.label, currentStatusInfo.color)}
@@ -245,14 +232,9 @@ export function EpicEditDialog({
                 </Select>
               </div>
 
-              {/* PRIORITY (ĐÃ "ĐỘ" VÀ THAY LẠI SELECT) */}
               <div className="space-y-2 w-full">
                 <Label htmlFor="priority-edit">Priority</Label>
-                <Select
-                  value={priority}
-                  onValueChange={(v) => setPriority(v as Priority)}
-                  disabled={!selectedId}
-                >
+                <Select value={priority} onValueChange={(v) => setPriority(v as Priority)} disabled={!selectedId || isUpdating || isDeleting}>
                   <SelectTrigger id="priority-edit" className="w-full">
                     <SelectValue asChild>
                       {renderOption(currentPriorityInfo.icon, currentPriorityInfo.label, currentPriorityInfo.color)}
@@ -267,32 +249,72 @@ export function EpicEditDialog({
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            {/* --- KẾT THÚC "ĐỘ" --- */}
 
-            {/* DateRangePicker (giữ nguyên) */}
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-10 h-10 p-0 rounded-md border shadow-sm" 
+                      style={{ backgroundColor: color }}
+                      type="button"
+                      disabled={!selectedId || isUpdating || isDeleting}
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3" align="end">
+                    <ColorPicker color={color} onChange={setColor} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Start & End date</Label>
-              <DateRangePicker
-                range={dateRange}
-                onRangeSelect={setDateRange}
-                disabled={!selectedId}
-              />
+              <DateRangePicker range={dateRange} onRangeSelect={setDateRange} disabled={!selectedId || isUpdating || isDeleting} />
             </div>
-
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={!selectedId}>
-              Save changes
-            </Button>
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  size="sm"
+                  disabled={!selectedId || isUpdating || isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the epic
+                    "{title}" and remove it from all associated tasks.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isUpdating || isDeleting}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={!selectedId || isUpdating || isDeleting}>
+                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save changes
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

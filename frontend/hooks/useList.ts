@@ -1,106 +1,97 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { List } from "@/types";
-import { listService } from "@/services/listService";
+import { 
+  listService, 
+  CreateListDto, 
+  UpdateListDto 
+} from "@/services/listService";
 
-export function useList(projectId?: string) {
-  const [lists, setLists] = useState<List[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+export function useLists(projectId?: string) {
+  const queryClient = useQueryClient();
+  const queryKey = ["lists", projectId];
 
-  const fetchLists = useCallback(async () => {
-    if (!projectId) {
-      setLists([]);
-      setIsLoading(false);
-      return;
-    }
-    try {
-      setIsLoading(true);
-      const data = await listService.getLists(projectId);
-      setLists(data);
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId]);
+  // 1. Fetch Lists
+  const {
+    data: lists = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey,
+    queryFn: () => listService.getLists(projectId!),
+    enabled: !!projectId,
+  });
 
-  useEffect(() => {
-    fetchLists();
-  }, [fetchLists]);
+  // 2. Create List Mutation
+  const createListMutation = useMutation({
+    mutationFn: (newList: CreateListDto) => listService.createList(newList),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
-  const createList = async (listData: Pick<List, "name" | "category">) => {
-    if (!projectId) return;
+  // 3. Update List Mutation
+  const updateListMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: UpdateListDto }) =>
+      listService.updateList(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
-    const newList: List = {
-      id: `list-${Date.now()}`,
-      name: listData.name,
-      position: lists.length + 1,
-      color: "#A1A1AA", // Default color
-      projectId: projectId,
-      category: listData.category,
-      isArchived: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  // 4. Delete List Mutation
+  const deleteListMutation = useMutation({
+    mutationFn: (id: string) => listService.deleteList(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
-    try {
-      const createdList = await listService.createList(newList);
-      setLists((prev) => [...prev, createdList]);
-      return createdList;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+  // 5. Reorder Lists Mutation (Optimistic Update)
+  const reorderListsMutation = useMutation({
+    mutationFn: (newLists: List[]) => {
+        if(!projectId) throw new Error("Project ID is required");
+        return listService.reorderLists(projectId, newLists)
+    },
+    onMutate: async (newLists) => {
+      // Cancel queries đang chạy để tránh conflict
+      await queryClient.cancelQueries({ queryKey });
 
-  const updateList = async (id: string, updates: Partial<List>) => {
-    try {
-      const updatedList = await listService.updateList(id, updates);
-      if (updatedList) {
-        setLists((prev) =>
-          prev.map((l) => (l.id === id ? updatedList : l))
-        );
+      // Lưu state cũ để rollback nếu lỗi
+      const previousLists = queryClient.getQueryData<List[]>(queryKey);
+
+      // Optimistic Update: Cập nhật cache ngay lập tức
+      queryClient.setQueryData<List[]>(queryKey, newLists);
+
+      return { previousLists };
+    },
+    onError: (err, newLists, context) => {
+      // Rollback về state cũ nếu lỗi
+      if (context?.previousLists) {
+        queryClient.setQueryData(queryKey, context.previousLists);
       }
-      return updatedList;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
-
-  const deleteList = async (id: string) => {
-    try {
-      await listService.deleteList(id);
-      setLists((prev) => prev.filter((l) => l.id !== id));
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
-
-  const reorderLists = async (newLists: List[]) => {
-      // Optimistic update
-      setLists(newLists);
-      try {
-          if (projectId) {
-             await listService.reorderLists(projectId, newLists);
-          }
-      } catch (err) {
-          setError(err as Error);
-          // Revert if failed (optional, but good practice)
-          fetchLists();
-      }
-  }
+    },
+    onSettled: () => {
+      // Fetch lại dữ liệu chuẩn từ server sau khi xong (thành công hoặc thất bại)
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
   return {
     lists,
     isLoading,
-    error,
-    fetchLists,
-    createList,
-    updateList,
-    deleteList,
-    reorderLists
+    error: error as Error | null,
+    
+    // Mutations
+    createList: createListMutation.mutateAsync,
+    updateList: (id: string, updates: UpdateListDto) => 
+      updateListMutation.mutateAsync({ id, updates }),
+    deleteList: deleteListMutation.mutateAsync,
+    reorderLists: reorderListsMutation.mutateAsync, 
+
+    // Loading states
+    isCreating: createListMutation.isPending,
+    isUpdating: updateListMutation.isPending,
+    isDeleting: deleteListMutation.isPending,
+    isReordering: reorderListsMutation.isPending,
   };
 }

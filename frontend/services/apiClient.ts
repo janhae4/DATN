@@ -14,7 +14,7 @@ const processQueue = (error: AxiosError | null) => {
       prom.reject(error);
     } else {
       prom.resolve();
-    }
+    }   
   });
 
   failedQueue = [];

@@ -1,77 +1,89 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sprint } from "@/types";
-import { sprintService } from "@/services/sprintService";
+import {
+  sprintService,
+  CreateSprintDto,
+  UpdateSprintDto,
+} from "@/services/sprintService";
 
 export function useSprints(projectId?: string) {
-  const [sprints, setSprints] = useState<Sprint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
+  const queryKey = ["sprints", projectId];
 
-  const fetchSprints = useCallback(async () => {
-    if (!projectId) {
-      setSprints([]);
-      setIsLoading(false);
-      return;
-    }
-    try {
-      setIsLoading(true);
-      const data = await sprintService.getSprints(projectId);
-      setSprints(data);
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId]);
+  // 1. Fetch Sprints
+  const {
+    data: sprints = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey,
+    queryFn: () => sprintService.getSprints(projectId!),
+    // Chỉ fetch khi có projectId
+    enabled: !!projectId, 
+  });
 
-  useEffect(() => {
-    fetchSprints();
-  }, [fetchSprints]);
+  // 2. Create Sprint Mutation
+  const createSprintMutation = useMutation({
+    mutationFn: (newSprint: CreateSprintDto) => sprintService.createSprint(newSprint),
+    onSuccess: () => {
+      // Invalidate để load lại danh sách mới
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
-  const createSprint = async (sprint: Sprint) => {
-    try {
-      const newSprint = await sprintService.createSprint(sprint);
-      setSprints((prev) => [...prev, newSprint]);
-      return newSprint;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
-
-  const updateSprint = async (id: string, updates: Partial<Sprint>) => {
-    try {
-      const updatedSprint = await sprintService.updateSprint(id, updates);
-      if (updatedSprint) {
-        setSprints((prev) =>
-          prev.map((s) => (s.id === id ? updatedSprint : s))
-        );
+  // 3. Update Sprint Mutation
+  const updateSprintMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: UpdateSprintDto }) =>
+      sprintService.updateSprint(id, updates),
+    onSuccess: (updatedSprint) => {
+      queryClient.invalidateQueries({ queryKey });
+      if (updatedSprint?.id) {
+         queryClient.invalidateQueries({ queryKey: ["sprint", updatedSprint.id] });
       }
-      return updatedSprint;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+    },
+  });
 
-  const deleteSprint = async (id: string) => {
-    try {
-      await sprintService.deleteSprint(id);
-      setSprints((prev) => prev.filter((s) => s.id !== id));
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+  // 4. Delete Sprint Mutation
+  const deleteSprintMutation = useMutation({
+    mutationFn: (id: string) => sprintService.deleteSprint(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
   return {
     sprints,
     isLoading,
+    error: error as Error | null,
+
+    // Actions
+    createSprint: createSprintMutation.mutateAsync,
+    updateSprint: (id: string, updates: UpdateSprintDto) =>
+      updateSprintMutation.mutateAsync({ id, updates }),
+    deleteSprint: deleteSprintMutation.mutateAsync,
+
+    // Loading states (Hữu ích để hiện spinner khi đang submit)
+    isCreating: createSprintMutation.isPending,
+    isUpdating: updateSprintMutation.isPending,
+    isDeleting: deleteSprintMutation.isPending,
+  };
+}
+
+// Hook lấy chi tiết 1 Sprint (Optional - Nếu cần dùng)
+export function useSprint(sprintId: string | null) {
+  const {
+    data: sprint,
+    isLoading,
     error,
-    fetchSprints,
-    createSprint,
-    updateSprint,
-    deleteSprint,
+  } = useQuery({
+    queryKey: ["sprint", sprintId],
+    queryFn: () => sprintService.getSprintById(sprintId!),
+    enabled: !!sprintId,
+  });
+
+  return {
+    sprint,
+    isLoading,
+    error: error as Error | null,
   };
 }

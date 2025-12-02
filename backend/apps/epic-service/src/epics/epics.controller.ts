@@ -5,10 +5,18 @@ import { CreateEpicDto, EPIC_PATTERNS, UpdateEpicDto } from '@app/contracts';
 
 @Controller()
 export class EpicsController {
-  constructor(private readonly epicsService: EpicsService) {}
+  constructor(private readonly epicsService: EpicsService) { }
+
+  @MessagePattern("hello")
+  getHello(body: any) {
+    console.log("hello from service")
+    return body;
+  }
+
 
   @MessagePattern(EPIC_PATTERNS.CREATE)
   create(createEpicDto: CreateEpicDto) {
+    console.log("create epic in service: ", createEpicDto)
     return this.epicsService.create(createEpicDto);
   }
 

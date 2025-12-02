@@ -1,72 +1,85 @@
-import { useState, useEffect, useCallback } from "react";
-import { Epic } from "@/types";
-import { epicService } from "@/services/epicService";
+  import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+  import { Epic } from "@/types";
+  import { 
+    epicService, 
+    CreateEpicDto, 
+    UpdateEpicDto 
+  } from "@/services/epicService";
 
-export function useEpics(projectId?: string) {
-  const [epics, setEpics] = useState<Epic[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  export function useEpics(projectId?: string) {
+    const queryClient = useQueryClient();
+    const queryKey = ["epics", projectId];
 
-  const fetchEpics = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await epicService.getEpics(projectId);
-      setEpics(data);
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId]);
+    // 1. Fetch Epics
+    const {
+      data: epics = [],
+      isLoading,
+      error,
+    } = useQuery({
+      queryKey,
+      queryFn: () => epicService.getEpics(projectId!), 
+      enabled: !!projectId, 
+    });
 
-  useEffect(() => {
-    fetchEpics();
-  }, [fetchEpics]);
+    // 2. Create Epic Mutation
+    const createEpicMutation = useMutation({
+      mutationFn: (newEpic: CreateEpicDto) => epicService.createEpic(newEpic),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey });
+      },
+    });
 
-  const createEpic = async (epic: Epic) => {
-    try {
-      const newEpic = await epicService.createEpic(epic);
-      setEpics((prev) => [...prev, newEpic]);
-      return newEpic;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+    // 3. Update Epic Mutation
+    const updateEpicMutation = useMutation({
+      mutationFn: ({ id, updates }: { id: string; updates: UpdateEpicDto }) =>
+        epicService.updateEpic(id, updates),
+      onSuccess: (updatedEpic) => {
+        queryClient.invalidateQueries({ queryKey });
+        queryClient.invalidateQueries({ queryKey: ["epic", updatedEpic.id] });
+      },
+    });
 
-  const updateEpic = async (id: string, updates: Partial<Epic>) => {
-    try {
-      const updatedEpic = await epicService.updateEpic(id, updates);
-      if (updatedEpic) {
-        setEpics((prev) =>
-          prev.map((e) => (e.id === id ? updatedEpic : e))
-        );
-      }
-      return updatedEpic;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+    // 4. Delete Epic Mutation
+    const deleteEpicMutation = useMutation({
+      mutationFn: (id: string) => epicService.deleteEpic(id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey });
+      },
+    });
 
-  const deleteEpic = async (id: string) => {
-    try {
-      await epicService.deleteEpic(id);
-      setEpics((prev) => prev.filter((e) => e.id !== id));
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+    return {
+      epics,
+      isLoading,
+      error: error as Error | null,
+      
+      // Mutations
+      createEpic: createEpicMutation.mutateAsync,
+      updateEpic: (id: string, updates: UpdateEpicDto) => 
+        updateEpicMutation.mutateAsync({ id, updates }),
+      deleteEpic: deleteEpicMutation.mutateAsync,
 
-  return {
-    epics,
-    isLoading,
-    error,
-    fetchEpics,
-    createEpic,
-    updateEpic,
-    deleteEpic,
-  };
-}
+      // Loading states
+      isCreating: createEpicMutation.isPending,
+      isUpdating: updateEpicMutation.isPending,
+      isDeleting: deleteEpicMutation.isPending,
+    };
+  }
+
+  // Hook lấy chi tiết 1 Epic
+  export function useEpic(epicId: string | null) {
+    const {
+      data: epic,
+      isLoading,
+      error,
+    } = useQuery({
+      queryKey: ["epic", epicId],
+      queryFn: () => epicService.getEpicById(epicId!),
+      enabled: !!epicId,
+    });
+
+    return {
+      epic,
+      isLoading,
+      error: error as Error | null,
+    };
+  }

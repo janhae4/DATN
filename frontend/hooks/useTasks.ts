@@ -1,77 +1,118 @@
-import { useState, useEffect, useCallback } from "react";
-import { Task } from "@/types";
-import { taskService } from "@/services/taskService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Task, TaskLabel } from "@/types"; // Đảm bảo import đúng TaskLabel hoặc Label
+import {
+  taskService,
+  CreateTaskDto,
+  UpdateTaskDto,
+} from "@/services/taskService";
 
 export function useTasks(projectId?: string) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
+  const tasksQueryKey = ["tasks", projectId];
+  const labelsQueryKey = ["task-labels-project", projectId];
 
-  const fetchTasks = useCallback(async () => {
-    if (!projectId) {
-      setTasks([]);
-      setIsLoading(false);
-      return;
-    }
-    try {
-      setIsLoading(true);
-      const data = await taskService.getTasks(projectId);
-      setTasks(data);
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId]);
+  // 1. Fetch Tasks
+  const {
+    data: tasks = [],
+    isLoading: isLoadingTasks,
+    error,
+  } = useQuery<Task[]>({
+    queryKey: tasksQueryKey,
+    queryFn: () => taskService.getTasks(projectId!),
+    enabled: !!projectId,
+  });
 
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+  // 2. Fetch Project Labels
+  const {
+    data: projectLabels = [],
+    isLoading: isLoadingLabels,
+  } = useQuery<TaskLabel[]>({
+    queryKey: labelsQueryKey,
+    queryFn: () => taskService.getAllTaskLabelByProjectId(projectId!),
+    enabled: !!projectId,
+  });
 
-  const createTask = async (task: Task) => {
-    try {
-      const newTask = await taskService.createTask(task);
-      setTasks((prev) => [...prev, newTask]);
-      return newTask;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+  // --- MUTATIONS ---
 
-  const updateTask = async (id: string, updates: Partial<Task>) => {
-    try {
-      const updatedTask = await taskService.updateTask(id, updates);
-      if (updatedTask) {
-        setTasks((prev) =>
-          prev.map((t) => (t.id === id ? updatedTask : t))
+  // Create Task
+  const createTaskMutation = useMutation({
+    mutationFn: (newTask: CreateTaskDto) => taskService.createTask(newTask),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+    },
+  });
+
+  // Update Task (FIX LOGIC OPTIMISTIC HERE)
+const updateTaskMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: UpdateTaskDto }) =>
+      taskService.updateTask(id, updates),
+
+    // Optimistic Update
+    onMutate: async ({ id, updates }) => {
+      await queryClient.cancelQueries({ queryKey: tasksQueryKey });
+      const previousTasks = queryClient.getQueryData<Task[]>(tasksQueryKey);
+
+      // Tìm label objects từ projectLabels để đắp vào UI ngay lập tức
+      let optimisticLabels: TaskLabel[] | undefined = undefined;
+      if (updates.labelIds && projectLabels.length > 0) {
+        optimisticLabels = projectLabels.filter(label => 
+          updates.labelIds?.includes(label.id)
         );
       }
-      return updatedTask;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
 
-  const deleteTask = async (id: string) => {
-    try {
-      await taskService.deleteTask(id);
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
+      queryClient.setQueryData<Task[]>(tasksQueryKey, (old) => {
+        if (!old) return [];
+        return old.map((task) =>
+          task.id === id 
+            ? { 
+                ...task, 
+                ...updates,
+                // Nếu có update label, hiển thị ngay label giả lập
+                ...(optimisticLabels ? { labels: optimisticLabels } : {})
+              } 
+            : task
+        );
+      });
+
+      return { previousTasks };
+    },
+
+    onError: (_err, _newTodo, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(tasksQueryKey, context.previousTasks);
+      }
+    },
+
+    onSettled: (data, error, variables) => {
+      // FIX QUAN TRỌNG: Invalidate tất cả các nơi có thể chứa dữ liệu cũ
+      setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+          queryClient.invalidateQueries({ queryKey: labelsQueryKey });
+          queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
+          
+          // Dòng này giúp useTaskLabels(taskId) tự động cập nhật nếu bạn vẫn dùng nó
+          queryClient.invalidateQueries({ queryKey: ["task-labels", variables.id] });
+      }, 50);
+    },
+  });
+
+  // Delete Task
+  const deleteTaskMutation = useMutation({
+    mutationFn: (id: string) => taskService.deleteTask(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+      queryClient.invalidateQueries({ queryKey: labelsQueryKey });
+    },
+  });
 
   return {
     tasks,
-    isLoading,
-    error,
-    fetchTasks,
-    createTask,
-    updateTask,
-    deleteTask,
+    projectLabels,
+    isLoading: isLoadingTasks || isLoadingLabels,
+    error: error as Error | null,
+    createTask: createTaskMutation.mutateAsync,
+    updateTask: (id: string, updates: UpdateTaskDto) =>
+      updateTaskMutation.mutateAsync({ id, updates }),
+    deleteTask: deleteTaskMutation.mutateAsync,
   };
 }

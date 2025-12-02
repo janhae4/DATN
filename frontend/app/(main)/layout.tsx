@@ -9,6 +9,7 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
+  
   return (
     <TeamProvider>
       <SidebarProvider>

@@ -1,17 +1,17 @@
-import { 
-  Controller, 
-  Post, 
-  Body, 
-  UseGuards, 
-  Get, 
-  Param, 
-  Put, 
-  Delete, 
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Param,
+  Put,
+  Delete,
   Query
 } from '@nestjs/common';
-import { 
-  CreateTaskDto, 
-  UpdateTaskDto 
+import {
+  CreateTaskDto,
+  UpdateTaskDto
 } from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
@@ -21,8 +21,15 @@ import { TaskService } from './task.service';
 
 @Controller('tasks')
 export class TaskController {
-  constructor(private readonly taskService: TaskService) {}
+  constructor(private readonly taskService: TaskService) { }
 
+  @Get("tasklabel")
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  getAllTaskLabel(@Query('projectId') projectId: string) {
+    return this.taskService.getAllTaskLabel(projectId);
+  }
+  
   @Post()
   @UseGuards(RoleGuard)
   @Roles(Role.USER)
@@ -75,5 +82,19 @@ export class TaskController {
     @Body() addFilesDto: { fileIds: string[] },
   ) {
     return this.taskService.addFiles(taskId, addFilesDto.fileIds);
+  }
+
+  @Get(":id/labels")
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  findLabelsByTaskId(
+    @Param('id') taskId: string,
+  ) {
+    return this.taskService.findLabelsByTaskId(taskId);
+  }
+
+  @Delete(":id/label")
+  handleLabelDeleted(@Query('labelId') labelId: string) {
+    return this.taskService.handleLabelDeleted({ labelId });
   }
 }

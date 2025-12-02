@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ClientsModule } from '@nestjs/microservices';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
 import {
@@ -9,10 +10,11 @@ import {
   REDIS_EXCHANGE,
   TASK_EXCHANGE,
   Task,
-  USER_EXCHANGE
+  USER_EXCHANGE,
+  LABEL_CLIENT
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { TaskLabel } from '../entities/task-label.entity';
+import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
 
 @Module({
   imports: [
@@ -30,6 +32,14 @@ import { TaskLabel } from '../entities/task-label.entity';
     TypeOrmModule.forFeature([Task, TaskLabel]), 
     
     ClientConfigModule,
+    ClientsModule.registerAsync([
+      {
+        name: LABEL_CLIENT,
+        imports: [ClientConfigModule],
+        inject: [ClientConfigService],
+        useFactory: (configService: ClientConfigService) => configService.labelClientOptions,
+      },
+    ]),
     RabbitMQModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],

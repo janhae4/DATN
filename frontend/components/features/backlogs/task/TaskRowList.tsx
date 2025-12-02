@@ -1,15 +1,17 @@
-// backlogs/task/TaskRowList.tsx
 "use client"
 
 import * as React from "react"
 import { TableBody } from "@/components/ui/table"
-import { Task, List } from "@/types"
+import { Task, List, TaskLabel } from "@/types"
 import { BacklogTaskRow } from "./BacklogTaskRow"
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
+// Import DTO để định nghĩa kiểu dữ liệu cho hàm update
+import { UpdateTaskDto } from "@/services/taskService"
+import { useTaskLabels } from "@/hooks/useTaskLabel"
 
 type TaskRowListProps = {
   tasks: Task[]
@@ -17,7 +19,8 @@ type TaskRowListProps = {
   isDraggable?: boolean
   isSortable?: boolean
   onRowClick: (task: Task) => void
-  children?: React.ReactNode // Dùng để nhét <AddNewTaskRow /> vào
+  onUpdateTask: (taskId: string, updates: UpdateTaskDto) => void;
+  children?: React.ReactNode 
 }
 
 export function TaskRowList({
@@ -26,9 +29,11 @@ export function TaskRowList({
   isDraggable = false,
   isSortable = false,
   onRowClick,
+  onUpdateTask, 
   children,
   onDeleteMultiple,
 }: TaskRowListProps & { onDeleteMultiple?: (ids: string[]) => void }) {
+  
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
   const handleSelect = (taskId: string, checked: boolean) => {
@@ -37,13 +42,16 @@ export function TaskRowList({
     );
   };
 
+  
+
   const handleDeleteSelected = () => {
     if (onDeleteMultiple) onDeleteMultiple(selectedIds);
     setSelectedIds([]);
   };
 
-  // 1. Tạo ra 1 mảng các component <BacklogTaskRow>
+  // 1. Tạo mảng các component <BacklogTaskRow>
   const taskRows = tasks.map((task) => (
+    
     <BacklogTaskRow
       key={task.id}
       task={task}
@@ -52,13 +60,13 @@ export function TaskRowList({
       onRowClick={onRowClick}
       selected={selectedIds.includes(task.id)}
       onSelect={handleSelect}
+      onUpdateTask={onUpdateTask} 
       data-sortable={isSortable}
     />
   ))
 
   // 2. Nếu list này CÓ SẮP XẾP (sortable)
   if (isSortable) {
-    // Lấy ID cho SortableContext
     const taskIds = tasks.map((task) => task.id)
     return (
       <TableBody data-sortable={true}>
@@ -77,6 +85,7 @@ export function TaskRowList({
             </tr>
           )}
           {taskRows}
+          {/* Render children (ví dụ: AddNewTaskRow) */}
           {children && React.Children.map(children, (child) => 
             React.isValidElement(child) ? React.cloneElement(child, { 'data-sortable': false } as any) : child
           )}
@@ -85,7 +94,7 @@ export function TaskRowList({
     )
   }
 
-  // 3. Nếu list này KHÔNG SẮP XẾP (ví dụ: trong Epic)
+  // 3. Nếu list này KHÔNG SẮP XẾP
   return (
     <TableBody data-sortable={false}>
       {taskRows}

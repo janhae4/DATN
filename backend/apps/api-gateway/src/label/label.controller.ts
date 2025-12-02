@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, Put } from '@nestjs/common';
 import { CreateLabelDto, UpdateLabelDto } from '@app/contracts';
 import { LabelService } from './label.service';
 import { ApiBody, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -15,15 +15,26 @@ export class LabelController {
     return this.labelService.create(createLabelDto);
   }
 
+  @Get('project/:projectId')
+  @ApiOperation({ summary: 'Get all labels by project id' })
+  findAllByProject(@Param('projectId') projectId: string) {
+    return this.labelService.findAllByProject(projectId);
+  }
+
+  @Post('details')
+  @ApiOperation({ summary: 'Get labels details by ids' })
+  @ApiBody({ schema: { type: 'object', properties: { labelIds: { type: 'array', items: { type: 'string' } } } } })
+  getDetails(@Body() body: { labelIds: string[] }) {
+    return this.labelService.findByIds(body.labelIds);
+  }
+
   @Get(':id')
-  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a label by id' })
   findOne(@Param('id') id: string) {
     return this.labelService.findOne(id);
   }
 
-  @Patch(':id')
-  // @ApiBearerAuth()
+  @Put('/:id')
   @ApiOperation({ summary: 'Update a label by id' })
   @ApiBody({ type: UpdateLabelDto })
   update(
@@ -34,7 +45,6 @@ export class LabelController {
   }
 
   @Delete(':id')
-  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a label by id' })
   remove(@Param('id') id: string) {
     return this.labelService.remove(id);
