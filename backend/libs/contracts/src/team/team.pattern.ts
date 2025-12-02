@@ -1,5 +1,6 @@
 export const TEAM_PATTERN = {
   CREATE: 'team.create',
+  CREATE_DEFAULT_TEAM: 'team.createDefaultTeam',
   FIND_ALL: 'team.findAll',
   FIND_BY_ID: 'team.findById',
   FIND_BY_IDS: 'team.findByIds',

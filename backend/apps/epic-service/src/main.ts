@@ -5,7 +5,7 @@ import { Logger } from '@nestjs/common';
 import { ClientConfigService } from '@app/contracts';
 
 async function bootstrap() {
-  const appContext = await NestFactory.create(EpicServiceModule);
+ const appContext = await NestFactory.create(EpicServiceModule);
   const configService = appContext.get(ClientConfigService);
   appContext.connectMicroservice<MicroserviceOptions>(
     configService.epicClientOptions,
@@ -13,7 +13,6 @@ async function bootstrap() {
 
   await appContext.startAllMicroservices();
   await appContext.init();
-
   Logger.log('Epic Service is listening RabbitMQ messages...', 'Bootstrap');
 }
 bootstrap();

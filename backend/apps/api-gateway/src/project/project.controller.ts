@@ -8,6 +8,7 @@ import {
   Param,
   UseFilters,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import {
@@ -54,5 +55,10 @@ export class ProjectController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.projectService.remove(id);
+  }
+
+  @Get()
+  findAllByTeamId(@Query('teamId') teamId: string) {
+    return this.projectService.findAllByTeamId(teamId);
   }
 }

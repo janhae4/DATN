@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateListDto, UpdateListDto } from '@app/contracts';
+import { CreateListDto, ListCategoryEnum, UpdateListDto } from '@app/contracts';
 import { List } from '@app/contracts/list/list/list.entity';
 
 @Injectable()
@@ -46,11 +46,15 @@ export class ListService {
   createDefaultLists(projectId: string) {
     const defaultLists: CreateListDto[] = [
       { name: 'To Do', projectId, position: 1 },
-      { name: 'In Progress', projectId, position: 2 },
-      { name: 'Done', projectId, position: 3 },
+      {
+        name: 'In Progress',
+        projectId,
+        position: 2,
+        category: ListCategoryEnum.IN_PROGRESS,
+      },
+      { name: 'Done', projectId, position: 3, category: ListCategoryEnum.DONE },
     ];
 
     return Promise.all(defaultLists.map(this.create.bind(this)));
   }
-
 }

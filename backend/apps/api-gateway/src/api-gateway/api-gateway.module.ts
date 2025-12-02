@@ -49,7 +49,7 @@ import { TaskModule } from '../task/task.module';
     EpicModule,
     TaskModule,
     ProjectModule,
-    WebhooksModule
+    WebhooksModule, 
   ],
   controllers: [ApiGatewayController],
   providers: [RpcErrorToHttpFilter, ApiGatewayService],

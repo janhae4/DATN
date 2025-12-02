@@ -38,12 +38,14 @@ export class TeamController {
     return this.teamService.findAll();
   }
 
-  @Get()
+  @Get('me')
   @ApiOperation({ summary: 'Get all teams by user id' })
   @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.USER)
   find(@CurrentUser('id') id: string) {
+    console.log('Finding teams for user:', id);
     return this.teamService.findByUserId(id);
+    
   }
 
   @Get(':id')

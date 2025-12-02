@@ -4,12 +4,15 @@ import {
   AddMember,
   ChangeRoleMember,
   CreateTeamDto,
+  EVENTS,
+  EVENTS_EXCHANGE,
   LeaveMember,
   NotificationEventDto,
   RemoveMember,
   TEAM_EXCHANGE,
   TEAM_PATTERN,
   TransferOwnership,
+  User,
 } from '@app/contracts';
 import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import { customErrorHandler } from '@app/common';
@@ -17,13 +20,12 @@ import { VerifyPermissionPayload } from '@app/contracts/team/dto/verify-permissi
 
 @Controller()
 export class TeamController {
-  constructor(private readonly teamService: TeamService) { }
-
+  constructor(private readonly teamService: TeamService) {}
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_ALL,
     queue: TEAM_PATTERN.FIND_ALL,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async findAll() {
     return await this.teamService.findAll();
@@ -33,9 +35,10 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_BY_USER_ID,
     queue: TEAM_PATTERN.FIND_BY_USER_ID,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async findByUserId(userId: string) {
+    console.log('Finding teams for user in service:', userId);
     return await this.teamService.findByUserId(userId);
   }
 
@@ -43,7 +46,7 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_BY_ID,
     queue: TEAM_PATTERN.FIND_BY_ID,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async findById(payload: { id: string; userId: string }) {
     return await this.teamService.findById(payload.id, payload.userId);
@@ -53,7 +56,7 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_ROOMS_BY_USER_ID,
     queue: TEAM_PATTERN.FIND_ROOMS_BY_USER_ID,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async findByName(userId: string) {
     return await this.teamService.findRoomsByUserId(userId);
@@ -63,7 +66,7 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.CREATE,
     queue: TEAM_PATTERN.CREATE,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async create(createTeamDto: CreateTeamDto) {
     return await this.teamService.create(createTeamDto);
@@ -73,7 +76,7 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.ADD_MEMBER,
     queue: TEAM_PATTERN.ADD_MEMBER,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async addMember(addMemberDto: AddMember) {
     return await this.teamService.addMembers(addMemberDto);
@@ -83,7 +86,7 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.REMOVE_MEMBER,
     queue: TEAM_PATTERN.REMOVE_MEMBER,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async removeMember(payload: RemoveMember) {
     return await this.teamService.removeMember(payload);
@@ -93,18 +96,17 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.REMOVE_TEAM,
     queue: TEAM_PATTERN.REMOVE_TEAM,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async removeTeam(payload: { userId: string; teamId: string }) {
     return await this.teamService.removeTeam(payload.userId, payload.teamId);
   }
 
-
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.LEAVE_TEAM,
     queue: TEAM_PATTERN.LEAVE_TEAM,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async leaveTeam(payload: LeaveMember) {
     return await this.teamService.leaveTeam(payload);
@@ -114,7 +116,7 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.TRANSFER_OWNERSHIP,
     queue: TEAM_PATTERN.TRANSFER_OWNERSHIP,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async transferOwnership(payload: TransferOwnership) {
     return await this.teamService.transferOwnership(payload);
@@ -124,7 +126,7 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.CHANGE_ROLE,
     queue: TEAM_PATTERN.CHANGE_ROLE,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async changeRole(payload: ChangeRoleMember) {
     return await this.teamService.changeMemberRole(payload);
@@ -134,28 +136,39 @@ export class TeamController {
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
     queue: TEAM_PATTERN.VERIFY_PERMISSION,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async verifyPermission(payload: VerifyPermissionPayload) {
-    return await this.teamService.verifyPermission(payload.userId, payload.teamId, payload.roles);
+    return await this.teamService.verifyPermission(
+      payload.userId,
+      payload.teamId,
+      payload.roles,
+    );
   }
-
 
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.SEND_NOTIFICATION,
     queue: TEAM_PATTERN.SEND_NOTIFICATION,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
-  async sendNotification(payload: { userId: string, teamId: string; message: NotificationEventDto }) {
-    return await this.teamService.sendNotification(payload.userId, payload.teamId, payload.message);
+  async sendNotification(payload: {
+    userId: string;
+    teamId: string;
+    message: NotificationEventDto;
+  }) {
+    return await this.teamService.sendNotification(
+      payload.userId,
+      payload.teamId,
+      payload.message,
+    );
   }
 
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
     queue: TEAM_PATTERN.FIND_PARTICIPANTS,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async findParticipants(teamId: string) {
     return await this.teamService.getMembersWithProfiles(teamId);
@@ -166,17 +179,22 @@ export class TeamController {
     routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
     queue: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
   })
-  async findParticipantRoles(payload: { teamId: string ; userId: string }) {
-    return await this.teamService.findParticipantRoles(payload.userId, payload.teamId);
+  async findParticipantRoles(payload: { teamId: string; userId: string }) {
+    return await this.teamService.findParticipantRoles(
+      payload.userId,
+      payload.teamId,
+    );
   }
 
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
     queue: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
-    errorHandler: customErrorHandler
+    errorHandler: customErrorHandler,
   })
   async findParticipantsIds(teamId: string) {
     return await this.teamService.getMembersFromTeam(teamId);
   }
+
+ 
 }

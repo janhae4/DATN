@@ -1,36 +1,74 @@
+"use client"
+
 import * as React from "react"
+import { useParams } from "next/navigation"
+import { PlusIcon, Loader2, AlertCircle } from "lucide-react"
+
 import { Table } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { PlusIcon } from "lucide-react"
-import { AddNewTaskRow } from "./AddNewTaskRow"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
+import { useTasks } from "@/hooks/useTasks" // Import Hook
+import { List, TaskLabel } from "@/types"
+
+import { AddNewTaskRow } from "./AddNewTaskRow"
 import { TaskRowList } from "./TaskRowList"
-import { List } from "@/types"
+import { UpdateTaskDto } from "@/services/taskService"
 
 type BacklogTaskListProps = {
   lists?: List[]
 }
 
 export function BacklogTaskList({ lists }: BacklogTaskListProps) {
+  const params = useParams();
+  const projectId = params.projectId as string;
+
+  // 1. Lấy dữ liệu và hàm xóa, CẬP NHẬT (updateTask)
+  const { tasks, deleteTask, updateTask, isLoading, error, projectLabels } = useTasks(projectId);
+
+
+  // 2. Các thao tác UI global 
   const {
-    data,
     isAddingNewRow,
     setIsAddingNewRow,
     handleRowClick,
-    handleDeleteTask,
   } = useTaskManagementContext()
 
+  // 3. Lọc Backlog Tasks (Task chưa có sprintId)
   const backlogTasks = React.useMemo(
-    () => data.filter((task) => !task.sprintId),
-    [data]
+    () => tasks.filter((task) => !task.sprintId),
+    [tasks]
   )
-  
-  const listsList = lists ?? []
 
+  const listsList = lists ?? []
   const isEmpty = backlogTasks.length === 0 && !isAddingNewRow
 
-  const handleDeleteMultiple = (ids: string[]) => {
-    ids.forEach((id) => handleDeleteTask(id))
+  // 4. Xử lý xóa nhiều (sử dụng hàm delete từ hook)
+  const handleDeleteMultiple = async (ids: string[]) => {
+    await Promise.all(ids.map((id) => deleteTask(id)));
+  }
+
+  const handleUpdateTask = (taskId: string, updates: UpdateTaskDto) => {
+    console.log("updating tasks: ", taskId, updates)
+    updateTask(taskId, updates);
+  }
+
+
+  if (isLoading) {
+    return (
+      <div className="flex h-32 w-full items-center justify-center text-muted-foreground">
+        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+        Loading backlog...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-32 w-full flex-col items-center justify-center gap-2 text-destructive border-2 border-destructive/20 rounded-md bg-destructive/5">
+        <AlertCircle className="h-6 w-6" />
+        <p>Failed to load tasks</p>
+      </div>
+    );
   }
 
   return (
@@ -52,9 +90,9 @@ export function BacklogTaskList({ lists }: BacklogTaskListProps) {
                 tasks={backlogTasks}
                 lists={listsList}
                 isDraggable={true}
-                isSortable={true} 
                 onRowClick={handleRowClick}
                 onDeleteMultiple={handleDeleteMultiple}
+                onUpdateTask={handleUpdateTask}
               >
                 {isAddingNewRow && (
                   <AddNewTaskRow
@@ -70,7 +108,7 @@ export function BacklogTaskList({ lists }: BacklogTaskListProps) {
       {!isAddingNewRow && !isEmpty && (
         <Button
           variant="ghost"
-          className="w-fit justify-start gap-2 px-1 text-muted-foreground"
+          className="w-fit justify-start gap-2 px-1 text-muted-foreground mt-2"
           onClick={() => setIsAddingNewRow(true)}
         >
           <PlusIcon className="h-4 w-4" />

@@ -4,6 +4,8 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { Loader2, Plus } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
@@ -24,15 +26,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { toast } from "sonner";
 import { useProjects } from "@/hooks/useProjects";
 import { useTeamContext } from "@/contexts/TeamContext";
-import { ProjectVisibility } from "@/types/common/enums";
+import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
+import { ProjectVisibility } from "@/types/common/enums"; // Đảm bảo đường dẫn import đúng
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Project name is required").max(50, "Project name is too long"),
-  key: z.string().min(2, "Key must be at least 2 characters").max(10, "Key is too long").toUpperCase(),
-  description: z.string().optional(),
+  name: z.string().min(1, "Project name is required").max(100, "Name is too long"),
+  description: z.string().max(500, "Description is too long").optional(),
   visibility: z.nativeEnum(ProjectVisibility),
 });
 
@@ -43,6 +47,9 @@ interface CreateProjectModalProps {
 export function CreateProjectModal({ children }: CreateProjectModalProps) {
   const [open, setOpen] = React.useState(false);
   const { activeTeam } = useTeamContext();
+  const { user } = useAuth(); // Lấy user hiện tại
+  const router = useRouter();
+  // Hook gọi API tạo project
   const { createProject } = useProjects(activeTeam?.id);
 
   const {
@@ -56,47 +63,51 @@ export function CreateProjectModal({ children }: CreateProjectModalProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      key: "",
       description: "",
       visibility: ProjectVisibility.TEAM,
     },
   });
 
-  // Auto-generate key from name
-  const name = watch("name");
-  React.useEffect(() => {
-    if (name && !watch("key")) {
-      const generatedKey = name
-        .split(" ")
-        .map((word) => word[0])
-        .join("")
-        .toUpperCase()
-        .substring(0, 5);
-      setValue("key", generatedKey);
-    }
-  }, [name, setValue, watch]);
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!activeTeam) {
-      toast.error("No active team selected");
+      toast.error("Please select a team first.");
       return;
     }
 
+    if (!user) {
+        toast.error("You must be logged in.");
+        return;
+    }
+
     try {
-      await createProject({
-        ...values,
+
+      const newProject = await createProject({
+        name: values.name,
+        description: values.description,
+        visibility: values.visibility,
         teamId: activeTeam.id,
-        icon: "🚀", // Default icon
-      } as any); // Type casting as createProject expects full Project object but service handles ID/dates
+        icon: "🚀",
+        isArchived: false
+      });
+
 
       toast.success("Project created successfully!");
       setOpen(false);
-      reset();
-    } catch (error) {
-      toast.error("Failed to create project");
+      reset(); 
+      // Redirect to the new project's dashboard or refresh the project list
+      router.replace(`/${activeTeam.id}/${newProject.id}/dashboard`);
+      
+    } catch (error: any) {
       console.error(error);
+      const message = error?.response?.data?.message || "Failed to create project";
+      toast.error(message);
     }
   };
+
+  // Reset form khi đóng modal
+  React.useEffect(() => {
+    if (!open) reset();
+  }, [open, reset]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -105,82 +116,76 @@ export function CreateProjectModal({ children }: CreateProjectModalProps) {
         <DialogHeader>
           <DialogTitle>Create Project</DialogTitle>
           <DialogDescription>
-            Create a new project in {activeTeam?.name}.
+            Add a new project to <span className="font-semibold text-foreground">{activeTeam?.name}</span> to start tracking tasks.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="name"
-                  placeholder="Project Phoenix"
-                  {...register("name")}
-                  className={errors.name ? "border-destructive" : ""}
-                />
-                {errors.name && (
-                  <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="key" className="text-right">
-                Key
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="key"
-                  placeholder="PHX"
-                  {...register("key")}
-                  className={errors.key ? "border-destructive" : ""}
-                />
-                {errors.key && (
-                  <p className="text-destructive text-xs mt-1">{errors.key.message}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="description" className="text-right mt-2">
-                Description
-              </Label>
-              <div className="col-span-3">
-                <Textarea
-                  id="description"
-                  placeholder="Describe your project..."
-                  {...register("description")}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="visibility" className="text-right">
-                Visibility
-              </Label>
-              <div className="col-span-3">
-                <Select
-                  onValueChange={(value) => setValue("visibility", value as ProjectVisibility)}
-                  defaultValue={ProjectVisibility.TEAM}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select visibility" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ProjectVisibility.PRIVATE}>Private</SelectItem>
-                    <SelectItem value={ProjectVisibility.TEAM}>Team</SelectItem>
-                    <SelectItem value={ProjectVisibility.PUBLIC}>Public</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+        
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+          
+          {/* Name Field */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Project Name <span className="text-destructive">*</span></Label>
+            <Input
+              id="name"
+              placeholder="e.g. Website Redesign"
+              {...register("name")}
+              className={errors.name ? "border-destructive focus-visible:ring-destructive" : ""}
+            />
+            {errors.name && (
+              <p className="text-destructive text-xs font-medium">{errors.name.message}</p>
+            )}
           </div>
-          <DialogFooter>
+
+          {/* Description Field */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="What is this project about?"
+              className="resize-none h-20"
+              {...register("description")}
+            />
+            {errors.description && (
+              <p className="text-destructive text-xs font-medium">{errors.description.message}</p>
+            )}
+          </div>
+
+          {/* Visibility Field */}
+          <div className="space-y-2">
+            <Label htmlFor="visibility">Visibility</Label>
+            <Select
+              onValueChange={(value) => setValue("visibility", value as ProjectVisibility)}
+              defaultValue={ProjectVisibility.TEAM}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select visibility" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ProjectVisibility.PRIVATE}>
+                    🔒 Private (Only you)
+                </SelectItem>
+                <SelectItem value={ProjectVisibility.TEAM}>
+                    👥 Team (Visible to team members)
+                </SelectItem>
+                <SelectItem value={ProjectVisibility.PUBLIC}>
+                    🌐 Public (Visible to everyone)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Project"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+                </>
+              ) : (
+                <>Create Project</>
+              )}
             </Button>
           </DialogFooter>
         </form>

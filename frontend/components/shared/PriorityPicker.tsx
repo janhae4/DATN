@@ -1,125 +1,131 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { FlagIcon, CircleSlashIcon } from "lucide-react"
+import * as React from "react";
+import { FlagIcon, Ban } from "lucide-react"; // Use 'Ban' icon for 'No Priority'
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { Task } from "@/types/task.type"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Priority } from "@/types/common/enums"; // Import Priority Enum
 
-// Helper để lấy màu cờ
-const getPriorityColor = (priority: Task["priority"]) => {
-    switch (priority) {
-        case "high":
-            return "text-red-500"
-        case "medium":
-            return "text-yellow-500"
-        case "low":
-            return "text-blue-500"
-        case null:
-        case undefined:
-            return "text-muted-foreground/50 hover:text-muted-foreground"
-        default:
-            return "text-muted-foreground/50 hover:text-muted-foreground"
-    }
-}
+// Helper to get priority color
+const getPriorityColor = (priority?: Priority | null) => {
+  switch (priority) {
+    case Priority.URGENT:
+      return "text-red-600";
+    case Priority.HIGH:
+      return "text-red-500";
+    case Priority.MEDIUM:
+      return "text-yellow-500";
+    case Priority.LOW:
+      return "text-blue-500";
+    case null:
+    case undefined:
+      return "text-muted-foreground/50 hover:text-muted-foreground";
+    default:
+      return "text-muted-foreground/50 hover:text-muted-foreground";
+  }
+};
 
-// Định nghĩa các lựa chọn
-const priorities: { value: Task["priority"]; label: string }[] = [
-    { value: "high", label: "High" },
-    { value: "medium", label: "Medium" },
-    { value: "low", label: "Low" },
-]
+// Define options based on Enum
+const priorities: { value: Priority; label: string }[] = [
+  //   { value: Priority.URGENT, label: "Urgent" },
+  { value: Priority.HIGH, label: "High" },
+  { value: Priority.MEDIUM, label: "Medium" },
+  { value: Priority.LOW, label: "Low" },
+];
 
+// Helper to get priority label
+const getPriorityLabel = (priority?: Priority | null) => {
+  switch (priority) {
+    // case Priority.URGENT:
+    //   return "Urgent"
+    case Priority.HIGH:
+      return "High";
+    case Priority.MEDIUM:
+      return "Medium";
+    case Priority.LOW:
+      return "Low";
+    case null:
+    case undefined:
+      return "No Priority";
+    default:
+      return "No Priority";
+  }
+};
 interface PriorityPickerProps {
-    priority: Task["priority"]
-    onPriorityChange: (priority: Task["priority"]) => void
-    disabled?: boolean
-}
-
-// Helper để lấy label của priority
-const getPriorityLabel = (priority: Task["priority"]) => {
-    switch (priority) {
-        case "high":
-            return "High"
-        case "medium":
-            return "Medium"
-        case "low":
-            return "Low"
-        case null:
-        case undefined:
-            return "No Priority"
-        default:
-            return "No Priority"
-    }
+  priority?: Priority | null
+  onPriorityChange: (priority: Priority | null) => void
+  disabled?: boolean
 }
 
 export function PriorityPicker({
-    priority,
-    onPriorityChange,
-    disabled = false,
+  priority,
+  onPriorityChange,
+  disabled = false,
 }: PriorityPickerProps) {
-    const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false)
 
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                {/* Use Button with asChild so the actual DOM element can be a non-button (div)
-                    - This prevents rendering a <button> inside another <button> (AccordionTrigger)
-                    - We also add explicit disabled styling since the child is not a native button */}
-                <Button
-                    asChild
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                        "h-auto w-auto p-1 gap-1",
-                        getPriorityColor(priority),
-                        disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
-                    )}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    disabled={disabled}
-                >
-                    <div className="flex items-center gap-1">
-                        <FlagIcon className="h-4 w-4" />
-                        <span className="text-xs font-medium">{getPriorityLabel(priority)}</span>
-                    </div>
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-1" align="start">
-                <div className="flex flex-col gap-1">
-                    {priorities.map((p) => (
-                        <Button
-                            key={p.value}
-                            variant="ghost"
-                            size="sm"
-                            className="justify-start gap-2"
-                            onClick={() => {
-                                onPriorityChange(p.value)
-                                setOpen(false)
-                            }}
-                        >
-                            <FlagIcon className={cn("h-4 w-4", getPriorityColor(p.value))} />
-                            {p.label}
-                        </Button>
-                    ))}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="justify-start gap-2 text-muted-foreground"
-                        onClick={() => {
-                            onPriorityChange(null) // Set về null
-                            setOpen(false)
-                        }}
-                    >
-                        <CircleSlashIcon className="h-4 w-4" />
-                        {getPriorityLabel(null)}
-                    </Button>
-                </div>
-            </PopoverContent>
-        </Popover>
-    )
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-7 px-2 flex items-center gap-2",
+            getPriorityColor(priority),
+            disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+          )}
+          onClick={(e) => e.stopPropagation()}
+          disabled={disabled}
+        >
+          <FlagIcon className="h-4 w-4" />
+          <span className="text-xs font-medium hidden group-hover:inline-block sm:inline-block">
+             {getPriorityLabel(priority)}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      
+      <PopoverContent className="w-40 p-1" align="start" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-1">
+          {priorities.map((p) => (
+            <Button
+              key={p.value}
+              variant="ghost"
+              size="sm"
+              className="justify-start gap-2 h-8"
+              onClick={(e) => {
+                e.stopPropagation()
+                onPriorityChange(p.value)
+                setOpen(false)
+              }}
+            >
+              <FlagIcon className={cn("h-4 w-4", getPriorityColor(p.value))} />
+              <span className="text-sm">{p.label}</span>
+            </Button>
+          ))}
+          
+          <div className="h-px bg-muted my-1" />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start gap-2 h-8 text-muted-foreground"
+            onClick={(e) => {
+              e.stopPropagation()
+              onPriorityChange(null)
+              setOpen(false)
+            }}
+          >
+            <Ban className="h-4 w-4" />
+            <span className="text-sm">No Priority</span>
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
 }

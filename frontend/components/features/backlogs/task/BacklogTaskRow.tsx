@@ -1,61 +1,58 @@
 "use client";
 
 import * as React from "react";
-import { Task, List } from "@/types";
+import { Task, List, Label, TaskLabel, User } from "@/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { GripVertical, Edit } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 import { PriorityPicker } from "@/components/shared/PriorityPicker";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { ListPicker } from "@/components/shared/list/ListPicker";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, GripVertical, Edit, Plus } from "lucide-react";
-import { getAssigneeInitial } from "@/lib/backlog-utils";
-import { db } from "@/public/mock-data/mock-data";
+import { EpicPicker } from "@/components/shared/epic/EpicPicker";
+import { AssigneePicker } from "@/components/shared/assignee/AssigneePicker";
 import { LabelPopover } from "@/components/shared/label/LabelPopover";
-import { cn } from "@/lib/utils";
-import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { EpicPicker } from "@/components/shared/epic/EpicPicker";
-import { AssigneePicker } from "@/components/shared/assignee/AssigneePicker";
+// DTO
+import { UpdateTaskDto } from "@/services/taskService";
 import LabelTag from "@/components/shared/label/LabelTag";
+import { useTaskLabels } from "@/hooks/useTaskLabel";
+import { useParams } from "next/navigation";
+import { useTeamMembers } from "@/hooks/useTeam";
 
 interface BacklogTaskRowProps {
   task: Task;
   lists: List[];
   isDraggable?: boolean;
-  onRowClick?: (task: Task) => void;
   selected?: boolean;
+  onRowClick?: (task: Task) => void;
   onSelect?: (taskId: string, checked: boolean) => void;
+  onUpdateTask: (taskId: string, updates: UpdateTaskDto) => void;
 }
 
 export function BacklogTaskRow({
   task,
   lists,
   isDraggable = false,
-  onRowClick,
   selected = false,
+  onRowClick,
   onSelect,
+  onUpdateTask,
 }: BacklogTaskRowProps) {
-  const {
-    handleUpdateCell,
-    handleListChange,
-    handlePriorityChange,
-    handleDateChange,
-    handleLabelChange,
-    handleRowClick: handleRowClickContext,
-    handleEpicChange,
-    handleAssigneeChange,
-  } = useTaskManagementContext();
+  const { taskLabels_data } = useTaskLabels(task.id)
 
-  // --- DND-KIT HOOK (Không thay đổi) ---
+  // --- DND-KIT HOOK ---
   const {
     attributes,
     listeners,
@@ -64,45 +61,63 @@ export function BacklogTaskRow({
     transform,
     transition,
   } = useSortable({
-    // <-- Đổi tên hook
     id: task.id,
-    data: {
-      task: task,
-    },
+    data: { task },
     disabled: !isDraggable,
   });
-  // --- END DND-KIT HOOK ---
 
-  const stopPropagation = (e: React.MouseEvent | React.PointerEvent) =>
-    e.stopPropagation();
-  const [isHovered, setIsHovered] = React.useState(false);
-  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
-  const [localTitle, setLocalTitle] = React.useState(task.title);
-
-  // Sync local title when task title changes
-  React.useEffect(() => {
-    setLocalTitle(task.title);
-  }, [task.title]);
-
-  // Save title
-  const handleTitleSave = () => {
-    if (localTitle.trim() && localTitle !== task.title) {
-      handleUpdateCell(task.id, "title", localTitle);
-    } else {
-      setLocalTitle(task.title); // Revert if empty or same
-    }
-    setIsEditingTitle(false);
-  };
-
-  // Cancel edit title
-  const handleTitleCancel = () => {
-    setLocalTitle(task.title);
-    setIsEditingTitle(false);
-  };
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  const stopPropagation = (e: React.MouseEvent | React.PointerEvent) =>
+    e.stopPropagation();
+
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
+  const [localTitle, setLocalTitle] = React.useState(task.title);
+
+  React.useEffect(() => {
+    setLocalTitle(task.title);
+  }, [task.title]);
+
+  const handleTitleSave = () => {
+    if (localTitle.trim() && localTitle !== task.title) {
+      onUpdateTask(task.id, { title: localTitle });
+    } else {
+      setLocalTitle(task.title);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleCancel = () => {
+    setLocalTitle(task.title);
+    setIsEditingTitle(false);
+  };
+
+  // 1. Logic xử lý mảng
+  const MAX_VISIBLE = 2;
+  const labels = taskLabels_data || []; // Fallback array rỗng
+  const visibleLabels = labels.slice(0, MAX_VISIBLE);
+  const remainingCount = labels.length - MAX_VISIBLE;
+  const hiddenLabels = labels.slice(MAX_VISIBLE);
+
+  const teamId = useParams().teamId as string;
+  // 2. Get Members of that Team
+  const { data: members } = useTeamMembers(teamId);
+  // 3. Map members to users for the picker (filter out any without user data)
+// 3. Map members to users for the picker
+  const teamUsers = React.useMemo(() => {
+    // Ép kiểu (members as any[]) vì Interface TeamMember hiện tại chưa khai báo 'cachedUser'
+    return ((members ?? []) as any[])
+      .filter((m) => !!m.cachedUser) // Kiểm tra xem có cachedUser không
+      .map((m) => ({
+         ...m.cachedUser, // Lấy toàn bộ info (name, avatar,...) từ cachedUser
+         id: m.userId     // Đảm bảo lấy đúng UserId (dù trong cachedUser thường cũng có id khớp)
+      })) as User[];
+  }, [members]);
+  console.log("teamUsers", teamUsers);
 
   return (
     <TableRow
@@ -113,10 +128,11 @@ export function BacklogTaskRow({
         "group cursor-pointer hover:bg-muted/50 transition-colors",
         isDragging && "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale"
       )}
-      onClick={() => onRowClick?.(task) || handleRowClickContext?.(task)}
+      onClick={() => onRowClick?.(task)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* --- Title Column --- */}
       <TableCell className="w-full">
         <div className="flex items-center gap-1 relative pr-1">
           <Button
@@ -160,183 +176,138 @@ export function BacklogTaskRow({
                 onPointerDown={stopPropagation}
                 onClick={stopPropagation}
               />
-              <Button
-                size="sm"
-                className="h-7 px-3 text-xs shrink-0"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleTitleSave();
-                }}
-              >
-                Save
-              </Button>
             </div>
           ) : (
             <div className="flex-1 min-w-0">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="px-2 text-sm truncate block text-left">
-                    {task.title.length > 50
-                      ? `${task.title.substring(0, 50)}...`
-                      : task.title}
-                  </span>
-                </TooltipTrigger>
-                {task.title.length > 50 && (
-                  <TooltipContent>
-                    <p className="max-w-xs">{task.title}</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
+              <span className="px-2 text-sm truncate block max-w-[400px]">
+                {task.title}
+              </span>
+            </div>
+          )}
+          {!isEditingTitle && (
+            <div className="absolute right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pl-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-6 w-6 rounded-md cursor-pointer text-muted-foreground flex-shrink-0"
+                onClick={(e) => { e.stopPropagation(); setIsEditingTitle(true); }}
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+
+
             </div>
           )}
 
-          {/* Label tags shown after title input */}
-          {!isEditingTitle && (
-            <div
-              className="flex items-center gap-1 ml-2 flex-shrink-0 max-w-[10rem] overflow-x-hidden transition-transform duration-200 group-hover:-translate-x-[56px]"
-              onPointerDown={stopPropagation}
-              onClick={stopPropagation}
-            >
-              {(task.labelIds || []).slice(0, 2).map((labelId) => {
-                const label = db.labels.find((l) => l.id === labelId);
-                if (!label) return null;
-                return <LabelTag key={label.id} label={label} />;
-              })}
-              {(task.labelIds || []).length > 2 && (
-                <span className="text-xs border text-muted-foreground px-1.5 py-0.5 bg-muted rounded-full">
-                  +{(task.labelIds || []).length - 2}
-                </span>
-              )}
-            </div>
-          )}
+        </div>
+      </TableCell>
 
-          {!isEditingTitle && (
-            <div className="absolute right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background pl-1">
+      <TableCell>
+
+        {/* Dùng flex để xếp các tag nằm ngang và có khoảng cách */}
+        <div className="flex  items-center gap-2">
+
+          {/* 1. Render các label được phép hiển thị */}
+          {visibleLabels.map((label) => (
+            <LabelTag key={label.id} label={label} onRemove={() => {
+              const newLabelIds = labels
+                .filter(l => l.id !== label.id)
+                .map(l => l.id);
+              onUpdateTask(task.id, { labelIds: newLabelIds });
+            }} />
+          ))}
+
+          {remainingCount > 0 && (
+            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span
-                    onPointerDown={stopPropagation}
-                    onClick={stopPropagation}
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer hover:bg-secondary/80 px-2"
                   >
-                    <LabelPopover
-                      initialSelectedLabelIds={task.labelIds || []}
-                      onSelectionChange={(newLabels) => {
-                        const newLabelIds = newLabels.map((l) => l.id);
-                        handleLabelChange(task.id, newLabelIds);
-                      }}
-                    />
-                  </span>
+                    +{remainingCount}
+                  </Badge>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add Label</p>
+
+                <TooltipContent className="p-2 bg-background">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs text-accent-foreground font-semibold mb-1">
+                      Remaining labels:
+                    </p>
+                    {hiddenLabels.map((hiddenLabel) => (
+                      <LabelTag key={hiddenLabel.id} label={hiddenLabel} />
+                    ))}
+                  </div>
                 </TooltipContent>
               </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-6 cursor-pointer w-6 rounded-md text-muted-foreground flex-shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsEditingTitle(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Rename</TooltipContent>
-              </Tooltip>
-            </div>
+            </TooltipProvider>
           )}
+
         </div>
       </TableCell>
 
-      <TableCell className="w-fit whitespace-nowrap">
-        <div
-          className={cn(
-            "w-full h-full flex items-center",
-            !task.epicId &&
-              "opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-          )}
-          onClick={(e) => {
-            // Only stop propagation if clicking on the container div, not the EpicPicker
-            if (e.target === e.currentTarget) {
-              e.stopPropagation();
-              e.preventDefault();
-            }
-          }}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <EpicPicker
-              value={task.epicId || null}
-              onChange={(epicId) => {
-                handleEpicChange(task.id, epicId);
-              }}
-            />
-          </div>
-        </div>
+      {/* --- Label --- */}
+      <TableCell className="w-fit whitespace-nowrap" onClick={stopPropagation}>
+        <LabelPopover
+          taskId={task.id}
+          initialSelectedLabels={taskLabels_data}
+          onSelectionChange={(labels) => onUpdateTask(task.id, { labelIds: labels.map(l => l.id) })}
+        />
       </TableCell>
 
-      <TableCell
-        className="w-fit whitespace-nowrap"
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          return false;
-        }}
-      >
-        <div
-          className="w-full h-full"
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-          }}
-        >
-          <ListPicker
-            lists={lists}
-            value={task.listId || null}
-            onChange={(listId) => {
-              if (listId) {
-                handleListChange(task.id, listId);
-              }
-            }}
-            disabled={false}
-          />
-        </div>
+      {/* --- Epic --- */}
+      <TableCell className="w-fit whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+        <EpicPicker
+          value={task.epicId || null}
+          onChange={(epicId) => onUpdateTask(task.id, { epicId: epicId === null ? null : epicId })}
+        />
       </TableCell>
 
-      {/*
-       * * SỬA Ở ĐÂY: w-[110px] -> w-fit
-       * */}
+      {/* --- List --- */}
+      <TableCell className="w-fit whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+        <ListPicker
+          lists={lists}
+          value={task.listId || null}
+          onChange={(listId) => onUpdateTask(task.id, { listId })}
+        />
+      </TableCell>
+
+      {/* --- Priority --- */}
       <TableCell className="w-fit whitespace-nowrap">
         <div onPointerDown={stopPropagation} onClick={stopPropagation}>
           <PriorityPicker
-            priority={task.priority}
-            onPriorityChange={(p) => handlePriorityChange(task.id, p)}
+            priority={task.priority ?? undefined}
+            onPriorityChange={(newPriority) => {
+              onUpdateTask(task.id, { priority: newPriority ?? undefined })
+            }}
           />
         </div>
       </TableCell>
 
-      {/*
-       * * SỬA Ở ĐÂY: w-[50px] -> w-fit
-       * */}
+      {/* --- Assignee --- */}
       <TableCell className="w-fit text-center whitespace-nowrap">
         <div onPointerDown={stopPropagation} onClick={stopPropagation}>
           <AssigneePicker
+            // 1. Pass current assignees from Task
             value={task.assigneeIds || []}
-            onChange={(assigneeIds) => handleAssigneeChange(task.id, assigneeIds)}
+            // 2. Pass Real Users fetched from hook
+            users={teamUsers} 
+            // 3. Call updateTask directly on change
+            onChange={(newAssigneeIds) => {
+              onUpdateTask(task.id, { assigneeIds: newAssigneeIds });
+            }}
           />
         </div>
       </TableCell>
 
+      {/* --- Date --- */}
       <TableCell className="w-[100px] whitespace-nowrap">
         <div onPointerDown={stopPropagation} onClick={stopPropagation}>
           <DatePicker
             date={task.dueDate ? new Date(task.dueDate) : undefined}
-            onDateSelect={(date) => handleDateChange(task.id, date)}
+            onDateSelect={(date) =>
+              onUpdateTask(task.id, { dueDate: date ? date.toISOString() : undefined })
+            }
           />
         </div>
       </TableCell>

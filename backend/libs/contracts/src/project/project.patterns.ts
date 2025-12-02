@@ -4,4 +4,5 @@ export const PROJECT_PATTERNS = {
   GET_BY_ID: 'project.getById',
   UPDATE: 'project.update',
   REMOVE: 'project.remove',
+  FIND_ALL_BY_TEAM_ID: 'project.findAllByTeamId',
 };

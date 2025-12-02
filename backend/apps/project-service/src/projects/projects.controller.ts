@@ -39,4 +39,11 @@ export class ProjectsController {
   async remove(payload: { id: string }) {
     return await this.projectService.remove(payload.id);
   }
+
+  @MessagePattern(PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID)
+  async findAllByTeamId(payload: { teamId: string }) {
+    return await this.projectService.findAllByTeamId(payload.teamId);
+  }
+
+
 }

@@ -1,13 +1,29 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { EpicsService } from './epics.service';
 import { EpicsController } from './epics.controller';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Epic } from '../entities/epic.entity';
+import { Epic } from '@app/contracts/epic/entity/epic.entity';
+import {
+  ClientConfigModule,
+  ClientConfigService,
+} from '@app/contracts';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Epic])],
+  imports: [
+    TypeOrmModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (configService: ClientConfigService) => ({
+        type: 'postgres',
+        url: configService.databaseEpicUrl,
+        entities: [Epic],
+        synchronize: true,
+      }),
+    }),
+    TypeOrmModule.forFeature([Epic]),
+  ],
+
   controllers: [EpicsController],
   providers: [EpicsService],
-  exports: [EpicsService],
 })
 export class EpicsModule {}

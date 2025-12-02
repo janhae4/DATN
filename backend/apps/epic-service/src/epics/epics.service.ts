@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CreateEpicDto, UpdateEpicDto } from '@app/contracts';
+import { CreateEpicDto, Epic, UpdateEpicDto } from '@app/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Epic } from '../entities/epic.entity';
 import { Repository } from 'typeorm';
 
 @Injectable()

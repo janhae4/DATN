@@ -5,15 +5,21 @@ import * as React from "react"
 import { Sprint } from "@/types"
 import { Task } from "@/types"
 import { Accordion } from "@/components/ui/accordion"
-import { statusesForProject1 } from "@/lib/backlog-utils"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 import { SprintItem } from "./SprintItem"
 import { SprintStatus } from "@/types/common/enums"
+import { useTasks } from "@/hooks/useTasks"
+import { useParams } from "next/navigation"
+import { useLists } from "@/hooks/useList"
 
 export function SprintList() {
   const { data, handleRowClick, sprints } = useTaskManagementContext()
+    const params = useParams();
+    const projectId = params.projectId as string;
+
+  const {updateTask} = useTasks(projectId)
   const [addingNewRowToSprint, setAddingNewRowToSprint] = React.useState<string | null>(null)
-  const statusesList = statusesForProject1 ?? []
+  const {lists} = useLists(projectId)
 
   const activeSprints = React.useMemo(() =>
     sprints.filter(
@@ -29,10 +35,11 @@ export function SprintList() {
           key={sprint.id}
           sprint={sprint}
           tasks={data as Task[]}
-          statusesList={statusesList}
+          statusesList={lists}
           handleRowClick={handleRowClick}
           addingNewRowToSprint={addingNewRowToSprint}
           setAddingNewRowToSprint={setAddingNewRowToSprint}
+          onUpdateTask={updateTask}
         />
       ))}
     </Accordion>

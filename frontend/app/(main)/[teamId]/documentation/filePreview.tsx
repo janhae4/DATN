@@ -4,6 +4,7 @@ import { FileText, Download } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import * as XLSX from "xlsx";
+import Image from "next/image";
 
 
 const getFriendlyExtension = (fileType: string, fileName: string): string => {
@@ -48,7 +49,7 @@ export default function FilePreview({ file }: { file: Attachment }) {
     // 2. Xử lý Ảnh (Sửa check)
     if (isImage) {
         return (
-            <img 
+            <Image 
                 src={fileUrl} 
                 alt={`Preview of ${file.fileName}`} 
                 className="max-w-full max-h-[70vh] object-contain mx-auto"

@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import authService, { getMe } from '@/services/authService'; //
-import { UserProfile, LoginCredentials, RegisterData } from '@/types/auth'; //
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import authService, { getMe } from "@/services/authService"; //
+import { UserProfile, LoginCredentials, RegisterData } from "@/types/auth"; //
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -21,13 +27,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const checkUserSession = async () => {
       try {
-        
         const userProfile = await authService.getMe();
         console.log("this is userProfile", userProfile);
         setUser(userProfile);
-
       } catch (error) {
-        console.error('Session check failed:', error);
+        console.error("Session check failed:", error);
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -53,11 +57,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // 3. Cập nhật state toàn cục
       setUser(userProfile);
 
-      // 4. Redirect to dashboard after successful login
-      if (typeof window !== 'undefined') {
-        window.location.href = '/dashboard';
-      }
-
       return userProfile;
     } catch (error) {
       setUser(null);
@@ -68,13 +67,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Hàm register
   const register = async (data: RegisterData) => {
     try {
-      const response = await authService.register(data);
-      return response;
+      await authService.register(data);
+
+      const loginResponse = await authService.login({
+        username: data.username,
+        password: data.password,
+      });
+
+      let userProfile = loginResponse.user;
+
+      if (!userProfile) {
+        userProfile = await authService.getMe();
+      }
+
+      if (userProfile) {
+        setUser(userProfile);
+      }
+
+      return loginResponse;
     } catch (error: any) {
-      // Log the error for debugging
-      console.error('Registration error in AuthContext:', error);
-      // Re-throw the error to be handled by the component
-      throw new Error(error.message || 'Registration failed. Please try again.');
+      console.error("Registration error in AuthContext:", error);
+      throw error;
     }
   };
 
@@ -108,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

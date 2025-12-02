@@ -1,176 +1,150 @@
-import { db } from "@/public/mock-data/mock-data";
+import apiClient from "./apiClient";
 import { Team, TeamMember } from "@/types/social";
 import { Discussion, Message } from "@/types/communication";
 import { User } from "@/types/auth";
 import { MemberRole } from "@/types/common/enums";
 
-// Helper to simulate API delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// --- Interfaces matching Backend DTOs ---
+
+export interface CreateTeamDto {
+  name: string;
+  avatar?: string;
+  memberIds?: string[];
+}
+
+export interface UpdateTeamDto extends Partial<CreateTeamDto> {}
+
+export interface AddMemberDto {
+  requesterId: string; // ID của người đang thực hiện hành động (Admin/Owner)
+  teamId: string;
+  memberIds: string[]; // Backend nhận mảng ID, không phải email
+}
+
+export interface RemoveMemberDto {
+  requesterId: string;
+  teamId: string;
+  memberIds: string[];
+}
+
+export interface LeaveMemberDto {
+  requesterId: string;
+  teamId: string;
+}
+
+export interface TransferOwnershipDto {
+  teamId: string;
+  newOwnerId: string;
+  requesterId: string;
+}
+
+export interface ChangeRoleMemberDto {
+  requesterId: string;
+  teamId: string;
+  targetId: string; 
+  newRole: MemberRole;
+}
+
+// --- Service Implementation ---
 
 export const teamService = {
-  // Get teams for a specific user
-  getTeams: async (userId: string): Promise<(Team & { role: string })[]> => {
-    await delay(500);
-    // Find team memberships for the user
-    const memberships = db.team_members.filter((m) => m.userId === userId && m.isActive);
-    const teamIds = memberships.map((m) => m.teamId);
-    
-    // Return the teams with role
-    return db.teams
-      .filter((t) => teamIds.includes(t.id))
-      .map(team => {
-        const membership = memberships.find(m => m.teamId === team.id);
-        return {
-          ...team,
-          role: membership?.role || 'MEMBER'
-        };
-      });
+
+  // Get teams for the current user
+  getTeams: async (): Promise<(Team & { role: string })[]> => {
+    const response = await apiClient.get<Team[]>('/teams/me');
+    return response.data as (Team & { role: string })[];
   },
 
   // Get a single team by ID
   getTeam: async (teamId: string): Promise<Team | undefined> => {
-    await delay(300);
-    return db.teams.find((t) => t.id === teamId);
+    const response = await apiClient.get<Team>(`/teams/${teamId}`);
+    return response.data;
   },
 
-  // Get members of a specific team (enriched with User details)
+  // Create a new team
+  createTeam: async (data: CreateTeamDto): Promise<Team> => {
+    const response = await apiClient.post<Team>('/teams', data);
+    return response.data;
+  },
+
+  // Update team
+  updateTeam: async (teamId: string, data: UpdateTeamDto): Promise<Team> => {
+    const response = await apiClient.patch<Team>(`/teams/${teamId}`, data);
+    return response.data;
+  },
+
+  // Delete a team
+  deleteTeam: async (teamId: string): Promise<void> => {
+    await apiClient.delete(`/teams/${teamId}`);
+  },
+
+  // Get members of a specific team
   getTeamMembers: async (teamId: string): Promise<(TeamMember & { user: User })[]> => {
-    await delay(500);
-    const members = db.team_members.filter((m) => m.teamId === teamId && m.isActive);
-    
-    return members.map((member) => {
-      const user = db.users.find((u) => u.id === member.userId);
-      if (!user) {
-        throw new Error(`User not found for member ${member.id}`);
-      }
-      return { ...member, user };
-    });
-  },
-
-  // Get discussions for a team
-  getDiscussions: async (teamId: string): Promise<Discussion[]> => {
-    await delay(500);
-    return db.discussions.filter((d) => d.teamId === teamId && !d.isDeleted);
-  },
-
-  // Get a single discussion by ID
-  getDiscussion: async (discussionId: string): Promise<Discussion | undefined> => {
-    await delay(300);
-    return db.discussions.find((d) => d.id === discussionId);
-  },
-
-  // Get messages for a discussion
-  getMessages: async (discussionId: string): Promise<Message[]> => {
-    await delay(300);
-    return db.messages
-      .filter((m) => m.discussionId === discussionId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  },
-
-  // Send a message
-  sendMessage: async (discussionId: string, senderId: string, content: string): Promise<Message> => {
-    await delay(300);
-    const sender = db.users.find((u) => u.id === senderId);
-    if (!sender) throw new Error("Sender not found");
-
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      discussionId,
-      content,
-      sender: {
-        id: sender.id,
-        name: sender.name,
-        avatar: sender.avatar || null,
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    db.messages.push(newMessage);
-    return newMessage;
-  },
-
-  // Create a new discussion (channel)
-  createDiscussion: async (teamId: string, name: string, ownerId: string, memberIds?: string[]): Promise<Discussion> => {
-    await delay(500);
-    const newDiscussion: Discussion = {
-      id: `discussion-${Date.now()}`,
-      name,
-      ownerId,
-      teamId,
-      isGroup: true,
-      isDeleted: false,
-      participants: memberIds ? [ownerId, ...memberIds] : [ownerId],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    db.discussions.push(newDiscussion);
-    return newDiscussion;
-  },
-
-  // Get or create a direct message discussion
-  getOrCreateDirectMessage: async (currentUserId: string, targetUserId: string): Promise<Discussion> => {
-    await delay(500);
-    
-    // Check if a DM already exists
-    // In a real app, we would check participants. For mock, we'll simulate it.
-    // We'll assume if isGroup is false, it's a DM.
-    // We'll store participants in the 'participants' field (which is jsonb/any in the interface)
-    
-    let dm = db.discussions.find(d => 
-      !d.isGroup && 
-      d.participants && 
-      (d.participants as string[]).includes(currentUserId) && 
-      (d.participants as string[]).includes(targetUserId)
-    );
-
-    if (dm) return dm;
-
-    // Create new DM
-    const targetUser = db.users.find(u => u.id === targetUserId);
-    const newDM: Discussion = {
-      id: `dm-${Date.now()}`,
-      name: targetUser?.name || "Direct Message", 
-      ownerId: currentUserId,
-      isGroup: false,
-      isDeleted: false,
-      participants: [currentUserId, targetUserId],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    db.discussions.push(newDM);
-    return newDM;
+    const response = await apiClient.get<(TeamMember & { user: User })[]>(`/teams/${teamId}/members`);
+    return response.data;
   },
 
   // Add member to team
-  addMember: async (teamId: string, email: string): Promise<TeamMember> => {
-    await delay(500);
-    const user = db.users.find(u => u.email === email);
-    if (!user) {
-      throw new Error("User not found");
-    }
+  addMember: async (payload: AddMemberDto): Promise<void> => {
+    await apiClient.post(`/teams/${payload.teamId}/member`, payload);
+  },
 
-    const existingMember = db.team_members.find(m => m.teamId === teamId && m.userId === user.id);
-    if (existingMember) {
-      if (existingMember.isActive) {
-        throw new Error("User is already a member of this team");
-      } else {
-        // Reactivate
-        existingMember.isActive = true;
-        return existingMember;
-      }
-    }
+  // Remove member from team
+  removeMember: async (payload: RemoveMemberDto): Promise<void> => {
+    // Dùng HTTP DELETE với body (axios hỗ trợ qua config 'data')
+    await apiClient.delete(`/teams/${payload.teamId}/member`, { data: payload });
+  },
 
-    const newMember: TeamMember = {
-      id: `member-${Date.now()}`,
+  // Leave team
+  leaveTeam: async (payload: LeaveMemberDto): Promise<void> => {
+    await apiClient.post(`/teams/${payload.teamId}/member/leave`, payload);
+  },
+
+  // Transfer ownership
+  transferOwnership: async (payload: TransferOwnershipDto): Promise<void> => {
+    await apiClient.post(`/teams/${payload.teamId}/member/transfer-ownership`, payload);
+  },
+
+  // Change member role
+  changeMemberRole: async (payload: ChangeRoleMemberDto): Promise<void> => {
+    await apiClient.patch(`/teams/${payload.teamId}/member/${payload.targetId}/role`, payload);
+  },
+
+  // --- DISCUSSION & MESSAGING ---
+
+  getDiscussions: async (teamId: string): Promise<Discussion[]> => {
+    const response = await apiClient.get<Discussion[]>(`/discussions/teams/${teamId}`);
+    return response.data;
+  },
+
+  getDiscussion: async (discussionId: string): Promise<Discussion | undefined> => {
+    const response = await apiClient.get<Discussion>(`/discussions/${discussionId}`);
+    return response.data;
+  },
+
+  getMessages: async (discussionId: string): Promise<Message[]> => {
+    const response = await apiClient.get<Message[]>(`/discussions/${discussionId}/messages`);
+    return response.data;
+  },
+
+  sendMessage: async (discussionId: string, content: string): Promise<Message> => {
+    const response = await apiClient.post<Message>(`/discussions/${discussionId}/messages`, { content });
+    return response.data;
+  },
+
+  createDiscussion: async (teamId: string, name: string, memberIds?: string[]): Promise<Discussion> => {
+    const response = await apiClient.post<Discussion>('/discussions', {
       teamId,
-      userId: user.id,
-      role: MemberRole.MEMBER,
-      isActive: true,
-      joinedAt: new Date().toISOString(),
-    };
-    db.team_members.push(newMember);
-    return newMember;
+      name,
+      participants: memberIds,
+      isGroup: true
+    });
+    return response.data;
+  },
+
+  getOrCreateDirectMessage: async (targetUserId: string): Promise<Discussion> => {
+    const response = await apiClient.post<Discussion>('/discussions/direct', {
+      targetUserId
+    });
+    return response.data;
   },
 };

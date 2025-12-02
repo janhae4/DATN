@@ -37,4 +37,10 @@ export class ProjectService {
   async remove(id: String) {
     return unwrapRpcResult(this.client.send(PROJECT_PATTERNS.REMOVE, { id }));
   }
+
+  async findAllByTeamId(teamId: string) {
+    return unwrapRpcResult(
+      this.client.send(PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID, { teamId }),
+    );
+  }
 }

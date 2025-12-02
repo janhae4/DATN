@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEnum,
-  IsHexColor,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -26,15 +25,6 @@ export class CreateListDto {
   })
   @IsNumber()
   position: number;
-
-  @ApiProperty({
-    description: 'The color code of the list in hex format',
-    example: '#FFFFFF',
-    required: false,
-  })
-  @IsHexColor()
-  @IsOptional()
-  color?: string;
 
   @ApiProperty({
     description: 'The ID of the project this list belongs to',

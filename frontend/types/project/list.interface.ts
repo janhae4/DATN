@@ -4,7 +4,6 @@ export interface List {
   id: string;
   name: string;
   position: number;
-  color: string;
   projectId: string;
   limited?: number;
   category: ListCategoryEnum;

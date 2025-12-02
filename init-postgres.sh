@@ -17,6 +17,12 @@ create_database "task"
 create_database "user"
 create_database "notification"
 create_database "call"
+create_database "epic_db"
+create_database "project_db"
+create_database "task_db"
+create_database "label_db"
+create_database "list_db"
+create_database "sprint_db"
 
 
 echo "Đang thêm extensions..."

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CreateLabelDto, UpdateLabelDto, LABEL_PATTERNS, LABEL_EXCHANGE } from '@app/contracts';
+import { TaskLabel } from '@app/contracts/events/task-label.event';
 import { unwrapRpcResult } from '../common/helper/rpc';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -20,10 +21,15 @@ export class LabelService {
   }
 
   async update(id: string, updateLabelDto: UpdateLabelDto) {
+    console.log("update label in api gateway: ", id, updateLabelDto)
     return unwrapRpcResult(await this.client.send(LABEL_PATTERNS.UPDATE, { id, updateLabelDto }));
   }
 
   async remove(id: string) {
     return unwrapRpcResult(await this.client.send(LABEL_PATTERNS.REMOVE, { id }));
+  }
+
+  async findByIds(labelIds: string[]) {
+    return unwrapRpcResult(await this.client.send(TaskLabel.GET_DETAILS, { labelIds }));
   }
 }

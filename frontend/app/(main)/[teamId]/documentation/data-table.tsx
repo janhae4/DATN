@@ -12,7 +12,6 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
 import {
@@ -27,15 +26,11 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  searchColumn?: string
-  searchPlaceholder?: string
 }
 
 export function DataTable<TData, TValue>({
   columns,
-  data,
-  searchColumn = "fileName",
-  searchPlaceholder = "Filter files...",
+  data
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])

@@ -2,10 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   CreateProjectDto,
   UpdateProjectDto,
-  LIST_PATTERNS,
   LIST_EXCHANGE,
-  PROJECT_EXCHANGE,
-  EVENTS,
 } from '@app/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +12,7 @@ import { PROJECT_EVENTS } from '@app/contracts/events/project.events';
 
 @Injectable()
 export class ProjectsService {
+
   constructor(
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
@@ -59,5 +57,11 @@ export class ProjectsService {
     // The new schema has `isArchived`, so we should use that.
     await this.projectRepository.update(id, { isArchived: true });
     return { message: 'Project archived successfully' };
+  }
+
+    async findAllByTeamId(teamId: string) {
+    return await this.projectRepository.find({
+      where: { teamId: teamId },
+    });
   }
 }

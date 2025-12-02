@@ -17,9 +17,11 @@ import { ClientsModule } from '@nestjs/microservices';
         useFactory: (config: ClientConfigService) => config.epicClientOptions,
       },
     ]),
+
   ],
+
   controllers: [EpicController],
   providers: [EpicService],
   exports: [EpicService],
 })
-export class EpicModule {}
+export class EpicModule { }

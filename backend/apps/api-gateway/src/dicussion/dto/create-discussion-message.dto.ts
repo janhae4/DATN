@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateDiscussionMessageDto {
+  
   @ApiProperty({
     description: 'Nội dung tin nhắn',
     example: 'Chào bạn, khoẻ không?',

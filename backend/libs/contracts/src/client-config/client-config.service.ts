@@ -539,6 +539,16 @@ export class ClientConfigService {
       },
     };
   }
+  get testClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: "test_queue",
+        queueOptions: { durable: true },
+      },
+    };
+  }
 
   /*
   -------------------------

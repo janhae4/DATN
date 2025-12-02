@@ -4,12 +4,12 @@ import { Priority } from "../common/enums";
 export type Task = {
   id: string; // uuid
   title: string;
-  description?: string;
+  description?: string | null;
   listId: string; 
   projectId: string; 
-  reporterId?: string; // uuid (Người tạo task)
+  reporterId?: string | null; // uuid (Người tạo task)
   priority?: Priority | null;
-  assigneeIds?: string[]; // Người được assign
+  assigneeIds?: string[] | null; // Người được assign
   labelIds?: string[]; // Nhãn
   dueDate?: string | null; // timestamp
   epicId?: string | null; // uuid

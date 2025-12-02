@@ -37,10 +37,10 @@ export class Epic {
   })
   priority: Priority;
 
-  @Column({ type: 'timestamp', name: 'start_date', nullable: true })
+  @Column({ type: 'timestamp', name: 'startDate', nullable: true })
   startDate: Date;
 
-  @Column({ type: 'timestamp', name: 'due_date', nullable: true })
+  @Column({ type: 'timestamp', name: 'dueDate', nullable: true })
   dueDate: Date;
 
   @Column({ name: 'project_id' })

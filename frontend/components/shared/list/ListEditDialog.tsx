@@ -1,6 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
+import { Loader2, Circle, CircleEllipsis, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+
 import {
   Dialog,
   DialogContent,
@@ -9,130 +12,121 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { db } from "@/public/mock-data/mock-data"
-import { toast } from "sonner"
-import { List } from "@/types/project/list.interface";
-import { ListCategoryEnum } from "@/types/common/enums";
-// 1. IMPORT ICON
-import { Circle, CircleEllipsis, CheckCircle2 } from "lucide-react"
-// 2. IMPORT CN (ĐỂ NỐI CLASS)
-import { cn } from "@/lib/utils"
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
-// 3. UPDATE CATEGORY MAP (THÊM CLASS MÀU)
+import { List } from "@/types";
+import { ListCategoryEnum } from "@/types/common/enums";
+import { useLists } from "@/hooks/useList";
+
 const categoryMap = {
   [ListCategoryEnum.TODO]: {
     label: "To do",
     icon: Circle,
-    color: "text-neutral-500", // Màu xám
+    color: "text-neutral-500",
   },
   [ListCategoryEnum.IN_PROGRESS]: {
     label: "In progress",
     icon: CircleEllipsis,
-    color: "text-blue-500", // Màu xanh dương
+    color: "text-blue-500",
   },
   [ListCategoryEnum.DONE]: {
     label: "Done",
     icon: CheckCircle2,
-    color: "text-green-500", // Màu xanh lá
+    color: "text-green-500",
   },
-}
+};
 
 interface ListEditDialogProps {
-  children: React.ReactNode
-  onSave: () => void
-  listId?: string
+  children: React.ReactNode;
+  projectId: string;
+  lists: List[]; // Nhận list từ cha để hiển thị dropdown chọn
+  initialListId?: string; // Nếu muốn mở dialog edit luôn list cụ thể
 }
 
 export function ListEditDialog({
   children,
-  onSave,
-  listId,
+  projectId,
+  lists,
+  initialListId,
 }: ListEditDialogProps) {
-  const [open, setOpen] = React.useState(false)
-  const [lists, setLists] = React.useState(db.lists)
-  const [selectedId, setSelectedId] = React.useState<string | undefined>(
-    listId || lists[0]?.id
-  )
-  const [name, setName] = React.useState(lists[0]?.name || "")
-  const [category, setCategory] = React.useState<ListCategoryEnum>(
-    lists[0]?.category || ListCategoryEnum.TODO
-  )
+  const [open, setOpen] = React.useState(false);
 
-  // Tất cả logic useEffect và handleSubmit giữ nguyên
+  // Hook update
+  const { updateList, isUpdating } = useLists(projectId);
+
+  const [selectedId, setSelectedId] = React.useState<string | undefined>(
+    initialListId || lists[0]?.id
+  );
+  const [name, setName] = React.useState("");
+  const [category, setCategory] = React.useState<ListCategoryEnum>(
+    ListCategoryEnum.TODO
+  );
+
+  // Sync data khi mở dialog hoặc đổi list chọn
   React.useEffect(() => {
     if (open) {
-      const currentLists = db.lists
-      setLists(currentLists)
-      
-      const targetId = listId || selectedId || currentLists[0]?.id;
-      
+      const targetId = initialListId || selectedId || lists[0]?.id;
       if (targetId) {
-         setSelectedId(targetId);
-         const listToEdit = currentLists.find((s) => s.id === targetId)
-         if (listToEdit) {
-           setName(listToEdit.name)
-           setCategory(listToEdit.category)
-         }
+        setSelectedId(targetId);
       }
     }
-  }, [open, listId]) // Removed selectedId from dependency to avoid loop if we wanted, but logic above handles it.
+  }, [open, initialListId, lists]);
 
   React.useEffect(() => {
-    if (!selectedId) return
-    const listToEdit = lists.find((s) => s.id === selectedId)
+    if (!selectedId) return;
+    const listToEdit = lists.find((s) => s.id === selectedId);
     if (listToEdit) {
-      setName(listToEdit.name)
-      setCategory(listToEdit.category)
+      setName(listToEdit.name);
+      setCategory(listToEdit.category);
     }
-  }, [selectedId, lists])
+  }, [selectedId, lists]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Logic Edit
-    const listIndex = db.lists.findIndex((s) => s.id === selectedId)
-    if (listIndex !== -1) {
-      db.lists[listIndex] = {
-        ...db.lists[listIndex],
-        name: name,
+  const handleSubmit = async () => {
+    if (!selectedId || !name.trim()) return;
+
+    try {
+      await updateList(selectedId, {
+        name: name.trim(),
         category: category,
-        updatedAt: new Date().toISOString(),
-      }
-      toast.success(`List "${name}" updated!`)
-      onSave()
-      setOpen(false)
-    } else {
-      toast.error("List not found")
+      });
+
+      toast.success(`List updated!`);
+      setOpen(false);
+    } catch (error) {
+      toast.error("Failed to update list");
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <DialogHeader>
             <DialogTitle>Edit list</DialogTitle>
-            <DialogDescription>
-              Update an existing list
-            </DialogDescription>
+            <DialogDescription>Update an existing list</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* 1. Dropdown chọn Status (giữ nguyên) */}
+            {/* Dropdown chọn List để sửa */}
             <div className="space-y-2">
               <Label htmlFor="status-select">List *</Label>
-              <Select value={selectedId} onValueChange={setSelectedId}>
+              <Select
+                value={selectedId}
+                onValueChange={setSelectedId}
+                disabled={isUpdating}
+              >
                 <SelectTrigger id="status-select" className="w-full">
                   <SelectValue placeholder="Select a list to edit" />
                 </SelectTrigger>
@@ -144,7 +138,7 @@ export function ListEditDialog({
                     >
                       <span
                         className="h-2 w-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: s.color }}
+                        // style={{ backgroundColor: s.color }}
                       />
                       <SelectItem value={s.id} className="flex-1">
                         {s.name}
@@ -155,30 +149,28 @@ export function ListEditDialog({
               </Select>
             </div>
 
-            {/* 2. Input Tên (giữ nguyên) */}
+            {/* Input Tên */}
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                disabled={!selectedId}
-                placeholder="Enter list name"
+                disabled={!selectedId || isUpdating}
                 className="w-full"
               />
             </div>
 
-            {/* 3. Dropdown Category (UPDATE TƯƠNG TỰ FILE CREATE) */}
+            {/* Dropdown Category */}
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
               <Select
                 value={category}
                 onValueChange={(value: ListCategoryEnum) => setCategory(value)}
-                disabled={!selectedId}
+                disabled={!selectedId || isUpdating}
               >
                 <SelectTrigger id="category" className="w-full">
                   <SelectValue placeholder="Select a category">
-                    {/* 4. UPDATE SELECT TRIGGER (THÊM MÀU) */}
                     <div className="flex items-center gap-2">
                       {React.createElement(categoryMap[category].icon, {
                         className: cn("h-4 w-4", categoryMap[category].color),
@@ -188,9 +180,8 @@ export function ListEditDialog({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {/* 5. UPDATE SELECT CONTENT (THÊM MÀU) */}
                   {Object.values(ListCategoryEnum).map((enumValue) => {
-                    const categoryInfo = categoryMap[enumValue]
+                    const categoryInfo = categoryMap[enumValue];
                     return (
                       <SelectItem key={enumValue} value={enumValue}>
                         <div className="flex items-center gap-2">
@@ -200,7 +191,7 @@ export function ListEditDialog({
                           <span>{categoryInfo.label}</span>
                         </div>
                       </SelectItem>
-                    )
+                    );
                   })}
                 </SelectContent>
               </Select>
@@ -212,15 +203,24 @@ export function ListEditDialog({
               type="button"
               variant="ghost"
               onClick={() => setOpen(false)}
+              disabled={isUpdating}
             >
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={!selectedId}>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              size="sm"
+              disabled={!selectedId || isUpdating}
+            >
+              {isUpdating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
               Save changes
             </Button>
           </DialogFooter>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

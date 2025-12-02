@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { Sprint } from "@/types";
 import { SprintStatus, ListCategoryEnum } from "@/types/common/enums";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
-import { useList } from "@/hooks/useList";
+import { useLists } from "@/hooks/useList";
 import {
   Select,
   SelectContent,
@@ -37,29 +37,25 @@ export function CompleteSprintDialog({
 }: CompleteSprintDialogProps) {
   const [open, setOpen] = React.useState(false);
   const { projectId, data: allTasks, sprints, handleSprintChange } = useTaskManagementContext();
-  const { updateSprint } = useSprints(projectId);
-  const { lists } = useList(projectId);
+  const { updateSprint, isUpdating } = useSprints(projectId);
+  const { lists } = useLists(projectId);
 
   const [moveToSprintId, setMoveToSprintId] = React.useState<string>("backlog");
 
-  // Filter tasks in this sprint
+  // Filter tasks logic (Giữ nguyên)
   const sprintTasks = React.useMemo(() => 
     allTasks.filter(t => t.sprintId === sprint.id), 
   [allTasks, sprint.id]);
 
-  // Identify uncompleted tasks
   const uncompletedTasks = React.useMemo(() => {
-    // Find lists that are NOT "Done"
     const doneListIds = lists
       .filter(l => l.category === ListCategoryEnum.DONE)
       .map(l => l.id);
-    
     return sprintTasks.filter(t => !doneListIds.includes(t.listId));
   }, [sprintTasks, lists]);
 
   const completedTasksCount = sprintTasks.length - uncompletedTasks.length;
 
-  // Available destinations: Backlog + Planned/Active sprints (excluding current)
   const availableSprints = React.useMemo(() => 
     sprints.filter(s => s.id !== sprint.id && s.status !== SprintStatus.COMPLETED && s.status !== SprintStatus.ARCHIVED),
   [sprints, sprint.id]);
@@ -68,19 +64,15 @@ export function CompleteSprintDialog({
     e.preventDefault();
 
     try {
-      // 1. Move uncompleted tasks
+      // 1. Move tasks
       if (uncompletedTasks.length > 0) {
         const targetSprintId = moveToSprintId === "backlog" ? null : moveToSprintId;
-        
-        // We need to update each task. 
-        // Ideally we'd have a bulk update API, but for now we loop.
-        // Using Promise.all for parallel execution.
         await Promise.all(uncompletedTasks.map(task => 
           handleSprintChange(task.id, targetSprintId)
         ));
       }
 
-      // 2. Complete the sprint
+      // 2. Complete Sprint (API call)
       await updateSprint(sprint.id, {
           status: SprintStatus.COMPLETED
       });
@@ -89,7 +81,7 @@ export function CompleteSprintDialog({
       setOpen(false);
     } catch (error) {
       console.error("Error completing sprint:", error);
-      toast.error("Failed to complete sprint. Please try again.");
+      toast.error("Failed to complete sprint.");
     }
   };
 
@@ -99,26 +91,18 @@ export function CompleteSprintDialog({
         {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit}>
+          {/* Header & Body (Giữ nguyên) */}
           <DialogHeader>
             <DialogTitle>Complete Sprint: {sprint.title}</DialogTitle>
             <DialogDescription>
-              Review the sprint summary and decide where to move remaining tasks.
+               {completedTasksCount} completed tasks. {uncompletedTasks.length} open tasks.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2 space-y-4">
-             <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Completed Tasks:</span>
-                <span className="font-medium">{completedTasksCount}</span>
-             </div>
-             <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Open Tasks:</span>
-                <span className="font-medium">{uncompletedTasks.length}</span>
-             </div>
-
+          <div className="py-4 space-y-4">
              {uncompletedTasks.length > 0 && (
-               <div className="space-y-2 pt-2 border-t">
+               <div className="space-y-2">
                  <Label>Move open tasks to:</Label>
                  <Select value={moveToSprintId} onValueChange={setMoveToSprintId}>
                     <SelectTrigger>
@@ -128,27 +112,22 @@ export function CompleteSprintDialog({
                       <SelectItem value="backlog">Backlog</SelectItem>
                       {availableSprints.map(s => (
                         <SelectItem key={s.id} value={s.id}>
-                          {s.title} ({s.status})
+                          {s.title}
                         </SelectItem>
                       ))}
                     </SelectContent>
                  </Select>
-                 <p className="text-xs text-muted-foreground">
-                   {uncompletedTasks.length} incomplete tasks will be moved to the selected destination.
-                 </p>
                </div>
              )}
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setOpen(false)}
-            >
+            <Button variant="ghost" type="button" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Complete Sprint</Button>
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? "Completing..." : "Complete Sprint"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

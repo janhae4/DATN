@@ -12,4 +12,7 @@ export const TASK_PATTERNS = {
   ADD_FILES: 'task.addFiles',
   MOVE_INCOMPLETE_TASKS_TO_BACKLOG: 'task.moveIncompleteToBacklog',
   UNASSIGN_TASKS_FROM_SPRINT: 'task.unassignFromSprint',
+  FIND_ALL_LABELS_BY_TASK_ID: 'task.findAllLabelsByTaskId',
+  GET_ALL_TASK_LABEL: 'task.getAllTaskLabel',
+  HANDLE_LABEL_DELETED: 'task.handleLabelDeleted',
 };

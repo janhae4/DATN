@@ -19,9 +19,6 @@ export class List {
   @Column({ type: 'real', nullable: false })
   position: number;
 
-  @Column({ type: 'varchar', nullable: true })
-  color: string;
-
   @Column({ type: 'uuid', nullable: false })
   projectId: string;
 

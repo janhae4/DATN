@@ -21,40 +21,17 @@ import {
 import { NavMain } from "@/components/sidebar/nav-main"
 import { NavProjects } from "@/components/sidebar/nav-projects"
 import { TeamSwitcher } from "@/components/sidebar/team-switcher"
-import Image from "next/image"
-// import logo from "@/public/assets/logo/logo_white .png"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
+
   
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
+
   navMain: [
     {
       title: "Project management",
@@ -126,17 +103,17 @@ const data = {
 }
 
 import { useProjects } from "@/hooks/useProjects"
-import { useTeamContext } from "@/contexts/TeamContext"
+import { useParams } from "next/navigation"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { activeTeam } = useTeamContext()
-  const { projects } = useProjects(activeTeam?.id)
+  const teamId = useParams().teamId as string
+  const { projects } = useProjects(teamId)
 
   const formattedProjects = React.useMemo(() => {
     return projects.map((project) => ({
       name: project.name,
-      url: `/dashboard?projectId=${project.id}`,
-      icon: Frame, // Default icon
+      url: `/${teamId}/${project.id}/dashboard`,
+      icon: Frame, 
     }))
   }, [projects])
 
