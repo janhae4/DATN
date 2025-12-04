@@ -45,6 +45,7 @@ export * from './chatbot/dto/response-stream.dto';
 export * from './chatbot/dto/summarize-document.dto';
 export * from './chatbot/dto/ask-question.dto';
 export * from './chatbot/dto/message.dto';
+export * from './chatbot/dto/meeting.dto'
 
 /*----
 CLIENT-CONFIG
@@ -121,10 +122,26 @@ export * from './team/dto/send-notification.dto'
 export * from './team/dto/remove-team.dto'
 
 /*----
+BOARD
+-----*/
+export * from './board/board.pattern';
+export * from './board/entity/board.entity'
+export * from './board/entity/list.entity'
+export * from './board/dto/create-board.dto';
+export * from './board/dto/create-list.dto';
+export * from './board/dto/move-list.dto';
+export * from './board/dto/board-snapshot.dto'
+export * from './board/dto/list-snapshot.dto'
+export * from './board/dto/update-list.dto'
+
+/*----
 VIDEO-CHAT
 -----*/
-export * from './video-chat/create-call.dto';
+export * from './video-chat/dto/create-call.dto';
 export * from './video-chat/video-chat.patterns';
+export * from './video-chat/enum';
+export * from './video-chat/dto/transcript.dto';
+export * from './video-chat/dto/kick-user.dto';
 
 /*----
 EVENT

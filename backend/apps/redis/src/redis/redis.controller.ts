@@ -220,8 +220,18 @@ export class RedisController {
     queue: REDIS_PATTERN.GET_USER_INFO,
     errorHandler: customErrorHandler
   })
-  async getUserInfo(userIds: string[]) {
-    return await this.redisService.getUserInfo(userIds);
+  async getUserInfo(userId: string) {
+    return await this.redisService.getUserInfo(userId);
+  }
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.SET_USER_INFO,
+    queue: REDIS_PATTERN.SET_USER_INFO,
+    errorHandler: customErrorHandler
+  })
+  async setUserInfo(user: User) {
+    return await this.redisService.setUserInfo(user);
   }
 
   @RabbitRPC({
@@ -296,4 +306,26 @@ export class RedisController {
     const { teamId, members } = payload;
     return await this.redisService.setTeamMembers(teamId, members);
   }
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.PUSH_MEETING_BUFFER,
+    queue: REDIS_PATTERN.PUSH_MEETING_BUFFER,
+    errorHandler: customErrorHandler
+  })
+  async pushToMeetingBuffer(payload: { roomId: string, userId: string, userName: string, content: string, timestamp: Date }) {
+    const { roomId, userId, userName, content, timestamp } = payload;
+    return await this.redisService.pushToMeetingBuffer(roomId, userId, userName, content, timestamp);
+  }
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.POP_MEETING_BUFFER,
+    queue: REDIS_PATTERN.POP_MEETING_BUFFER,
+    errorHandler: customErrorHandler
+  })
+  async popMeetingBuffer(roomId: string) {
+    return await this.redisService.popMeetingBuffer(roomId);
+  }
+
 }

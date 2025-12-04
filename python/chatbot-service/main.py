@@ -15,7 +15,8 @@ from config import (
     ASK_QUESTION_ROUTING_KEY,
     SUMMARIZE_DOCUMENT_ROUTING_KEY,
     PROCESS_DOCUMENT_ROUTING_KEY,
-    REMOVE_COLLECTION_ROUTING_KEY
+    REMOVE_COLLECTION_ROUTING_KEY,
+    SUMMARIZE_MEETING_ROUTING_KEY
 )
 from callback import ingestion_callback, action_callback, on_team_deleted
 from services.llm_service import LLMService
@@ -84,7 +85,7 @@ async def main():
         rag_queue = await channel.declare_queue(RAG_QUEUE, durable=True)
         await rag_queue.bind(chatbot_exchange, routing_key=ASK_QUESTION_ROUTING_KEY)
         await rag_queue.bind(chatbot_exchange, routing_key=SUMMARIZE_DOCUMENT_ROUTING_KEY)
-        
+        await rag_queue.bind(chatbot_exchange, routing_key=SUMMARIZE_MEETING_ROUTING_KEY)
 
         ingestion_consumer = partial(
             ingestion_callback, 
@@ -92,6 +93,7 @@ async def main():
             channel=channel,
             search_exchange=search_exchange
         )
+        
         action_consumer = partial(
             action_callback, 
             rag_chain=rag_chain, 

@@ -110,6 +110,7 @@ export class TeamService {
   }
 
   async changeRole(payload: ChangeRoleMember) {
+    console.log('payload', payload);
     if (payload.newRole === MemberRole.OWNER) {
       throw new ForbiddenException('Please use route /ownership instead');
     }

@@ -22,6 +22,7 @@ import type {
   CreateTeamEventPayload,
   FileStatus,
   LeaveMemberEventPayload,
+  MeetingSummaryResponseDto,
   RemoveMemberEventPayload,
   RemoveTeamEventPayload,
   SendMessageEventPayload,
@@ -232,6 +233,66 @@ export class SocketController {
   })
   async handleStreamResponse(response: ResponseStreamDto) {
     await this.socketGateway.handleStreamResponse(response);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: CHATBOT_PATTERN.RESPONSE_SUMMARIZE_MEETING,
+    queue: CHATBOT_PATTERN.RESPONSE_SUMMARIZE_MEETING,
+    errorHandler: customErrorHandler
+  })
+  async handleSummarizeMeetingResponse(response: MeetingSummaryResponseDto) {
+    await this.socketGateway.handleMeetingSummaryStream(response);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: 'socket.video-call.request-unkick',
+    queue: 'socket.video-call.request-unkick',
+    errorHandler: customErrorHandler
+  })
+  async handleUnKickUser(payload: {
+    hostUserId: string,
+    message: string,
+    roomId: string,
+    targetUserId: string
+  }) {
+    await this.socketGateway.sendUnKickRequestToHost(payload.hostUserId, payload.message, payload.roomId, payload.targetUserId);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: 'socket.video-call.request-kick',
+    queue: 'socket.video-call.request-kick',
+    errorHandler: customErrorHandler
+  })
+  async handleKickUser(payload: {
+    hostUserId: string,
+    message: string,
+    roomId: string,
+    targetUserId: string
+  }) {
+    await this.socketGateway.sendKickRequestToHost(payload.hostUserId, payload.message, payload.roomId, payload.targetUserId);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: 'socket.video-call.user-kicked',
+    queue: 'socket.video-call.user-kicked',
+    errorHandler: customErrorHandler
+  })
+  async handleUserKicked(payload: { targetUserId: string, roomId: string, message: string }) {
+    await this.socketGateway.notifyUserKicked(payload.targetUserId, payload.message, payload.roomId);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: 'socket.video-call.user-unkicked',
+    queue: 'socket.video-call.user-unkicked',
+    errorHandler: customErrorHandler
+  })
+  async handleUserUnKicked(payload: { targetUserId: string, roomId: string, message: string }) {
+    await this.socketGateway.notifyUserUnKicked(payload.targetUserId, payload.message, payload.roomId);
   }
 
   @RabbitSubscribe({

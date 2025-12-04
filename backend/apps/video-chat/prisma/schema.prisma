@@ -11,25 +11,94 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_VIDEO_CHAT_URL")
+  // url      = env("DATABASE_VIDEO_CHAT_URL")
+}
+
+enum RefType {
+  TASK
+  DOC
+  PROJECT
+  TEAM
+  CALENDAR
+}
+
+enum CallRole {
+  HOST
+  ADMIN
+  MEMBER
+  BANNED
 }
 
 model Call {
-  id        String   @id @default(uuid())
-  roomId    String   @unique // Thêm trường roomId để định danh phòng
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(uuid())
+  roomId    String    @unique
+  teamId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   endedAt   DateTime?
+
+  refId   String?
+  refType RefType?
+
   participants CallParticipant[]
+
+  callTranscripts CallTranscript[]
+
+  callSummaryBlocks CallSummaryBlock[]
+
+  callActionItems CallActionItem[]
 }
 
 model CallParticipant {
-  id     String  @id @default(uuid())
-  call   Call    @relation(fields: [callId], references: [id])
-  callId String
-  userId String
-  joinedAt DateTime @default(now())
-  leftAt  DateTime?
+  id              String    @id @default(uuid())
+  call            Call      @relation(fields: [callId], references: [id])
+  callId          String
+  userId          String
+  joinedAt        DateTime  @default(now())
+  leftAt          DateTime?
+  role            CallRole  @default(MEMBER)
+  isSharingScreen Boolean   @default(false)
 
   @@unique([callId, userId])
+}
+
+model CallTranscript {
+  id     String @id @default(uuid())
+  callId String
+  call   Call   @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  userId    String
+  content   String   @db.Text
+  timestamp DateTime @default(now())
+
+  @@index([callId])
+}
+
+model CallSummaryBlock {
+  id     String @id @default(uuid())
+  callId String
+  call   Call   @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  content String @db.Text
+
+  startTime DateTime?
+  endTime   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([callId])
+}
+
+model CallActionItem {
+  id     String @id @default(uuid())
+  callId String
+  call   Call   @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  content    String  @db.Text
+  status     String  @default("PENDING")
+  assigneeId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([callId])
 }

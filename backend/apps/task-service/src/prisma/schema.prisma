@@ -19,11 +19,12 @@ model Task {
   taskId      String     @id @default(uuid())
   userId      String
   title       String     @default("Title")
-  person      String?
+  assigneeId  String?
   description String?
   startTime   DateTime   @default(now())
   endTime     DateTime?
   priority    Int?
+  listId      String?
   isDaily     Boolean    @default(false)
   status      TaskStatus @default(PENDING)
   createdAt   DateTime   @default(now())

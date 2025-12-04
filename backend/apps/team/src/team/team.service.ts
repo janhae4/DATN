@@ -306,6 +306,8 @@ export class TeamService {
           payload: { userIds: missingIds },
         });
 
+        this.logger.debug(usersFromDb);
+
         if (usersFromDb.length > 0) {
           this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, {
             users: usersFromDb,
@@ -530,7 +532,7 @@ export class TeamService {
     return removedTeam!;
   }
 
-  async changeMemberRole(payload: ChangeRoleMember): Promise<Team> {
+  async changeMemberRole(payload: ChangeRoleMember) {
     const { teamId, targetId, requesterId, newRole } = payload;
     this.logger.log(
       `User [${requesterId}] changing role for [${targetId}] to ${newRole} in team [${teamId}].`,
@@ -586,8 +588,19 @@ export class TeamService {
         );
       }
 
-      memberToUpdate.role = newRole;
-      await memberRepo.save(memberToUpdate);
+      this.logger.debug(newRole);
+
+      await memberRepo.update(
+        {
+          userId: targetId,
+          team: {
+            id: teamId
+          }
+        },
+        {
+          role: newRole
+        }
+      );
 
       eventPayload = {
         teamId,
@@ -615,7 +628,7 @@ export class TeamService {
       );
     }
 
-    return finalTeamState!;
+    return { success: true, message: 'Role changed successfully' };
   }
 
   async leaveTeam(payload: LeaveMember): Promise<Team> {
@@ -901,7 +914,8 @@ export class TeamService {
   }
 
   async findParticipantRoles(userId: string, teamId: string) {
-    let rolesFromCache: { teamId: string; role: MemberRole }[] | null = null;
+    let rolesFromCache: string = "";
+
     try {
       this.logger.log(`[Cache] GET user roles: ${userId} in ${teamId}`);
       const rpcResult = await this.amqp.request({
@@ -919,7 +933,7 @@ export class TeamService {
     if (rolesFromCache) {
       this.logger.log(`[Cache] HIT for user roles: ${userId} in ${teamId}`);
       console.log(rolesFromCache)
-      return rolesFromCache;
+      return rolesFromCache
     }
 
     this.logger.log(`[DB] Fallback: Getting roles for user ${userId} in ${teamId}`);
@@ -928,9 +942,6 @@ export class TeamService {
       where: { id: teamId, members: { userId } },
       relations: ['members'],
     })
-
-
-    console.log(team)
 
     if (team && team.members && team.members.length > 0) {
       this.amqp.publish(
@@ -962,10 +973,14 @@ export class TeamService {
 
   async verifyPermission(userId: string, teamId: string, roles: MemberRole[]) {
     const team = await this.findById(teamId, userId);
+    this.logger.debug(team);
     if (!team) {
       throw new NotFoundException(`You are not a member of this team.`);
     }
     const requester = team.members.find((m) => m.userId === userId);
+    this.logger.debug(requester);
+
+    this.logger.debug(roles.includes(requester!.role))
     if (!requester || !roles.includes(requester.role)) {
       throw new ForbiddenException(
         'You do not have permission to perform this action.',

@@ -1,48 +1,77 @@
 import {
   CreateTaskDto,
   RequestGoogleTaskDto,
+  TASK_EXCHANGE, // Bạn cần export cái này từ file contracts (tương tự CHATBOT_EXCHANGE)
   TASK_PATTERNS,
   UpdateTaskDto,
 } from '@app/contracts';
-import { TASK_CLIENT } from '@app/contracts/constants';
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class TasksService {
-  constructor(@Inject(TASK_CLIENT) private readonly client: ClientProxy) {}
+  constructor(private readonly amqpConnection: AmqpConnection) { }
 
-  create(createTaskDto: CreateTaskDto) {
-    return this.client.send(TASK_PATTERNS.CREATE, createTaskDto);
+  async create(createTaskDto: CreateTaskDto) {
+    return await this.amqpConnection.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.CREATE,
+      payload: createTaskDto,
+    });
   }
 
-  findAll() {
-    return this.client.send(TASK_PATTERNS.FIND_ALL, {});
+  async findAll() {
+    return await this.amqpConnection.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.FIND_ALL,
+      payload: {},
+    });
   }
 
-  findOne(id: number) {
-    return this.client.send(TASK_PATTERNS.FIND_ONE, { id });
+  async findOne(id: number) {
+    return await this.amqpConnection.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.FIND_ONE,
+      payload: { id },
+    });
   }
 
-  findByUserId(id: string) {
-    return this.client.send(TASK_PATTERNS.FIND_BY_USER_ID, id);
+  async findByUserId(id: string) {
+    return await this.amqpConnection.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.FIND_BY_USER_ID,
+      payload: id,
+    });
   }
 
-  update(id: number, updateTaskDto: UpdateTaskDto) {
-    return this.client.send(TASK_PATTERNS.UPDATE, { id, data: updateTaskDto });
+  async update(id: number, updateTaskDto: UpdateTaskDto) {
+    return await this.amqpConnection.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.UPDATE,
+      payload: { id, data: updateTaskDto },
+    });
   }
 
-  remove(id: number) {
-    return this.client.send(TASK_PATTERNS.REMOVE, { id });
+  async remove(id: number) {
+    return await this.amqpConnection.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.REMOVE,
+      payload: { id },
+    });
   }
 
-  findGoogleEvents(request: Request) {
+  async findGoogleEvents(request: Request) {
     const cookies = request.cookies;
     const data: RequestGoogleTaskDto = {
       accessToken: cookies.accessToken as string,
       refreshToken: cookies.refreshToken as string,
     };
-    return this.client.send(TASK_PATTERNS.FIND_GOOGLE_EVENTS, data);
+
+    return await this.amqpConnection.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.FIND_GOOGLE_EVENTS,
+      payload: data,
+    });
   }
 }

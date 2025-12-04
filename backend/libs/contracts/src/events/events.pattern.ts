@@ -13,4 +13,11 @@ export const EVENTS = {
   NEW_MESSAGE: 'events.new.message',
   DELETE_DOCUMENT: 'events.delete.document',
   RENAME_TEAM: 'events.rename.team',
+  LIST_MOVED: 'events.list.move',
+  LIST_UPDATED: 'events.list.update',
+  LIST_CREATED: 'events.list.create',
+  LIST_DELETED: 'events.list.delete',
+  BOARD_CREATED: 'events.board.create',
+  BOARD_DELETED: 'events.board.delete',
+  BOARD_UPDATED: 'events.board.update',
 };

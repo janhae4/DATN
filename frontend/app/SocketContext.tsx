@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   ReactNode,
+  useState,
 } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -23,9 +24,10 @@ export const CHATBOT_PATTERN = {
 
 interface SocketContextType {
   socket: Socket | null;
+  isConnected: boolean;
 }
 
-const SocketContext = createContext<SocketContextType>({ socket: null });
+const SocketContext = createContext<SocketContextType>({ socket: null, isConnected: false });
 
 export const useSocket = () => useContext(SocketContext);
 
@@ -34,6 +36,8 @@ interface SocketProviderProps {
 }
 
 export const SocketProvider = ({ children }: SocketProviderProps) => {
+  const [isConnected, setIsConnected] = useState(false);
+
   const socket = useMemo(() => {
     return io("http://localhost:4001", {
       autoConnect: true,
@@ -43,20 +47,43 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
   }, []);
 
   useEffect(() => {
-    socket.on("connect", () =>
-      console.log("Socket đã kết nối (ID:", socket.id, ")")
-    );
-    socket.on("disconnect", () => console.log("Socket đã ngắt kết nối."));
+    const onConnect = () => {
+      console.log("✅ Socket connected:", socket.id);
+      setIsConnected(true);
+    };
+
+    const onDisconnect = () => {
+      console.log("❌ Socket disconnected");
+      setIsConnected(false);
+    };
+
+    const onConnectError = (err: any) => {
+      console.error("⚠️ Socket connection error:", err);
+      setIsConnected(false);
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
 
     return () => {
-      socket.off("connect");
-      socket.off("disconnect");
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
       socket.disconnect();
     };
   }, [socket]);
 
+  const contextValue = useMemo(
+    () => ({
+      socket,
+      isConnected,
+    }),
+    [socket, isConnected]
+  );
+
   return (
-    <SocketContext.Provider value={{ socket }}>
+    <SocketContext.Provider value={contextValue}>
       {children}
     </SocketContext.Provider>
   );

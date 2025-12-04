@@ -10,6 +10,15 @@
   "monorepo": true,
   "root": "apps/api-gateway",
   "projects": {
+    "ai-discussion": {
+      "type": "application",
+      "root": "apps/discussion-ai",
+      "entryFile": "main",
+      "sourceRoot": "apps/discussion-ai/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/discussion-ai/tsconfig.app.json"
+      }
+    },
     "api-gateway": {
       "type": "application",
       "root": "apps/api-gateway",
@@ -28,22 +37,13 @@
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
-    "discussion": {
+    "board": {
       "type": "application",
-      "root": "apps/discussion",
+      "root": "apps/board",
       "entryFile": "main",
-      "sourceRoot": "apps/discussion/src",
+      "sourceRoot": "apps/board/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/discussion/tsconfig.app.json"
-      }
-    },
-    "ai-discussion": {
-      "type": "application",
-      "root": "apps/discussion-ai",
-      "entryFile": "main",
-      "sourceRoot": "apps/discussion-ai/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/discussion-ai/tsconfig.app.json"
+        "tsConfigPath": "apps/board/tsconfig.app.json"
       }
     },
     "common": {
@@ -62,6 +62,15 @@
       "sourceRoot": "libs/contracts/src",
       "compilerOptions": {
         "tsConfigPath": "libs/contracts/tsconfig.lib.json"
+      }
+    },
+    "discussion": {
+      "type": "application",
+      "root": "apps/discussion",
+      "entryFile": "main",
+      "sourceRoot": "apps/discussion/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/discussion/tsconfig.app.json"
       }
     },
     "file": {

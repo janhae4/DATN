@@ -2,11 +2,12 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Api gateway",
-            "command": "npm",
+            "label": "API Gateway",
+            "command": "nest",
             "args": [
-                "run",
-                "start:api"
+                "start",
+                "api-gateway",
+                "--watch"
             ],
             "type": "shell",
             "options": {
@@ -18,11 +19,12 @@
             }
         },
         {
-            "label": "Auth",
-            "command": "npm",
+            "label": "Auth Service",
+            "command": "nest",
             "args": [
-                "run",
-                "start:auth"
+                "start",
+                "auth",
+                "--watch"
             ],
             "type": "shell",
             "options": {
@@ -34,11 +36,12 @@
             }
         },
         {
-            "label": "User",
-            "command": "npm",
+            "label": "User Service",
+            "command": "nest",
             "args": [
-                "run",
-                "start:user"
+                "start",
+                "user",
+                "--watch"
             ],
             "type": "shell",
             "options": {
@@ -50,11 +53,12 @@
             }
         },
         {
-            "label": "redis",
-            "command": "npm",
+            "label": "Redis Service",
+            "command": "nest",
             "args": [
-                "run",
-                "start:redis"
+                "start",
+                "redis",
+                "--watch"
             ],
             "type": "shell",
             "options": {
@@ -66,11 +70,12 @@
             }
         },
         {
-            "label": "notification",
-            "command": "npm",
+            "label": "Notification Service",
+            "command": "nest",
             "args": [
-                "run",
-                "start:notification"
+                "start",
+                "notification",
+                "--watch"
             ],
             "type": "shell",
             "options": {
@@ -82,11 +87,12 @@
             }
         },
         {
-            "label": "team",
-            "command": "npm",
+            "label": "Team Service",
+            "command": "nest",
             "args": [
-                "run",
-                "start:team"
+                "start",
+                "team",
+                "--watch"
             ],
             "type": "shell",
             "options": {
@@ -98,11 +104,12 @@
             }
         },
         {
-            "label": "discussion",
-            "command": "npm",
+            "label": "Discussion Service",
+            "command": "nest",
             "args": [
-                "run",
-                "start:discussion"
+                "start",
+                "discussion",
+                "--watch"
             ],
             "type": "shell",
             "options": {
@@ -114,7 +121,7 @@
             }
         },
         {
-            "label": "ai-discussion",
+            "label": "AI Discussion Service",
             "command": "nest",
             "args": [
                 "start",
@@ -131,56 +138,112 @@
             }
         },
         {
-            "label": "search",
-            "command": "npm",
+            "label": "Search Service",
+            "command": "nest",
             "args": [
-                "run",
-                "start:search"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "socket",
-            "command": "npm",
-            "args": [
-                "run",
-                "start:socket"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "All Service",
-            "dependsOn": [
-                "Api gateway",
-                "Auth",
-                "User",
-                "redis",
-                "notification",
-                "team",
-                "discussion",
-                "ai-discussion",
+                "start",
                 "search",
-                "socket"
+                "--watch"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Socket Service",
+            "command": "nest",
+            "args": [
+                "start",
+                "socket",
+                "--watch"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Video Chat Service",
+            "command": "nest",
+            "args": [
+                "start",
+                "video-chat",
+                "--watch"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Chatbot Python Service",
+            "type": "shell",
+            "command": ".\\venv\\Scripts\\activate; python main.py",
+            "options": {
+                "cwd": "${workspaceFolder}/python/chatbot-service"
+            },
+            "presentation": {
+                "group": "chatbotDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Start All Services",
+            "dependsOn": [
+                "API Gateway",
+                "Auth Service",
+                "User Service",
+                "Redis Service",
+                "Notification Service",
+                "Team Service",
+                "Discussion Service",
+                "AI Discussion Service",
+                "Search Service",
+                "Socket Service"
             ],
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "Start Auth Group",
+            "dependsOn": [
+                "Auth Service",
+                "User Service",
+                "API Gateway",
+                "Redis Service"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Start Video Call Group",
+            "dependsOn": [
+                "Start Auth Group",
+                "Video Chat Service",
+                "Socket Service",
+                "Chatbot Python Service",
+                "Redis Service",
+                "Team Service"
+            ]
         }
     ]
 }

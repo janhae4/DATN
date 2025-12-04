@@ -177,15 +177,29 @@ export class RedisService {
     );
   }
 
-  async getUserInfo(userIds: string[]) {
-    const keys = userIds.map((id) => `user:profile:${id}`);
-    const dataList = await this.redis.mget(keys);
-    
-    const profiles = dataList
-      .map((data) => (data ? JSON.parse(data) : null))
-      .filter(Boolean);
+  async getUserInfo(id: string) {
+    const keys = `user:profile:${id}`;
+    const data = await this.redis.get(keys);
+    return data ? JSON.parse(data) : null;
+  }
 
-    return profiles;
+  async setUserInfo(user: User) {
+    const key = `user:profile:${user.id}`;
+
+    const profileData = {
+      id: user.id,
+      name: user.name,
+      avatar: user.avatar,
+    };
+
+    this.logger.log(`Caching profile for user: ${user.id}`);
+
+    await this.redis.set(
+      key,
+      JSON.stringify(profileData),
+      'EX',
+      TTL_24_HOURS
+    )
   }
 
   async getUserRole(userId: string, teamId: string) {
@@ -430,5 +444,26 @@ export class RedisService {
   async setTeamMembers(teamId: string, members: string[]) {
     const teamMembersKey = `team:members:${teamId}`;
     return await this.redis.sadd(teamMembersKey, members);
+  }
+
+  async pushToMeetingBuffer(roomId: string, userId: string, userName: string, content: string, timestamp: Date) {
+    const redisKey = `meeting:${roomId}:buffer`;
+    const dataString = JSON.stringify({ userId, userName, content, timestamp });
+    await this.redis.rpush(redisKey, dataString);
+    this.logger.debug(await this.redis.lrange(redisKey, 0, -1))
+    return await this.redis.llen(redisKey);
+  }
+
+  async popMeetingBuffer(roomId: string) {
+    const redisKey = `meeting:${roomId}:buffer`;
+    const processingKey = `meeting:${roomId}:processing`;
+    try {
+      await this.redis.rename(redisKey, processingKey);
+    } catch (e) {
+      return []; 
+    }
+    const data = await this.redis.lrange(processingKey, 0, -1);
+    await this.redis.del(processingKey);
+    return data.map(item => JSON.parse(item));
   }
 }

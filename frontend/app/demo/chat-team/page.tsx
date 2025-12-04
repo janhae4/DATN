@@ -1,12 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChatSidebar } from "./components/ChatSideBar";
-import { ChatWindow } from "./components/ChatWindow";
-import { useSocketHandler } from "./hooks/useSocketHandler";
 import { useChatStore } from "./store/useChatStore";
 import { CurrentUser } from "./types/type";
-import { useShallow } from "zustand/shallow";
 import { LoginPage } from "./login";
 import { Loader2 } from "lucide-react";
 import { ApiService } from "./services/api-service";

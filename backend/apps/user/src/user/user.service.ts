@@ -318,11 +318,50 @@ export class UserService {
   }
 
   async findOne(id: string): Promise<User | null> {
-    this.logger.log(`Finding user by ID: ${id}`);
-    return await this.userRepo.findOne({
-      where: { id },
+    this.logger.log(`[Cache] GET: user:${id}`);
+
+    try {
+      const rpcResult = await this.amqp.request<User | null>({
+        exchange: REDIS_EXCHANGE,
+        routingKey: REDIS_PATTERN.GET_USER_INFO,
+        payload: id,
+        timeout: 1000
+      });
+
+      const cachedUser = unwrapRpcResult(rpcResult);
+
+      if (cachedUser) {
+        this.logger.log(`[Cache] HIT: user:${id}`);
+        return cachedUser;
+      }
+    } catch (error) {
+      this.logger.warn(
+        `[Cache] MISS (Error): ${error.message}. Fallback to DB.`,
+      );
+    }
+
+    this.logger.log(`[DB] Fallback: Getting user ${id}`);
+    const userFromDb = await this.userRepo.findOne({
+      where: { id: id },
       relations: ['accounts'],
     });
+
+    if (userFromDb) {
+      this.logger.log(`[Cache] SET: user:${id}`);
+      this.amqp
+        .publish(
+          REDIS_EXCHANGE,
+          REDIS_PATTERN.SET_USER_INFO,
+          userFromDb,
+        )
+        .catch((err) => {
+          this.logger.warn(
+            `[Cache] FAILED TO SET cache for user ${id}: ${err.message}`,
+          );
+        });
+    }
+
+    return userFromDb;
   }
 
   async findOneWithAccounts(id: string): Promise<User | null> {
@@ -378,9 +417,11 @@ export class UserService {
   async findManyByIds(ids: string[], forDiscussion?: boolean) {
     const cachedUsers: Partial<User>[] = unwrapRpcResult(await this.amqp.request({
       exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.GET_USER_INFO,
+      routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
       payload: ids,
     }))
+
+    this.logger.debug(ids, cachedUsers)
 
     const cachedIds = new Set(cachedUsers.map(u => u.id));
     const missingIds = ids.filter(id => !cachedIds.has(id));
@@ -409,6 +450,8 @@ export class UserService {
         }
       })
     }
+
+    this.logger.debug(allUsers)
 
     return allUsers;
   }
@@ -515,48 +558,49 @@ export class UserService {
 
   async confirmResetPassword(userId: string, code: string, password: string) {
     this.logger.log(`Confirming password reset for user ID: ${userId}`);
-    const user = await this.findOne(userId);
-    const account = user?.accounts.find((a) => a.provider === Provider.LOCAL);
-    if (!account) {
-      this.logger.warn(
-        `Password reset confirmation failed: Account not found for user ${userId}.`,
-      );
-      throw new NotFoundException('Account not found');
-    }
-    if (user?.resetCode !== code) {
-      this.logger.warn(
-        `Password reset confirmation failed for user ${userId}: Invalid code.`,
-      );
-      throw new BadRequestException('Invalid code');
-    }
-    if (user.expiredCode && user.expiredCode < new Date()) {
-      this.logger.warn(
-        `Password reset confirmation failed for user ${userId}: Code expired.`,
-      );
-      throw new BadRequestException('Code expired');
-    }
+    return this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, {
+        where: { id: userId },
+        relations: ['accounts']
+      });
 
-    if (await bcrypt.compare(password, account.password ?? '')) {
-      this.logger.warn(
-        `Password reset confirmation failed for user ${userId}: New password is the same as old one.`,
-      );
-      throw new BadRequestException(
-        'Password must be different from old password',
-      );
-    }
+      const account = user?.accounts.find((a) => a.provider === Provider.LOCAL);
+      if (!account) {
+        this.logger.warn(`Password reset confirmation failed: Account not found for user ${userId}.`);
+        throw new NotFoundException('Account not found');
+      }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await Promise.all([
-      this.userRepo.update(user.id, {
-        resetCode: undefined,
-        expiredCode: undefined,
-      }),
-      this.accountRepo.update(account.id, {
-        password: hashedPassword,
-      }),
-    ]);
-    this.logger.log(`Password reset confirmed and updated for user ${userId}`);
-    return { message: 'Password has been successfully reset.' };
+      if (user?.resetCode !== code) {
+        this.logger.warn(`Password reset confirmation failed for user ${userId}: Invalid code.`);
+        throw new BadRequestException('Invalid code');
+      }
+      if (user.expiredCode && user.expiredCode < new Date()) {
+        this.logger.warn(`Password reset confirmation failed for user ${userId}: Code expired.`);
+        throw new BadRequestException('Code expired');
+      }
+
+      if (await bcrypt.compare(password, account.password ?? '')) {
+        this.logger.warn(`Password reset confirmation failed for user ${userId}: New password is the same as old one.`);
+        throw new BadRequestException(
+          'Password must be different from old password',
+        );
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await Promise.all([
+        manager.update(User, user.id, {
+          resetCode: undefined,
+          expiredCode: undefined,
+        }),
+        manager.update(Account, account.id, {
+          password: hashedPassword,
+        }),
+      ]);
+
+      this.logger.log(`Password reset confirmed and updated for user ${userId}`);
+      return { message: 'Password has been successfully reset.' };
+    });
   }
 
   async updatePassword(id: string, oldPassword: string, newPassword: string) {

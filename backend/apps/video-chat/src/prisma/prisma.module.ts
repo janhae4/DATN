@@ -1,9 +1,11 @@
 import { Global, Module } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
+import { ClientConfigModule } from '@app/contracts';
 
-@Global() // Đánh dấu là module toàn cục
+@Global()
 @Module({
+  imports: [ClientConfigModule],
   providers: [PrismaService],
-  exports: [PrismaService], // Xuất service để các module khác có thể dùng
+  exports: [PrismaService],
 })
 export class PrismaModule {}

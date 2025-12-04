@@ -22,7 +22,8 @@ import { ResponseInterceptor } from '../common/filter/response.interceptor';
     DiscussionModule,
     AiDiscussionModule,
     FileModule,
-    WebhooksModule
+    WebhooksModule,
+    VideoChatModule
   ],
   controllers: [ApiGatewayController],
   providers: [ResponseInterceptor, ApiGatewayService],

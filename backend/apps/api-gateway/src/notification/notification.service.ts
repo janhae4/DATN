@@ -1,13 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import {
-  NOTIFICATION_CLIENT,
   NOTIFICATION_EXCHANGE,
   NOTIFICATION_PATTERN,
   NotificationEventDto,
   NotificationUpdateDto,
 } from '@app/contracts';
-import { firstValueFrom } from 'rxjs';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()

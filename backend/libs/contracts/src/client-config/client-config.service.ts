@@ -8,10 +8,17 @@ export class ClientConfigService {
   /*
   DATABASE
   */
- get databaseTeamUrl(): string {
+  get databaseTeamUrl(): string {
     return this.config.get<string>(
       'DATABASE_TEAM_URL',
       'mongodb://localhost:27017/team',
+    );
+  }
+
+  get videoChatUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_VIDEO_CHAT_URL',
+      'postgresql://postgres:postgres@localhost:5432/call',
     );
   }
 

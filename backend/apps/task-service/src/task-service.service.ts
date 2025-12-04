@@ -22,7 +22,6 @@ const SECONDS_IN_HOUR = 60 * 60;
 const SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR;
 @Injectable()
 export class TaskServiceService {
-  // 2. Instantiate the logger
   private readonly logger = new Logger(TaskServiceService.name);
 
   constructor(
@@ -56,7 +55,6 @@ export class TaskServiceService {
 
   async findByUserId(userId: string): Promise<Task[]> {
     this.logger.log(`Finding and sorting tasks for user ID: ${userId}`);
-    // This is a complex query, adding a debug log to show it's being executed.
     this.logger.debug(
       `Executing raw SQL query for prioritized tasks for user ${userId}.`,
     );

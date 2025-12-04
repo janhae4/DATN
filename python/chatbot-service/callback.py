@@ -1,4 +1,5 @@
 import json
+import re
 from aio_pika import Exchange, IncomingMessage, Channel, Message
 from services.vectorstore_service import VectorStoreService
 from services.minio_service import MinioService
@@ -10,7 +11,9 @@ from config import (
     SEND_FILE_STATUS_ROUTING_KEY,
     SEND_NOTIFICATION_ROUTING_KEY,
     SUMMARIZE_DOCUMENT_ROUTING_KEY,
+    SUMMARIZE_MEETING_ROUTING_KEY,
     STREAM_RESPONSE_ROUTING_KEY,
+    RESPONSE_SUMMARIZE_MEETING_ROUTING_KEY,
     SOCKET_EXCHANGE
 )
 
@@ -69,6 +72,92 @@ async def send_notification(channel: Channel, user_id, file_name, status, messag
         print(f"--> Đã gửi thông báo '{status}' cho file: {file_name}")
     except Exception as e:
         print(f"Lỗi khi gửi thông báo: {e}")
+
+async def send_summarize_meeting_response(
+    channel: Channel, 
+    room_id: str, 
+    content: str, 
+    status: str,
+    metadata: dict = None
+):
+    """
+    Gửi stream chunk về cho một Room cụ thể.
+    """
+    try:
+        payload = {
+            "roomId": room_id, 
+            "data": {
+                "content": content,
+                "status": status,
+                "metadata": metadata or {}
+            }
+        }
+
+        message_body = Message(
+            body=json.dumps(payload).encode(),
+            content_type="application/json"
+        )
+
+        socket_exchange = await channel.get_exchange(SOCKET_EXCHANGE)
+        
+        await socket_exchange.publish(
+            message_body,
+            routing_key=RESPONSE_SUMMARIZE_MEETING_ROUTING_KEY
+        )
+        
+    except Exception as e:
+        print(f"Lỗi khi gửi meeting response: {e}")
+    
+async def handle_meeting_summary(channel: Channel, payload_dto, summarizer: Summarizer):
+    room_id = payload_dto.get('roomId')
+    conversation_text = payload_dto.get('content')
+    
+    await send_summarize_meeting_response(channel, room_id, "", "start")
+    
+    final_summary_text = ""
+    accumulated_json = ""
+    
+    try:
+        async for event in summarizer.summarize_meeting(conversation_text):
+            msg_type = event["type"]
+            content = event["content"]
+
+            if msg_type == "text":
+                final_summary_text += content
+                print(f"--> [Py->Nest] Gửi về (text): {content[:50]}...")
+                await send_summarize_meeting_response(channel, room_id, content, "chunk")
+            
+            elif msg_type == "json_chunk":
+                print(f"--> [Py->Nest] Gửi về (json_chunk): {content[:50]}...")
+                accumulated_json += content
+
+        action_items = parse_llm_json(accumulated_json)
+        print(f"--> [DONE] Action Items extracted: {len(action_items)}")
+
+        final_payload = {
+            "actionItems": action_items,
+        }
+        await send_summarize_meeting_response(channel, room_id, "", "end", metadata=final_payload)
+
+        return {"status": "success", "actionItems": action_items, "summary": final_summary_text.strip()}
+
+    except Exception as e:
+        print(f"Lỗi: {e}")
+        await send_summarize_meeting_response(channel, room_id, str(e), "error")
+        return {"status": "error"}
+    
+def parse_llm_json(json_str):
+    """
+    Hàm helper để làm sạch và parse JSON từ LLM
+    """
+    try:
+        clean_str = re.sub(r"```json|```", "", json_str).strip()
+        if not clean_str: return []
+        return json.loads(clean_str)
+    except json.JSONDecodeError as e:
+        print(f"Lỗi parse JSON từ LLM: {e}")
+        print(f"Raw string: {json_str}")
+        return []
 
 async def send_status_file(channel: Channel, user_id, file_id, fileName,status, teamId: str = None):
     try:
@@ -159,6 +248,8 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
         pattern_from_key = "ask_question"
     elif actual_routing_key == SUMMARIZE_DOCUMENT_ROUTING_KEY:
         pattern_from_key = "summarize_document"
+    elif actual_routing_key == SUMMARIZE_MEETING_ROUTING_KEY:
+        pattern_from_key = "summarize_meeting"
     
     async with message.process():
         try:
@@ -173,7 +264,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
 
             print(f"Socket ID: {socket_id}, User ID: {user_id}, Discussion ID: {discussion_id}, Team ID: {team_id}")
 
-            if not all([socket_id, user_id, discussion_id]):
+            if not all([socket_id, user_id, discussion_id]) and not pattern_from_key == 'summarize_meeting':
                 raise ValueError("Tin nhắn thiếu socketId, userId, hoặc discussionId.")
 
             if pattern_from_key == 'ask_question':
@@ -198,20 +289,30 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 print(f"--> [SUMMARIZE] Bắt đầu tóm tắt file '{file_name}' cho user '{user_id}'.")
                 
                 documents = await minio_service.load_documents(file_name)
-                async for chunk in summarizer.summarize(documents):
+                async for chunk in summarizer.summarize_documents(documents):
                     await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
                     
-            else:
-                raise ValueError(f"Routing key không xác định: '{actual_routing_key}'")
-
+            elif pattern_from_key == 'summarize_meeting':
+                result_data = await handle_meeting_summary(channel, payload_dto, summarizer)
+                if message.reply_to:
+                    print(f"--> [RPC] Đang trả kết quả về cho NestJS (Correlation ID: {message.correlation_id})")
+                    
+                    response_body = json.dumps(result_data).encode()
+                    
+                    await channel.default_exchange.publish(
+                        Message(
+                            body=response_body,
+                            correlation_id=message.correlation_id,
+                            content_type="application/json"
+                        ),
+                        routing_key=message.reply_to 
+                    )
+                else:
+                    print("--> [WARN] Không tìm thấy reply_to. NestJS có thể sẽ bị timeout.")
         except Exception as e:
             error_message = f"Lỗi khi xử lý '{pattern_from_key}': {e}"
             print(f"!!! LỖI: {error_message}")
             
-            # ***
-            # SỬA 3: Phải kiểm tra 'socket_id' trước khi gửi lỗi
-            # (Vì nếu 'socket_id' là None, ta không thể gửi lỗi về)
-            # ***
             if socket_id and discussion_id:
                 error_metadata = {"error": str(error_message)}
                 try:
@@ -224,9 +325,6 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                     print(f"!!! LỖI KHI GỬI LỖI: {e_pub}")
 
         finally:
-            # ***
-            # SỬA 4: Gửi 'end' bất kể thành công hay thất bại (miễn là có socket_id)
-            # ***
             if socket_id and discussion_id:
                 print(f"--> Đã gửi tín hiệu kết thúc stream cho tác vụ '{pattern_from_key}'.")
                 try:
@@ -237,7 +335,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                     )
                 except Exception as e_pub:
                     print(f"!!! LỖI KHI GỬI 'END': {e_pub}")
-               
+
 async def on_team_deleted(message: IncomingMessage, vector_store: VectorStoreService):
     """
     Callback lắng nghe sự kiện xóa team từ NestJS và xóa collection 

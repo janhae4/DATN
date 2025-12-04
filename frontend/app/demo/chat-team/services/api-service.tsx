@@ -1,3 +1,4 @@
+import { RefType } from "@/app/video-call/page";
 import {
   Discussion,
   CreateTeam,
@@ -303,5 +304,26 @@ export const ApiService = {
         body: JSON.stringify({ message }),
       }
     );
+  },
+
+  joinVideoCall: (teamId: string, refId?: string, refType?: RefType) => {
+    return ApiService.request(`/video-call/join`, {
+      method: "POST",
+      body: JSON.stringify({ teamId, refId, refType }),
+    });
+  },
+
+  kickUserFromVideoCall: (targetUserId: string, roomId: string) => {
+    return ApiService.request(`/video-call/kick`, {
+      method: "POST",
+      body: JSON.stringify({ targetUserId, roomId }),
+    });
+  },
+
+  unKickUserFromVideoCall: (targetUserId: string, roomId: string) => {
+    return ApiService.request(`/video-call/unkick`, {
+      method: "POST",
+      body: JSON.stringify({ targetUserId, roomId }),
+    });
   },
 };

@@ -132,8 +132,9 @@ export class UserController {
     queue: USER_PATTERNS.FIND_ONE,
     errorHandler: customErrorHandler
   })
-  findOne(id: string) {
-    return this.userService.findOne(id);
+  async findOne(id: string) {
+    console.debug(123, id);
+    return await this.userService.findOne(id);
   }
 
   @RabbitRPC({
