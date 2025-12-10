@@ -22,10 +22,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { FileTypeBadge } from "@/app/(main)/documentation/file-type-badge";
 import { toast } from "sonner";
 
-import { useMessages, useSendMessage, useDiscussion } from "@/hooks/useTeam";
+import { useMessages, useDiscussion, useSendMessage } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 
 interface MessageProps {
@@ -103,7 +102,6 @@ export default function ChatArea({ onToggleInfo, discussionId }: ChatAreaProps) 
     
     sendMessage({
       discussionId,
-      senderId: user.id,
       content: inputValue
     });
 

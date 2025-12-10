@@ -8,7 +8,6 @@ import {
   DragOverEvent,
   DragStartEvent,
   DragOverlay,
-  closestCorners,
   PointerSensor,
   useSensor,
   useSensors,
@@ -16,22 +15,22 @@ import {
   DropAnimation,
   pointerWithin,
   rectIntersection,
-  getFirstCollision,
   CollisionDetection,
 } from "@dnd-kit/core";
 import { Task } from "@/types";
 import { List } from "@/types";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
-import { useList } from "@/hooks/useList";
+import { useLists } from "@/hooks/useList";
+import { useTasks } from "@/hooks/useTasks";
 import { KanbanColumn } from "./KanbanColumn";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import { ListCategoryEnum } from "@/types/common/enums";
-
+import { calculateNewPositionForTask, calculatePosition } from "@/lib/position-utils";
 import { KanbanMinimap } from "./KanbanMinimap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Plus, X, Circle, Clock, CheckCircle2 } from "lucide-react";
+import { Check, Plus, X, Circle, Clock } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -39,10 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BacklogFilterBar } from "../backlogs/BacklogFilterBar";
+import { BacklogFilterBar, TaskFilters } from "../backlogs/BacklogFilterBar";
 import { TaskDetailModal } from "../backlogs/taskmodal";
 
 import { KanbanSprintSelection } from "./KanbanSprintSelection";
+import { toast } from "sonner";
+import { ResolveSubtasksDialog } from "./ResolveSubtasksDialog";
 
 const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({
@@ -63,9 +64,9 @@ const collisionDetectionStrategy: CollisionDetection = (args) => {
 };
 
 export function KanbanBoard() {
-  const { 
-    data, 
-    handleListChange, 
+  const {
+    data,
+    allData, // Đảm bảo context trả về allData (toàn bộ task chưa filter)
     projectId,
     selectedTask,
     setSelectedTask,
@@ -76,81 +77,151 @@ export function KanbanBoard() {
     handleAssigneeChange,
     activeSprint,
     sprints,
-    startSprint
+    startSprint,
+    handleListChange
   } = useTaskManagementContext();
-  const { lists, createList, reorderLists, fetchLists, deleteList, updateList } = useList(projectId);
+
+  const { lists, createList, deleteList, updateList } = useLists(projectId);
+  const { updateTask } = useTasks(projectId);
 
   const [items, setItems] = React.useState<Task[]>(data);
+  const [filters, setFilters] = React.useState<TaskFilters>({
+    searchText: "",
+    assigneeIds: [],
+    priorities: [],
+    listIds: [],
+    epicIds: [],
+    labelIds: [],
+    sprintIds: [],
+  });
+
+  // --- Subtask Resolution State ---
+  const [isResolveDialogOpen, setIsResolveDialogOpen] = React.useState(false);
+  const [pendingSubtasks, setPendingSubtasks] = React.useState<Task[]>([]);
+  const [pendingMove, setPendingMove] = React.useState<{
+    task: Task;
+    overContainerId: string;
+    newPosition: number;
+    isMovedColumn: boolean;
+  } | null>(null);
+
+  const filterTasksByFilters = React.useCallback(
+    (source: Task[], f: TaskFilters) => {
+      const search = f.searchText.trim().toLowerCase();
+      return source.filter((task) => {
+        if (search && !task.title?.toLowerCase().includes(search)) return false;
+
+        if (f.assigneeIds.length) {
+          const hasUnassigned = f.assigneeIds.includes("unassigned");
+          const assignees = task.assigneeIds ?? [];
+          const matchAssigned = assignees.some((id) => f.assigneeIds.includes(id));
+          if (!matchAssigned && !(hasUnassigned && assignees.length === 0)) return false;
+        }
+
+        if (f.priorities.length && !f.priorities.includes(task.priority)) return false;
+        if (f.listIds.length && (!task.listId || !f.listIds.includes(task.listId))) return false;
+        if (f.epicIds.length && (!task.epicId || !f.epicIds.includes(task.epicId))) return false;
+
+        if (f.labelIds.length) {
+          const labels = task.labelIds ?? [];
+          if (!labels.some((id) => f.labelIds.includes(id))) return false;
+        }
+
+        if (f.sprintIds.length && (!task.sprintId || !f.sprintIds.includes(task.sprintId))) return false;
+
+        return true;
+      });
+    },
+    []
+  );
+
+  const filteredTasks = React.useMemo(
+    () => filterTasksByFilters(data, filters),
+    [data, filters, filterTasksByFilters]
+  );
+
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
   const [overColumnId, setOverColumnId] = React.useState<string | null>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [isAddingList, setIsAddingList] = React.useState(false);
   const [newListName, setNewListName] = React.useState("");
   const [newListCategory, setNewListCategory] = React.useState<ListCategoryEnum>(ListCategoryEnum.TODO);
+  const [UILists, setUILists] = React.useState<List[]>(lists);
 
+  // Sync items with filtered data
   React.useEffect(() => {
     if (activeSprint) {
-      setItems(data.filter(t => t.sprintId === activeSprint.id));
+      setItems(
+        filteredTasks.filter((t) =>
+          // Chỉ hiện task thuộc sprint này VÀ là task cha (parentId null/undefined)
+          t.sprintId === activeSprint.id && !t.parentId
+        )
+      );
     } else {
       setItems([]);
     }
-  }, [data, activeSprint]);
+  }, [filteredTasks, activeSprint]);
+
+  // Sync UILists with server lists
+  React.useEffect(() => {
+    if (lists && lists.length > 0) {
+      setUILists(lists);
+    }
+  }, [lists]);
 
   const handleAddList = async () => {
     if (!newListName.trim()) return;
+    if (newListCategory === ListCategoryEnum.DONE) return;
 
     await createList({
       name: newListName,
       category: newListCategory,
+      position: UILists.length + 1,
+      projectId,
     });
 
-    // Reset state
     setNewListName("");
     setNewListCategory(ListCategoryEnum.TODO);
     setIsAddingList(false);
   };
 
   const handleMoveList = async (listId: string, direction: "left" | "right") => {
-    const currentIndex = lists.findIndex((l) => l.id === listId);
+    const currentIndex = UILists.findIndex((l) => l.id === listId);
     if (currentIndex === -1) return;
 
-    const targetIndex =
-      direction === "left" ? currentIndex - 1 : currentIndex + 1;
+    const targetIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= UILists.length) return;
 
-    if (targetIndex < 0 || targetIndex >= lists.length) return;
-
-    const newLists = [...lists];
+    const newLists = [...UILists];
     const [movedList] = newLists.splice(currentIndex, 1);
     newLists.splice(targetIndex, 0, movedList);
 
-    // Update positions
-    const updatedLists = newLists.map((list, index) => ({
-      ...list,
-      position: index + 1
-    }));
+    const prevItem = newLists[targetIndex - 1];
+    const nextItem = newLists[targetIndex + 1];
+    const newPosition = calculatePosition(prevItem?.position, nextItem?.position);
 
-    await reorderLists(updatedLists);
+    setUILists(newLists);
+    await updateList(listId, { position: newPosition });
   };
 
   const handleDeleteList = async (listId: string) => {
+    const target = lists.find((l) => l.id === listId);
+    if (target?.category === ListCategoryEnum.DONE) {
+      toast.warning("The Done list cannot be deleted.");
+      return;
+    }
     if (confirm("Are you sure you want to delete this list?")) {
       await deleteList(listId);
     }
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 10,
-      },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
   );
 
   const tasksByList = React.useMemo(() => {
     const grouped: { [key: string]: Task[] } = {};
-    lists.forEach((list) => {
-      grouped[list.id] = [];
-    });
+    lists.forEach((list) => { grouped[list.id] = []; });
     items.forEach((task) => {
       const listId = task.listId || lists[0]?.id;
       if (listId && grouped[listId]) {
@@ -161,8 +232,6 @@ export function KanbanBoard() {
     });
     return grouped;
   }, [items, lists]);
-
-  const columnIds = React.useMemo(() => lists.map((s) => s.id), [lists]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -175,71 +244,171 @@ export function KanbanBoard() {
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     const overId = over?.id;
-
     if (!overId || active.id === overId) return;
 
-    const activeTask = active.data.current?.task as Task;
     const overTask = over.data.current?.task as Task;
+    const overContainerId = over.data.current?.type === "KANBAN_COLUMN" ? overId : overTask?.listId;
 
-    const overContainerId =
-      over.data.current?.type === "KANBAN_COLUMN" ? overId : overTask?.listId;
+    if (overContainerId) setOverColumnId(overContainerId as string);
 
-    if (overContainerId) {
-      setOverColumnId(overContainerId as string);
-    }
+    if (!active.data.current?.task || !overContainerId) return;
 
-    if (!activeTask || !overContainerId) return;
-
-    // Check if the item is already in the target list in our local state
     const currentItem = items.find((i) => i.id === active.id);
     if (currentItem && currentItem.listId !== overContainerId) {
-      setItems((prev) => {
-        return prev.map((t) =>
-          t.id === active.id ? { ...t, listId: overContainerId as string } : t
-        );
-      });
+      setItems((prev) => prev.map((t) =>
+        t.id === active.id ? { ...t, listId: overContainerId as string } : t
+      ));
+    }
+  };
+
+  // Helper thực hiện di chuyển Task
+  const executeMoveTask = (task: Task, targetListId: string, newPosition: number, isMovedColumn: boolean) => {
+    setItems((prev) => {
+      const newItems = prev.filter(t => t.id !== task.id);
+      const updatedTask = {
+        ...task,
+        listId: targetListId,
+        position: newPosition
+      };
+      return [...newItems, updatedTask];
+    });
+
+    updateTask(task.id, {
+      listId: targetListId,
+      position: newPosition
+    });
+
+    const targetList = lists.find((l) => l.id === targetListId);
+    if (targetList?.category === ListCategoryEnum.DONE && isMovedColumn) {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
     setActiveTask(null);
     setOverColumnId(null);
 
     if (!over) {
-      // Reset items to data if cancelled
-      setItems(data);
+      // Nếu thả ra ngoài, revert lại state gốc
+      setItems(filteredTasks.filter((t) => t.sprintId === activeSprint?.id && !t.parentId));
       return;
     }
 
-    const activeId = active.id as string;
+    const activeTask = active.data.current?.task as Task;
     const overId = over.id as string;
 
-    // Calculate final position and list
     const overContainerId =
       over.data.current?.type === "KANBAN_COLUMN"
         ? overId
         : over.data.current?.task?.listId;
 
-    if (overContainerId) {
-      // Commit the change
-      const originalTask = data.find((t) => t.id === activeId);
-      if (originalTask && originalTask.listId !== overContainerId) {
-        handleListChange(activeId, overContainerId as string);
+    if (overContainerId && activeTask) {
+      const targetListTasks = tasksByList[overContainerId] || [];
+      const newPosition = calculateNewPositionForTask(activeTask.id, overId, targetListTasks);
 
-        // Confetti logic
-        const targetList = lists.find((l) => l.id === overContainerId);
-        if (targetList?.category === ListCategoryEnum.DONE) {
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ["#10B981", "#34D399", "#6EE7B7", "#059669"], 
-          });
+      const isMovedColumn = activeTask.listId !== overContainerId;
+      const isMovedPosition = activeTask.position !== newPosition;
+
+        // --- CHECK SUBTASKS LOGIC ---
+        // 1. Tìm thông tin List đích
+        const targetList = lists.find(l => l.id === overContainerId);
+        const isTargetDone = targetList?.category === ListCategoryEnum.DONE;
+
+        // Debug log để kiểm tra
+        console.log("Dragging to:", targetList?.name, "Category:", targetList?.category);
+
+        if (isTargetDone ) {
+          console.log("--------------------------------")
+          // 2. Tìm tất cả subtasks (dùng allData vì subtask không hiển thị trên board)
+          const subtasks = allData.filter(t => t.parentId === activeTask.id);
+
+          // 3. Lấy danh sách ID của các cột DONE
+          const doneListIds = lists
+            .filter(l => l.category === ListCategoryEnum.DONE)
+            .map(l => l.id);
+
+          console.log("doneListIds: --------", doneListIds)
+          // 4. Lọc ra các subtask CHƯA hoàn thành (không nằm trong cột DONE)
+          const unfinishedSubtasks = subtasks.filter(t =>
+            !t.listId || !doneListIds.includes(t.listId)
+          );
+
+          if (unfinishedSubtasks.length > 0) {
+            console.log("Unfinished subtasks found:", unfinishedSubtasks);
+            // STOP: Lưu state và hiện Dialog
+            setPendingSubtasks(unfinishedSubtasks);
+            setPendingMove({
+              task: activeTask,
+              overContainerId, // Đây chính là ID của cột DONE vừa thả vào
+              newPosition,
+              isMovedColumn
+            });
+            setIsResolveDialogOpen(true);
+            return; // Return sớm để chặn executeMoveTask
+          }
         }
-      }
+        // -----------------------------
+
+        executeMoveTask(activeTask, overContainerId, newPosition, isMovedColumn);
+      
     }
+  };
+
+  const handleConfirmResolve = async () => {
+    if (!pendingMove) return;
+
+    // 1. Tìm cột DONE đích thực (để chắc chắn)
+    // Nếu overContainerId là cột DONE thì dùng luôn, hoặc tìm cột DONE đầu tiên của project
+    const doneList = lists.find(l => l.category === ListCategoryEnum.DONE);
+    const targetDoneListId = doneList?.id || pendingMove.overContainerId;
+
+    // 2. Update tất cả subtasks vào cột DONE này
+    const promises = pendingSubtasks.map(subtask =>
+      updateTask(subtask.id, { listId: targetDoneListId })
+    );
+
+    // Chờ server update xong
+    await Promise.all(promises);
+
+    // 3. Di chuyển Task Cha vào cột đích (pendingMove.overContainerId)
+    executeMoveTask(
+      pendingMove.task,
+      pendingMove.overContainerId,
+      pendingMove.newPosition,
+      pendingMove.isMovedColumn
+    );
+
+    // 4. Cleanup
+    setIsResolveDialogOpen(false);
+    setPendingMove(null);
+    setPendingSubtasks([]);
+    toast.success(`Moved task and resolved ${pendingSubtasks.length} subtasks.`);
+  };
+
+  const handleCancelResolve = () => {
+    setIsResolveDialogOpen(false);
+    setPendingMove(null);
+    setPendingSubtasks([]);
+    // Revert items về state ban đầu để task cha "bay" về chỗ cũ
+    setItems(filteredTasks.filter((t) => t.sprintId === activeSprint?.id && !t.parentId));
+  };
+
+  const handleIgnoreResolve = () => {
+    if (!pendingMove) return;
+
+    // Chỉ di chuyển task cha, bỏ qua subtasks
+    executeMoveTask(
+      pendingMove.task,
+      pendingMove.overContainerId,
+      pendingMove.newPosition,
+      pendingMove.isMovedColumn
+    );
+
+    setIsResolveDialogOpen(false);
+    setPendingMove(null);
+    setPendingSubtasks([]);
+    toast.success("Task moved. Subtasks left unchanged.");
   };
 
   return (
@@ -252,36 +421,44 @@ export function KanbanBoard() {
       onDragCancel={() => {
         setActiveTask(null);
         setOverColumnId(null);
+        setItems(filteredTasks.filter((t) => t.sprintId === activeSprint?.id && !t.parentId));
       }}
     >
       <div className="h-full w-full min-w-0 relative group/board flex flex-col">
-        <div className=" py-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-          <BacklogFilterBar showCreateSprint={false} showStatusFilter={false} />
+        <div className="py-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+          <BacklogFilterBar
+            showCreateSprint={false}
+            showStatusFilter={false}
+            filters={filters}
+            onFilterChange={setFilters}
+          />
         </div>
         <div
           ref={scrollContainerRef}
           className="flex-1 w-full overflow-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent pb-2"
         >
-          <div className="flex w-max gap-6 pt-4 ">
+          <div className="flex w-max gap-6 pt-4">
             {!activeSprint && (
               <KanbanSprintSelection sprints={sprints} onStartSprint={startSprint} />
             )}
-            {lists.map((list) => (
+            {UILists.map((list) => (
               <KanbanColumn
                 key={list.id}
+                projectId={projectId}
                 list={list}
+                sprintId={activeSprint?.id || ""}
                 tasks={tasksByList[list.id] || []}
-                allLists={lists}
-                onListUpdate={fetchLists}
+                allLists={UILists}
                 onMoveLeft={() => handleMoveList(list.id, "left")}
                 onMoveRight={() => handleMoveList(list.id, "right")}
                 onDeleteList={() => handleDeleteList(list.id)}
                 onUpdateLimit={(limit) => updateList(list.id, { limited: limit })}
+                onListUpdate={() => { }}
               />
             ))}
-            <div className=" shrink-0">
+            <div className="shrink-0">
               {isAddingList ? (
-                <div className=" w-80">
+                <div className="w-80">
                   <div className="bg-secondary p-3 rounded-xl space-y-2">
                     <Input
                       autoFocus
@@ -292,7 +469,7 @@ export function KanbanBoard() {
                         if (e.key === "Enter") handleAddList();
                         if (e.key === "Escape") setIsAddingList(false);
                       }}
-                      className="bg-background "
+                      className="bg-background"
                     />
                     <Select
                       value={newListCategory}
@@ -314,12 +491,6 @@ export function KanbanBoard() {
                             <span>In Progress</span>
                           </div>
                         </SelectItem>
-                        <SelectItem value={ListCategoryEnum.DONE}>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span>Done</span>
-                          </div>
-                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -333,7 +504,7 @@ export function KanbanBoard() {
                       size="icon"
                       onClick={() => setIsAddingList(false)}
                     >
-                      <X className="" />
+                      <X />
                     </Button>
                   </div>
                 </div>
@@ -365,7 +536,7 @@ export function KanbanBoard() {
               boxShadow: "0 0 0 0 rgba(0, 0, 0, 0)",
             }}
             animate={{
-              rotate: 4,
+              rotate: 0,
               scale: 1.05,
               boxShadow:
                 "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
@@ -382,7 +553,7 @@ export function KanbanBoard() {
               damping: 20,
             }}
           >
-            <KanbanCardContent task={activeTask} className="cursor-grabbing" />
+            <KanbanCardContent task={activeTask} lists={lists} className="cursor-grabbing" />
           </motion.div>
         ) : null}
       </DragOverlay>
@@ -397,6 +568,17 @@ export function KanbanBoard() {
         onAssigneeChange={handleAssigneeChange}
         onTitleChange={handleUpdateCell}
         onDescriptionChange={handleDescriptionChange}
+        onTaskSelect={setSelectedTask}
+        lists={lists}
+      />
+
+      <ResolveSubtasksDialog
+        open={isResolveDialogOpen}
+        onOpenChange={setIsResolveDialogOpen}
+        subtasks={pendingSubtasks}
+        onConfirm={handleConfirmResolve}
+        onCancel={handleCancelResolve}
+        onIgnoreAndComplete={handleIgnoreResolve}
       />
     </DndContext>
   );

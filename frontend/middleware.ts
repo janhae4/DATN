@@ -12,11 +12,11 @@ export function middleware(request: NextRequest) {
     request.cookies.get("accessToken")?.value;
 
   if (isAuthRoute && token) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL(`/dashboard`, request.url));
   }
-
+  
   if (isPrivateRoute && !token) {
-    return NextResponse.redirect(new URL("/auth#login", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
@@ -24,7 +24,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Chạy trên mọi route TRỪ các file tĩnh (ảnh, font, css...)
     "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };

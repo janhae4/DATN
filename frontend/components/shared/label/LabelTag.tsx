@@ -46,7 +46,7 @@ export function LabelTag({
       onMouseLeave={() => setIsHovered(false)}
     >
       <span className={cn(
-        "transition-opacity",
+        "transition-opacity truncate max-w-[65px] overflow-hidden",
         isHovered && "opacity-0" 
       )}>
         {label.name}

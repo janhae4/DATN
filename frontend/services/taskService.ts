@@ -1,5 +1,5 @@
 import apiClient from "@/services/apiClient";
-import { Label, Task, TaskLabel } from "@/types";
+import { Task, TaskLabel } from "@/types";
 import { Priority } from "@/types/common/enums"; 
 
 // --- DTOs ---
@@ -13,6 +13,7 @@ export interface CreateTaskDto {
   reporterId?: string | null;
   assigneeIds?: string[] | null;
   startDate?: string | null;
+  parentId?: string | null;
   dueDate?: string | null;
   epicId?: string | null;
   sprintId?: string | null;

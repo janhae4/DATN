@@ -1,16 +1,25 @@
 "use client";
 
 import * as React from "react";
-import { Task, List, Label, TaskLabel, User } from "@/types";
+import { useParams } from "next/navigation";
+import { Task, List, User } from "@/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Edit } from "lucide-react";
+import {
+  GripVertical,
+  Edit,
+  ChevronRight,
+  ChevronDown,
+  Plus as PlusIcon,
+  Network
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Components
 import { PriorityPicker } from "@/components/shared/PriorityPicker";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { ListPicker } from "@/components/shared/list/ListPicker";
@@ -24,12 +33,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-// DTO
-import { UpdateTaskDto } from "@/services/taskService";
 import LabelTag from "@/components/shared/label/LabelTag";
+import { AddNewTaskRow } from "./AddNewTaskRow";
+
+// Hooks & Services
+import { UpdateTaskDto } from "@/services/taskService";
 import { useTaskLabels } from "@/hooks/useTaskLabel";
-import { useParams } from "next/navigation";
 import { useTeamMembers } from "@/hooks/useTeam";
+import { useTasks } from "@/hooks/useTasks";
+import { toast } from "sonner";
 
 interface BacklogTaskRowProps {
   task: Task;
@@ -39,6 +51,7 @@ interface BacklogTaskRowProps {
   onRowClick?: (task: Task) => void;
   onSelect?: (taskId: string, checked: boolean) => void;
   onUpdateTask: (taskId: string, updates: UpdateTaskDto) => void;
+  level?: number;
 }
 
 export function BacklogTaskRow({
@@ -49,10 +62,58 @@ export function BacklogTaskRow({
   onRowClick,
   onSelect,
   onUpdateTask,
+  level = 0,
 }: BacklogTaskRowProps) {
-  const { taskLabels_data } = useTaskLabels(task.id)
+  const params = useParams();
+  const projectId = params.projectId as string;
+  const teamId = params.teamId as string;
 
-  // --- DND-KIT HOOK ---
+  // 1. Fetching Data
+  const { taskLabels_data } = useTaskLabels(task.id);
+  const { data: members } = useTeamMembers(teamId);
+  const { tasks: allTasks } = useTasks(projectId);
+
+  // 2. Subtask Logic
+  const subTasks = React.useMemo(() => {
+    return allTasks.filter(t => t.parentId === task.id);
+  }, [allTasks, task.id]);
+
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isAddingSubtask, setIsAddingSubtask] = React.useState(false);
+
+  // --- LOGIC TOGGLE CẬP NHẬT ---
+  const handleToggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isExpanded) {
+      setIsExpanded(false);
+      setIsAddingSubtask(false);
+    } else {
+      // Nếu đã có subtask, chỉ đơn giản mở rộng để xem
+      if (subTasks.length > 0) {
+        setIsExpanded(true);
+        setIsAddingSubtask(false);
+        return;
+      }
+
+      // Nếu chưa có subtask, kiểm tra giới hạn level trước khi cho phép tạo mới
+      if (level < MAX_LEVEL) {
+        setIsExpanded(true);
+        setIsAddingSubtask(true);
+      } else {
+        toast.warning("Maximum nesting level reached.");
+        setIsExpanded(false);
+        setIsAddingSubtask(false);
+      }
+    }
+  };
+
+  const handleAddSubtaskClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(true);
+    setIsAddingSubtask(true);
+  };
+
+  // 3. DND Hook
   const {
     attributes,
     listeners,
@@ -71,16 +132,14 @@ export function BacklogTaskRow({
     transition,
   };
 
-  const stopPropagation = (e: React.MouseEvent | React.PointerEvent) =>
-    e.stopPropagation();
+  const stopPropagation = (e: React.MouseEvent | React.PointerEvent) => e.stopPropagation();
 
+  // 4. UI Handlers
   const [isHovered, setIsHovered] = React.useState(false);
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [localTitle, setLocalTitle] = React.useState(task.title);
 
-  React.useEffect(() => {
-    setLocalTitle(task.title);
-  }, [task.title]);
+  React.useEffect(() => { setLocalTitle(task.title); }, [task.title]);
 
   const handleTitleSave = () => {
     if (localTitle.trim() && localTitle !== task.title) {
@@ -96,221 +155,282 @@ export function BacklogTaskRow({
     setIsEditingTitle(false);
   };
 
-  // 1. Logic xử lý mảng
   const MAX_VISIBLE = 2;
-  const labels = taskLabels_data || []; // Fallback array rỗng
+  const MAX_LEVEL=4;
+  const labels = taskLabels_data || [];
   const visibleLabels = labels.slice(0, MAX_VISIBLE);
   const remainingCount = labels.length - MAX_VISIBLE;
   const hiddenLabels = labels.slice(MAX_VISIBLE);
 
-  const teamId = useParams().teamId as string;
-  // 2. Get Members of that Team
-  const { data: members } = useTeamMembers(teamId);
-  // 3. Map members to users for the picker (filter out any without user data)
-// 3. Map members to users for the picker
   const teamUsers = React.useMemo(() => {
-    // Ép kiểu (members as any[]) vì Interface TeamMember hiện tại chưa khai báo 'cachedUser'
     return ((members ?? []) as any[])
-      .filter((m) => !!m.cachedUser) // Kiểm tra xem có cachedUser không
-      .map((m) => ({
-         ...m.cachedUser, // Lấy toàn bộ info (name, avatar,...) từ cachedUser
-         id: m.userId     // Đảm bảo lấy đúng UserId (dù trong cachedUser thường cũng có id khớp)
-      })) as User[];
+      .filter((m) => !!m.cachedUser)
+      .map((m) => ({ ...m.cachedUser, id: m.userId })) as User[];
   }, [members]);
-  console.log("teamUsers", teamUsers);
+  console.log("This is team user: ", members)
 
   return (
-    <TableRow
-      ref={setNodeRef}
-      {...attributes}
-      style={style}
-      className={cn(
-        "group cursor-pointer hover:bg-muted/50 transition-colors",
-        isDragging && "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale"
-      )}
-      onClick={() => onRowClick?.(task)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* --- Title Column --- */}
-      <TableCell className="w-full">
-        <div className="flex items-center gap-1 relative pr-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-6 w-6 rounded-md text-muted-foreground flex-shrink-0 cursor-grab",
-              !isDraggable && "invisible",
-              isDragging && "cursor-grabbing"
-            )}
-            {...listeners}
-            onClick={stopPropagation}
+    <>
+      <TableRow
+        ref={setNodeRef}
+        {...attributes}
+        style={style}
+        className={cn(
+          "group cursor-pointer hover:bg-muted/50 transition-colors",
+          isDragging && "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale"
+        )}
+        onClick={() => onRowClick?.(task)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <TableCell className="w-full">
+          <div
+            className="flex items-center gap-1 relative pr-1"
+            style={{ paddingLeft: `${level * 24}px` }}
           >
-            <GripVertical className="h-4 w-4" />
-          </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-6 w-6 rounded-md text-muted-foreground flex-shrink-0 cursor-grab",
+                !isDraggable && "invisible",
+                isDragging && "cursor-grabbing"
+              )}
+              {...listeners}
+              onClick={stopPropagation}
+            >
+              <GripVertical className="h-4 w-4" />
+            </Button>
 
-          <Checkbox
-            className="h-4 w-4 flex-shrink-0"
-            checked={selected}
-            onCheckedChange={(checked) => onSelect?.(task.id, !!checked)}
-            onClick={stopPropagation}
-            onPointerDown={stopPropagation}
-          />
+            <Checkbox
+              className="h-4 w-4 flex-shrink-0"
+              checked={selected}
+              onCheckedChange={(checked) => onSelect?.(task.id, !!checked)}
+              onClick={stopPropagation}
+              onPointerDown={stopPropagation}
+            />
 
-          {isEditingTitle ? (
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Input
-                autoFocus
-                className="border-none bg-white h-auto px-2 shadow-none focus-visible:ring-2 text-sm flex-1 min-w-0"
-                value={localTitle}
-                onChange={(e) => setLocalTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleTitleSave();
-                  } else if (e.key === "Escape") {
-                    handleTitleCancel();
-                  }
-                }}
-                onBlur={handleTitleSave}
-                onPointerDown={stopPropagation}
-                onClick={stopPropagation}
-              />
-            </div>
-          ) : (
-            <div className="flex-1 min-w-0">
-              <span className="px-2 text-sm truncate block max-w-[400px]">
-                {task.title}
-              </span>
-            </div>
-          )}
+            {/* Nút Toggle kiêm Create Subtask */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-6 w-6 p-0 hover:bg-muted text-muted-foreground transition-all",
+                (subTasks.length > 0 || isAddingSubtask) ? "opacity-100 w-6" : "opacity-0 w-0 overflow-hidden group-hover:w-6 group-hover:opacity-100"
+              )}
+              onClick={handleToggleExpand}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Input
+                  autoFocus
+                  className="border-none bg-white h-auto px-2 shadow-none focus-visible:ring-2 text-sm flex-1 min-w-0"
+                  value={localTitle}
+                  onChange={(e) => setLocalTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleTitleSave();
+                    } else if (e.key === "Escape") {
+                      handleTitleCancel();
+                    }
+                  }}
+                  onBlur={handleTitleSave}
+                  onPointerDown={stopPropagation}
+                  onClick={stopPropagation}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className="px-2 text-sm truncate block max-w-[200px]">
+                  {task.title}
+                </span>
+
+                {/* Badge đếm số subtask (chỉ hiện khi đang đóng) */}
+                {!isExpanded && subTasks.length > 0 && (
+                  <div className="flex items-center text-[10px] text-muted-foreground bg-muted/80 px-1.5 py-0.5 rounded-sm border">
+                    <Network className="w-3 h-3 mr-1" />
+                    {subTasks.length}
+                  </div>
+                )}
+              </div>
+            )}
+
+
+          </div>
+        </TableCell>
+
+        {/* --- CÁC CỘT KHÁC (GIỮ NGUYÊN) --- */}
+        <TableCell>
+   
+        </TableCell>
+
+        <TableCell className="w-fit whitespace-nowrap" onClick={stopPropagation}>
+          <div className="flex justify-end gap-2">    <div className="flex gap-2 opacity-0 group-hover:opacity-100">
+
           {!isEditingTitle && (
-            <div className="absolute right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pl-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-6 w-6 rounded-md cursor-pointer text-muted-foreground flex-shrink-0"
-                onClick={(e) => { e.stopPropagation(); setIsEditingTitle(true); }}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
 
 
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-6 w-6 rounded-md cursor-pointer text-muted-foreground flex-shrink-0"
+              onClick={(e) => { e.stopPropagation(); setIsEditingTitle(true); }}
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
           )}
+          <LabelPopover
+            taskId={task.id}
+            initialSelectedLabels={taskLabels_data}
+            onSelectionChange={(newLabels) => onUpdateTask(task.id, { labelIds: newLabels.map(l => l.id) })}
+          />
+          </div>
+                 <div className="flex items-center gap-2 justify-end">
+            {visibleLabels.map((label) => (
+              <LabelTag
+                key={label.id}
+                label={label}
+                onRemove={() => {
+                  const newLabelIds = labels
+                    .filter(l => l.id !== label.id)
+                    .map(l => l.id);
+                  onUpdateTask(task.id, { labelIds: newLabelIds });
+                }}
+              />
+            ))}
+            {remainingCount > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80 px-2">
+                      +{remainingCount}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="p-2 bg-background">
+                    <div className="flex flex-col gap-1">
+                      {hiddenLabels.map((hiddenLabel) => (
+                        <LabelTag key={hiddenLabel.id} label={hiddenLabel} />
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div></div>
+      
+        </TableCell>
 
-        </div>
-      </TableCell>
+        <TableCell className="w-fit whitespace-nowrap" onClick={stopPropagation}>
+          <EpicPicker
+            value={task.epicId || null}
+            onChange={(epicId) => onUpdateTask(task.id, { epicId: epicId === null ? null : epicId })}
+          />
+        </TableCell>
 
-      <TableCell>
+        <TableCell className="w-fit whitespace-nowrap" onClick={stopPropagation}>
+          <ListPicker
+            lists={lists}
+            value={task.listId || null}
+            onChange={(listId) => onUpdateTask(task.id, { listId })}
+          />
+        </TableCell>
 
-        {/* Dùng flex để xếp các tag nằm ngang và có khoảng cách */}
-        <div className="flex  items-center gap-2">
+        <TableCell className="w-fit whitespace-nowrap">
+          <div onPointerDown={stopPropagation} onClick={stopPropagation}>
+            <PriorityPicker
+              priority={task.priority ?? undefined}
+              onPriorityChange={(newPriority) => {
+                onUpdateTask(task.id, { priority: newPriority ?? undefined })
+              }}
+            />
+          </div>
+        </TableCell>
 
-          {/* 1. Render các label được phép hiển thị */}
-          {visibleLabels.map((label) => (
-            <LabelTag key={label.id} label={label} onRemove={() => {
-              const newLabelIds = labels
-                .filter(l => l.id !== label.id)
-                .map(l => l.id);
-              onUpdateTask(task.id, { labelIds: newLabelIds });
-            }} />
+        <TableCell className="w-fit text-center whitespace-nowrap">
+          <div onPointerDown={stopPropagation} onClick={stopPropagation}>
+            <AssigneePicker
+              value={task.assigneeIds || []}
+              users={teamUsers}
+              onChange={(newAssigneeIds) => {
+                onUpdateTask(task.id, { assigneeIds: newAssigneeIds });
+              }}
+            />
+          </div>
+        </TableCell>
+
+        <TableCell className="w-[100px] whitespace-nowrap">
+          <div onPointerDown={stopPropagation} onClick={stopPropagation}>
+            <DatePicker
+              date={task.dueDate ? new Date(task.dueDate) : undefined}
+              onDateSelect={(date) =>
+                onUpdateTask(task.id, { dueDate: date ? date.toISOString() : undefined })
+              }
+            />
+          </div>
+        </TableCell>
+      </TableRow>
+
+      {/* --- RENDER SUBTASKS & CREATE ROW (NESTED) --- */}
+      {isExpanded && (
+        <>
+          {/* Render danh sách task con */}
+          {subTasks.map(subtask => (
+            <BacklogTaskRow
+              key={subtask.id}
+              task={subtask}
+              lists={lists}
+              isDraggable={false}
+              selected={selected}
+              onRowClick={onRowClick}
+              onSelect={onSelect}
+              onUpdateTask={onUpdateTask}
+              level={level + 1} // Tăng level để thụt sâu hơn
+            />
           ))}
 
-          {remainingCount > 0 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="secondary"
-                    className="cursor-pointer hover:bg-secondary/80 px-2"
+          {/* 1. Form tạo subtask mới (Nếu đang trong chế độ thêm) */}
+          {isAddingSubtask ? (
+            <AddNewTaskRow
+              lists={lists}
+              sprintId={task.sprintId || undefined}
+              parentId={task.id}
+              epicId={task.epicId}
+              onCancel={() => setIsAddingSubtask(false)}
+              isSubtask={true}
+            />
+          ) : (
+            /* 2. Nút "Create Task" (Nếu không ở chế độ thêm VÀ đã có task con) */
+            subTasks.length > 0 && (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={10} className="p-y-2 border-0">
+                  <div
+                    className="flex items-center"
+                    style={{ paddingLeft: `${(level + 1) * 24 + 48}px` }}
                   >
-                    +{remainingCount}
-                  </Badge>
-                </TooltipTrigger>
-
-                <TooltipContent className="p-2 bg-background">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs text-accent-foreground font-semibold mb-1">
-                      Remaining labels:
-                    </p>
-                    {hiddenLabels.map((hiddenLabel) => (
-                      <LabelTag key={hiddenLabel.id} label={hiddenLabel} />
-                    ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-muted-foreground hover:text-foreground hover:bg-transparent -ml-2"
+                      onClick={() => setIsAddingSubtask(true)}
+                    >
+                      <PlusIcon className="mr-1 h-3 w-3" />
+                      Create Task
+                    </Button>
                   </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </TableCell>
+              </TableRow>
+            )
           )}
-
-        </div>
-      </TableCell>
-
-      {/* --- Label --- */}
-      <TableCell className="w-fit whitespace-nowrap" onClick={stopPropagation}>
-        <LabelPopover
-          taskId={task.id}
-          initialSelectedLabels={taskLabels_data}
-          onSelectionChange={(labels) => onUpdateTask(task.id, { labelIds: labels.map(l => l.id) })}
-        />
-      </TableCell>
-
-      {/* --- Epic --- */}
-      <TableCell className="w-fit whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-        <EpicPicker
-          value={task.epicId || null}
-          onChange={(epicId) => onUpdateTask(task.id, { epicId: epicId === null ? null : epicId })}
-        />
-      </TableCell>
-
-      {/* --- List --- */}
-      <TableCell className="w-fit whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-        <ListPicker
-          lists={lists}
-          value={task.listId || null}
-          onChange={(listId) => onUpdateTask(task.id, { listId })}
-        />
-      </TableCell>
-
-      {/* --- Priority --- */}
-      <TableCell className="w-fit whitespace-nowrap">
-        <div onPointerDown={stopPropagation} onClick={stopPropagation}>
-          <PriorityPicker
-            priority={task.priority ?? undefined}
-            onPriorityChange={(newPriority) => {
-              onUpdateTask(task.id, { priority: newPriority ?? undefined })
-            }}
-          />
-        </div>
-      </TableCell>
-
-      {/* --- Assignee --- */}
-      <TableCell className="w-fit text-center whitespace-nowrap">
-        <div onPointerDown={stopPropagation} onClick={stopPropagation}>
-          <AssigneePicker
-            // 1. Pass current assignees from Task
-            value={task.assigneeIds || []}
-            // 2. Pass Real Users fetched from hook
-            users={teamUsers} 
-            // 3. Call updateTask directly on change
-            onChange={(newAssigneeIds) => {
-              onUpdateTask(task.id, { assigneeIds: newAssigneeIds });
-            }}
-          />
-        </div>
-      </TableCell>
-
-      {/* --- Date --- */}
-      <TableCell className="w-[100px] whitespace-nowrap">
-        <div onPointerDown={stopPropagation} onClick={stopPropagation}>
-          <DatePicker
-            date={task.dueDate ? new Date(task.dueDate) : undefined}
-            onDateSelect={(date) =>
-              onUpdateTask(task.id, { dueDate: date ? date.toISOString() : undefined })
-            }
-          />
-        </div>
-      </TableCell>
-    </TableRow>
+        </>
+      )}
+    </>
   );
 }

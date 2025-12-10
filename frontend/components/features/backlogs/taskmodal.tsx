@@ -9,16 +9,18 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet"
-import { Task } from "@/types"
-import { db } from "@/public/mock-data/mock-data"
+import { List, Task, User } from "@/types"
 import { TaskTitle } from "./TaskTitle"
 import { TaskDescription } from "./TaskDescription"
 import { TaskMetaBox } from "./TaskMetaBox"
-import { AttachmentsBox } from "@/components/shared/AttachmentsBox"
+// 1. IMPORT COMPONENT MỚI
+import { TaskSubtasks } from "./TaskSubtasks"
 
 type TaskDetailModalProps = {
     task: Task | null
     open?: boolean
+    users?: User[]
+    lists:List[]
     onOpenChange?: (open: boolean) => void
     onListChange: (taskId: string, listId: string) => void
     onDateChange: (taskId: string, newDate: Date | undefined) => void
@@ -26,10 +28,14 @@ type TaskDetailModalProps = {
     onAssigneeChange: (taskId: string, assigneeIds: string[]) => void
     onTitleChange: (taskId: string, columnId: "title", value: string) => void
     onDescriptionChange: (taskId: string, description: string) => void
+    onLabelsChange?: (taskId: string, labelIds: string[]) => void
+    onTaskSelect?: (task: Task) => void
 }
 
 export function TaskDetailModal({
     task: initialTask,
+    users,
+    lists,
     open: propOpen = false,
     onOpenChange: propOnOpenChange,
     onListChange,
@@ -37,7 +43,9 @@ export function TaskDetailModal({
     onPriorityChange,
     onAssigneeChange,
     onTitleChange,
-    onDescriptionChange
+    onDescriptionChange,
+    onLabelsChange,
+    onTaskSelect,
 }: TaskDetailModalProps) {
     const { isOpen, onOpenChange } = useModal(propOpen)
     const modalOpen = propOnOpenChange ? propOpen : isOpen
@@ -57,18 +65,6 @@ export function TaskDetailModal({
         }
     }, [initialTask])
 
-    // Get lists for the current project
-    const lists = React.useMemo(
-        () => db.lists.filter(l => l.projectId === task?.projectId).sort((a, b) => a.position - b.position),
-        [task?.projectId]
-    )
-
-    // Get assignee initials
-    const getAssigneeInitial = (assigneeId: string): string => {
-        const user = db.users.find(u => u.id === assigneeId);
-        return user ? user.name.charAt(0).toUpperCase() : "U";
-    }
-
     // Don't render anything if no task is selected
     if (!task) return null
 
@@ -79,6 +75,12 @@ export function TaskDetailModal({
     const handleTaskAssigneeChange = (assigneeIds: string[]) => onAssigneeChange(task.id, assigneeIds)
     const handleTaskTitleChange = (title: string) => onTitleChange(task.id, "title", title)
     const handleTaskDescriptionChange = (description: string) => onDescriptionChange(task.id, description)
+    const handleTaskLabelsChange = (labelIds: string[]) => onLabelsChange?.(task.id, labelIds)
+
+    // Khi click vào 1 subtask trong modal -> yêu cầu component cha switch sang task đó
+    const handleSubtaskClick = (subtask: Task) => {
+        onTaskSelect?.(subtask)
+    }
 
     return (
         <Sheet open={modalOpen} onOpenChange={handleOpenChange}>
@@ -108,18 +110,23 @@ export function TaskDetailModal({
                         />
                     </div>
 
+                    {/* 2. SUBTASKS SECTION */}
+                    <TaskSubtasks 
+                        taskId={task.id}
+                        projectId={task.projectId}
+                        lists={lists}
+                        onRowClick={handleSubtaskClick}
+                    />
+
                     {/* Task Meta Information */}
                     <TaskMetaBox
                         task={task}
                         lists={lists}
-                        onListChange={handleListChange}
                         onDateChange={handleTaskDateChange}
                         onPriorityChange={handleTaskPriorityChange}
-                        onAssigneeChange={handleTaskAssigneeChange}
-                        getAssigneeInitial={getAssigneeInitial}
+                        onLabelsChange={handleTaskLabelsChange}
                     />
 
-                    {/* Attachment Section */}
                 </div>  
             </SheetContent>
         </Sheet>

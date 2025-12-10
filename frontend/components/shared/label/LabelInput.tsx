@@ -4,9 +4,8 @@ import React, { useState } from 'react'
 import { Label } from '@/types'
 import LabelTag from './LabelTag';
 import { useParams } from 'next/navigation';
-import { useTasks } from '@/hooks/useTasks';
 import { Input } from '@/components/ui/input';
-
+import { useLabels } from '@/hooks/useLabels';
 
 interface CustomTagInputProps {
   onChange: (tags: Label[]) => void;
@@ -33,12 +32,15 @@ export function LabelInput({
   }, [initialTags])
 
   const projectId = useParams().projectId as string;
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const { createLabel } = useLabels(projectId);
+
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputValue.trim() !== '') {
       e.preventDefault() 
       
       const getRandomColor = () => {
         const letters = '0123456789ABCDEF';
+
         let color = '#';
         for (let i = 0; i < 6; i++) {
           color += letters[Math.floor(Math.random() * 16)];
@@ -46,22 +48,22 @@ export function LabelInput({
         return color;
       };
 
-      const now = new Date().toISOString()
-      const newTag: Label = {
-        id: '',
-        name: inputValue.trim(),
-        color: getRandomColor(),
-        projectId: projectId,
-        createdAt: now,
-        updatedAt: now,
+      const name = inputValue.trim();
+
+      if (!tags.find(t => t.name.toLowerCase() === name.toLowerCase())) {
+        try {
+          const color = getRandomColor();
+          const created = await createLabel({ name, color });
+
+          const newTag = created as Label;
+          const newTags = [...tags, newTag];
+          setTags(newTags);
+          onChange(newTags);
+        } catch (error) {
+          console.error('Failed to create label', error);
+        }
       }
-      
-      if (!tags.find(t => t.name.toLowerCase() === newTag.name.toLowerCase())) {
-        const newTags = [...tags, newTag]
-        setTags(newTags)
-        onChange(newTags) 
-      }
-      
+
       onInputChange('') 
     }
 

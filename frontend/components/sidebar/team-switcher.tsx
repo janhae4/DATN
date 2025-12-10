@@ -96,8 +96,7 @@ export function TeamSwitcher() {
               <DropdownMenuItem
                 key={team.name}
                 onClick={() => {
-                    // 6. Navigation is the only "state change" needed
-                    router.push(`/${team.original.id}/dashboard`); 
+                    router.push(`/${team.original.id}`); 
                 }}
                 className="gap-2 p-2"
               >
@@ -111,7 +110,7 @@ export function TeamSwitcher() {
             <DropdownMenuSeparator />
             <DropdownMenuItem 
                 className="gap-2 p-2 cursor-pointer" 
-                onClick={() => router.push("/teams/create")}
+                onClick={() => router.push("/team-create")}
             >
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                 <Plus className="size-4" />

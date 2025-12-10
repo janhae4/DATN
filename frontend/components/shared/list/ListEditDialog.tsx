@@ -73,6 +73,13 @@ export function ListEditDialog({
     ListCategoryEnum.TODO
   );
 
+  const doneListId = React.useMemo(
+    () => lists.find((l) => l.category === ListCategoryEnum.DONE)?.id,
+    [lists]
+  );
+
+  const hasDoneList = !!doneListId;
+
   // Sync data khi mở dialog hoặc đổi list chọn
   React.useEffect(() => {
     if (open) {
@@ -96,10 +103,18 @@ export function ListEditDialog({
     if (!selectedId || !name.trim()) return;
 
     try {
-      await updateList(selectedId, {
+      const updates: Partial<List> = {
         name: name.trim(),
-        category: category,
-      });
+      };
+
+      // If this is the DONE list, never change its category
+      if (selectedId === doneListId) {
+        updates.category = ListCategoryEnum.DONE;
+      } else {
+        updates.category = category;
+      }
+
+      await updateList(selectedId, updates as any);
 
       toast.success(`List updated!`);
       setOpen(false);
@@ -167,7 +182,7 @@ export function ListEditDialog({
               <Select
                 value={category}
                 onValueChange={(value: ListCategoryEnum) => setCategory(value)}
-                disabled={!selectedId || isUpdating}
+                disabled={!selectedId || isUpdating || selectedId === doneListId}
               >
                 <SelectTrigger id="category" className="w-full">
                   <SelectValue placeholder="Select a category">
@@ -180,19 +195,27 @@ export function ListEditDialog({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(ListCategoryEnum).map((enumValue) => {
-                    const categoryInfo = categoryMap[enumValue];
-                    return (
-                      <SelectItem key={enumValue} value={enumValue}>
-                        <div className="flex items-center gap-2">
-                          <categoryInfo.icon
-                            className={cn("h-4 w-4", categoryInfo.color)}
-                          />
-                          <span>{categoryInfo.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
+                  {Object.values(ListCategoryEnum)
+                    .filter((enumValue) =>
+                      // If a DONE list already exists and this is not it,
+                      // do not allow selecting DONE for other lists
+                      enumValue === ListCategoryEnum.DONE && hasDoneList
+                        ? selectedId === doneListId
+                        : true
+                    )
+                    .map((enumValue) => {
+                      const categoryInfo = categoryMap[enumValue];
+                      return (
+                        <SelectItem key={enumValue} value={enumValue}>
+                          <div className="flex items-center gap-2">
+                            <categoryInfo.icon
+                              className={cn("h-4 w-4", categoryInfo.color)}
+                            />
+                            <span>{categoryInfo.label}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                 </SelectContent>
               </Select>
             </div>

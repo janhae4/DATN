@@ -12,10 +12,14 @@ import { useTasks } from "@/hooks/useTasks"
 import { useParams } from "next/navigation"
 import { useLists } from "@/hooks/useList"
 
-export function SprintList() {
-  const { data, handleRowClick, sprints } = useTaskManagementContext()
-    const params = useParams();
-    const projectId = params.projectId as string;
+interface SprintListProps {
+  tasks: Task[]
+}
+
+export function SprintList({ tasks }: SprintListProps) {
+  const { handleRowClick, sprints } = useTaskManagementContext()
+  const params = useParams();
+  const projectId = params.projectId as string;
 
   const {updateTask} = useTasks(projectId)
   const [addingNewRowToSprint, setAddingNewRowToSprint] = React.useState<string | null>(null)
@@ -34,7 +38,7 @@ export function SprintList() {
         <SprintItem
           key={sprint.id}
           sprint={sprint}
-          tasks={data as Task[]}
+          tasks={tasks}
           statusesList={lists}
           handleRowClick={handleRowClick}
           addingNewRowToSprint={addingNewRowToSprint}

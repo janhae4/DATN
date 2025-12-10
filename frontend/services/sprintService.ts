@@ -43,6 +43,7 @@ export const sprintService = {
    * POST /sprints
    */
   createSprint: async (data: CreateSprintDto): Promise<Sprint> => {
+    console.log("creating sprint:", data)
     const response = await apiClient.post<Sprint>('/sprints', data);
     return response.data;
   },

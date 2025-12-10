@@ -44,6 +44,15 @@ export class CreateListDto {
   category?: ListCategoryEnum;
 
   @ApiProperty({
+    description: 'The limit of the list',
+    example: 10,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  limited?: number;
+
+  @ApiProperty({
     description: 'Whether the list is archived',
     default: false,
     required: false,

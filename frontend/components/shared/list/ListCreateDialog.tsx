@@ -65,6 +65,11 @@ export function ListCreateDialog({
   // Gọi hook
   const { createList, isCreating, lists } = useLists(projectId);
 
+  const hasDoneList = React.useMemo(
+    () => lists.some((l) => l.category === ListCategoryEnum.DONE),
+    [lists]
+  );
+
   React.useEffect(() => {
     if (open) {
       setName("");
@@ -75,6 +80,11 @@ export function ListCreateDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    if (category === ListCategoryEnum.DONE && hasDoneList) {
+      toast.error("This project already has a Done list.");
+      return;
+    }
 
     try {
       const newListData: CreateListDto = {
@@ -140,19 +150,23 @@ export function ListCreateDialog({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(ListCategoryEnum).map((enumValue) => {
-                    const categoryInfo = categoryMap[enumValue];
-                    return (
-                      <SelectItem key={enumValue} value={enumValue}>
-                        <div className="flex items-center gap-2">
-                          <categoryInfo.icon
-                            className={cn("h-4 w-4", categoryInfo.color)}
-                          />
-                          <span>{categoryInfo.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
+                  {Object.values(ListCategoryEnum)
+                    .filter((enumValue) =>
+                      enumValue === ListCategoryEnum.DONE ? !hasDoneList : true
+                    )
+                    .map((enumValue) => {
+                      const categoryInfo = categoryMap[enumValue];
+                      return (
+                        <SelectItem key={enumValue} value={enumValue}>
+                          <div className="flex items-center gap-2">
+                            <categoryInfo.icon
+                              className={cn("h-4 w-4", categoryInfo.color)}
+                            />
+                            <span>{categoryInfo.label}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                 </SelectContent>
               </Select>
             </div>

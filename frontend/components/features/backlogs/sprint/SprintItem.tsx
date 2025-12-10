@@ -63,7 +63,7 @@ export function SprintItem({
       className={cn(
         "flex flex-col rounded-lg border bg-card transition-all duration-300 ease-in-out",
         shouldHighlight 
-          ? "border-primary ring-4 ring-primary/10 shadow-xl scale-[1.005] bg-primary/5 z-10" 
+          ? "border-primary ring-4 ring-primary/10 shadow-xl bg-primary/5 z-10" 
           : "hover:border-primary/50 hover:shadow-sm"
       )}
     >

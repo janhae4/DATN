@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button"; // Đảm bảo bạn đã có Button component
+
 import { 
   ArrowRight, 
   CheckCircle2, 
@@ -10,35 +11,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import HeroImg from "@public/assets/landingPage/heroImg.jpg";
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { teamService } from '@/services/teamService'; // Service server-side của bạn
-export default async function Home() {
-  const cookieStore = await cookies();
-  const hasToken = cookieStore.has('accessToken') || cookieStore.has('connect.sid');
 
-  // 1. Nếu chưa đăng nhập -> Đá về Login
-  if (!hasToken) {
-    redirect('/auth#login');
-  }
-
-  try {
-    const teams = await teamService.getTeams(); 
-
-    if (teams && teams.length > 0) {
-      const lastTeamId = cookieStore.get('lastTeamId')?.value;
-      const targetTeam = teams.find(t => t.id === lastTeamId) || teams[0];
-
-      // --> CHUYỂN HƯỚNG ĐÚNG CHỖ
-      redirect(`/teams/${targetTeam.id}/dashboard`);
-    } else {
-      // Trường hợp User mới reg nick, chưa có team nào
-      redirect('/teams/create'); // Hoặc trang "Onboarding"
-    }
-  } catch (error) {
-    // Nếu lỗi API (Token hết hạn/Lỗi server) -> Về Login
-    redirect('/auth#login');
-  }
+export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans text-foreground">
       
@@ -280,7 +254,7 @@ export default async function Home() {
             <Zap size={16} /> Taskora
           </div>
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Taskora Inc. All rights reserved.
+            {new Date().getFullYear()} Taskora Inc. All rights reserved.
           </p>
           <nav className="flex gap-4 sm:gap-6">
             <Link href="#" className="text-xs hover:underline underline-offset-4 text-muted-foreground hover:text-foreground">

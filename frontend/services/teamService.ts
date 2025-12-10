@@ -48,6 +48,7 @@ export interface ChangeRoleMemberDto {
 
 export const teamService = {
 
+  
   // Get teams for the current user
   getTeams: async (): Promise<(Team & { role: string })[]> => {
     const response = await apiClient.get<Team[]>('/teams/me');

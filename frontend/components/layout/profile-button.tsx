@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserProfile } from "@/types/auth";
 import { useAuth } from '@/contexts/AuthContext';
+import { ThemeToggle } from "./ThemeToggle";
 
 // A helper function for simple navigation to make the code cleaner.
 const navigateTo = (path: string) => {
@@ -63,7 +64,13 @@ export function ProfileButton() {
         
         <DropdownMenuSeparator />
 
-      <DropdownMenuGroup>
+        <div className="px-2 py-1.5">
+          <ThemeToggle />
+        </div>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
           <DropdownMenuItem onSelect={() => navigateTo('/profile')}>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>

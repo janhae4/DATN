@@ -17,7 +17,7 @@ import { useDeleteTaskLabel } from "@/hooks/useTaskLabel"
 import { Label, TaskLabel } from "@/types"
 
 export interface LabelPopoverProps {
-    initialSelectedLabels: TaskLabel[];
+    initialSelectedLabels: (TaskLabel | Label)[];
     taskId: string;
     onSelectionChange: (newLabels: Label[]) => void;
 }
