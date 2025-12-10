@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Task, TaskLabel } from "@/types"; // Đảm bảo import đúng TaskLabel hoặc Label
+import { Task, TaskLabel } from "@/types";
 import {
   taskService,
   CreateTaskDto,
@@ -42,8 +42,8 @@ export function useTasks(projectId?: string) {
     },
   });
 
-  // Update Task (FIX LOGIC OPTIMISTIC HERE)
-const updateTaskMutation = useMutation({
+  // Update Task
+  const updateTaskMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: UpdateTaskDto }) =>
       taskService.updateTask(id, updates),
 
@@ -55,7 +55,7 @@ const updateTaskMutation = useMutation({
       // Tìm label objects từ projectLabels để đắp vào UI ngay lập tức
       let optimisticLabels: TaskLabel[] | undefined = undefined;
       if (updates.labelIds && projectLabels.length > 0) {
-        optimisticLabels = projectLabels.filter(label => 
+        optimisticLabels = projectLabels.filter((label) =>
           updates.labelIds?.includes(label.id)
         );
       }
@@ -63,13 +63,12 @@ const updateTaskMutation = useMutation({
       queryClient.setQueryData<Task[]>(tasksQueryKey, (old) => {
         if (!old) return [];
         return old.map((task) =>
-          task.id === id 
-            ? { 
-                ...task, 
+          task.id === id
+            ? {
+                ...task,
                 ...updates,
-                // Nếu có update label, hiển thị ngay label giả lập
-                ...(optimisticLabels ? { labels: optimisticLabels } : {})
-              } 
+                ...(optimisticLabels ? { labels: optimisticLabels } : {}),
+              }
             : task
         );
       });
@@ -84,14 +83,13 @@ const updateTaskMutation = useMutation({
     },
 
     onSettled: (data, error, variables) => {
-      // FIX QUAN TRỌNG: Invalidate tất cả các nơi có thể chứa dữ liệu cũ
       setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: tasksQueryKey });
-          queryClient.invalidateQueries({ queryKey: labelsQueryKey });
-          queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
-          
-          // Dòng này giúp useTaskLabels(taskId) tự động cập nhật nếu bạn vẫn dùng nó
-          queryClient.invalidateQueries({ queryKey: ["task-labels", variables.id] });
+        queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+        queryClient.invalidateQueries({ queryKey: labelsQueryKey });     
+        queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["task-labels", variables.id],
+        });
       }, 50);
     },
   });
@@ -114,5 +112,26 @@ const updateTaskMutation = useMutation({
     updateTask: (id: string, updates: UpdateTaskDto) =>
       updateTaskMutation.mutateAsync({ id, updates }),
     deleteTask: deleteTaskMutation.mutateAsync,
+  };
+}
+
+// --- THÊM ĐOẠN NÀY VÀO CUỐI FILE ---
+
+// Hook lấy chi tiết 1 Task (Dùng cho TaskMetaBox / Modal)
+export function useTask(taskId: string | null) {
+  const {
+    data: task,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["task", taskId], // Key này phải khớp với dòng invalidate ở trên
+    queryFn: () => taskService.getTaskById(taskId!),
+    enabled: !!taskId,
+  });
+
+  return {
+    task,
+    isLoading,
+    error: error as Error | null,
   };
 }

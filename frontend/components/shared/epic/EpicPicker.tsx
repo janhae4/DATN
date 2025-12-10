@@ -45,7 +45,7 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
       key={epic.id}
       type="button"
       className={cn(
-        "w-full flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted text-left",
+        "w-fit flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted text-left",
         value === epic.id ? "bg-primary/5" : ""
       )}
       onClick={() => {
@@ -69,7 +69,7 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
       return (
         <Button
           variant="outline"
-          className="h-7 invisible group-hover:visible"
+          className="h-7 opacity-0 group-hover:opacity-100"
           onClick={() => !disabled && setOpen(true)}
         >
           <Plus className="h-3 w-3 mr-1" /> <span className="">Epic</span>
@@ -79,7 +79,7 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
     return (
       <div
         className={cn(
-          "flex items-center px-2 py-0.5 border rounded font-medium uppercase cursor-pointer",
+          "flex w-fit items-center px-2 py-0.5 border rounded font-medium uppercase cursor-pointer",
           disabled && "opacity-50 cursor-not-allowed pointer-events-none"
         )}
         style={{

@@ -41,7 +41,7 @@ const data = {
       items: [
         {
           title: "Dashboard",
-          url: "dashboard",
+          url: "dashboard#summary",
         },
         {
           title: "Boards",
@@ -106,16 +106,44 @@ import { useProjects } from "@/hooks/useProjects"
 import { useParams } from "next/navigation"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const teamId = useParams().teamId as string
+  const params = useParams()
+  const teamId = params.teamId as string
+  const projectId = params.projectId as string | undefined
   const { projects } = useProjects(teamId)
 
   const formattedProjects = React.useMemo(() => {
     return projects.map((project) => ({
       name: project.name,
-      url: `/${teamId}/${project.id}/dashboard`,
-      icon: Frame, 
+        url: `/${teamId}/${project.id}/dashboard`,
+      icon: Frame,
     }))
-  }, [projects])
+  }, [projects, teamId])
+
+  const effectiveProjectId = React.useMemo(() => {
+    if (projectId) return projectId
+    if (projects && projects.length > 0) return projects[0].id
+    return undefined
+  }, [projectId, projects])
+
+  const navMainWithParams = React.useMemo(() => {
+    if (!teamId || !effectiveProjectId) {
+      return data.navMain
+    }
+
+    const basePath = `/${teamId}/${effectiveProjectId}`
+
+    return data.navMain.map((item) => ({
+      ...item,
+      // Đặc biệt: mục "Team" luôn trỏ tới /team (không kèm teamId/projectId)
+      url: item.url === "team" ? "/team" : `${basePath}/${item.url}`,
+      items: item.items
+        ? item.items.map((subItem) => ({
+            ...subItem,
+            url: `${basePath}/${subItem.url}`,
+          }))
+        : item.items,
+    }))
+  }, [teamId, effectiveProjectId])
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -123,7 +151,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMainWithParams} />
         <NavProjects projects={formattedProjects} />
       </SidebarContent>
       <SidebarRail />

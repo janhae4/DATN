@@ -9,7 +9,8 @@ export interface CreateListDto {
   position: number;
   projectId: string;
   category?: ListCategoryEnum;
-  isArchived?: boolean;
+  limited?: number | null;
+  isArchived?: boolean; 
 }
 
 export interface UpdateListDto extends Partial<CreateListDto> {}
@@ -58,10 +59,10 @@ export const listService = {
 
   /**
    * Cập nhật list
-   * PATCH /list/{id}
+   * Put /list/{id}
    */
   updateList: async (id: string, updates: UpdateListDto): Promise<List> => {
-    const response = await apiClient.patch<List>(`/list/${id}`, updates);
+    const response = await apiClient.put<List>(`/list/${id}`, updates);
     return response.data;
   },
 

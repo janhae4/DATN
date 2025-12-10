@@ -301,12 +301,12 @@ export default function AttachmentPage() {
           className={`flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg cursor-pointer transition-colors
             ${isDragging
               ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+              : 'border-gray-300 hover:border-gray-400'
             }
           `}
         >
-          <UploadCloud className={`h-12 w-12 ${isDragging ? 'text-blue-600' : 'text-gray-400'}`} />
-          <p className="mt-4 text-lg font-semibold text-gray-700">
+          <UploadCloud className={`h-12 w-12 ${isDragging ? 'text-blue-600' : 'text-primary'}`} />
+          <p className="mt-4 text-lg font-semibold ">
             Click to choose files or drag and drop
           </p>
           <p className="text-sm text-gray-500">

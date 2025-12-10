@@ -35,6 +35,15 @@ export class CreateTaskDto {
   @IsUUID()
   projectId: string;
 
+
+  @ApiProperty({
+    description: 'ID of the parent this task belongs to',
+    format: 'uuid',
+  })
+  @IsUUID()
+  @IsOptional()
+  parentId: string;
+
   @ApiProperty({
     description: 'ID of the list (column) this task is in',
     format: 'uuid',
@@ -42,7 +51,7 @@ export class CreateTaskDto {
   @IsUUID()
   listId: string;
 
-   @ApiProperty({
+  @ApiProperty({
     description: 'IDs of the label this task is in',
     format: 'uuid',
   })

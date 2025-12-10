@@ -11,14 +11,29 @@ import {
 import { Archive } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { BacklogTaskList } from "./task/backlogTaskList"
-import { List } from "@/types"
+import { List, Task } from "@/types"
 
 interface BacklogAccordionItemProps {
   lists: List[]
   taskCount: number
+  tasks: Task[]
+  isLoading?: boolean
+  error?: any
+  onRowClick: (task: Task) => void
+  onUpdateTask: (taskId: string, updates: any) => void
+  onDeleteTasks: (ids: string[]) => Promise<void> | void
 }
 
-export function BacklogAccordionItem({ lists, taskCount }: BacklogAccordionItemProps) {
+export function BacklogAccordionItem({
+  lists,
+  taskCount,
+  tasks,
+  isLoading,
+  error,
+  onRowClick,
+  onUpdateTask,
+  onDeleteTasks,
+}: BacklogAccordionItemProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: 'backlog-drop-area',
     data: {
@@ -30,7 +45,6 @@ export function BacklogAccordionItem({ lists, taskCount }: BacklogAccordionItemP
   const isOverBacklog = isOver
   const isOverTaskInBacklog = over?.data?.current?.task && !over?.data?.current?.task?.sprintId
   const shouldHighlight = isOverBacklog || isOverTaskInBacklog
-
   return (
     <div 
       ref={setNodeRef} 
@@ -57,7 +71,15 @@ export function BacklogAccordionItem({ lists, taskCount }: BacklogAccordionItemP
           </div>
         </AccordionTrigger>
         <AccordionContent className="p-1 border-t bg-muted/20">
-          <BacklogTaskList lists={lists} />
+          <BacklogTaskList
+            lists={lists}
+            tasks={tasks}
+            isLoading={isLoading}
+            error={error}
+            onRowClick={onRowClick}
+            onUpdateTask={onUpdateTask}
+            onDeleteTasks={onDeleteTasks}
+          />
         </AccordionContent>
       </AccordionItem>
     </div>

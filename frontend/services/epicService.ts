@@ -12,8 +12,8 @@ export interface CreateEpicDto {
   color?: string;
   priority?: Priority;
   projectId: string;
-  startDate?: string; // ISO Date string
-  dueDate?: string;   // ISO Date string
+    startDate?: string; 
+    dueDate?: string;   
 }
 
 export interface UpdateEpicDto extends Partial<CreateEpicDto> {}

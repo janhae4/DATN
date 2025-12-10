@@ -1,88 +1,104 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  Minus 
-} from 'lucide-react'; // <-- ĐÃ THAY ĐỔI
+import {
+  ChevronUp,
+  ChevronDown,
+  Minus
+} from 'lucide-react';
 
 interface StatCardProps {
   icon: ReactNode;
-  value: number;
+  value: number | string; // Changed to allow formatted strings (e.g. "1,234")
   title: string;
   period: string;
   change?: number;
   unit?: string;
+  className?: string; // Added for external styling flexibility
 }
 
-export default function StatCard({ 
-  icon, 
-  value, 
-  title, 
-  period, 
+export default function StatCard({
+  icon,
+  value,
+  title,
+  period,
   change,
-  unit = "" 
+  unit = "",
+  className
 }: StatCardProps) {
 
-  // --- Logic xử lý cho prop 'change' ---
+  // --- Logic for 'change' prop ---
   const hasChangeValue = change !== undefined;
-  let changeDisplay = null;
-  
+
+  let ChangeIcon = Minus;
+  let changeColorClass = "text-muted-foreground bg-secondary"; // Default/Neutral
+
   if (hasChangeValue) {
-    const isPositive = change > 0;
-    const isNegative = change < 0;
-    const absChange = Math.abs(change);
-
-    let bgColorClass = 'bg-gray-100 text-gray-800'; // Dùng màu muted
-    let textColorClass = 'text-gray-800';
-    let ArrowIcon = Minus; // <-- ĐÃ THAY ĐỔI
-
-    if (isPositive) {
-      bgColorClass = 'bg-green-100 text-green-800';
-      textColorClass = 'text-green-800';
-      ArrowIcon = ChevronUp; // <-- ĐÃ THAY ĐỔI
-    } else if (isNegative) {
-      bgColorClass = 'bg-red-100 text-red-800';
-      textColorClass = 'text-red-800';
-      ArrowIcon = ChevronDown; // <-- ĐÃ THAY ĐỔI
+    if (change > 0) {
+      ChangeIcon = ChevronUp;
+      // Using opacity (e.g., /15) allows this to work on both Light and Dark modes
+      changeColorClass = "text-emerald-600 dark:text-emerald-400 bg-emerald-500/15";
+    } else if (change < 0) {
+      ChangeIcon = ChevronDown;
+      changeColorClass = "text-rose-600 dark:text-rose-400 bg-rose-500/15";
     }
-
-    changeDisplay = (
-      <div className={cn(
-        "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-        bgColorClass,
-        textColorClass
-      )}>
-        {/* Kích thước icon của Lucide (h-3 w-3) nhỏ hơn Radix một chút (h-4 w-4)
-            nên dùng strokeWidth={3} để nó đậm hơn, hoặc tăng size
-        */}
-        <ArrowIcon className="h-3 w-3" strokeWidth={3} />
-        {absChange}%
-      </div>
-    );
   }
-  // --- Hết logic ---
+  // --- End Logic ---
 
   return (
+    <div className={cn(
+      "flex flex-col px-5 py-4 bg-card text-card-foreground rounded-xl border border-border shadow-sm transition-all hover:shadow-md",
+      className
+    )}>
 
-    <div className="flex flex-col p-4 bg-white border rounded-lg shadow-sm w-full">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 text-base font-medium text-gray-800">
-          <span className="text-gray-600">{icon}</span>
-          <span>{title}</span>
+      {/* Header: Title and Icon */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+
+          <span className="text-sm font-medium text-muted-foreground">
+            {title}
+          </span>
+
+          {hasChangeValue ? (
+            <div className={cn(
+              "flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-medium",
+              changeColorClass
+            )}>
+              <ChangeIcon className="h-3 w-3" strokeWidth={3} />
+              <span>{Math.abs(change)}%</span>
+            </div>
+          ) : (
+            // Placeholder to keep alignment if needed, or render nothing
+            <div className="h-6" />
+          )}
         </div>
-        {changeDisplay}
+
+        {/* Icon wrapper for consistent sizing and muted color */}
+        <div className="p-2 rounded-md bg-secondary/50 text-foreground/70">
+          {icon}
+        </div>
+
       </div>
 
-      <div className="flex flex-wrap justify-between items-end">
-        <div>
-
-        <span className="text-4xl font-bold">{value}</span>
-        {unit && <span className="ml-2 text-gray-600">{unit}</span>}
-        </div>
-      <p className="text-sm text-gray-500">{period}</p>
+      {/* Main Value */}
+      <div className='w-full flex justify-between items-end'>
+        
+      <div className="mt-4 flex items-baseline gap-1">
+        <span className="text-3xl font-bold tracking-tight">
+          {value}
+        </span>
+        {unit && (
+          <span className="text-sm font-medium text-muted-foreground">
+            {unit}
+          </span>
+        )}
       </div>
 
+      {/* Footer: Change Badge and Period */}
+
+        <p className="text-xs text-muted-foreground">
+          {period}
+        </p>
+      </div>
     </div>
   );
 }

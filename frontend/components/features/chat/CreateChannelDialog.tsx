@@ -122,9 +122,9 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
     );
   };
 
-  // Filter out current user from the list of selectable members
+  // FIX: Lọc bỏ user hiện tại VÀ những member bị thiếu thông tin user (undefined)
   const availableMembers = teamMembers?.filter(
-    (m) => m.userId !== userProfile?.id
+    (m) => m.userId !== userProfile?.id && !!m.user
   ) || [];
 
   return (
@@ -193,6 +193,7 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
                       <CommandList>
                         {availableMembers.filter(
                           (m) =>
+                            // Vì đã lọc availableMembers ở trên nên m.user chắc chắn tồn tại
                             m.user.name
                               .toLowerCase()
                               .includes(searchValue.toLowerCase()) ||

@@ -49,8 +49,9 @@ export function KanbanSprintSelection({ sprints, onStartSprint }: KanbanSprintSe
               </CardContent>
               <CardFooter className="pt-2">
                 <Button 
-                  className="w-full gap-2 opacity-0 group-hover:opacity-100 transition-opacity" 
+                  className="w-full gap-2  transition-opacity" 
                   size="sm"
+                  variant="outline"
                   onClick={() => onStartSprint(sprint.id)}
                 >
                   <Play className="h-3 w-3" /> Start Sprint

@@ -1,5 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { teamService } from "@/services/teamService";
+import { 
+  teamService, 
+  CreateTeamDto, 
+  UpdateTeamDto, 
+  LeaveMemberDto,
+  RemoveMemberDto,
+  TransferOwnershipDto,
+  ChangeRoleMemberDto,
+  AddMemberDto
+} from "@/services/teamService";
 import { useUserProfile } from "./useAuth";
 
 // --- Hooks ---
@@ -30,6 +39,92 @@ export const useTeamMembers = (teamId: string | null) => {
   });
 };
 
+// --- Team Mutations ---
+
+export const useCreateTeam = () => {
+  const queryClient = useQueryClient();
+  const { data: user } = useUserProfile();
+
+  return useMutation({
+    mutationFn: (data: CreateTeamDto) => teamService.createTeam(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+    },
+  });
+};
+
+export const useUpdateTeam = () => {
+  const queryClient = useQueryClient();
+  const { data: user } = useUserProfile();
+
+  return useMutation({
+    mutationFn: ({ teamId, data }: { teamId: string; data: UpdateTeamDto }) =>
+      teamService.updateTeam(teamId, data),
+    onSuccess: (updatedTeam) => {
+      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["team", updatedTeam.id] });
+    },
+  });
+};
+
+export const useDeleteTeam = () => {
+  const queryClient = useQueryClient();
+  const { data: user } = useUserProfile();
+
+  return useMutation({
+    mutationFn: (teamId: string) => teamService.deleteTeam(teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+    },
+  });
+};
+
+export const useLeaveTeam = () => {
+  const queryClient = useQueryClient();
+  const { data: user } = useUserProfile();
+
+  return useMutation({
+    mutationFn: (payload: LeaveMemberDto) => teamService.leaveTeam(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+    },
+  });
+};
+
+export const useRemoveMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: RemoveMemberDto) => teamService.removeMember(payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });
+    },
+  });
+};
+
+export const useTransferOwnership = () => {
+  const queryClient = useQueryClient();
+  const { data: user } = useUserProfile();
+  
+  return useMutation({
+    mutationFn: (payload: TransferOwnershipDto) => teamService.transferOwnership(payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["team", variables.teamId] });
+      queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });
+      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+    },
+  });
+};
+
+export const useChangeMemberRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ChangeRoleMemberDto) => teamService.changeMemberRole(payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });
+    },
+  });
+};
+
 export const useDiscussions = (teamId: string | null) => {
   return useQuery({
     queryKey: ["discussions", teamId],
@@ -57,17 +152,17 @@ export const useMessages = (discussionId: string | null) => {
 
 // --- Mutations ---
 
-// export const useSendMessage = () => {
-//   const queryClient = useQueryClient();
-//   return useMutation({
-//     mutationFn: ({ discussionId, senderId, content }: { discussionId: string; senderId: string; content: string }) =>
-//       teamService.sendMessage(discussionId, senderId, content),
-//     onSuccess: (newMessage, variables) => {
-//       // Optimistically update or invalidate
-//       queryClient.invalidateQueries({ queryKey: ["messages", variables.discussionId] });
-//     },
-//   });
-// };
+export const useSendMessage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ discussionId, content }: { discussionId: string; content: string }) =>
+      teamService.sendMessage(discussionId, content),
+    onSuccess: (_, variables) => {
+      // Optimistically update or invalidate
+      queryClient.invalidateQueries({ queryKey: ["messages", variables.discussionId] });
+    },
+  });
+};
 
 export const useCreateDiscussion = () => {
   const queryClient = useQueryClient();

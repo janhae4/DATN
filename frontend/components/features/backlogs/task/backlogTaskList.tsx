@@ -1,57 +1,84 @@
 "use client"
 
 import * as React from "react"
-import { useParams } from "next/navigation"
-import { PlusIcon, Loader2, AlertCircle } from "lucide-react"
+import { PlusIcon, Loader2, AlertCircle, Trash2, X } from "lucide-react"
 
 import { Table } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
-import { useTasks } from "@/hooks/useTasks" // Import Hook
-import { List, TaskLabel } from "@/types"
+import { List, Task } from "@/types"
+
+import { toast } from "sonner"
 
 import { AddNewTaskRow } from "./AddNewTaskRow"
 import { TaskRowList } from "./TaskRowList"
 import { UpdateTaskDto } from "@/services/taskService"
+import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 
 type BacklogTaskListProps = {
   lists?: List[]
+  tasks: Task[]
+  isLoading?: boolean
+  error?: any
+  onRowClick: (task: Task) => void
+  onUpdateTask: (taskId: string, updates: UpdateTaskDto) => void
+  onDeleteTasks: (ids: string[]) => Promise<void> | void
 }
 
-export function BacklogTaskList({ lists }: BacklogTaskListProps) {
-  const params = useParams();
-  const projectId = params.projectId as string;
+export function BacklogTaskList({
+  lists,
+  tasks,
+  isLoading = false,
+  error,
+  onRowClick,
+  onUpdateTask,
+  onDeleteTasks,
+}: BacklogTaskListProps) {
+  const { isAddingNewRow, setIsAddingNewRow } = useTaskManagementContext()
 
-  // 1. Lấy dữ liệu và hàm xóa, CẬP NHẬT (updateTask)
-  const { tasks, deleteTask, updateTask, isLoading, error, projectLabels } = useTasks(projectId);
+  // 2. Selection State (Lifted Up)
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
-
-  // 2. Các thao tác UI global 
-  const {
-    isAddingNewRow,
-    setIsAddingNewRow,
-    handleRowClick,
-  } = useTaskManagementContext()
-
-  // 3. Lọc Backlog Tasks (Task chưa có sprintId)
+  // 3. Filter Backlog Tasks (No Sprint)
   const backlogTasks = React.useMemo(
-    () => tasks.filter((task) => !task.sprintId),
+    () => tasks.filter((task) => !task.sprintId && !task.parentId),
     [tasks]
   )
 
   const listsList = lists ?? []
   const isEmpty = backlogTasks.length === 0 && !isAddingNewRow
 
-  // 4. Xử lý xóa nhiều (sử dụng hàm delete từ hook)
-  const handleDeleteMultiple = async (ids: string[]) => {
-    await Promise.all(ids.map((id) => deleteTask(id)));
+  // --- Handlers ---
+
+  const handleSelectTask = (taskId: string, checked: boolean) => {
+    setSelectedIds((prev) =>
+      checked ? [...prev, taskId] : prev.filter((id) => id !== taskId)
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    
+    try {
+        // Delete all selected tasks in parallel
+        await onDeleteTasks(selectedIds);
+
+        toast.success(`Deleted ${selectedIds.length} tasks`);
+        setSelectedIds([]); // Clear selection after delete
+    } catch (err) {
+        toast.error("Failed to delete tasks");
+        console.error(err);
+    }
   }
 
   const handleUpdateTask = (taskId: string, updates: UpdateTaskDto) => {
-    console.log("updating tasks: ", taskId, updates)
-    updateTask(taskId, updates);
+    onUpdateTask(taskId, updates);
   }
 
+  // --- Render ---
 
   if (isLoading) {
     return (
@@ -72,7 +99,26 @@ export function BacklogTaskList({ lists }: BacklogTaskListProps) {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col relative">
+      
+      {/* --- DELETE TOOLBAR (Shows when tasks are selected) --- */}
+      {selectedIds.length > 0 && (
+        <div className="sticky top-0 z-10 flex items-center justify-between p-2 mb-2 bg-destructive/10 border border-destructive/20 rounded-md shadow-sm animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/20" onClick={handleClearSelection}>
+                    <X className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium text-destructive">
+                    {selectedIds.length} selected
+                </span>
+            </div>
+            <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                Delete
+            </Button>
+        </div>
+      )}
+
       <div className="rounded-lg">
         <div>
           {isEmpty ? (
@@ -90,13 +136,16 @@ export function BacklogTaskList({ lists }: BacklogTaskListProps) {
                 tasks={backlogTasks}
                 lists={listsList}
                 isDraggable={true}
-                onRowClick={handleRowClick}
-                onDeleteMultiple={handleDeleteMultiple}
+                onRowClick={onRowClick}
                 onUpdateTask={handleUpdateTask}
+                // Pass selection props down
+                selectedIds={selectedIds}
+                onSelect={handleSelectTask}
               >
                 {isAddingNewRow && (
                   <AddNewTaskRow
                     lists={listsList}
+                    onCancel={() => setIsAddingNewRow(false)}
                   />
                 )}
               </TaskRowList>

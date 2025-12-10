@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React from 'react';
 import dynamic from 'next/dynamic';
@@ -21,6 +21,7 @@ const ProfileButton = dynamic(
 
 const Header = () => {
     const { user } = useAuth();
+
     return (
         <header className="mx-5 my-2 flex flex-wrap gap-2 justify-between items-center">
             <div className='flex gap-2'>

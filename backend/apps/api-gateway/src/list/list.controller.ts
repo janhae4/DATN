@@ -8,6 +8,7 @@ import {
   Param,
   UseGuards,
   Query,
+  Put,
 } from '@nestjs/common';
 import { CreateListDto, Role, UpdateListDto } from '@app/contracts';
 import {
@@ -50,7 +51,7 @@ export class ListController {
     return this.listService.findAllByProject(projectId);
   }
 
-  @Patch(':id')
+  @Put(':id')
   @ApiOperation({ summary: 'Update a list by id' })
   @ApiBody({ type: UpdateListDto })
   update(@Param('id') id: string, @Body() updateListDto: UpdateListDto) {

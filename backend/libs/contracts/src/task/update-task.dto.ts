@@ -9,6 +9,7 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
     @IsUUID('4', { each: true })
     labelIds?: string[];
 
+    @IsOptional()
     @IsArray()
     @IsString({ each: true })
     @IsUUID('4', { each: true })

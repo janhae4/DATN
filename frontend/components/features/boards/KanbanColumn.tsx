@@ -3,6 +3,8 @@
 import * as React from "react"
 import { Task } from "@/types"
 import { List } from "@/types"
+import { UpdateTaskDto } from "@/services/taskService"
+
 import { KanbanCard } from "./KanbanCard"
 import { useDroppable } from "@dnd-kit/core"
 import {
@@ -37,17 +39,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 interface KanbanColumnProps {
+  projectId: string
   list: List
   tasks: Task[]
+  sprintId: string
   allLists: List[]
   onListUpdate?: () => void
   onMoveLeft?: () => void
   onMoveRight?: () => void
   onDeleteList?: () => void
-  onUpdateLimit?: (limit: number | undefined) => void
+  onUpdateLimit?: (limit: number | null) => void
 }
 
-export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, onMoveRight, onDeleteList, onUpdateLimit }: KanbanColumnProps) {
+export function KanbanColumn({ projectId, list, tasks, sprintId, allLists, onListUpdate, onMoveLeft, onMoveRight, onDeleteList, onUpdateLimit }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: list.id,
     data: {
@@ -69,14 +73,17 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
     if (!isNaN(limit) && limit > 0) {
       onUpdateLimit?.(limit)
     } else {
-      onUpdateLimit?.(undefined)
+      onUpdateLimit?.(null)
     }
     setIsMenuOpen(false)
   }
 
   const taskIds = React.useMemo(() => tasks.map((t) => t.id), [tasks]);
   const isDoneColumn = list.category === ListCategoryEnum.DONE;
-  const isLimitExceeded = list.limited !== undefined && tasks.length > list.limited;
+  
+  // SỬA: Chỉ tính quá hạn mức nếu có limit và limit > 0
+  const hasLimit = typeof list.limited === 'number' && list.limited > 0;
+  const isLimitExceeded = hasLimit && tasks.length > list.limited!;
   
   const isFirst = allLists[0]?.id === list.id;
   const isLast = allLists[allLists.length - 1]?.id === list.id;
@@ -94,7 +101,7 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
       )}
     >
       {/* Header */}
-      <div className="flex sticky bg-secondary!   rounded-xl   top-0 z-10 items-center justify-between p-4 pb-3">
+      <div className="flex sticky bg-secondary! mb-2   rounded-t-xl   top-0 z-10 items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-2.5">
            {list.category === ListCategoryEnum.TODO && (
              <TooltipProvider>
@@ -133,13 +140,17 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
              </TooltipProvider>
            )}
            <h3 className="font-semibold text-sm text-foreground/90">{list.name}</h3>
+           
            <Badge variant="secondary" className={cn(
              "ml-1 px-1.5 py-0 h-5 text-[10px] font-bold text-muted-foreground bg-background shadow-sm",
              isLimitExceeded && "text-destructive bg-destructive/10"
            )}>
              {tasks.length}
-             {list.limited ? ` / ${list.limited}` : ""}
+             {/* Chỉ hiện limit nếu có */}
+             {hasLimit ? ` / ${list.limited}` : ""}
            </Badge>
+
+           {/* Chỉ hiện icon cảnh báo nếu quá limit */}
            {isLimitExceeded && (
              <TooltipProvider>
                <Tooltip>
@@ -163,73 +174,79 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
             <Plus className="h-4 w-4" />
           </Button>
           
-          <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled={isFirst} onClick={onMoveLeft}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Move Left
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={isLast} onClick={onMoveRight}>
-                <ArrowRight className="mr-2 h-4 w-4" />
-                Move Right
-              </DropdownMenuItem>
-              
-              {!isDoneColumn && (
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Settings2 className="mr-2 h-4 w-4" />
-                    Set Limit
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="p-3 w-60">
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="limit" className="text-xs font-medium">
-                          Max tasks
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="limit"
-                            type="number"
-                            value={limitInput}
-                            onChange={(e) => setLimitInput(e.target.value)}
-                            className="h-8"
-                            placeholder="No limit"
-                            min="1"
-                            onKeyDown={(e) => e.stopPropagation()}
-                          />
-                          <Button size="sm" onClick={handleSaveLimit} className="h-8">
-                            Save
-                          </Button>
+          {!isDoneColumn && (
+            <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled={isFirst} onClick={onMoveLeft}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Move Left
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={isLast} onClick={onMoveRight}>
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  Move Right
+                </DropdownMenuItem>
+                
+                {!isDoneColumn && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Settings2 className="mr-2 h-4 w-4" />
+                      Set Limit
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="p-3 w-60">
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="limit" className="text-xs font-medium">
+                            Max tasks
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="limit"
+                              type="number"
+                              value={limitInput}
+                              onChange={(e) => setLimitInput(e.target.value)}
+                              className="h-8"
+                              placeholder="No limit"
+                              min="1"
+                              onKeyDown={(e) => e.stopPropagation()}
+                            />
+                            <Button size="sm" onClick={handleSaveLimit} className="h-8">
+                              Save
+                            </Button>
+                          </div>
                         </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Leave empty to remove limit.
+                        </p>
                       </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Leave empty to remove limit.
-                      </p>
-                    </div>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
 
-              <ListEditDialog listId={list.id} onSave={() => onListUpdate?.()}>
-                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                   <Pencil className="mr-2 h-4 w-4" />
-                   Edit
-                 </DropdownMenuItem>
-              </ListEditDialog>
-              <DropdownMenuItem 
-                className="text-destructive focus:text-destructive"
-                onClick={onDeleteList}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <ListEditDialog 
+                  projectId={projectId} 
+                  lists={allLists} 
+                  initialListId={list.id}
+                >
+                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                     <Pencil className="mr-2 h-4 w-4" />
+                     Edit
+                   </DropdownMenuItem>
+                </ListEditDialog>
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={onDeleteList}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -261,6 +278,8 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
                  >
                    <KanbanAddNewCard 
                      listId={list.id} 
+                     projectId={projectId}
+                     sprintId={sprintId}
                      onCancel={() => setIsAdding(false)} 
                    />
                  </motion.div>
@@ -272,10 +291,12 @@ export function KanbanColumn({ list, tasks, allLists, onListUpdate, onMoveLeft, 
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     onClick={() => setIsAdding(true)}
-                    className="opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center gap-2 p-3 rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5 text-sm font-medium text-muted-foreground hover:text-primary w-full text-left mt-1"
+                    className="hidden group-hover:block transition-all cursor-pointer duration-200 items-center gap-2 p-3 rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5 text-sm font-medium text-muted-foreground hover:text-primary w-full text-left mt-1"
                  >
+                  <div className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
                     Create new task
+                  </div>
                  </motion.button>
                )}
              </AnimatePresence>

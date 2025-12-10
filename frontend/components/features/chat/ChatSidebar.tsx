@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  Settings,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,6 @@ import { Separator } from "@/components/ui/separator";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useDiscussions, useTeamMembers, useGetOrCreateDirectMessage } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
-import { CreateTeamModal } from "@/components/features/team/createTeamModal";
 import { AddMemberDialog } from "@/components/features/team/AddMemberDialog";
 import { CreateChannelDialog } from "@/components/features/chat/CreateChannelDialog";
 
@@ -252,16 +250,21 @@ export default function ChatSidebar({
               </AddMemberDialog>
             }
           >
-            {members?.map((member) => (
-              <div key={member.id} onClick={() => handleDMClick(member.userId)}>
-                <DMItem
-                  name={member.user.name}
-                  avatar={member.user.avatar || undefined}
-                  isOnline={member.isActive}
-                  status={member.role}
-                />
-              </div>
-            ))}
+            {/* FIX: Thêm kiểm tra member.user tồn tại trước khi render */}
+            {members?.map((member) => {
+              if (!member.user) return null; // Bỏ qua nếu không có thông tin user
+              
+              return (
+                <div key={member.id} onClick={() => handleDMClick(member.userId)}>
+                  <DMItem
+                    name={member.user.name}
+                    avatar={member.user.avatar || undefined}
+                    isOnline={member.isActive}
+                    status={member.role}
+                  />
+                </div>
+              );
+            })}
           </SidebarSection>
         </div>
       </div>

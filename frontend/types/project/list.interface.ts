@@ -5,7 +5,7 @@ export interface List {
   name: string;
   position: number;
   projectId: string;
-  limited?: number;
+  limited?: number | null;
   category: ListCategoryEnum;
   isArchived: boolean;
   createdAt: string;
