@@ -15,7 +15,8 @@ import {
   SquareTerminal,
   Star,
   Users,
-  MessageCircle
+  MessageCircle,
+  CalendarDays,
 } from "lucide-react"
 
 import { NavMain } from "@/components/sidebar/nav-main"
@@ -87,6 +88,12 @@ const data = {
       isActive: true
     },
     {
+      title: "Calendar",
+      url: "calendar",
+      icon: CalendarDays,
+      isActive: true,
+    },
+    {
       title: "Messages",
       url: "chat",
       icon: MessageCircle,
@@ -132,17 +139,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     const basePath = `/${teamId}/${effectiveProjectId}`
 
-    return data.navMain.map((item) => ({
-      ...item,
-      // Đặc biệt: mục "Team" luôn trỏ tới /team (không kèm teamId/projectId)
-      url: item.url === "team" ? "/team" : `${basePath}/${item.url}`,
-      items: item.items
-        ? item.items.map((subItem) => ({
-            ...subItem,
-            url: `${basePath}/${subItem.url}`,
-          }))
-        : item.items,
-    }))
+    return data.navMain.map((item) => {
+      // Xử lý đặc biệt cho Team và Calendar
+      let resolvedUrl: string
+      if (item.url === "team") {
+        resolvedUrl = "/team"
+      } else if (item.url === "calendar") {
+        resolvedUrl = "/calendar"
+      } else {
+        resolvedUrl = `${basePath}/${item.url}`
+      }
+
+      return {
+        ...item,
+        url: resolvedUrl,
+        items: item.items
+          ? item.items.map((subItem) => ({
+              ...subItem,
+              url: `${basePath}/${subItem.url}`,
+            }))
+          : item.items,
+      }
+    })
   }, [teamId, effectiveProjectId])
 
   return (

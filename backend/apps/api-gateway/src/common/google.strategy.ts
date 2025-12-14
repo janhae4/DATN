@@ -25,6 +25,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         'https://www.googleapis.com/auth/calendar.events',
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.send',
+
       ],
     } as StrategyOptionsWithRequest);
   }
@@ -63,7 +64,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       isLinking,
       linkedUser,
     };
-
+    console.log("User Data created:", user); 
     done(null, user);
   }
 }
