@@ -11,6 +11,7 @@ import Summary from "./features/summary/summary"
 import Backlogs from "./features/backlogs/backlogs"
 import TimelineView from "./features/timeline/TimelineView"
 import { KanbanBoard } from "./features/boards/KanbanBoard"
+import GanttChart from "./shared/ganttchart/ganttChart"
 
 function getTabFromHash(): string {
     if (typeof window === "undefined") return "backlogs"
@@ -63,8 +64,9 @@ export function TabsNav() {
                 <TabsContent value="boards" className="flex-1 overflow-hidden min-w-0">
                     <KanbanBoard />
                 </TabsContent>
-                <TabsContent value="timeline" className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent">
-                    <TimelineView />
+                <TabsContent value="timeline" className="flex-1 h-full  overflow-y-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent">
+                    {/* <TimelineView /> */}
+                    <GanttChart />
                 </TabsContent>
             </Tabs>
         </div>

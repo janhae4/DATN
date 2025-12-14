@@ -11,7 +11,8 @@ export type Task = {
   priority?: Priority | null;
   assigneeIds?: string[] | null; // Người được assign
   labelIds?: string[]; // Nhãn
-  dueDate?: string | null; // timestamp
+  startDate?: string | null; 
+  dueDate?: string | null; 
   epicId?: string | null; // uuid
   position?: number;
   sprintId?: string | null; // uuid
