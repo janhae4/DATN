@@ -8,7 +8,6 @@ import {
   USER_EXCHANGE,
 } from '@app/contracts';
 import { AuthModule } from '../auth/auth.module';
-// THÊM ClientProvider để khai báo kiểu dữ liệu trả về
 import { ClientsModule } from '@nestjs/microservices';
 import { ProjectService } from './project.service';
 

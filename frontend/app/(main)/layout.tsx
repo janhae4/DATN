@@ -4,6 +4,7 @@ import Header from "@/components/layout/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TeamProvider } from "@/contexts/TeamContext";
 import { TeamGuard } from "@/providers/team-guard";
+import ChatWidget from "@/components/chatbot/ChatWidget";
 
 export default function MainLayout({
   children,
@@ -20,6 +21,7 @@ export default function MainLayout({
             <div className={styles.mainLayout}>
               <main className={styles.content}>
                 <Header />
+                <ChatWidget/>
                 <div className={styles.pageWrapper}>{children}</div>
               </main>
             </div>

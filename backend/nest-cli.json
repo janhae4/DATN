@@ -37,6 +37,15 @@
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
+    "calendar-service": {
+      "type": "application",
+      "root": "apps/calendar-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/calendar-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/calendar-service/tsconfig.app.json"
+      }
+    },
     "common": {
       "type": "library",
       "root": "libs/common",

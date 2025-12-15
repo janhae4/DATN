@@ -12,6 +12,7 @@ export const AUTH_PATTERN = {
   CHANGE_PASSWORD: 'auth.changePassword',
   RESET_PASSWORD_CONFIRM: 'auth.resetPasswordConfirm',
   GOOGLE_CALLBACK: 'auth.googleCallback',
+  GET_GOOGLE_TOKEN: 'auth.getgoogletoken',
   CREATE_ACCESS_TOKEN: 'auth.createAccessToken',
   VALIDATE_TOKEN: 'auth.validateToken',
   REGISTER: 'auth.register',

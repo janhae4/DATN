@@ -192,13 +192,17 @@ export class AuthService {
     }));
   }
 
-  async handleGoogleCallback(user: GoogleAccountDto) {
-    return await unwrapRpcResult(this.amqp.request({
+  // Trong file AuthService mà mom vừa gửi
+
+  async handleGoogleCallback(user: GoogleAccountDto, response: Response) {
+    const tokens = await unwrapRpcResult(this.amqp.request<LoginResponseDto>({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.GOOGLE_CALLBACK,
       payload: user,
       timeout: RPC_TIMEOUT
     }));
+    // this.setCookies(tokens.accessToken, tokens.refreshToken, response);
+    return response.redirect(`${process.env.CLIENT_URL || 'http://localhost:5000'}/dashboard`);
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {

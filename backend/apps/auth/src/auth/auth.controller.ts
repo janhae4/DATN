@@ -31,6 +31,16 @@ export class AuthController {
   }
 
   @RabbitRPC({
+  exchange: AUTH_EXCHANGE,
+  routingKey: AUTH_PATTERN.GET_GOOGLE_TOKEN, 
+  queue: AUTH_PATTERN.GET_GOOGLE_TOKEN,
+  errorHandler: customErrorHandler
+})
+async getGoogleTokens(@RabbitPayload() userId: string) {
+  return this.authService.getGoogleTokens(userId);
+}
+
+  @RabbitRPC({
     exchange: AUTH_EXCHANGE,
     routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
     queue: AUTH_PATTERN.VALIDATE_TOKEN,

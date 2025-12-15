@@ -3,7 +3,6 @@ import { AuthService } from './auth.service';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 import { UserModule } from '../user/user.module';
 import { AuthController } from './auth.controller';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -12,7 +11,7 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ClientConfigModule, UserModule],
       controllers: [AuthController],
-      providers: [AuthService, CLIENT_PROXY_PROVIDER.AUTH_CLIENT],
+      providers: [AuthService],
       exports: [AuthService],
     }).compile();
 

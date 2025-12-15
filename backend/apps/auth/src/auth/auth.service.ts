@@ -263,6 +263,13 @@ export class AuthService {
     return token;
   }
 
+  async getGoogleTokens(userId: string) {
+    return await this.amqp.request({
+      exchange: REDIS_EXCHANGE,
+      routingKey: REDIS_PATTERN.GET_GOOGLE_TOKEN,
+      payload: userId,
+    });
+  }
   private async handleLinking(data: GoogleAccountDto, account: Account) {
     const {
       accessToken,
@@ -332,6 +339,7 @@ export class AuthService {
       `Handling Google login for existing user ${account.user.id} (Email: ${data.email}).`,
     );
     const { accessToken, refreshToken } = data;
+    console.log("data from handleLoginGoogle: ",)
 
     this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
       userId: account.user.id,
@@ -340,6 +348,7 @@ export class AuthService {
     });
 
     await this._generateTokensAndSession(account.user);
+    return await this._generateTokensAndSession(account.user);
   }
 
   private async handleRegisterGoogle(data: GoogleAccountDto) {
@@ -364,6 +373,9 @@ export class AuthService {
         email,
         avatar,
         isVerified: true,
+
+        provider,
+        providerId,
       },
     })
 
@@ -387,10 +399,15 @@ export class AuthService {
       throw new BadRequestException('Google account missing email');
     }
 
+    console.log("data in google callback: ", data)
+
     const account = await this.amqp.request<Account>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_ONE_OAUTH,
-      payload: data.email,
+      payload: {
+        provider: data.provider,
+        providerId: data.providerId
+      }
     })
 
     if (data.isLinking && data.linkedUser) {
