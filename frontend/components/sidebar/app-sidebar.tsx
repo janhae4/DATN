@@ -31,7 +31,7 @@ import {
 
 const data = {
 
-  
+
 
   navMain: [
     {
@@ -99,7 +99,7 @@ const data = {
       icon: MessageCircle,
       isActive: true
     },
-     {
+    {
       title: "AI Assistant",
       url: "ai-assistant",
       icon: Sparkles,
@@ -121,7 +121,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const formattedProjects = React.useMemo(() => {
     return projects.map((project) => ({
       name: project.name,
-        url: `/${teamId}/${project.id}/dashboard`,
+      url: `/${teamId}/${project.id}/dashboard`,
       icon: Frame,
     }))
   }, [projects, teamId])
@@ -155,9 +155,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         url: resolvedUrl,
         items: item.items
           ? item.items.map((subItem) => ({
-              ...subItem,
-              url: `${basePath}/${subItem.url}`,
-            }))
+            ...subItem,
+            url: `${basePath}/${subItem.url}`,
+          }))
           : item.items,
       }
     })

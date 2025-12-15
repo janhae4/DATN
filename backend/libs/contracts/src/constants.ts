@@ -59,6 +59,7 @@ export const DIRECT_EXCHANGE = 'direct_exchange';
 export const TOPIC_EXCHANGE = 'topic_exchange';
 export const FILE_EXCHANGE = 'file_exchange';
 export const PROJECT_EXCHANGE = 'project_exchange';
+export const CALENDAR_EXCHANGE = 'calendar_exchange';
 export const TEST_EXCHANGE = 'test_exchange';
 export const SPRINT_EXCHANGE = 'sprint_exchange';
 export const EPIC_EXCHANGE = 'epic_exchange';

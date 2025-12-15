@@ -526,7 +526,7 @@ export class ClientConfigService {
   ------ PROJECT SERVICE CLIENT -----
   -------------------------
   */
- getProjectClientQueue(): string {
+  getProjectClientQueue(): string {
     return this.config.get<string>('PROJECT_QUEUE', 'project_service_queue');
   }
   get projectClientOptions(): any {
@@ -549,6 +549,26 @@ export class ClientConfigService {
       },
     };
   }
+  /*
+  -------------------------
+  ------ CALENDAR SERVICE CLIENT -----
+  -------------------------
+  */
+  getCalendarClientQueue(): string {
+    return this.config.get<string>('CALENDAR_QUEUE', 'calendar_service_queue');
+  }
+  
+  get calendarClientOptions(): any {
+    return {
+      transport: Transport.RMQ,
+      options: {
+        urls: [this.getRMQUrl()],
+        queue: this.getCalendarClientQueue(),
+        queueOptions: { durable: true },
+      },
+    };
+  }
+
 
   /*
   -------------------------

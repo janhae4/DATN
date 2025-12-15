@@ -177,12 +177,7 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
   async googleCallback(@Req() request: Request, @Res() res: Response) {
-    const data = await this.authService.handleGoogleCallback(
-      request.user as GoogleAccountDto,
-    );    
-    console.log("google callback: ", data)
-    const frontendUrl = `http://localhost:5173?accessToken=${data.accessToken}&refreshToken=${data.refreshToken}`;
-    return res.redirect(frontendUrl);
+    await this.authService.handleGoogleCallback(request.user as GoogleAccountDto, res);
   }
 
 }

@@ -15,6 +15,7 @@ create_database() {
 create_database "team"
 create_database "task"
 create_database "user"
+create_database "project"
 create_database "notification"
 create_database "call"
 create_database "epic_db"

@@ -4,7 +4,7 @@ export const REDIS_PATTERN = {
   DELETE_REFRESH_TOKEN: 'redis.deleteRefreshToken',
   CLEAR_REFRESH_TOKENS: 'redis.clearRefreshTokens',
   GET_STORED_REFRESH_TOKEN: 'redis.getStoredRefreshToken',
-  GET_GOOGLE_TOKEN: 'redis.getGoogleToken',
+  GET_GOOGLE_TOKEN: 'redis.getGoogleTokens',
   SET_LOCK_KEY: 'redis.setLockKey',
   NOTIFICATION: 'redis.notification',
   GET_USER_INFO: 'redis.getUserInfo',

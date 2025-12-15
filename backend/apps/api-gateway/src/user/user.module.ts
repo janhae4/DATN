@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { ClientConfigModule, ClientConfigService, USER_EXCHANGE } from '@app/contracts';
@@ -9,6 +9,7 @@ import { AuthModule } from '../auth/auth.module';
   imports: [
     ClientConfigModule,
     AuthModule,
+    forwardRef(() => AuthModule),
     RabbitMQModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],

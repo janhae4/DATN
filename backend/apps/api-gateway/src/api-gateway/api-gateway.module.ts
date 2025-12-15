@@ -18,6 +18,7 @@ import { ListModule } from '../list/list.module';
 import { SprintModule } from '../sprint/sprint.module';
 import { EpicModule } from '../epic/epic.module';
 import { TaskModule } from '../task/task.module';
+import { CalendarModule } from '../calendar/calendar.module';
 
 
 @Module({
@@ -49,6 +50,7 @@ import { TaskModule } from '../task/task.module';
     EpicModule,
     TaskModule,
     ProjectModule,
+    CalendarModule,
     WebhooksModule, 
   ],
   controllers: [ApiGatewayController],
