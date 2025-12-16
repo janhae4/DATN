@@ -128,6 +128,8 @@ export class UserService {
     this.logger.debug(
       `Creating a new account link for user ${partial.user?.id} with provider ${partial.provider}`,
     );
+
+    console.log("user when linking account or creating account: ", partial)
     const account = this.accountRepo.create(partial);
     return await this.accountRepo.save(account);
   }

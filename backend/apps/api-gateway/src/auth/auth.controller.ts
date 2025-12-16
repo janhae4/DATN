@@ -180,4 +180,12 @@ export class AuthController {
     await this.authService.handleGoogleCallback(request.user as GoogleAccountDto, res);
   }
 
+  @Get('/google/linked')
+  @UseGuards(RoleGuard)
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.USER)
+  @ApiOperation({ summary: 'Check if current user has linked Google account' })
+  async checkGoogleStatus(@CurrentUser('id') userId: string) {
+    return await this.authService.getGoogleConnectionStatus(userId);
+  }
 }

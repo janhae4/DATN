@@ -156,6 +156,16 @@ export const initiateGoogleLogin = () => {
   window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/auth/google`;
 };
 
+export const linkGoogleAccount = () => {
+  window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/auth/google?type=link`;
+};
+
+export const isGoogleLinked = async () => {
+  const response = await apiClient.get('/auth/google/linked');
+  return response.data;
+};
+
+
 const authService = {
   login,
   register,
@@ -169,7 +179,8 @@ const authService = {
   forgotPassword,
   resetPassword,
   refreshToken,
-  initiateGoogleLogin
+  initiateGoogleLogin,
+  linkGoogleAccount
 };
 
 export default authService;

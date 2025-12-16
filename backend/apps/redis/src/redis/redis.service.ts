@@ -101,11 +101,12 @@ export class RedisService {
   async getGoogleToken(userId: string) {
     const accessKey = `google:${userId}:access`;
     const refreshKey = `google:${userId}:refresh`;
-
     const [accessToken, refreshToken] = await Promise.all([
       this.redis.get(accessKey),
       this.redis.get(refreshKey),
     ]);
+
+    console.log("accessToken and Refresh Token:" , accessToken, refreshToken)
 
     if (!refreshToken) {
       this.logger.warn('No valid Google tokens found for user:', userId);
