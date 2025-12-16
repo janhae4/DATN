@@ -14,6 +14,8 @@ import {
   JwtDto,
   LoginDto,
   LoginResponseDto,
+  REDIS_EXCHANGE,
+  REDIS_PATTERN,
   REFRESH_TTL,
   RPC_TIMEOUT,
   User,
@@ -231,4 +233,19 @@ export class AuthService {
       timeout: RPC_TIMEOUT
     }));
   }
+
+  async getGoogleConnectionStatus(userId: string): Promise<boolean> {
+    try {
+      const result = await this.amqp.request<LoginResponseDto>({
+        exchange: REDIS_EXCHANGE,
+        routingKey: REDIS_PATTERN.GET_GOOGLE_TOKEN,
+        payload: userId, 
+      });
+      console.log(result)
+      return !!result?.accessToken; 
+    } catch (error) {
+      return false;
+    }
+  }
+
 }

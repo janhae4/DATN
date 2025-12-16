@@ -314,12 +314,14 @@ export class AuthService {
       refreshToken,
     });
 
+    console.log("user.id in handleLinking", user.id);
+
     this.logger.log(`Creating new account link for user ${user.id}.`);
     await this.amqp.request({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.CREATE_ACCOUNT,
       payload: {
-        userId: user.id,
+        user: { id: user.id },
         provider,
         providerId,
         email,

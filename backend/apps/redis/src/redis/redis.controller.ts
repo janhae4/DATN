@@ -78,7 +78,6 @@ export class RedisController {
     errorHandler: customErrorHandler
   })
   async getGoogleToken(userId: string) {
-    console.log('Google userID', userId);
     return await this.redisService.getGoogleToken(userId);
   }
 

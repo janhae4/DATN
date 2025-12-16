@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Provider } from '@/types/common/enums'
 import { useAuth } from '@/contexts/AuthContext';
-
+import { linkGoogleAccount } from "@/services/authService"
 export function ProfileHeaderAndGeneral() {
     const { user } = useAuth();
     const [name, setName] = React.useState(user?.name)
@@ -59,6 +59,8 @@ export function ProfileHeaderAndGeneral() {
                             </Button>
                             <Button variant="ghost" size="sm">Remove</Button>
                         </div>
+
+                        <Button onClick={linkGoogleAccount}>Link Google Account</Button>
                         {user?.provider === Provider.GOOGLE && (
                             <p className="text-xs text-muted-foreground">
                                 Synced from Google
@@ -87,7 +89,7 @@ export function ProfileHeaderAndGeneral() {
                             disabled
                             className="bg-muted/50"
                         />
-                         <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                             Email cannot be changed
                         </p>
                     </div>
