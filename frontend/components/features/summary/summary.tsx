@@ -1,136 +1,149 @@
-"use client"
+"use client";
 
-import React, { useMemo } from 'react'
-import { useParams } from 'next/navigation'
-import StatsCard from './statsCard'
-import { ClockIcon, CheckCircleIcon, AlertTriangleIcon, CalendarIcon } from 'lucide-react'
-import { TaskCompletionPieChart } from '../../charts/TaskCompletionPieChart'
-import { TaskActivityLineChart } from '../../charts/TaskActivityLineChart'
-import { AISummaryBox } from './AISummaryBox'
-import { UnreadEmailBox } from './UnreadEmailBox'
+import React, { useMemo } from "react";
+import { useParams } from "next/navigation";
+import StatsCard from "./statsCard";
+import {
+  ClockIcon,
+  CheckCircleIcon,
+  AlertTriangleIcon,
+  CalendarIcon,
+} from "lucide-react";
+import { TaskCompletionPieChart } from "../../charts/TaskCompletionPieChart";
+import { TaskActivityLineChart } from "../../charts/TaskActivityLineChart";
+import { AISummaryBox } from "./AISummaryBox";
+import { UnreadEmailBox } from "./UnreadEmailBox";
 
 // Hooks & Types
-import { useTasks } from '@/hooks/useTasks'
-import { useLists } from '@/hooks/useList'
-import { ListCategoryEnum } from '@/types/common/enums'
+import { useTasks } from "@/hooks/useTasks";
+import { useLists } from "@/hooks/useList";
+import { ListCategoryEnum } from "@/types/common/enums";
+import { SummarySkeleton } from "@/components/skeletons/SummarySkeleton";
 
 const Summary = () => {
-    const params = useParams();
-    const projectId = params.projectId as string;
+  const params = useParams();
+  const projectId = params.projectId as string;
 
-    // 1. Fetch Real Data
-    const { tasks } = useTasks(projectId);
-    const { lists } = useLists(projectId);
+  // 1. Fetch Real Data
+  const { tasks, isLoading: isTasksLoading } = useTasks(projectId);
+  const { lists, isLoading: isListsLoading } = useLists(projectId);
 
-    // 2. Tính toán thống kê (Real-time Calculation)
-    const stats = useMemo(() => {
-        // Fallback an toàn nếu data chưa load xong
-        if (!tasks || !lists) return { completed: 0, pending: 0, overdue: 0, dueSoon: 0 };
+  const isLoading = isTasksLoading || isListsLoading;
 
-        // Tìm danh sách ID của các cột "Done"
-        const doneListIds = lists
-            .filter(l => l.category === ListCategoryEnum.DONE)
-            .map(l => l.id);
+  // 2. Tính toán thống kê (Real-time Calculation)
+  const stats = useMemo(() => {
+    // Fallback an toàn nếu data chưa load xong
+    if (!tasks || !lists)
+      return { completed: 0, pending: 0, overdue: 0, dueSoon: 0 };
 
-        const now = new Date();
-        // Reset giờ về 0 để so sánh ngày chính xác hơn
-        now.setHours(0, 0, 0, 0);
+    // Tìm danh sách ID của các cột "Done"
+    const doneListIds = lists
+      .filter((l) => l.category === ListCategoryEnum.DONE)
+      .map((l) => l.id);
 
-        const next7Days = new Date(now);
-        next7Days.setDate(now.getDate() + 7);
+    const now = new Date();
+    // Reset giờ về 0 để so sánh ngày chính xác hơn
+    now.setHours(0, 0, 0, 0);
 
-        let completed = 0;
-        let pending = 0;
-        let overdue = 0;
-        let dueSoon = 0;
+    const next7Days = new Date(now);
+    next7Days.setDate(now.getDate() + 7);
 
-        tasks.forEach(task => {
-            const isDone = doneListIds.includes(task.listId);
+    let completed = 0;
+    let pending = 0;
+    let overdue = 0;
+    let dueSoon = 0;
 
-            // --- Đếm số lượng theo trạng thái ---
-            if (isDone) {
-                completed++;
-            } else {
-                pending++;
-            }
+    tasks.forEach((task) => {
+      const isDone = doneListIds.includes(task.listId);
 
-            // --- Đếm theo thời gian (Chỉ tính task chưa xong) ---
-            if (!isDone && task.dueDate) {
-                const dueDate = new Date(task.dueDate);
-                // Reset giờ của dueDate để so sánh
-                dueDate.setHours(0, 0, 0, 0); 
+      // --- Đếm số lượng theo trạng thái ---
+      if (isDone) {
+        completed++;
+      } else {
+        pending++;
+      }
 
-                if (dueDate < now) {
-                    overdue++;
-                } else if (dueDate >= now && dueDate <= next7Days) {
-                    dueSoon++;
-                }
-            }
-        });
+      // --- Đếm theo thời gian (Chỉ tính task chưa xong) ---
+      if (!isDone && task.dueDate) {
+        const dueDate = new Date(task.dueDate);
+        // Reset giờ của dueDate để so sánh
+        dueDate.setHours(0, 0, 0, 0);
 
-        return { completed, pending, overdue, dueSoon };
-    }, [tasks, lists]);
+        if (dueDate < now) {
+          overdue++;
+        } else if (dueDate >= now && dueDate <= next7Days) {
+          dueSoon++;
+        }
+      }
+    });
 
-    return (
-        <div className="flex flex-1 flex-col gap-4 pt-0">
-            {/* Stats Cards Row */}
-            <div className="grid auto-rows-min gap-4 md:grid-cols-4 sm:grid-cols-2">
-                <StatsCard 
-                    icon={<CheckCircleIcon className="text-green-600" />} 
-                    value={stats.completed} 
-                    title="Completed" 
-                    period="All time" 
-                    unit="tasks"
-                    // Hiện tại chưa có API lịch sử để tính % change, để trống hoặc mock
-                />
-                <StatsCard 
-                    icon={<ClockIcon className="text-blue-600" />} 
-                    value={stats.pending} 
-                    title="Pending Tasks" 
-                    period="Active tasks" 
-                    unit="tasks" 
-                />
-                <StatsCard 
-                    icon={<AlertTriangleIcon className="text-red-600" />} 
-                    value={stats.overdue} 
-                    title="Overdue Tasks" 
-                    period="Action required" 
-                    unit="tasks"
-                    // Ví dụ: Nếu có overdue thì hiện số âm (màu đỏ) để cảnh báo
-                    change={stats.overdue > 0 ? -stats.overdue : undefined} 
-                />
-                <StatsCard 
-                    icon={<CalendarIcon className="text-orange-600" />} 
-                    value={stats.dueSoon} 
-                    title="Due Soon" 
-                    period="Next 7 days" 
-                    unit="tasks" 
-                />
-            </div>
+    return { completed, pending, overdue, dueSoon };
+  }, [tasks, lists]);
 
-            {/* Charts Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-background rounded-xl w-full h-full shadow-sm border" >
-                    {/* TRUYỀN DATA THẬT VÀO ĐÂY */}
-                    <TaskCompletionPieChart tasks={tasks} lists={lists} />
-                </div>
-                <div className="bg-background rounded-xl w-full h-full shadow-sm border" >
-                    {/* VÀ VÀO ĐÂY */}
-                    <TaskActivityLineChart tasks={tasks} lists={lists} />
-                </div>
-            </div>
+  if (isLoading) {
+    return <SummarySkeleton />;
+  }
 
-            {/* AI & Email Row (Keep Mock/AI as requested) */}
-            <div className="flex gap-4">
-                <div className="bg-muted/50 aspect-video rounded-xl w-full" >
-                    <AISummaryBox />
-                </div>
-                <div className="bg-muted/50 aspect-video rounded-xl w-full" >
-                    <UnreadEmailBox />
-                </div>
-            </div>
+  return (
+    <div className="flex flex-1 flex-col gap-4 pt-0">
+      {/* Stats Cards Row */}
+      <div className="grid auto-rows-min gap-4 md:grid-cols-4 sm:grid-cols-2">
+        <StatsCard
+          icon={<CheckCircleIcon className="text-green-600" />}
+          value={stats.completed}
+          title="Completed"
+          period="All time"
+          unit="tasks"
+          // Hiện tại chưa có API lịch sử để tính % change, để trống hoặc mock
+        />
+        <StatsCard
+          icon={<ClockIcon className="text-blue-600" />}
+          value={stats.pending}
+          title="Pending Tasks"
+          period="Active tasks"
+          unit="tasks"
+        />
+        <StatsCard
+          icon={<AlertTriangleIcon className="text-red-600" />}
+          value={stats.overdue}
+          title="Overdue Tasks"
+          period="Action required"
+          unit="tasks"
+          // Ví dụ: Nếu có overdue thì hiện số âm (màu đỏ) để cảnh báo
+          change={stats.overdue > 0 ? -stats.overdue : undefined}
+        />
+        <StatsCard
+          icon={<CalendarIcon className="text-orange-600" />}
+          value={stats.dueSoon}
+          title="Due Soon"
+          period="Next 7 days"
+          unit="tasks"
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-background rounded-xl w-full h-full shadow-sm border">
+          {/* TRUYỀN DATA THẬT VÀO ĐÂY */}
+          <TaskCompletionPieChart tasks={tasks} />
         </div>
-    )
-}
+        <div className="bg-background rounded-xl w-full h-full shadow-sm border">
+          {/* VÀ VÀO ĐÂY */}
+          <TaskActivityLineChart tasks={tasks} lists={lists} />
+        </div>
+      </div>
 
-export default Summary
+      {/* AI & Email Row (Keep Mock/AI as requested) */}
+      <div className="flex gap-4">
+        <div className="bg-muted/50 aspect-video rounded-xl w-full">
+          <AISummaryBox />
+        </div>
+        <div className="bg-muted/50 aspect-video rounded-xl w-full">
+          <UnreadEmailBox />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Summary;
