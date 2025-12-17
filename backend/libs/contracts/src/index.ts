@@ -111,7 +111,6 @@ export * from './project/project.patterns';
 /*----
 SPRINT
 ------*/
-export * from './sprint/create-sprint.dto';
 export * from './sprint/update-sprint.dto';
 export * from './sprint/sprint.patterns';
 export * from './sprint/entity/sprint.entity';

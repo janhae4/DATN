@@ -3,13 +3,30 @@
 import { useState } from "react";
 import TeamSidebar from "@/components/features/team/teamSidebar";
 import ChatArea from "@/components/features/chat/chatArea";
-import AllTeams from "@/components/features/team/allTeams";
-import AllMembers from "@/components/features/team/allMembers";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import dynamic from "next/dynamic";
+import { Loader2 } from "lucide-react";
+
+const ContentLoading = () => (
+  <div className="flex h-full w-full items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+);
+
+const AllTeams = dynamic(() => import("@/components/features/team/allTeams"), {
+  loading: () => <ContentLoading />,
+});
+
+const AllMembers = dynamic(
+  () => import("@/components/features/team/allMembers"),
+  {
+    loading: () => <ContentLoading />,
+  }
+);
 
 export default function TeamPage() {
   const [currentView, setCurrentView] = useState<"teams" | "members">("teams");

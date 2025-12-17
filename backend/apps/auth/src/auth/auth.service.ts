@@ -222,7 +222,7 @@ export class AuthService {
       this.jwtService.signAsync(payload, { expiresIn: '1h' }),
       this.jwtService.signAsync(
         { ...payload, sessionId },
-        { expiresIn: REFRESH_TTL },
+        { expiresIn: '1D' },
       ),
     ]);
 

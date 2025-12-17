@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 // --- "NÂNG CẤP" IMPORTS (Giữ nguyên) ---
 import ReactMarkdown from "react-markdown"       // "Thông dịch" Markdown
 import rehypeRaw from "rehype-raw"              // "Thông dịch" HTML (nếu có)
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter' // "Tô màu" code
+import { PrismAsyncLight as SyntaxHighlighter } from 'react-syntax-highlighter' // "Tô màu" code
 // --- SỬA STYLE: ĐỔI SANG STYLE "TỐI" XỊN HƠN ---
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism' // Style "tối" (giống VSCode)
 
