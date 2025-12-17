@@ -22,16 +22,7 @@ export default function GoogleConnectPrompt() {
             
             {/* Header / Branding */}
             <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-full bg-black dark:bg-white flex items-center justify-center shadow-xl">
-                        <CalendarIcon className="h-6 w-6 text-white dark:text-black" />
-                    </div>
-                    <div className="w-12 h-[1px] bg-zinc-200 dark:bg-zinc-800"></div>
-                    <div className="h-10 w-10 rounded-full border-2 border-zinc-100 dark:border-zinc-800 flex items-center justify-center bg-transparent">
-                        <LinkIcon className="h-4 w-4 text-zinc-400" />
-                    </div>
-                </div>
-                
+          
                 <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-zinc-950 dark:text-white leading-[1.1]">
                   Sync Your <br/> 
                   <span className="text-zinc-400 dark:text-zinc-600">Calendar.</span>
