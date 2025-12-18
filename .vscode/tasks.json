@@ -163,6 +163,70 @@
             }
         },
         {
+            "label": "sprint",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:sprint"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "list-services",
+            "command": "npm",
+            "args": [
+                "run",
+                "list:services"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "label-service",
+            "command": "npm",
+            "args": [
+                "run",
+                "label:service"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "task",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:task"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
             "label": "All Service",
             "dependsOn": [
                 "Api gateway",
@@ -171,10 +235,12 @@
                 "redis",
                 "notification",
                 "team",
-                "discussion",
-                "ai-discussion",
                 "search",
-                "socket"
+                "socket",
+                "ai-discussion",
+                "list-service",
+                "label-service",
+                "sprint"
             ],
             "problemMatcher": [],
             "group": {

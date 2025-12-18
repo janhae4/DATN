@@ -15,7 +15,6 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       inject: [ClientConfigService],
       useFactory: (cfg: ClientConfigService) => ({
         secret: cfg.getJWTSecret(),
-        signOptions: { expiresIn: '1D' },
       }),
     }),
     RabbitMQModule.forRootAsync({
