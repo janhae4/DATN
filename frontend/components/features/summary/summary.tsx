@@ -25,8 +25,17 @@ const Summary = () => {
   const projectId = params.projectId as string;
 
   // 1. Fetch Real Data
-  const { tasks, isLoading: isTasksLoading } = useTasks(projectId);
-  const { lists, isLoading: isListsLoading } = useLists(projectId);
+  const { tasks, isLoading: isTasksLoading, error: tasksError } = useTasks(projectId);
+  const { lists, isLoading: isListsLoading, error: listsError } = useLists(projectId);
+
+  console.log({
+    tasks,
+    lists,
+    isTasksLoading,
+    isListsLoading,
+    tasksError,
+    listsError,
+  })
 
   const isLoading = isTasksLoading || isListsLoading;
 

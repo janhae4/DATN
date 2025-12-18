@@ -4,7 +4,6 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { ClientConfigModule, ClientConfigService} from '@app/contracts';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { List } from '@app/contracts/list/list/list.entity';
-
 @Module({
   imports: [
     ClientConfigModule,

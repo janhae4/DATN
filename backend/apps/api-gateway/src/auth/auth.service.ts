@@ -37,12 +37,12 @@ export class AuthService {
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: true,
-      maxAge: ACCESS_TTL,
+      maxAge: 24 * 60 * 60 * 1000,
     });
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: true,
-      maxAge: REFRESH_TTL,
+      maxAge: 24 * 60 * 60 * 1000 * 14,
     });
   }
 
