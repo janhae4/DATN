@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { logout } from './authService';
+import authService, { logout } from './authService';
+import { ca } from 'date-fns/locale';
 
 let isRefreshing = false;
 let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void }[] = [];
@@ -33,7 +34,7 @@ const refreshAccessToken = async () => {
       withCredentials: true,
     });
 
-    await refreshAxios.post('/auth/refresh');
+    await authService.refreshToken()
 
     return Promise.resolve();
 
@@ -77,7 +78,7 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && originalRequest.url !== '/auth/me') {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -102,6 +103,7 @@ apiClient.interceptors.response.use(
 
       } catch (refreshError) {
         processQueue(refreshError as AxiosError);
+        await logout();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
