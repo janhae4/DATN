@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Task, ViewMode, Gantt } from "gantt-task-react";
-import { getStartEndDateForProject, initTasks, mapProjectTasksToGanttTasks } from "./helper";
+import { getStartEndDateForProject, mapProjectTasksToGanttTasks } from "./helper";
 import "gantt-task-react/dist/index.css";
 import { ViewSwitcher } from "@/components/shared/ganttchart/view-switcher";
 import { useTasks } from "@/hooks/useTasks";
@@ -12,9 +12,7 @@ import { useProject } from "@/hooks/useProjects";
 import { useTeamMembers } from "@/hooks/useTeam";
 import { toast } from "sonner";
 
-// Init
 const GanttPage = () => {
-  
     const [view, setView] = React.useState<ViewMode>(ViewMode.Day);
     const params = useParams();
     const [searchQuery, setSearchQuery] = useState('');
@@ -31,8 +29,9 @@ const GanttPage = () => {
     const [selectedTask, setSelectedTask] = React.useState<AppTask | null>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
 
+    // Memoize gantt tasks transformation
     const ganttTasks = React.useMemo(
-        () => mapProjectTasksToGanttTasks(projectTasks),
+        () => mapProjectTasksToGanttTasks(projectTasks || []), // Fallback empty array
         [projectTasks]
     );
 
@@ -44,6 +43,7 @@ const GanttPage = () => {
         setTasks(ganttTasks);
     }, [ganttTasks]);
 
+    // Calculate column width based on view mode
     let columnWidth = 65;
     if (view === ViewMode.Year) {
         columnWidth = 350;
@@ -54,20 +54,15 @@ const GanttPage = () => {
     }
 
     const handleTaskChange = async (task: Task) => {
-        console.log("On date change Id:" + task.id);
-        
-        // Optimistic update locally for smoothness
+        // Optimistic update locally
         let newTasks = tasks.map((t) => (t.id === task.id ? task : t));
         
-        // Logic to update parent Project task (if exists)
+        // Update parent project task logic
         if (task.project) {
-            // Check if the "project" exists as a task in our list
             const projectTaskIndex = newTasks.findIndex((t) => t.id === task.project);
-            
             if (projectTaskIndex !== -1) {
                 const [start, end] = getStartEndDateForProject(newTasks, task.project);
                 const project = newTasks[projectTaskIndex];
-                
                 if (
                     project.start.getTime() !== start.getTime() ||
                     project.end.getTime() !== end.getTime()
@@ -90,33 +85,28 @@ const GanttPage = () => {
         } catch (error) {
             console.error("Failed to update task", error);
             toast.error("Failed to update task date");
-            // Revert on error would be ideal, but rely on React Query refetch for now
+            // Nên revert lại state cũ ở đây nếu cần thiết
+            setTasks(tasks); // Revert to old state
         }
     };
 
     const handleTaskDelete = (task: Task) => {
         const conf = window.confirm("Are you sure about " + task.name + " ?");
         if (conf) {
-            // Optimistic delete
             setTasks(tasks.filter((t) => t.id !== task.id));
-            
-            // API call
             deleteTask(task.id)
-                .then(() => {
-                    toast.success("Task deleted");
-                })
+                .then(() => toast.success("Task deleted"))
                 .catch((err) => {
                     console.error(err);
                     toast.error("Failed to delete task");
+                    // Re-fetch logic or revert state handled by parent query usually
                 });
         }
         return conf;
     };
 
-
     const handleDblClick = (task: Task) => {
-        // Find the original AppTask
-        const originalTask = projectTasks.find(t => t.id === task.id);
+        const originalTask = projectTasks?.find(t => t.id === task.id);
         if (originalTask) {
             setSelectedTask(originalTask);
             setIsModalOpen(true);
@@ -124,17 +114,15 @@ const GanttPage = () => {
     };
 
     const handleClick = (task: Task) => {
-        // Optional: Single click could also select, but sticking to dblClick for modal opening is standard in Gantt
-        // console.log("On Click event Id:" + task.id);
+        // Handle click if needed
     };
 
     const handleSelect = (task: Task, isSelected: boolean) => {
-        // console.log(task.name + " has " + (isSelected ? "selected" : "unselected"));
+        // Handle select if needed
     };
 
     const handleExpanderClick = (task: Task) => {
         setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
-        console.log("On expander click Id:" + task.id);
     };
 
     // Modal Handlers
@@ -143,65 +131,35 @@ const GanttPage = () => {
         if (!open) setSelectedTask(null);
     };
 
-    const handleListChange = (taskId: string, listId: string) => {
-        updateTask(taskId, { listId });
-    };
+    // ... (Giữ nguyên các handler update task khác: handleListChange, handleDateChange, etc.)
+    const handleListChange = (taskId: string, listId: string) => updateTask(taskId, { listId });
+    const handleDateChange = (taskId: string, newDate: Date | undefined) => updateTask(taskId, { dueDate: newDate?.toISOString() ?? null });
+    const handlePriorityChange = (taskId: string, priority: AppTask["priority"]) => updateTask(taskId, { priority });
+    const handleAssigneeChange = (taskId: string, assigneeIds: string[]) => updateTask(taskId, { assigneeIds });
+    const handleTitleChange = (taskId: string, columnId: "title", value: string) => updateTask(taskId, { title: value });
+    const handleDescriptionChange = (taskId: string, description: string) => updateTask(taskId, { description });
+    const handleLabelsChange = (taskId: string, labelIds: string[]) => updateTask(taskId, { labelIds });
 
-    const handleDateChange = (taskId: string, newDate: Date | undefined) => {
-        updateTask(taskId, { dueDate: newDate?.toISOString() ?? null });
-    };
+    // --- RENDER LOGIC ---
 
-    const handlePriorityChange = (taskId: string, priority: AppTask["priority"]) => {
-        updateTask(taskId, { priority });
-    };
-
-    const handleAssigneeChange = (taskId: string, assigneeIds: string[]) => {
-        updateTask(taskId, { assigneeIds });
-    };
-
-    const handleTitleChange = (taskId: string, columnId: "title", value: string) => {
-        updateTask(taskId, { title: value });
-    };
-
-    const handleDescriptionChange = (taskId: string, description: string) => {
-        updateTask(taskId, { description });
-    };
-    
-    const handleLabelsChange = (taskId: string, labelIds: string[]) => {
-        updateTask(taskId, { labelIds });
+    if (isLoading) {
+        return <div className="p-4">Loading tasks...</div>; // Có thể thay bằng Skeleton UI
     }
 
     return (
-        <div
-            className="Wrapper"
-        >
+        <div className="Wrapper h-full flex flex-col">
              <style
                 dangerouslySetInnerHTML={{
                     __html: `
-                        ._3_ygE{
-                        border-top-left-radius: 10px;
-                        }
-
-                        ._CZjuD{
-                        border-radius: 10px;
-                        }
-
-                        ._1nBOt{
-                        display: flex; 
-                        align-items: center;
-                        justify-content: center;
-                        flex-direction: row;
-                        }
-                        ._1nBOt > *{
-                            display: flex; 
-                            font-weight: bold;
-                            align-items: center;
-                            justify-content: center;
-                            flex-direction: row;
-                        }
+                        ._3_ygE{ border-top-left-radius: 10px; }
+                        ._CZjuD{ border-radius: 10px; }
+                        ._1nBOt{ display: flex; align-items: center; justify-content: center; flex-direction: row; }
+                        ._1nBOt > *{ display: flex; font-weight: bold; align-items: center; justify-content: center; flex-direction: row; }
                     `,
                 }}
             />
+            
+            {/* View Switcher luôn hiển thị để user có thể tương tác (tạo task mới, đổi view) */}
             <ViewSwitcher
                 onViewModeChange={(viewMode) => setView(viewMode)}
                 onViewListChange={setIsChecked}
@@ -210,34 +168,40 @@ const GanttPage = () => {
                 searchQuery={searchQuery}
                 onSearchQueryChange={setSearchQuery}
             />
-            <Gantt
-                tasks={tasks}
-                viewMode={view}
-                onDateChange={handleTaskChange}
-                onDelete={handleTaskDelete}
-                onDoubleClick={handleDblClick}
-                onClick={handleClick}
-                onSelect={handleSelect}
-                onExpanderClick={handleExpanderClick}
 
-                // Layout
-                listCellWidth={isChecked ? "155px" : ""}
-                columnWidth={columnWidth}
-                rowHeight={50} // Chiều cao mỗi dòng
-
-                // Styling (Sửa lỗi tại đây)
-                barFill={65} // Bar dày 65% dòng
-                barCornerRadius={4} // Bo tròn góc
-                barProgressColor="#3b82f6" // Blue-500
-                barProgressSelectedColor="#1d4ed8" // Blue-700
-                barBackgroundColor="black" // Slate-200
-                projectProgressColor="#10b981" // Green-500 (Cho Project cha)
-                projectBackgroundColor="#d1fae5" // Green-100
-
-                // Typography
-                fontFamily="roboto"
-                fontSize="12px"
-            />
+            {/* LOGIC FIX: Chỉ hiển thị Gantt nếu có tasks */}
+            <div className="flex-1 overflow-hidden">
+                {tasks.length > 0 ? (
+                    <Gantt
+                        tasks={tasks}
+                        viewMode={view}
+                        onDateChange={handleTaskChange}
+                        onDelete={handleTaskDelete}
+                        onDoubleClick={handleDblClick}
+                        onClick={handleClick}
+                        onSelect={handleSelect}
+                        onExpanderClick={handleExpanderClick}
+                        listCellWidth={isChecked ? "155px" : ""}
+                        columnWidth={columnWidth}
+                        rowHeight={50}
+                        barFill={65}
+                        barCornerRadius={4}
+                        barProgressColor="#3b82f6"
+                        barProgressSelectedColor="#1d4ed8"
+                        barBackgroundColor="black"
+                        projectProgressColor="#10b981"
+                        projectBackgroundColor="#d1fae5"
+                        fontFamily="roboto"
+                        fontSize="12px"
+                    />
+                ) : (
+                    // Empty State UI
+                    <div className="flex flex-col items-center justify-center h-[400px] text-gray-500 border rounded-lg m-4 bg-gray-50">
+                        <p className="text-lg font-medium">No tasks found</p>
+                        <p className="text-sm">Create a new task to view the Gantt chart.</p>
+                    </div>
+                )}
+            </div>
 
             {selectedTask && (
                 <TaskDetailModal
