@@ -7,16 +7,21 @@ export function middleware(request: NextRequest) {
   const isAuthRoute = path.startsWith("/auth");
   const isPrivateRoute = !isAuthRoute && path !== "/";
 
-  const token =
-    request.cookies.get("connect.sid")?.value ||
-    request.cookies.get("accessToken")?.value;
+  const accessToken = request.cookies.get("accessToken")?.value;
+  const refreshToken = request.cookies.get("refreshToken")?.value;
 
-  if (isAuthRoute && token) {
-    return NextResponse.redirect(new URL(`/dashboard`, request.url));
-  }
   
-  if (isPrivateRoute && !token) {
-    return NextResponse.redirect(new URL("/", request.url));
+  if (isPrivateRoute) {
+    if (!accessToken && !refreshToken) {
+      return NextResponse.redirect(new URL("/auth", request.url));
+    }
+    
+    return NextResponse.next();
+  }
+  if (path.startsWith("/")) {
+    if (accessToken || refreshToken) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
   }
 
   return NextResponse.next();
