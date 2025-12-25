@@ -61,13 +61,13 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
         const projects = await projectService.getProjects(teams[0].id);
 
         if (teams && teams.length > 0) {
+          console.log("teams", teams);
           router.push(`/${teams[0].id}/${projects[0].id}/dashboard`);
         } else {
-          // Chưa có team -> Trang tạo mới
           router.push("/team-create");
         }
       } catch (teamError) {
-        router.push("/team-create");
+        router.push("/dashboard");
       }
     } catch (error: any) {
       setIsLoading(false);

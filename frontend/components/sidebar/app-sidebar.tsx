@@ -71,7 +71,7 @@ const data = {
         },
         {
           title: "Meeting history",
-          url: "meeting-history",
+          url: "meeting/summary",
         },
       ],
     },
@@ -140,14 +140,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const basePath = `/${teamId}/${effectiveProjectId}`
 
     return data.navMain.map((item) => {
-      // Xử lý đặc biệt cho Team và Calendar
+      // Xử lý đặc biệt cho Team, Calendar và Meeting
       let resolvedUrl: string
       if (item.url === "team") {
-        resolvedUrl = "/team"
+        resolvedUrl = `/${teamId}/team`
       } else if (item.url === "calendar") {
         resolvedUrl = "/calendar"
+      } else if (item.url === "meeting") {
+        resolvedUrl = `/${teamId}/meeting`
       } else {
-        resolvedUrl = `${basePath}/${item.url}`
+        resolvedUrl = `${basePath}/${item.url}` 
       }
 
       return {
@@ -156,7 +158,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         items: item.items
           ? item.items.map((subItem) => ({
             ...subItem,
-            url: `${basePath}/${subItem.url}`,
+            url: item.url === "meeting" 
+              ? `/${teamId}/${subItem.url}` 
+              : `${basePath}/${subItem.url}`,
           }))
           : item.items,
       }

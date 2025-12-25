@@ -2,30 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTeams, useTeamMembers, useDeleteTeam, useLeaveTeam } from "@/hooks/useTeam";
+import { useTeams, useDeleteTeam, useLeaveTeam } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
-import { Team } from "@/types/social/team.interface";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, Search, Plus, Frown, MoreHorizontal, ShieldCheck, Trash2, LogOut, Settings } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Search, Plus, Frown,  } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,165 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// --- Sub-component: TeamCard ---
-
-interface TeamCardProps {
-  team: Team;
-  currentUserId?: string;
-  onDelete: (teamId: string) => void;
-  onLeave: (teamId: string) => void;
-}
-
-function TeamCard({ team, currentUserId, onDelete, onLeave }: TeamCardProps) {
-  const router = useRouter();
-  const { data: members = [], isLoading: isLoadingMembers } = useTeamMembers(team.id);
-
-  const isOwner = team.ownerId === currentUserId;
-  const owner = members.find((m) => m && m.user && m.user.id === team.ownerId)?.user;
-
-  const handleCardClick = () => {
-    router.push(`/team/${team.id}`);
-  };
-
-  return (
-    <Card
-      className="group hover:shadow-lg hover:border-primary/50 transition-all duration-300 flex flex-col cursor-pointer h-full"
-      onClick={handleCardClick}
-    >
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12 rounded-xl border bg-gradient-to-br from-primary/10 to-primary/5 text-primary">
-            <AvatarImage src={team.avatar || `https://avatar.vercel.sh/${team.name}.png`} />
-            <AvatarFallback className="rounded-xl font-bold">
-              {team.name.substring(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="space-y-1">
-            <h3 className="font-semibold leading-none tracking-tight truncate max-w-[150px]" title={team.name}>
-              {team.name}
-            </h3>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary/70" />
-              <span className="truncate max-w-[100px]">
-                {owner?.name || "Unknown Owner"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => router.push(`/${team.id}`)}>
-                View Dashboard
-              </DropdownMenuItem>
-              
-              {isOwner ? (
-                <>
-                  <DropdownMenuItem onClick={() => router.push(`/${team.id}/settings`)}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Team Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => onDelete(team.id)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Team
-                  </DropdownMenuItem>
-                </>
-              ) : (
-                <>
-                   <DropdownMenuSeparator />
-                   <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => onLeave(team.id)}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Leave Team
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex-1">
-        <div className="flex items-center justify-between mt-4">
-          <Badge
-            variant={team.status === "ACTIVE" ? "default" : "secondary"}
-            className={`rounded-md px-2.5 py-0.5 text-xs font-medium ${
-              team.status === "ACTIVE"
-                ? "bg-green-500/15 text-green-700 hover:bg-green-500/25 dark:text-green-400"
-                : ""
-            }`}
-          >
-            {team.status}
-          </Badge>
-
-          <div className="flex -space-x-2.5 overflow-hidden pl-1">
-            {isLoadingMembers ? (
-               <Skeleton className="h-7 w-20 rounded-full" />
-            ) : (
-              <TooltipProvider delayDuration={100}>
-                {members
-                  .filter((m) => m && m.user)
-                  .slice(0, 4)
-                  .map((member) => (
-                    <Tooltip key={member.id}>
-                      <TooltipTrigger asChild>
-                        <Avatar className="inline-block h-7 w-7 rounded-full ring-2 ring-background cursor-pointer hover:z-10 transition-transform hover:scale-110">
-                          <AvatarImage src={member.user?.avatar} />
-                          <AvatarFallback className="text-[9px] bg-muted">
-                            {member.user?.name?.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-medium text-xs">{member.user?.name ?? "Unknown"}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-              </TooltipProvider>
-            )}
-            
-            {!isLoadingMembers && members.length > 4 && (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full ring-2 ring-background bg-muted text-[10px] font-medium text-muted-foreground hover:bg-muted/80 transition-colors cursor-default">
-                +{members.length - 4}
-              </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-
-      <CardFooter className="flex items-center justify-between text-xs text-muted-foreground border-t bg-muted/20 p-3 group-hover:bg-muted/40 transition-colors pt-3">
-        <div className="flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5" />
-          <span>{isLoadingMembers ? "..." : members.length} members</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5" />
-          <span>{new Date(team.createdAt).toLocaleDateString()}</span>
-        </div>
-      </CardFooter>
-    </Card>
-  );
-}
-
-// --- Main Component: AllTeams ---
+import TeamCard from "./teamCard";
 
 export default function AllTeams() {
   const router = useRouter();
@@ -236,7 +61,7 @@ export default function AllTeams() {
       });
       toast.success("Left team successfully");
     } catch (error) {
-       toast.error("Failed to leave team");
+      toast.error("Failed to leave team");
     } finally {
       setTeamToLeave(null);
     }
