@@ -1,239 +1,157 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useVideoCall } from '@/hooks/useVideoCall';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Loader2,
-  AlertTriangle,
-  Mic,  
-  MicOff,
-  Video,
-  VideoOff,
-  PhoneOff,
-  Users, // --- THÊM MỚI ---
-  MessageSquare, // --- THÊM MỚI ---
-  ScreenShare, // --- THÊM MỚI ---
-} from 'lucide-react';
-import { VideoTile } from '@/components/features/meeting/VideoTile'; 
+import { ControlsBar } from '@/components/features/meeting/ControlsBar';
+import { VideoGrid } from '@/components/features/meeting/VideoGrid';
+import { useWebRTC } from '@/hooks/useWebRTC';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { MeetingHeader } from '@/components/features/meeting/MeetingHeader';
+// Import Component mới tạo
+import { TranscriptPanel, TranscriptMessage } from '@/components/features/meeting/TranscriptPanel';
 
-export default function VideoCallPage() {
-  const { roomId } = useParams<{ roomId: string }>();
+export default function MeetingRoomPage() {
+  const params = useParams();
   const router = useRouter();
-  const [roomExists, setRoomExists] = useState<boolean | null>(null);
+  const roomId = params.roomId as string;
+  
+  // Custom hooks
+  const { localStream, remoteStreams, peerNames, socket } = useWebRTC(roomId);
+  
+  // UI State
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCamOn, setIsCamOn] = useState(true);
+  const [peerCamStates, setPeerCamStates] = useState<Map<string, boolean>>(new Map());
+  
+  // --- NEW: State cho Transcript Panel ---
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [transcripts, setTranscripts] = useState<TranscriptMessage[]>([]);
 
-  const {
-    localStream,
-    peers,
-    isVideoMuted,
-    toggleVideoMute,
-    isAudioMuted,
-    toggleAudioMute,
-    isLoading,
-  } = useVideoCall(roomId || '');
-
-  // --- PHẦN LOGIC (useEffect, checkRoomExists) ---
-  // (Giữ nguyên, không thay đổi)
+  // 1. Logic xử lý socket nhận transcript từ người khác
   useEffect(() => {
-    const checkRoomExists = async () => {
-      if (!roomId) return;
-      try {
-        const response = await fetch(
-          `http://localhost:3000/video-chat/call-history?roomId=${roomId}`
-        );
-        const callHistory = await response.json();
-        setRoomExists(response.ok && callHistory && callHistory.length > 0);
-      } catch (error) {
-        console.error('Lỗi khi kiểm tra phòng:', error);
-        setRoomExists(false);
-      }
+    if (!socket) return;
+
+    // Lắng nghe sự kiện 'transcript_received' từ server
+    // (Giả định server emit event này khi có ai đó gửi transcript)
+    const handleTranscriptReceived = (data: any) => {
+      const newMessage: TranscriptMessage = {
+        id: Date.now().toString() + Math.random(), // Fallback ID
+        userId: data.userId,
+        userName: peerNames.get(data.userId) || 'Unknown', // Map tên từ ID nếu có
+        content: data.content,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setTranscripts((prev) => [...prev, newMessage]);
     };
-    checkRoomExists();
-  }, [roomId]);
 
+    socket.on('transcript_received', handleTranscriptReceived);
 
-  // --- UI Trạng thái Đang Tải (Loading) ---
-  if (roomExists === null) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <h1 className="mt-4 text-xl font-medium">Đang Kiểm Tra Phòng...</h1>
-        <p className="text-muted-foreground">Vui lòng đợi trong giây lát.</p>
-      </div>
-    );
-  }
+    return () => {
+      socket.off('transcript_received', handleTranscriptReceived);
+    };
+  }, [socket, peerNames]);
 
-  // --- UI Trạng thái Lỗi (Error) ---
-  if (roomExists === false) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-muted/40 p-4">
-        <Card className="w-full max-w-md">
-          {/* ... (Nội dung Card lỗi giữ nguyên) ... */}
-        </Card>
-      </div>
-    );
-  }
+  // 2. Xử lý khi Speech Recognition nhận diện giọng nói local
+  const handleSpeechResult = (text: string) => {
+    console.log("🗣️ User said:", text);
+    const userId = 'CURRENT_USER_ID'; // Lấy từ auth context thực tế của bạn
 
-  // --- UI Trang Gọi Video Chính (Đã cập nhật) ---
+    // Emit lên server
+    socket?.emit('send_transcript', {
+      content: text,
+      roomId: roomId,
+      userId: userId
+    });
+
+    // Cập nhật UI ngay lập tức (Optimistic Update) để người dùng thấy mình vừa nói
+    const myMessage: TranscriptMessage = {
+      id: Date.now().toString(),
+      userId: userId,
+      userName: 'Bạn',
+      content: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setTranscripts(prev => [...prev, myMessage]);
+  };
+
+  const { isListening, startListening, stopListening } = useSpeechRecognition(handleSpeechResult);
+
+  // 3. Toggle Panel Transcript
+  const toggleTranscriptPanel = () => {
+    const newState = !showTranscript;
+    setShowTranscript(newState);
+    
+    // Logic phụ: Tự động bật/tắt nhận diện giọng nói khi mở/đóng panel (Tuỳ chọn UX)
+    // Nếu muốn tách biệt (nút bật panel riêng, nút bật mic riêng) thì bỏ đoạn này đi.
+    if (newState && !isListening) {
+      startListening();
+    } else if (!newState && isListening) {
+      stopListening();
+    }
+  };
+
+  const toggleMic = () => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach(track => track.enabled = !isMicOn);
+      setIsMicOn(!isMicOn);
+    }
+  };
+
+  const toggleCam = () => {
+    if (localStream) {
+      localStream.getVideoTracks().forEach(track => track.enabled = !isCamOn);
+      setIsCamOn(!isCamOn);
+    }
+  };
+
+  const leaveRoom = () => {
+    router.push(`/${params.teamId}/meeting`);
+  };
+
   return (
-    <TooltipProvider delayDuration={0}>
-      <div className="relative flex h-screen flex-col overflow-hidden bg-zinc-900 text-white">
+    <div className="flex flex-col h-screen bg-neutral-900 text-white overflow-hidden">
+      
+      {/* Header luôn cố định ở trên */}
+      <MeetingHeader roomId={roomId} participantCount={remoteStreams.size + 1} />
 
-        {/* Lưới video (Đã thay đổi) */}
-        {/*
-          Thay đổi 1: Thêm `overflow-y-auto` để cuộn khi có nhiều người
-          Thay đổi 2: Thay `flex-wrap` bằng `grid` và `grid-cols-[repeat(auto-fit,minmax(350px,1fr))]`
-          - `auto-fit`: Tự động vừa vặn số cột
-          - `minmax(350px, 1fr)`: Mỗi cột rộng tối thiểu 350px, và
-             có thể giãn ra (1fr) để lấp đầy không gian.
-        */}
-        <div className="flex-1 p-4 overflow-y-auto">
-          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(350px,1fr))]">
-            {/* Video của bạn */}
-            <VideoTile
-              stream={localStream}
-              name="You (Bạn)"
-              isLocal={true}
-              isVideoMuted={isVideoMuted || isLoading} 
-              isAudioMuted={isAudioMuted}
-            />
-
-            {/* Video của Peers */}
-            {Object.entries(peers).map(([peerId, stream]) => (
-              <VideoTile
-                key={peerId}
-                stream={stream}
-                name={`Peer ${peerId.substring(0, 6)}`}
-              />
-            ))}
-          </div>
+      {/* Main Content: Dùng flex-1 để chiếm toàn bộ chiều cao còn lại */}
+      {/* Flex Row để VideoGrid và TranscriptPanel nằm ngang nhau */}
+      <div className="flex flex-1 overflow-hidden relative">
+        
+        {/* VideoGrid Area: Chiếm phần còn lại */}
+        <div className={`flex-1 transition-all duration-300 ${showTranscript ? 'mr-0' : ''}`}>
+           <VideoGrid
+            localStream={localStream}
+            remoteStreams={remoteStreams}
+            peerNames={peerNames}
+            isMicOn={isMicOn}
+            isCamOn={isCamOn}
+            peerCamStates={peerCamStates}
+          />
         </div>
 
-        {/* Thanh điều khiển (Đã thay đổi) */}
-        {/*
-          Thay đổi 3: Bọc các nhóm nút bằng một `div` cha
-          để căn chỉnh `justify-between`
-        */}
-        <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-center">
-          
-          {/* Phần 1: Thông tin phòng (Bên trái) */}
-          <div className="rounded-full bg-black/70 p-3 px-4 backdrop-blur-sm">
-            <p className="text-sm font-medium">{roomId}</p>
-          </div>
-
-          {/* Phần 2: Nút điều khiển chính (Giữa) */}
-          <div className="flex items-center gap-4 rounded-full bg-black/70 p-3 backdrop-blur-sm">
-            {/* Nút Mic */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={toggleAudioMute}
-                  disabled={isLoading}
-                  variant={isAudioMuted ? 'destructive' : 'secondary'}
-                  size="icon"
-                  className="h-14 w-14 rounded-full"
-                >
-                  {isAudioMuted ? (
-                    <MicOff className="h-6 w-6" />
-                  ) : (
-                    <Mic className="h-6 w-6" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isAudioMuted ? 'Bật Mic' : 'Tắt Mic'}</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Nút Camera */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={toggleVideoMute}
-                  disabled={isLoading}
-                  variant={isVideoMuted ? 'destructive' : 'secondary'}
-                  size="icon"
-                  className="h-14 w-14 rounded-full"
-                >
-                  {isVideoMuted ? (
-                    <VideoOff className="h-6 w-6" />
-                  ) : (
-                    <Video className="h-6 w-6" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isVideoMuted ? 'Bật Camera' : 'Tắt Camera'}</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Nút Kết thúc Cuộc gọi */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => router.push('/meeting')}
-                  variant="destructive"
-                  size="icon"
-                  className="h-14 w-14 rounded-full"
-                >
-                  <PhoneOff className="h-6 w-6" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Kết thúc cuộc gọi</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
-          {/* Phần 3: Nút chức năng phụ (Bên phải) */}
-          <div className="flex items-center gap-2 rounded-full bg-black/70 p-3 backdrop-blur-sm">
-            {/* Nút Người tham gia (Placeholder) */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="secondary" size="icon" className="rounded-full">
-                  <Users className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Người tham gia</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Nút Chat (Placeholder) */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="secondary" size="icon" className="rounded-full">
-                  <MessageSquare className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Trò chuyện</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Nút Chia sẻ (Placeholder) */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="secondary" size="icon" className="rounded-full">
-                  <ScreenShare className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Chia sẻ màn hình</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
-        </div>
+        {/* Transcript Panel (Sidebar) */}
+        <TranscriptPanel 
+          isOpen={showTranscript} 
+          onClose={() => setShowTranscript(false)}
+          messages={transcripts}
+        />
+        
       </div>
-    </TooltipProvider>
+
+      {/* Controls Bar luôn cố định ở dưới */}
+      <ControlsBar
+        isMicOn={isMicOn}
+        isCamOn={isCamOn}
+        // Button này giờ sẽ bật/tắt Panel hiển thị
+        isTranscriptOn={showTranscript} 
+        onToggleMic={toggleMic}
+        onToggleCam={toggleCam}
+        // Logic: Click nút -> Toggle Panel (và trigger speech recognition bên trong hàm toggle)
+        onToggleTranscript={toggleTranscriptPanel} 
+        onLeave={leaveRoom}
+      />
+    </div>
   );
 }

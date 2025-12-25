@@ -140,5 +140,5 @@ export function mapProjectTaskToGanttTask(task: ProjectTask): GanttTask {
 }
 
 export function mapProjectTasksToGanttTasks(tasks: ProjectTask[]): GanttTask[] {
-  return tasks.map(mapProjectTaskToGanttTask);
+  return tasks?.filter(Boolean).map(mapProjectTaskToGanttTask) ?? [];
 }

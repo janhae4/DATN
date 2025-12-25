@@ -6,20 +6,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function CustomToolbar({ date, onNavigate, view, onView, selectedCalendar, onCalendarChange, calendarList }: any) {
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
+    <div className="flex text-primary flex-col md:flex-row items-center justify-between mb-6 mt-6 gap-4">
       <div className="flex items-center gap-3 w-full md:w-auto">
         <div className="flex items-center rounded-lg border bg-background shadow-sm p-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onNavigate('PREV')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 hover:bg-muted"
+            onClick={() => onNavigate('PREV')}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-3 font-medium" onClick={() => onNavigate('TODAY')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-3 hover:bg-muted"
+            onClick={() => onNavigate('TODAY')}
+          >
             Today
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onNavigate('NEXT')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 hover:bg-muted"
+            onClick={() => onNavigate('NEXT')}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <h2 className="text-xl font-bold text-foreground capitalize tracking-tight min-w-[150px]">
+        <h2 className="text-xl font-bold  capitalize tracking-tight min-w-[150px]">
           {format(date, 'MMMM yyyy')}
         </h2>
       </div>
@@ -37,7 +52,7 @@ export default function CustomToolbar({ date, onNavigate, view, onView, selected
             <SelectItem value="agenda">Agenda</SelectItem>
           </SelectContent>
         </Select>
-        
+
         <Select value={selectedCalendar} onValueChange={onCalendarChange}>
           <SelectTrigger className="w-[200px] bg-background shadow-sm">
             <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />

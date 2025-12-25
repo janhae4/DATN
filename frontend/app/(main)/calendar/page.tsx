@@ -27,16 +27,32 @@ export default function CalendarPage() {
   }, []);
 
   if (isLoading) {
-return (
+    return (
       <div className="flex h-[80vh] w-full items-center justify-center flex-col gap-4">
         <Loader2 className="h-10 w-10 animate-spin " />
         <p className="text-sm font-medium text-slate-500 animate-pulse">Verifying connection...</p>
       </div>
-    );  }
+    );
+  }
 
   if (!isLinked) {
     return <GoogleConnectPrompt />;
   }
 
-  return <CalendarContent />;
+  return <div className='flex gap-2'>
+    <div className='p-6 w-[500px] border bg-white shadow-xl rounded-2xl'> 
+      Tasks
+      <div className='flex gap-2'>
+        <input type="text" placeholder='Search' className='w-full p-2 border rounded-md' />
+        <button className='p-2 border rounded-md'>Search</button>
+      </div>
+      <div className='flex gap-2'>
+        <button className='p-2 border rounded-md'>Add Task</button>
+      </div>
+      <div className='flex gap-2'>
+        <button className='p-2 border rounded-md'>Add Task</button>
+      </div>
+    </div>
+    <CalendarContent />;
+  </div>
 }
