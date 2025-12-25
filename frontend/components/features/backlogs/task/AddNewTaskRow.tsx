@@ -18,9 +18,9 @@ interface AddNewTaskRowProps {
   lists: List[];
   sprintId?: string;
   epicId?: string | null;
-  parentId?: string; // <-- 1. Thêm prop parentId
+  parentId?: string; 
   onCancel?: () => void;
-  isSubtask?: boolean; // <-- 2. Thêm prop để style indent
+  isSubtask?: boolean; 
 }
 
 export function AddNewTaskRow({ 

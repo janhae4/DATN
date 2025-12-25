@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronRight, Home, LayoutGrid } from "lucide-react"; // Import Icons
+import { ChevronRight, LayoutGrid } from "lucide-react";
 
 import { 
   useTeam, 
@@ -14,8 +14,6 @@ import {
 import { useUserProfile } from "@/hooks/useAuth";
 import { MemberRole } from "@/types/common/enums";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// Components
 import { TeamHeader } from "@/components/features/team/team-header";
 import { TeamOverviewTab } from "@/components/features/team/team-overview-tab";
 
@@ -45,7 +43,7 @@ export default function TeamDetailsPage() {
     try {
       await deleteTeamMutation.mutateAsync(teamId);
       toast.success("Team deleted");
-      router.push("/team");
+      router.push("/team-create");
     } catch (error) {
       toast.error("Failed to delete team");
     }
@@ -59,7 +57,7 @@ export default function TeamDetailsPage() {
         requesterId: user.id,
       });
       toast.success("Left team successfully");
-      router.push("/team");
+      router.push("/team-create");
     } catch (error) {
       toast.error("Failed to leave team");
     }
@@ -69,38 +67,29 @@ export default function TeamDetailsPage() {
   if (isTeamLoading || isMembersLoading) {
     return (
       <div className="flex-1 p-6 space-y-6 bg-background/50">
-        <Skeleton className="h-6 w-32" /> {/* Breadcrumb skeleton */}
+        <Skeleton className="h-6 w-32" />
         <Skeleton className="h-48 w-full rounded-xl" />
         <div className="grid gap-4 md:grid-cols-3">
-            {[1,2,3].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))}
         </div>
       </div>
     );
   }
 
-  if (!team) return <div className="p-10 text-center text-muted-foreground">Team not found</div>;
+  if (!team) {
+    return (
+      <div className="p-10 text-center text-muted-foreground">
+        Team not found
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 h-full overflow-y-auto bg-background/50">
-      <div className="container max-w-7xl mx-auto p-6 space-y-6">
-        
-        {/* --- 1. BREADCRUMB NAVIGATION --- */}
-        <nav className="flex items-center text-sm text-muted-foreground animate-in fade-in slide-in-from-left-2 duration-300">
-            <Link 
-                href="/team" 
-                className="flex items-center gap-1.5 hover:text-foreground transition-colors font-medium"
-            >
-                <LayoutGrid className="h-4 w-4" />
-                Teams
-            </Link>
-            <ChevronRight className="h-4 w-4 mx-1.5 opacity-50" />
-            <span className="font-medium text-foreground truncate max-w-[200px]">
-                {team.name}
-            </span>
-        </nav>
-
-        {/* --- 2. TEAM HEADER --- */}
-        <TeamHeader 
+      <div className="container max-w-7xl mx-auto px-2 space-y-6">
+        <TeamHeader
           team={team}
           memberCount={members.length}
           isLoading={false}
@@ -108,15 +97,14 @@ export default function TeamDetailsPage() {
           canManage={canManage}
           onDelete={handleDelete}
           onLeave={handleLeave}
-          onSettingsClick={() => router.push(`/team/${teamId}/settings`)} 
+          onSettingsClick={() => router.push(`/team/${teamId}/settings`)}
         />
 
-        {/* --- 3. OVERVIEW DASHBOARD --- */}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <TeamOverviewTab teamId={teamId} members={members} />
+          <TeamOverviewTab teamId={teamId} members={members} />
         </div>
-
       </div>
     </div>
   );
-}
+};
+

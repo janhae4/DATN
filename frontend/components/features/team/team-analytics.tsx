@@ -345,7 +345,7 @@ export function TeamAnalytics({ members, projects }: TeamAnalyticsProps) {
       </div>
 
       {/* RIGHT COLUMN: ACTIVITY FEED (3/7) */}
-      <Card className="col-span-3 flex flex-col h-full max-h-[600px] shadow-sm border-muted/60">
+      <Card className="col-span-3 flex flex-col h-full shadow-sm border-muted/60">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
               <div className="space-y-1">
