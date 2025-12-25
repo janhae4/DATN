@@ -4,6 +4,7 @@ from services.vectorstore_service import VectorStoreService
 from services.minio_service import MinioService
 from chains.rag_chain import RAGChain
 from chains.summarizer import Summarizer
+from chains.task_architect import TaskArchitect
 from config import (
     EVENTS_EXCHANGE,
     ASK_QUESTION_ROUTING_KEY,
@@ -47,7 +48,6 @@ async def publish_response(
         message_body,
         routing_key=STREAM_RESPONSE_ROUTING_KEY
     )
-
 
 async def send_notification(channel: Channel, user_id, file_name, status, message):
     """
@@ -141,7 +141,8 @@ async def ingestion_callback(
                 original_name = payload_dto.get('originalName', 'unknown file')
                 await send_notification(channel, user_id, file_id, "failed", f"Failed to process '{original_name}': {error_message}")
                 await send_status_file(channel, user_id, file_id ,original_name, "failed", team_id)
-async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, channel: Channel):
+
+async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, task_architect: TaskArchitect, channel: Channel):
     """
     Callback xử lý các tác vụ tương tác (RAG, Summarize).
     """
@@ -191,7 +192,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 print(f"--> [RAG] Đã lấy được metadata: {retrieved_metadata}")
 
             elif pattern_from_key == 'summarize_document':
-                file_name = payload_dto.get('summarizeFileName') # Sửa: Key là summarizeFileName
+                file_name = payload_dto.get('summarizeFileName')
                 if not file_name: raise ValueError("Tin nhắn thiếu 'summarizeFileName'.")
                 
                 await publish_response(channel, socket_id, discussion_id, "Summarizing...", "start", team_id, membersToNotify=membersToNotify)
@@ -200,7 +201,19 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 documents = await minio_service.load_documents(file_name)
                 async for chunk in summarizer.summarize(documents):
                     await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
-                    
+            
+            elif pattern_from_key == 'task_architect':
+                objective = payload_dto.get('objective')
+                members = payload_dto.get('members', [])
+                
+                if not objective: raise ValueError("Tin nhắn thiếu 'objective'.")
+                if not members: raise ValueError("Tin nhắn thiếu 'members'.")
+                
+                async for chunk in task_architect.suggest_and_assign(
+                    objective=payload_dto.get('objective', ''),
+                    members=payload_dto.get('members', [])
+                ):
+                    await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id)
             else:
                 raise ValueError(f"Routing key không xác định: '{actual_routing_key}'")
 
@@ -208,10 +221,6 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
             error_message = f"Lỗi khi xử lý '{pattern_from_key}': {e}"
             print(f"!!! LỖI: {error_message}")
             
-            # ***
-            # SỬA 3: Phải kiểm tra 'socket_id' trước khi gửi lỗi
-            # (Vì nếu 'socket_id' là None, ta không thể gửi lỗi về)
-            # ***
             if socket_id and discussion_id:
                 error_metadata = {"error": str(error_message)}
                 try:
@@ -224,9 +233,6 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                     print(f"!!! LỖI KHI GỬI LỖI: {e_pub}")
 
         finally:
-            # ***
-            # SỬA 4: Gửi 'end' bất kể thành công hay thất bại (miễn là có socket_id)
-            # ***
             if socket_id and discussion_id:
                 print(f"--> Đã gửi tín hiệu kết thúc stream cho tác vụ '{pattern_from_key}'.")
                 try:

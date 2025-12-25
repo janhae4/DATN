@@ -1,6 +1,6 @@
 import apiClient from "@/services/apiClient";
 import { Task, TaskLabel } from "@/types";
-import { Priority } from "@/types/common/enums"; 
+import { Priority } from "@/types/common/enums";
 
 // --- DTOs ---
 
@@ -54,12 +54,17 @@ export const taskService = {
     return response.data;
   },
 
+  suggestTasksByAi: async (query: string): Promise<Task[]> => {
+    const response = await apiClient.post<Task[]>(`/tasks/suggest`, { query });
+    return response.data;
+  },
+
   /**
    * Cập nhật Task
    * PUT /tasks/{id}
    */
   updateTask: async (id: string, updates: UpdateTaskDto): Promise<Task> => {
-    console.log("updates while updateTask", updates ,"with task: ", id)
+    console.log("updates while updateTask", updates, "with task: ", id)
     const response = await apiClient.put<Task>(`/tasks/${id}`, updates);
     return response.data;
   },
