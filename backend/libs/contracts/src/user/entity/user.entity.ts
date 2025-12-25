@@ -10,6 +10,7 @@ import {
 import { Account } from './account.entity';
 import { Follow } from './follow.entity';
 import { Role } from '@app/contracts/enums';
+import { UserSkill } from '@app/contracts';
 
 
 
@@ -53,6 +54,9 @@ export class User {
   @Column({ type: 'text', nullable: true, select: false })
   resetCode: string | null;
 
+  @Column({type: 'text', nullable: true, select: true})
+  jobTitle: string | null;
+
   @Column({ type: 'text', nullable: true })
   bio?: string | null;
 
@@ -73,4 +77,7 @@ export class User {
 
   @OneToMany(() => Follow, (follow) => follow.following)
   followers: Follow[];
+
+  @OneToMany(() => UserSkill, (skill) => skill.user)
+  skills: UserSkill[]
 }

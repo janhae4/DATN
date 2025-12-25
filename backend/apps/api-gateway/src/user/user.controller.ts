@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto, Role, UpdateUserDto } from '@app/contracts';
+import { CreateUserDto, Role, UpdateUserDto, UserOnboardingDto } from '@app/contracts';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { CurrentUser } from '../common/role/current-user.decorator';
@@ -90,4 +90,5 @@ export class UserController {
   remove(@Param('id') id: string) {
     return this.userService.remove(id);
   }
+
 }

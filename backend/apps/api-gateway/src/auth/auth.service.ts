@@ -24,6 +24,7 @@ import {
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { unwrapRpcResult } from '../common/helper/rpc';
+import { UserOnboardingDto } from './dto/user-onboarding.dto';
 
 @Injectable()
 export class AuthService {
@@ -239,13 +240,21 @@ export class AuthService {
       const result = await this.amqp.request<LoginResponseDto>({
         exchange: REDIS_EXCHANGE,
         routingKey: REDIS_PATTERN.GET_GOOGLE_TOKEN,
-        payload: userId, 
+        payload: userId,
       });
       console.log(result)
-      return !!result?.accessToken; 
+      return !!result?.accessToken;
     } catch (error) {
       return false;
     }
+  }
+
+  async addSkills(userId: string, data: UserOnboardingDto) {
+    return this.userService.addSkills(userId, data);
+  }
+
+  async updateSkills(userId: string, skills: string[]) {
+    return this.userService.updateSkills(userId, skills);
   }
 
 }
