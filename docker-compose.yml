@@ -156,6 +156,9 @@ services:
     volumes:
       - mongo-data:/data/db
       - ./init-mongo.sh:/scripts/init-mongo.sh
+    environment:
+      - MONGODB_URI=mongodb://mongo_db:27017/mongo_db?directConnection=true
+      - MONGO_HOST=mongo_db
   mongo_rs_init:
     image: mongo:8.0
     depends_on:

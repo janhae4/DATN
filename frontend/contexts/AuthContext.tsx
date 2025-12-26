@@ -30,23 +30,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userProfile = await authService.getMe();
       setUser(userProfile);
       return userProfile;
-    } catch (error) {
-      setUser(null);
-      throw error;
+    } catch (error: any) {
+      // Only clear user on 401 Unauthorized
+      if (error?.response?.status === 401) {
+        setUser(null);
+      }
+      // Don't throw the error to prevent infinite loading
+      return null;
     }
   };
 
   useEffect(() => {
+    let isMounted = true;
+    
     const checkUserSession = async () => {
       try {
         await fetchUserProfile();
       } catch (error) {
         console.error("Session check failed:", error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
+    
     checkUserSession();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const refreshUser = async () => {
@@ -124,11 +137,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser
   };
 
-  // Chỉ render khi đã check xong session
-  if (isLoading) {
+  // Only show loading indicator for protected routes
+  if (isLoading && user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
