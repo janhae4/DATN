@@ -55,6 +55,7 @@ export * from './chatbot/dto/response-stream.dto';
 export * from './chatbot/dto/summarize-document.dto';
 export * from './chatbot/dto/ask-question.dto';
 export * from './chatbot/dto/message.dto';
+export * from './chatbot/dto/meeting.dto';
 
 /*----
 CLIENT-CONFIG
@@ -174,8 +175,7 @@ export * from './team/dto/remove-team.dto'
 /*----
 VIDEO-CHAT
 -----*/
-export * from './video-chat/create-call.dto';
-export * from './video-chat/video-chat.patterns';
+export * from './video-chat/index';
 
 /*----
 EVENT
@@ -196,6 +196,8 @@ export * from './file/file.pattern';
 export * from './file/dto/delete-file.dto';
 export * from './file/dto/update-file.dto';
 export * from './file/dto/upload-file.dto';
+
+
 
 
 

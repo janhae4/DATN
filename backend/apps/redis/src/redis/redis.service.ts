@@ -430,4 +430,25 @@ export class RedisService {
     const teamMembersKey = `team:members:${teamId}`;
     return await this.redis.sadd(teamMembersKey, members);
   }
+
+  async pushToMeetingBuffer(roomId: string, userId: string, userName: string, content: string, timestamp: Date) {
+    const redisKey = `meeting:${roomId}:buffer`;
+    const dataString = JSON.stringify({ userId, userName, content, timestamp });
+    await this.redis.rpush(redisKey, dataString);
+    this.logger.debug(await this.redis.lrange(redisKey, 0, -1))
+    return await this.redis.llen(redisKey);
+  }
+
+  async popMeetingBuffer(roomId: string) {
+    const redisKey = `meeting:${roomId}:buffer`;
+    const processingKey = `meeting:${roomId}:processing`;
+    try {
+      await this.redis.rename(redisKey, processingKey);
+    } catch (e) {
+      return []; 
+    }
+    const data = await this.redis.lrange(processingKey, 0, -1);
+    await this.redis.del(processingKey);
+    return data.map(item => JSON.parse(item));
+  }
 }

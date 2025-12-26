@@ -3,15 +3,9 @@ import { CallActionItem } from './call-action-item.entity';
 import { CallParticipant } from './call-participant.entity';
 import { CallSummaryBlock } from './call-summary-block.entity';
 import { CallTranscript } from './call-transcript.entity';
+import { RefType } from '../enum';
 
 
-export enum RefType {
-  TASK = 'TASK',
-  DOC = 'DOC',
-  PROJECT = 'PROJECT',
-  TEAM = 'TEAM',
-  CALENDAR = 'CALENDAR',
-}
 
 @Entity()
 export class Call {

@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { ClientConfigService } from '@app/contracts';
 import { SocketModule } from './socket.module';
 import { RedisIoAdapter } from './redis-io.adapter';
-import { MicroserviceOptions } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(SocketModule);
