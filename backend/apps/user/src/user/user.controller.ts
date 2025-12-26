@@ -15,6 +15,7 @@ import {
   User,
   USER_EXCHANGE,
   USER_PATTERNS,
+  UserOnboardingDto,
 } from '@app/contracts';
 import { Payload } from '@nestjs/microservices';
 import { customErrorHandler } from '@app/common';
@@ -259,4 +260,37 @@ export class UserController {
   unfollow(requesterId: string, followingId: string) {
     return this.userService.unfollow(requesterId, followingId);
   }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.ADD_SKILLS,
+    queue: USER_PATTERNS.ADD_SKILLS,
+    errorHandler: customErrorHandler
+  })
+  addSkills(data: UserOnboardingDto) {
+    console.log("RPC addSkills called with data:", data);
+    return this.userService.onboarding(data);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.UPDATE_SKILLS,
+    queue: USER_PATTERNS.UPDATE_SKILLS,
+    errorHandler: customErrorHandler
+  })
+  updateSkills(data: { userId: string, skills: string[] }) {
+    console.log("RPC updateSkills called with data:", data);
+    return this.userService.updateSkills(data.userId, data.skills);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.INCREMENT_BULK_SKILLS,
+    queue: USER_PATTERNS.INCREMENT_BULK_SKILLS,
+    errorHandler: customErrorHandler
+  })
+  incrementBulkSkills(data: { skills: string[], userIds: string[] }) {
+    return this.userService.handleBulkSkillIncrement(data.userIds, data.skills);
+  }
+
 }

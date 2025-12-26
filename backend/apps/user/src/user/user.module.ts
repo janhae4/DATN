@@ -10,6 +10,7 @@ import {
   TEAM_EXCHANGE,
   User,
   USER_EXCHANGE,
+  UserSkill,
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
@@ -20,11 +21,11 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       useFactory: () => ({
         type: 'postgres',
         url: process.env.DATABASE_USER_URL,
-        entities: [User, Account, Follow],
+        entities: [User, Account, Follow, UserSkill],
         synchronize: true,
       }),
     }),
-    TypeOrmModule.forFeature([User, Account, Follow]),
+    TypeOrmModule.forFeature([User, Account, Follow, UserSkill]),
     RabbitMQModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],

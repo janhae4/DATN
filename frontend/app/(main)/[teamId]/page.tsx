@@ -19,14 +19,6 @@ function DefaultTeamPage() {
     }
   }, [isLoading, projects, teamId, router]);
 
-  // if (isLoading) {
-  //   return (
-  //     <div className="flex h-full items-center justify-center">
-  //       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-  //     </div>
-  //   );
-  // }
-
   if (projects.length > 0) {
     return null; 
   }

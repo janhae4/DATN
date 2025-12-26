@@ -33,6 +33,7 @@ import { Roles } from '../common/role/role.decorator';
 import { GoogleAuthGuard } from '../common/role/google-auth.guard';
 import { RoleGuard } from '../common/role/role.guard';
 import { CurrentUser } from '../common/role/current-user.decorator';
+import { UserOnboardingDto } from './dto/user-onboarding.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -187,5 +188,21 @@ export class AuthController {
   @ApiOperation({ summary: 'Check if current user has linked Google account' })
   async checkGoogleStatus(@CurrentUser('id') userId: string) {
     return await this.authService.getGoogleConnectionStatus(userId);
+  }
+
+  @Patch('/onboarding')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  addSkills(@CurrentUser('id') userId: string,
+    @Body() data: UserOnboardingDto) {
+    return this.authService.addSkills(userId, data);
+  }
+
+  @Patch('/update-skills')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  updateSkills(@CurrentUser('id') userId: string,
+    @Body('skills') skills: string[]) {
+    return this.authService.updateSkills(userId, skills);
   }
 }

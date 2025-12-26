@@ -5,6 +5,7 @@ import {
   CreateTaskDto,
   UpdateTaskDto,
 } from "@/services/taskService";
+import { streamHelper } from "@/services/apiClient";
 
 export function useTasks(projectId?: string) {
   const queryClient = useQueryClient();
@@ -33,6 +34,13 @@ export function useTasks(projectId?: string) {
   });
 
   // --- MUTATIONS ---
+
+  const suggestTaskByAiMutation = useMutation({
+    mutationFn: ({ query, onChunk }: { query: string, onChunk: (chunk: string) => void }) => streamHelper('/tasks/suggest', { query }, onChunk),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+    },
+  });
 
   // Create Task
   const createTaskMutation = useMutation({
@@ -65,10 +73,10 @@ export function useTasks(projectId?: string) {
         return old.map((task) =>
           task.id === id
             ? {
-                ...task,
-                ...updates,
-                ...(optimisticLabels ? { labels: optimisticLabels } : {}),
-              }
+              ...task,
+              ...updates,
+              ...(optimisticLabels ? { labels: optimisticLabels } : {}),
+            }
             : task
         );
       });
@@ -85,7 +93,7 @@ export function useTasks(projectId?: string) {
     onSettled: (data, error, variables) => {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: tasksQueryKey });
-        queryClient.invalidateQueries({ queryKey: labelsQueryKey });     
+        queryClient.invalidateQueries({ queryKey: labelsQueryKey });
         queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
         queryClient.invalidateQueries({
           queryKey: ["task-labels", variables.id],
@@ -109,6 +117,7 @@ export function useTasks(projectId?: string) {
     isLoading: isLoadingTasks || isLoadingLabels,
     error: error as Error | null,
     createTask: createTaskMutation.mutateAsync,
+    suggestTaskByAi: suggestTaskByAiMutation.mutateAsync,
     updateTask: (id: string, updates: UpdateTaskDto) =>
       updateTaskMutation.mutateAsync({ id, updates }),
     deleteTask: deleteTaskMutation.mutateAsync,
@@ -124,7 +133,7 @@ export function useTask(taskId: string | null) {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["task", taskId], // Key này phải khớp với dòng invalidate ở trên
+    queryKey: ["task", taskId],
     queryFn: () => taskService.getTaskById(taskId!),
     enabled: !!taskId,
   });
