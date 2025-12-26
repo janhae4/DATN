@@ -514,12 +514,12 @@ export class ClientConfigService {
 --------------
 */
 
-  getFileDatabaseUrl(): string {
-    return this.config.get<string>(
-      'DATABASE_FILE_URL',
-      'mongodb://localhost:27017/file',
-    );
-  }
+getFileDatabaseUrl(): string {
+  return this.config.get<string>(
+    'DATABASE_FILE_URL',
+    'mongodb://localhost:27017/file?directConnection=true', // Thêm tham số này
+  );
+}
 
   /*
   -------------------------
