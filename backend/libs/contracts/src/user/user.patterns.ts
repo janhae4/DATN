@@ -25,4 +25,7 @@ export const USER_PATTERNS = {
   UNFOLLOW: 'user.unfollow',
   BAN: 'user.ban',
   UNBAN: 'user.unban',
+  ADD_SKILLS: 'user.addSkills',
+  UPDATE_SKILLS: 'user.updateSkills',
+  INCREMENT_BULK_SKILLS: 'user.incrementBulkSkills',
 };

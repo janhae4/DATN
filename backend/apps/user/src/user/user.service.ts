@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { Brackets, DataSource, FindManyOptions, In, Repository } from 'typeorm';
+import { Brackets, DataSource, EntityManager, FindManyOptions, In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
@@ -23,6 +23,8 @@ import {
   TeamMember,
   REDIS_EXCHANGE,
   REDIS_PATTERN,
+  UserSkill,
+  UserOnboardingDto,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { EVENTS } from '@app/contracts/events/events.pattern';
@@ -323,7 +325,7 @@ export class UserService {
     this.logger.log(`Finding user by ID: ${id}`);
     return await this.userRepo.findOne({
       where: { id },
-      relations: ['accounts'],
+      relations: ['accounts', 'skills'],
     });
   }
 
@@ -793,4 +795,72 @@ export class UserService {
 
     throw new BadRequestException('User not found or not unbanable');
   }
+
+  private async syncUserSkills(manager: EntityManager, userId: string, skillNames: string[]) {
+    const currentSkills = await manager.find(UserSkill, { where: { user: { id: userId } } });
+    const currentSkillNames = currentSkills.map(s => s.skillName.toLowerCase());
+
+    const newSkillNames = skillNames.filter(name => !currentSkillNames.includes(name.toLowerCase()));
+
+    if (newSkillNames.length > 0) {
+      const newEntities = newSkillNames.map(name => manager.create(UserSkill, {
+        user: { id: userId },
+        skillName: name.toLowerCase(),
+        isInterest: true
+      }));
+      await manager.save(newEntities);
+    }
+
+    const skillsToRemove = currentSkills.filter(s => !skillNames.includes(s.skillName));
+    await manager.remove(skillsToRemove);
+  }
+
+  async onboarding(dto: UserOnboardingDto) {
+    return await this.dataSource.transaction(async (manager) => {
+      await manager.update(User, dto.userId, { jobTitle: dto.jobTitle });
+      await this.syncUserSkills(manager, dto.userId, dto.interests);
+    });
+  }
+
+  async updateSkills(userId: string, skills: string[]) {
+    return await this.dataSource.transaction(async (manager) => {
+      await this.syncUserSkills(manager, userId, skills);
+    });
+  }
+
+  async handleBulkSkillIncrement(userIds: string[], skills: string[]) {
+    return await this.dataSource.transaction(async (manager) => {
+      for (const userId of userIds) {
+        for (const skillName of skills) {
+          await this.increaseSkillExperience(manager, userId, skillName, 10);
+        }
+      }
+      this.logger.log(`Updated skills for users: ${userIds.join(', ')}`);
+    });
+  }
+
+  async increaseSkillExperience(manager: EntityManager, userId: string, skillName: string, amount: number) {
+    const normalizedName = skillName.trim().toLowerCase();
+
+    let userSkill = await manager.findOne(UserSkill, {
+      where: { user: { id: userId }, skillName: normalizedName },
+    });
+
+    if (!userSkill) {
+      userSkill = manager.create(UserSkill, {
+        userId,
+        skillName: normalizedName,
+        experience: amount,
+        level: 1,
+      });
+    } else {
+      userSkill.experience += amount;
+      userSkill.level = 1 + Math.floor(userSkill.experience / 100);
+      userSkill.isInterest = false;
+    }
+
+    await manager.save(UserSkill, userSkill);
+  }
+
+
 }

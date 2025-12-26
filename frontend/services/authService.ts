@@ -1,9 +1,9 @@
 import apiClient from './apiClient';
-import { 
-  LoginCredentials, 
-  LoginResponse, 
-  RegisterData, 
-  UserProfile, 
+import {
+  LoginCredentials,
+  LoginResponse,
+  RegisterData,
+  UserProfile,
   ChangePasswordDto,
   VerifyAccountDto,
   ForgotPasswordDto,
@@ -17,10 +17,10 @@ import {
 export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
   try {
     const response = await apiClient.post<LoginResponse>('/auth/session', credentials);
-    return response.data; 
+    return response.data;
   } catch (error) {
     console.error('Login failed', error);
-    throw error; 
+    throw error;
   }
 };
 
@@ -55,12 +55,12 @@ export const logout = async (): Promise<void> => {
   try {
     await apiClient.delete('/auth/session');
     if (typeof window !== 'undefined') {
-      window.location.href = '/auth#login'; 
+      window.location.href = '/auth#login';
     }
   } catch (error) {
     console.error('Logout failed', error);
     if (typeof window !== 'undefined') {
-      window.location.href = '/auth#login'; 
+      window.location.href = '/auth#login';
     }
   }
 };
@@ -70,7 +70,7 @@ export const logout = async (): Promise<void> => {
  * DELETE /auth/sessions
  */
 export const logoutAll = async (): Promise<void> => {
-    await apiClient.delete('/auth/sessions');
+  await apiClient.delete('/auth/sessions');
 };
 
 // --- Account Verification ---
@@ -165,6 +165,15 @@ export const isGoogleLinked = async () => {
   return response.data;
 };
 
+export const onboarding = async (data: { jobTitle: string; interests: string[] }) => {
+  const response = await apiClient.patch('/auth/onboarding', data);
+  return response.data;
+}
+
+export const updateSkills = async (skills: string[]) => {
+  const response = await apiClient.patch('/auth/update-skills', { skills });
+  return response.data;
+}
 
 const authService = {
   login,
@@ -180,7 +189,9 @@ const authService = {
   resetPassword,
   refreshToken,
   initiateGoogleLogin,
-  linkGoogleAccount
+  linkGoogleAccount,
+  onboarding,
+  updateSkills
 };
 
 export default authService;

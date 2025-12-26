@@ -1,5 +1,5 @@
 "use client";
-import { GoogleOAuthProvider } from '@react-oauth/google';
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import {
   createContext,
   useContext,
@@ -7,15 +7,16 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import authService, { getMe } from "@/services/authService"; //
-import { UserProfile, LoginCredentials, RegisterData } from "@/types/auth"; //
+import authService, { getMe } from "@/services/authService";
+import { UserProfile, LoginCredentials, RegisterData } from "@/types/auth";
 
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<UserProfile>; //
-  register: (data: RegisterData) => Promise<any>; //
+  login: (credentials: LoginCredentials) => Promise<UserProfile>;
+  register: (data: RegisterData) => Promise<any>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,22 +25,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchUserProfile = async () => {
+    try {
+      const userProfile = await authService.getMe();
+      setUser(userProfile);
+      return userProfile;
+    } catch (error) {
+      setUser(null);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     const checkUserSession = async () => {
       try {
-        const userProfile = await authService.getMe();
-        console.log("this is userProfile", userProfile);
-        setUser(userProfile);
+        await fetchUserProfile();
       } catch (error) {
         console.error("Session check failed:", error);
-        setUser(null);
       } finally {
         setIsLoading(false);
       }
     };
-
     checkUserSession();
   }, []);
+
+  const refreshUser = async () => {
+    try {
+      await fetchUserProfile();
+      console.log("User profile refreshed");
+    } catch (error) {
+      console.error("Failed to refresh user:", error);
+    }
+  };
 
   // Hàm login
   const login = async (credentials: LoginCredentials) => {
@@ -104,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     register,
     logout,
+    refreshUser
   };
 
   // Chỉ render khi đã check xong session
@@ -115,7 +133,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  return <AuthContext.Provider value={value}> <GoogleOAuthProvider clientId="387020606917-73crp08jd6l5ntsi27c0kg0g9uo6u0jk.apps.googleusercontent.com">{children}</GoogleOAuthProvider></AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {" "}
+      <GoogleOAuthProvider clientId="387020606917-73crp08jd6l5ntsi27c0kg0g9uo6u0jk.apps.googleusercontent.com">
+        {children}
+      </GoogleOAuthProvider>
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {

@@ -15,7 +15,7 @@ const processQueue = (error: AxiosError | null) => {
       prom.reject(error);
     } else {
       prom.resolve();
-    }   
+    }
   });
 
   failedQueue = [];
@@ -113,5 +113,36 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const streamHelper = async (
+  url: string,
+  body: any,
+  onChunk: (chunk: string) => void
+): Promise<void> => {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${url}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+
+  if (response.status === 401) {
+    await authService.refreshToken();
+    return streamHelper(url, body, onChunk);
+  }
+
+  if (!response.body) throw new Error("No response body");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    onChunk(decoder.decode(value));
+  }
+};
 
 export default apiClient;

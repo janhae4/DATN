@@ -153,6 +153,8 @@ export * from './user/entity/account.entity';
 export * from './user/entity/user.entity';
 export * from './user/dto/find-user.dto'
 export * from './user/entity/follow.entity'
+export * from './user/entity/user-skill.entity'
+export * from './user/dto/user-onboarding.dto';
 
 /*----
 TEAM

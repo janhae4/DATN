@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Api gateway",
+            "label": "Api Gateway",
             "command": "npm",
             "args": [
                 "run",
@@ -50,7 +50,7 @@
             }
         },
         {
-            "label": "redis",
+            "label": "Redis",
             "command": "npm",
             "args": [
                 "run",
@@ -66,11 +66,11 @@
             }
         },
         {
-            "label": "notification",
+            "label": "Project",
             "command": "npm",
             "args": [
                 "run",
-                "start:notification"
+                "start:dev:project"
             ],
             "type": "shell",
             "options": {
@@ -82,136 +82,7 @@
             }
         },
         {
-            "label": "team",
-            "command": "npm",
-            "args": [
-                "run",
-                "start:team"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "discussion",
-            "command": "npm",
-            "args": [
-                "run",
-                "start:discussion"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "ai-discussion",
-            "command": "nest",
-            "args": [
-                "start",
-                "ai-discussion",
-                "--watch"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatbotDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "search",
-            "command": "npm",
-            "args": [
-                "run",
-                "start:search"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "socket",
-            "command": "npm",
-            "args": [
-                "run",
-                "start:socket"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "sprint",
-            "command": "npm",
-            "args": [
-                "run",
-                "start:sprint"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "list-services",
-            "command": "npm",
-            "args": [
-                "run",
-                "list:services"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "label-service",
-            "command": "npm",
-            "args": [
-                "run",
-                "label:service"
-            ],
-            "type": "shell",
-            "options": {
-                "cwd": "${workspaceFolder}/backend"
-            },
-            "presentation": {
-                "group": "chatDemo",
-                "panel": "new"
-            }
-        },
-        {
-            "label": "task",
+            "label": "Task",
             "command": "npm",
             "args": [
                 "run",
@@ -227,20 +98,252 @@
             }
         },
         {
-            "label": "All Service",
+            "label": "Sprint",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:dev:sprint"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Epic",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:dev:epic"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Label Service",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:dev:label"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "List Service",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:dev:list"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Team",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:team"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Search",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:search"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Socket",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:socket"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Notification",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:notification"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Discussion",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:discussion"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "AI Discussion",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:dev:ai-discussion"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Testing",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:dev:testing"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Calendar",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:dev:calendar"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Gmail",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:gmail"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Video Chat",
+            "command": "npm",
+            "args": [
+                "run",
+                "start:video-chat"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "RUN ALL SERVICES",
             "dependsOn": [
-                "Api gateway",
+                "Api Gateway",
                 "Auth",
                 "User",
-                "redis",
-                "notification",
-                "team",
-                "search",
-                "socket",
-                "ai-discussion",
-                "list-service",
-                "label-service",
-                "sprint"
+                "Redis",
+                "Project",
+                "Task",
+                "Sprint",
+                "Epic",
+                "Label Service",
+                "List Service",
+                "Team",
+                "Search",
+                "Socket",
+                "Notification",
+                // "Discussion",
+                "AI Discussion",
+                // "Testing",
+                "Calendar",
+                // "Gmail",
+                // "Video Chat"
             ],
             "problemMatcher": [],
             "group": {

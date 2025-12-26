@@ -8,6 +8,7 @@ import {
   USER_PATTERNS,
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { UserOnboardingDto } from '../auth/dto/user-onboarding.dto';
 
 @Injectable()
 export class UserService {
@@ -97,6 +98,22 @@ export class UserService {
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.UNBAN,
       payload: id,
+    });
+  }
+
+  addSkills(userId: string, data: UserOnboardingDto) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.ADD_SKILLS,
+      payload: { userId, ...data },
+    });
+  }
+
+  updateSkills(userId: string, skills: string[]) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.UPDATE_SKILLS,
+      payload: { userId, skills },
     });
   }
 }
