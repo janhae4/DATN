@@ -21,5 +21,12 @@ export const CHATBOT_PATTERN = {
   UPDATE_FILE: 'chatbot.update_file',
   RENAME_FILE: 'chatbot.rename_file',
   REMOVE_COLLECTION: 'chatbot.remove_collection',
-  UPDATE_STATUS_DOCUMENT: 'file.update.status'
+  UPDATE_STATUS_DOCUMENT: 'file.update.status', 
+  SUMMARIZE_MEETING: 'summarize_meeting',
+
+  RESPONSE_SUMMARIZE_MEETING: 'summarize_meeting.response',
+  RESPONSE_END_MEETING: 'summarize_meeting.end',
+
+  GET_MESSAGES: 'chatbot.get_messages',
+
 };

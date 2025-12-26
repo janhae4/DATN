@@ -1,16 +1,17 @@
-export const VIDEO_CHAT_PATTERNS = {
-  // For microservice communication
-  CREATE_GROUP_CALL: 'video-chat.create-group-call',
-  CREATE_CALL: 'video-chat.createCall',
-  GET_CALL_HISTORY: 'video-chat.getCallHistory',
-};
-
-// For WebSocket communication
-export const WEBSOCKET_EVENTS = {
-  GROUP_CALL_INVITATION: 'group-call-invitation', // Server to client: invite to a call
-  JOIN_ROOM: 'join-room', // Client to server: accept and join
-  NEW_USER_JOINED: 'new-user-joined', // Server to clients: notify of new member
-  USER_LEFT: 'user-left', // Server to clients: notify of member leaving
-  WEBRTC_SIGNAL: 'webrtc-signal', // C2S2C: Relay WebRTC offer/answer
-  WEBRTC_ICE_CANDIDATE: 'webrtc-ice-candidate', // C2S2C: Relay network candidates
+export const VIDEO_CHAT_PATTERN = {
+  CREATE_CALL: 'video_chat.call.create',
+  GET_HISTORY: 'video_chat.history.get',
+  GET_HISTORY_BY_ROOM: 'video_chat.history.room.get',
+  JOIN_ROOM: 'video_chat.room.join',
+  SEND_TRANSCRIPT: 'video_chat.transcript.send',
+  KICK_USER: 'video_chat.user.kick',
+  UNKICK_USER: 'video_chat.user.unkick',
+  RECEIVE_TRANSCRIPT: 'video_chat.transcript.receive',
+  PROCESS_TRANSCRIPT: 'video_chat.transcript.process',
+  LEAVE_ROOM: 'video_chat.room.leave',
+  END_CALL: 'video_chat.call.end',
+  OFFER: 'video_chat.signal.offer',
+  ANSWER: 'video_chat.signal.answer',
+  ICE_CANDIDATE: 'video_chat.signal.ice',
+  DISCONNECT: 'video_chat.client.disconnect',
 };

@@ -19,6 +19,7 @@ import { SprintModule } from '../sprint/sprint.module';
 import { EpicModule } from '../epic/epic.module';
 import { TaskModule } from '../task/task.module';
 import { CalendarModule } from '../calendar/calendar.module';
+import { VideoChatModule } from '../video-chat/video-chat.module';
 
 
 @Module({
@@ -52,6 +53,7 @@ import { CalendarModule } from '../calendar/calendar.module';
     ProjectModule,
     CalendarModule,
     WebhooksModule, 
+    VideoChatModule
   ],
   controllers: [ApiGatewayController],
   providers: [RpcErrorToHttpFilter, ApiGatewayService],

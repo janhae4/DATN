@@ -164,6 +164,18 @@ services:
       - ./init-mongo.sh:/scripts/init-mongo.sh
     entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
 
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root  # (Tùy chọn nếu mongo có pass)
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root # (Tùy chọn nếu mongo có pass)
+      ME_CONFIG_MONGODB_URL: mongodb://mongo_db:27017/ # Kết nối nội bộ Docker
+      ME_CONFIG_BASICAUTH: "false" # Tắt đăng nhập web cho tiện dev
+    depends_on:
+      - mongo_db
 volumes:
   postgres-data:
   redis-data:

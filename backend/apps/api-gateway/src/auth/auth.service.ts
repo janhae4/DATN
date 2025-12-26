@@ -241,7 +241,7 @@ export class AuthService {
         routingKey: REDIS_PATTERN.GET_GOOGLE_TOKEN,
         payload: userId, 
       });
-      console.log(result)
+      console.log("This is the result of linking gooogle: ", result)
       return !!result?.accessToken; 
     } catch (error) {
       return false;
