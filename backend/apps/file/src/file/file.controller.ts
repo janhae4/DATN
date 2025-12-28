@@ -59,8 +59,18 @@ export class FileController {
     queue: FILE_PATTERN.GET_FILES,
     errorHandler: customErrorHandler
   })
-  async getFiles(payload: { userId: string, teamId?: string }) {
-    return await this.fileService.getFiles(payload.userId, payload.teamId);
+  async getFiles(payload: {
+    userId: string,
+    teamId?: string,
+    page?: number,  
+    limit?: number   
+  }) {
+    return await this.fileService.getFiles(
+      payload.userId,
+      payload.teamId,
+      payload.page,
+      payload.limit
+    );
   }
 
   @RabbitRPC({
@@ -69,10 +79,10 @@ export class FileController {
     queue: FILE_PATTERN.RENAME,
     errorHandler: customErrorHandler
   })
- async renameFile(payload: { fileId: string, newFileName: string, userId: string, teamId?: string }) {
-  const { fileId, newFileName, userId, teamId } = payload;
-  return await this.fileService.renameFile(fileId, newFileName, userId, teamId);
-}
+  async renameFile(payload: { fileId: string, newFileName: string, userId: string, teamId?: string }) {
+    const { fileId, newFileName, userId, teamId } = payload;
+    return await this.fileService.renameFile(fileId, newFileName, userId, teamId);
+  }
 
   @RabbitRPC({
     exchange: FILE_EXCHANGE,
@@ -80,11 +90,11 @@ export class FileController {
     queue: FILE_PATTERN.INITIAL_UPDATE,
     errorHandler: customErrorHandler
   })
-async initiateUpdate(payload: { fileId: string, newFileName: string, userId: string, teamId?: string }) {
-  const { fileId, newFileName, userId, teamId } = payload;
-  console.log("initiateUpdate", fileId, newFileName, userId, teamId);
-  return await this.fileService.createPreSignedUpdateUrl(fileId, newFileName, userId, teamId);
-}
+  async initiateUpdate(payload: { fileId: string, newFileName: string, userId: string, teamId?: string }) {
+    const { fileId, newFileName, userId, teamId } = payload;
+    console.log("initiateUpdate", fileId, newFileName, userId, teamId);
+    return await this.fileService.createPreSignedUpdateUrl(fileId, newFileName, userId, teamId);
+  }
 
   @RabbitSubscribe({
     exchange: FILE_EXCHANGE,

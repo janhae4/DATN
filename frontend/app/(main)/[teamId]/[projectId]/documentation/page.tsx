@@ -38,18 +38,48 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
 export default function AttachmentPage() {
+    const [paginationState, setPaginationState] = useState({
+    pageIndex: 0,
+    pageSize: 12,
+  });
+  
+  // Filter states
+  const [fileNameFilter, setFileNameFilter] = useState("")
+  const [fileTypeFilter, setFileTypeFilter] = useState("all")
+
   // 1. Quản lý trạng thái dữ liệu qua Hook thực tế
   const {
-    files,
+    files = [],
     isLoading,
+    isPlaceholderData,
     uploadFile,
     deleteFile,
     downloadFile,
-    previewFile
-  } = useFiles();
+    previewFile,
+    pagination
+  } = useFiles(undefined, paginationState.pageIndex + 1, paginationState.pageSize);
+
+  console.log("data in page: ", files)
 
 
+  // Handle search and filter changes by resetting to first page
+  React.useEffect(() => {
+    setPaginationState(prev => ({
+      ...prev,
+      pageIndex: 0, // Reset to first page when filters change
+    }));
+  }, [fileNameFilter, fileTypeFilter]);
+
+  React.useEffect(() => {
+    if (pagination?.currentPage) {
+      setPaginationState(prev => ({
+        ...prev,
+        pageIndex: pagination.currentPage - 1,
+      }));
+    }
+  }, [pagination?.currentPage]);
 
   const [viewMode, setViewMode] = React.useState<'table' | 'grid'>('grid')
   const [isUploadVisible, setIsUploadVisible] = useState(false)
@@ -57,10 +87,6 @@ export default function AttachmentPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // 2. State cho bộ lọc
-  const [fileNameFilter, setFileNameFilter] = useState("")
-  const [fileTypeFilter, setFileTypeFilter] = useState("all")
 
   // --- LOGIC XỬ LÝ FILE CHỜ (STAGING) ---
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -113,23 +139,19 @@ export default function AttachmentPage() {
   }
 
   // --- LOGIC BỘ LỌC (CLIENT-SIDE) ---
-  const filteredData = useMemo(() => {
-    return files.filter(item => {
-      const matchesName = item.fileName.toLowerCase().includes(fileNameFilter.toLowerCase());
-      let matchesType = true;
-      if (fileTypeFilter !== "all") {
-        matchesType = item.fileName.split('.').pop()?.toLowerCase() === fileTypeFilter || false;
-      }
-      return matchesName && matchesType;
-    });
-  }, [files, fileNameFilter, fileTypeFilter]);
+  // Remove client-side filtering since we're doing it server-side
+  // The filtering is now handled by the API
 
   // Lấy danh sách extension duy nhất để làm filter
   const uniqueExtensions = useMemo(() => {
     const exts = new Set<string>();
-    files.forEach(f => {
-      const ext = f.fileName.split('.').pop()?.toLowerCase();
-      if (ext) exts.add(ext);
+    files?.forEach(f => {
+      const fileName = f?.fileName || ''; // Ensure fileName is a string
+      const parts = fileName.split('.');
+      if (parts.length > 1) { // Only process if there's an extension
+        const ext = parts.pop()?.toLowerCase();
+        if (ext) exts.add(ext);
+      }
     });
     return Array.from(exts);
   }, [files]);
@@ -331,6 +353,7 @@ export default function AttachmentPage() {
       </div>
 
       {/* DATA DISPLAY AREA */}
+   {/* DATA DISPLAY AREA */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -343,11 +366,21 @@ export default function AttachmentPage() {
             onDownload: (file) => downloadFile(file.id),
             onDelete: (file) => deleteFile(file.id),
           })}
-          data={filteredData}
+          data={files}
+          
+          // DataTable nhận index 0-based
+          pageCount={pagination?.totalPages || 1}
+          pageIndex={paginationState.pageIndex} 
+          onPageChange={(page) => {
+             // Scroll lên đầu
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setPaginationState(prev => ({ ...prev, pageIndex: page }));
+          }}
+          isLoading={isLoading || isPlaceholderData}
         />
       ) : (
         <DataGrid
-          data={filteredData}
+          data={files}
           renderItem={(file) => (
             <FileCard
               file={file}
@@ -356,6 +389,18 @@ export default function AttachmentPage() {
               onDelete={(f) => deleteFile(f.id)}
             />
           )}
+          // THÊM LOGIC PHÂN TRANG CHO DATAGRID TẠI ĐÂY
+          pagination={{
+            // Convert 0-based -> 1-based để hiển thị "Page 1"
+            currentPage: paginationState.pageIndex + 1, 
+            totalPages: pagination?.totalPages || 1,
+            // Khi DataGrid trả về trang mới (ví dụ trang 2), ta trừ 1 để lưu vào state (thành 1)
+            onPageChange: (newPage) => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setPaginationState(prev => ({ ...prev, pageIndex: newPage - 1 }));
+            }
+          }}
+          isLoading={isLoading || isPlaceholderData}
         />
       )}
 

@@ -47,25 +47,27 @@ import { Attachment } from "@/types"
 import { FilePreviewDialog } from "./file-preview-dialog";
 
 // --- 1. Helper: Lấy Icon đúng định dạng tập tin ---
-const getFileIcon = (fileType: string, fileName: string) => {
-  const type = fileType.toLowerCase();
-  const name = fileName.toLowerCase();
+const getFileIcon = (fileType?: string, fileName?: string) => {
+  const type = fileType?.toLowerCase() || '';
+  const name = fileName?.toLowerCase() || '';
 
-  if (type.includes('image') || name.match(/\.(png|jpg|jpeg|gif|webp)$/)) 
+  if (!type && !name) return <FileIcon className="h-4 w-4 text-gray-400" />;
+
+  if (type.includes('image') || name.match(/\.(png|jpg|jpeg|gif|webp)$/i)) 
     return <FileImage className="h-4 w-4 text-blue-500" />;
   if (type.includes('pdf') || name.endsWith('.pdf')) 
     return <FileText className="h-4 w-4 text-red-500" />;
-  if (type.includes('spreadsheet') || type.includes('excel') || name.match(/\.(xlsx?|csv)$/)) 
+  if (type.includes('spreadsheet') || type.includes('excel') || name.match(/\.(xlsx?|csv)$/i)) 
     return <FileSpreadsheet className="h-4 w-4 text-emerald-600" />;
-  if (type.includes('presentation') || type.includes('powerpoint') || name.match(/\.(pptx?)$/)) 
+  if (type.includes('presentation') || type.includes('powerpoint') || name.match(/\.(pptx?)$/i)) 
     return <Presentation className="h-4 w-4 text-orange-500" />;
-  if (type.includes('zip') || type.includes('archive') || name.match(/\.(zip|rar|7z)$/)) 
+  if (type.includes('zip') || type.includes('archive') || name.match(/\.(zip|rar|7z)$/i)) 
     return <FileArchive className="h-4 w-4 text-amber-600" />;
-  if (type.includes('video') || name.match(/\.(mp4|mov|avi)$/)) 
+  if (type.includes('video') || name.match(/\.(mp4|mov|avi)$/i)) 
     return <FileVideo className="h-4 w-4 text-pink-500" />;
-  if (type.includes('audio') || name.match(/\.(mp3|wav)$/)) 
+  if (type.includes('audio') || name.match(/\.(mp3|wav)$/i)) 
     return <FileAudio className="h-4 w-4 text-purple-500" />;
-  if (type.includes('code') || name.match(/\.(ts|js|tsx|jsx|json|html|css)$/))
+  if (type.includes('code') || name.match(/\.(ts|js|tsx|jsx|json|html|css)$/i))
     return <FileCode className="h-4 w-4 text-indigo-500" />;
   
   // Default file icon
@@ -91,11 +93,13 @@ const FileNameCell = ({
   onPreview: (file: Attachment) => void 
 }) => {
   const { files } = useFiles();
-  const file = files.find(f => f.id === row.original.id);
+  // Fall back to row.original if file is not found in files array
+  const file = files.find(f => f.id === row.original.id) || row.original;
   
-  if (!file) return null;
+  if (!file) return <div className="flex items-center gap-2"><FileIcon className="h-4 w-4 text-gray-400" /> <span className="text-gray-400">Unknown file</span></div>;
   
   const { fileName, fileType } = file;
+  const displayName = fileName || 'Untitled file';
 
   return (
     <div className="flex items-center gap-2 group">
@@ -107,7 +111,7 @@ const FileNameCell = ({
           onPreview(file);
         }}
       >
-        {fileName}
+        {displayName}
       </button>
     </div>
   );

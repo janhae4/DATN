@@ -1,8 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fileService, GetFilesResponse } from "@/services/fileService";
-import { Attachment } from "@/types";
+import { Attachment } from "@/types"; // Đảm bảo type này khớp với UI của mày
 
+// Helper function giữ nguyên
 const getMimeTypeByExtension = (fileName: string): string => {
   const extension = fileName.split('.').pop()?.toLowerCase();
   const mimeMap: Record<string, string> = {
@@ -18,39 +19,57 @@ const getMimeTypeByExtension = (fileName: string): string => {
   return extension ? (mimeMap[extension] || `application/${extension}`) : 'application/octet-stream';
 };
 
-export function useFiles(teamId?: string) {
+// 1. Nhận thêm tham số page và limit
+export function useFiles(teamId?: string, page: number = 1, limit: number = 10) {
   const queryClient = useQueryClient();
-  const queryKey = ["files", teamId || "personal"];
+  
+  // 2. QueryKey phải chứa page và limit để cache riêng từng trang
+  const queryKey = ["files", teamId || "personal", page, limit];
 
-  const { data: files = [], isLoading } = useQuery<GetFilesResponse, Error, Attachment[]>({
+  const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey,
-    queryFn: () => fileService.getFiles(teamId),
-    staleTime: 1000 * 60 * 5,
-    select: (response): Attachment[] => {
-      return response.data.map((file) => ({
-        id: file._id,
-        fileName: file.originalName,
-        fileSize: file.size || 0,
-        fileType: file?.mimeType || getMimeTypeByExtension(file.originalName),
-        uploadedById: file.userId || "System",
-        uploadedAt: file.createdAt,
-        taskId: "general",
-        fileUrl: "",
-        status: file.status
-      }));
+    queryFn: () => fileService.getFiles(teamId, page, limit),
+    staleTime: 1000 * 60 * 5, // 5 phút
+    placeholderData: keepPreviousData, // QUAN TRỌNG: Giữ data trang cũ khi đang fetch trang mới (UX mượt hơn)
+    
+    // 3. Select: Transform data nhưng KHÔNG ĐƯỢC vứt pagination đi
+    select: (response: GetFilesResponse) => {
+      const mappedFiles: Attachment[] = response.data.map((file) => {
+        return {
+          id: file._id,
+          fileName: file.originalName,
+          fileSize: file.size, 
+          fileType: file.mimetype || getMimeTypeByExtension(file.originalName),
+          uploadedById: file.userId || "System",
+          uploadedAt: file.createdAt,
+          taskId: "general",
+          fileUrl: "",
+          status: file.status
+        };
+      });
+      
+      return {
+        files: mappedFiles,
+        pagination: response.pagination
+      };
     },
   });
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      // 4. Fix Upload: Truyền thêm fileType để MinIO ký signature đúng
       const { uploadUrl, fileId } = await fileService.initiateUpload({
-        fileName: file.name
+        fileName: file.name,
+        fileType: file.type // BẮT BUỘC CÓ
       }, teamId);
+      
       await fileService.uploadFileToMinIO(uploadUrl, file);
       return fileId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      // Invalidate toàn bộ cache liên quan đến teamId (bất kể trang nào)
+      queryClient.invalidateQueries({ queryKey: ["files", teamId || "personal"] });
+      toast.success("Tải lên thành công!");
     },
     onError: (error: any) => {
       const msg = error.response?.data?.message || error.message || "Không thể tải lên tập tin";
@@ -61,7 +80,7 @@ export function useFiles(teamId?: string) {
   const deleteMutation = useMutation({
     mutationFn: (fileId: string) => fileService.deleteFile(fileId, teamId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["files", teamId || "personal"] });
       toast.success("Đã xóa tập tin");
     },
     onError: () => {
@@ -83,23 +102,29 @@ export function useFiles(teamId?: string) {
     }
   };
 
-const previewFile = async (fileId: string): Promise<string | null> => {
-  try {
-    const { viewUrl } = await fileService.getPreviewUrl(fileId, teamId);
-    return viewUrl || null;
-  } catch (err) {
-    toast.error("Không thể xem trước tập tin");
-    return null;
-  }
-}
+  const previewFile = async (fileId: string): Promise<string | null> => {
+    try {
+      const { viewUrl } = await fileService.getPreviewUrl(fileId, teamId);
+      return viewUrl || null;
+    } catch (err) {
+      toast.error("Không thể xem trước tập tin");
+      return null;
+    }
+  };
 
   return {
-    files,
+    // Trả về data đã transform (nếu chưa có data thì fallback mảng rỗng)
+    files: data?.files || [],
+    pagination: data?.pagination || null, // Trả về pagination cho UI dùng
     isLoading,
+    isPlaceholderData, // Cờ này để UI biết đang load trang kế tiếp (có thể làm mờ bảng)
+    
     uploadFile: uploadMutation.mutateAsync,
     isUploading: uploadMutation.isPending,
+    
     deleteFile: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
+    
     downloadFile,
     previewFile,
     refreshFiles: () => queryClient.invalidateQueries({ queryKey })
