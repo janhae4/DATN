@@ -164,6 +164,8 @@ export class FileService {
             throw new NotFoundException(`File not found`);
         }
 
+        const metadata = await this.minioService.getObjectMetadata(storageKey);
+
         const fileOriginalName = file.pendingNewName || file.originalName;
 
         try {
@@ -172,17 +174,20 @@ export class FileService {
                     $set: {
                         originalName: fileOriginalName,
                         status: FileStatus.UPLOADED,
+                        size: metadata?.size || 0,
+                        mimetype: metadata?.metaData?.['content-type'] || 'application/octet-stream',
                     },
                     $unset: {
                         pendingNewName: ''
                     }
                 }
-            )
+            );
         } catch (dbError) {
             this.logger.error(`DB update UPLOADED failed: ${dbError.message}`);
             throw new BadRequestException('Failed to update file record');
         }
 
+        // 4. Thông báo qua Socket để Client cập nhật UI ngay lập tức
         this.amqp.publish(
             SOCKET_EXCHANGE,
             FILE_PATTERN.COMPLETE_UPLOAD,
@@ -192,8 +197,9 @@ export class FileService {
                 status: FileStatus.UPLOADED,
                 userId: file.userId
             }
-        )
+        );
 
+        // 5. Gửi sang Chatbot/AI để xử lý nội dung bên trong tập tin
         this.amqp.publish(
             CHATBOT_EXCHANGE,
             CHATBOT_PATTERN.PROCESS_DOCUMENT,
@@ -204,7 +210,7 @@ export class FileService {
                 userId: file.userId,
                 teamId: file.teamId
             }
-        )
+        );
     }
 
     async getFiles(
@@ -303,4 +309,6 @@ export class FileService {
 
         return { downloadUrl };
     }
+
+
 }

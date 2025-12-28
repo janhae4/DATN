@@ -134,4 +134,20 @@ export class FileController {
   ) {
     return this.fileService.getFiles(userId, teamId);
   }
+
+  // --- THÊM ĐOẠN NÀY ---
+  @Post(':fileId/confirm')
+  @ApiOperation({ summary: '7. Confirm file upload completion' })
+  @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to confirm' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiResponse({ status: 200, description: 'File confirmed successfully' })
+  confirmUpload(
+    @Param('fileId') fileId: string,
+    @CurrentUser('id') userId: string,
+    @Query('teamId') teamId?: string,
+  ) {
+    return this.fileService.confirmUpload(fileId, userId, teamId);
+  }
+
+  
 }
