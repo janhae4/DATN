@@ -137,7 +137,7 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
 
   // 5. Fallback (Không hỗ trợ preview)
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 bg-zinc-50 dark:bg-zinc-900">
+    <div className="flex h-full  flex-col items-center justify-center gap-4 bg-zinc-50 dark:bg-zinc-900">
       <div className="rounded-full bg-zinc-200 p-6 dark:bg-zinc-800">
         <FileText className="h-10 w-10 text-zinc-400" />
       </div>
