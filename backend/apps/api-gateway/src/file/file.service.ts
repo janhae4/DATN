@@ -85,4 +85,12 @@ export class FileService {
             teamId,
         })
     }
+
+    async confirmUpload(fileId: string, userId: string, teamId?: string) {
+        return this.sendRpcRequest('file.confirm_upload', { 
+            fileId,
+            userId,
+            teamId,
+        });
+    }
 }

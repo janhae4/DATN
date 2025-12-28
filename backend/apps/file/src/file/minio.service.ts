@@ -126,4 +126,13 @@ export class MinioService implements OnModuleInit {
             throw new BadRequestException('Get pre-signed download URL failed');
         }
     }
+
+    async getObjectMetadata(key: string) {
+        try {
+            return await this.minioClient.statObject(this.bucketName, key);
+        } catch (err) {
+            this.logger.error(`Failed to get metadata for ${key}:`, err);
+            return null;
+        }
+    }
 }
