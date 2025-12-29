@@ -31,7 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-import { TeamMember } from "@/types/social";
+import { Member, TeamMember } from "@/types/social";
 import { Project } from "@/types/project";
 import { MemberRole } from "@/types/common/enums";
 import { CreateProjectModal } from "@/components/features/project/CreateProjectModal";
@@ -45,7 +45,7 @@ const COLORS = {
 };
 
 interface TeamAnalyticsProps {
-  members: TeamMember[];
+  members: Member[];
   projects: Project[];
 }
 

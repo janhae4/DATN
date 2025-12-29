@@ -1,5 +1,5 @@
 import apiClient from "./apiClient";
-import { Team, TeamMember } from "@/types/social";
+import { Member, Team, TeamMember } from "@/types/social";
 import { Discussion, Message } from "@/types/communication";
 import { User } from "@/types/auth";
 import { MemberRole } from "@/types/common/enums";
@@ -79,8 +79,8 @@ export const teamService = {
   },
 
   // Get members of a specific team
-  getTeamMembers: async (teamId: string): Promise<(TeamMember & { user: User })[]> => {
-    const response = await apiClient.get<(TeamMember & { user: User })[]>(`/teams/${teamId}/members`);
+  getTeamMembers: async (teamId: string): Promise<(Member)[]> => {
+    const response = await apiClient.get<(Member)[]>(`/teams/${teamId}/members`);
     return response.data;
   },
 

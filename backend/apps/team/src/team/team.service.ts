@@ -837,78 +837,32 @@ export class TeamService {
       return [];
     }
 
-    const memberIds = membersFromDb.map((m) => m.userId);
-    
-    // 1. Thử lấy từ Cache trước
-    let usersFromCache: EventUserSnapshot[] = [];
-    try {
-      usersFromCache = await this.amqp.request<EventUserSnapshot[]>({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
-        payload: memberIds,
-        timeout: 2000,
-      });
-    } catch (cacheError) {
-      this.logger.warn(
-        `Failed to get profiles from cache for ${teamId}.`,
-        cacheError,
-      );
-    }
+    const userIds = membersFromDb.map(m => m.userId);
 
-    // 2. Tìm những ID bị thiếu trong Cache
-    const foundInCacheIds = new Set(usersFromCache.map((u) => u.id));
-    const missingIds = memberIds.filter((id) => !foundInCacheIds.has(id));
-    
-    let usersFromDb: User[] = [];
+    const membersInfo: Partial<User>[] = unwrapRpcResult(await this.amqp.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+      payload: { userIds }
+    }));
 
-    // 3. Nếu thiếu, gọi sang User Service để lấy
-    if (missingIds.length > 0) {
-      this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from User Service...`);
-      try {
-        const result = await this.amqp.request<User[]>({
-          exchange: USER_EXCHANGE,
-          routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-          payload: { userIds: missingIds },
-        });
-        usersFromDb = Array.isArray(result) ? result : (result ? [result] : []);
-
-        // 4. Cập nhật lại vào Cache để lần sau nhanh hơn
-        if (usersFromDb.length > 0) {
-          this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, {
-            users: usersFromDb,
-          });
-        }
-      } catch (rpcError) {
-        this.logger.error(`Failed to fetch users from User Service`, rpcError);
-      }
-    }
-
-    // 5. Gộp danh sách từ Cache và DB
-    const allFoundUsers = [
-      ...usersFromCache,
-      ...usersFromDb.map((u) => ({
-        id: u.id,
-        name: u.name,
-        avatar: u.avatar,
-      })),
-    ];
-
-    // Tạo Map để lookup nhanh
-    const profileMap = new Map(allFoundUsers.map((p) => [p.id, p]));
-
-    const combinedMembers = membersFromDb.map((member) => {
-      const cachedUser = profileMap.get(member.userId) || {
-        name: 'Unknown',
-        avatar: null,
-      };
+    const result = membersFromDb.map(member => {
+      const profile = membersInfo.find(u => u.id === member.userId);
 
       return {
-        ...member,
-        cachedUser: cachedUser
+        id: member.userId,
+        name: profile?.name || 'Unknown',
+        avatar: profile?.avatar || '',
+        bio: profile?.bio || '',
+        role: member.role,
+        email: profile?.email || '',
+        skills: profile?.skills || [],
+        joinedAt: member.joinedAt,
+        isActive: profile?.isActive || false,
+        teamId: teamId,
       };
     });
 
-    return combinedMembers;
+    return result;
   }
 
   async findAll() {
@@ -979,6 +933,7 @@ export class TeamService {
       throw new NotFoundException(`You are not a member of this team.`);
     }
     const requester = team.members.find((m) => m.userId === userId);
+    console.log('Role', requester?.role)
     if (!requester || !roles.includes(requester.role)) {
       throw new ForbiddenException(
         'You do not have permission to perform this action.',

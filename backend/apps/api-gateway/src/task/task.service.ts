@@ -81,4 +81,11 @@ export class TaskService {
     }));
   }
 
+  async suggestTask(userId: string, objective: string): Promise<string[]> {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.SUGGEST_TASK,
+      payload: { userId, objective },
+    }));
+  }
 }

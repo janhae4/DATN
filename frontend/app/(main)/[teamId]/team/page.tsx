@@ -32,7 +32,7 @@ export default function TeamDetailsPage() {
   const leaveTeamMutation = useLeaveTeam();
 
   // Permissions
-  const currentMember = members.find(m => m.userId === user?.id);
+  const currentMember = members.find(m => m.id === user?.id);
   const userRole = currentMember?.role;
   const isOwner = userRole === MemberRole.OWNER;
   const isAdmin = userRole === MemberRole.ADMIN;

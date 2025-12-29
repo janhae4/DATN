@@ -1,4 +1,4 @@
-import apiClient from "@/services/apiClient";
+import apiClient, { streamHelper } from "@/services/apiClient";
 import { Task, TaskLabel } from "@/types";
 import { Priority } from "@/types/common/enums";
 
@@ -54,9 +54,8 @@ export const taskService = {
     return response.data;
   },
 
-  suggestTasksByAi: async (query: string): Promise<Task[]> => {
-    const response = await apiClient.post<Task[]>(`/tasks/suggest`, { query });
-    return response.data;
+  suggestTasksByAi: async (teamId: string, projectId: string, query: string, onChunk: (chunk: string) => void): Promise<void> => {
+    await streamHelper('/tasks/suggest-stream', projectId, teamId, query, onChunk)
   },
 
   /**

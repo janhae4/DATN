@@ -1,13 +1,19 @@
-import { Controller } from '@nestjs/common';
+import { Body, Controller, Inject, Query, Req, Sse } from '@nestjs/common';
 import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE } from '@app/contracts';
+import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, TEAM_EXCHANGE, CHATBOT_EXCHANGE } from '@app/contracts';
 import { customErrorHandler } from '@app/common';
 import { LabelEvent } from '@app/contracts/events/label.event';
+import { finalize, map, Observable } from 'rxjs';
+import { AiStreamService } from './ai-stream.service';
+import type { Request } from 'express';
+import { unwrapRpcResult } from 'apps/api-gateway/src/common/helper/rpc';
 
-@Controller()
+@Controller('tasks')
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) { }
+  constructor(private readonly tasksService: TasksService,
+    private readonly streamService: AiStreamService
+  ) { }
 
   @RabbitRPC({
     exchange: TASK_EXCHANGE,
@@ -110,14 +116,14 @@ export class TasksController {
     this.tasksService.handleLabelDeleted(payload);
   }
 
-   @RabbitSubscribe({
+  @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: LabelEvent.UPDATED,
     queue: 'task-service.label.updated',
   })
   async handleLabelUpdated(label: Label) {
     console.log("label update in tasks----------------", label)
-   return this.tasksService.handLabelUpdate(label)
+    return this.tasksService.handLabelUpdate(label)
   }
 
 
@@ -127,8 +133,72 @@ export class TasksController {
     queue: TASK_PATTERNS.GET_ALL_TASK_LABEL,
     errorHandler: customErrorHandler,
   })
-  getAllTaskLabel(payload: { projectId: string }){
+  getAllTaskLabel(payload: { projectId: string }) {
     return this.tasksService.getAllTaskLabel(payload.projectId);
   }
-  
+
+  // @RabbitRPC({
+  //   exchange: TASK_EXCHANGE,
+  //   routingKey: TASK_PATTERNS.SUGGEST_TASK,
+  //   queue: TASK_PATTERNS.SUGGEST_TASK,
+  //   errorHandler: customErrorHandler,
+  // })
+  // suggestTask(payload: { userId: string; objective: string }) {
+  //   return this.tasksService.suggestTask(payload.userId, payload.objective);
+  // }
+
+  // @RabbitSubscribe({
+  //   exchange: TEAM_EXCHANGE,
+  //   routingKey: 'ai.generate.tasks',
+  //   queue: 'ai.generate.tasks',
+  // })
+  // async mockPythonAI(msg: any) {
+  //   return this.tasksService.mockPythonAI(msg);
+  // }
+
+  @RabbitSubscribe({
+    exchange: TASK_EXCHANGE,
+    routingKey: 'ai.result.tasks',
+    queue: 'ai.result.tasks',
+  })
+  async handleAiResult(data: {
+    userId: string;
+    type: string;
+    title?: string;
+    memberId?: string;
+    skillName?: string;
+    experience?: number;
+    reason?: string;
+  }) {
+    console.log(`[SSE Bridge] Nhận kết quả từ RabbitMQ cho User: ${data.userId}, Type: ${data.type}, Title: ${data.title}, MemberId: ${data.memberId}, SkillName: ${data.skillName}, Experience: ${data.experience}, Reason: ${data.reason}`);
+    const stream = this.streamService.getOrCreateStream(data.userId);
+    stream.next(data);
+  }
+
+  @Sse('suggest-stream')
+  async sse(
+    @Query('query') query: string,
+    @Query('projectId') projectId: string, 
+    @Query('teamId') teamId: string,
+    @Req() req: Request): Promise<Observable<MessageEvent>> {
+    const accessToken = req.cookies['accessToken'];
+    const userId = await this.tasksService.getUserIdFromToken(accessToken);
+    const userStream$ = this.streamService.getOrCreateStream(userId);
+
+    await this.tasksService.suggestTask(userId, query, projectId, teamId);
+
+    return userStream$.asObservable().pipe(
+      map((data) => ({
+        data: {
+          title: data.title,
+          memberId: data.memberId,
+          skillName: data.skillName,
+          experience: data.experience,
+          reason: data.reason,
+          type: data.type
+        },
+      } as MessageEvent)),
+      finalize(() => this.streamService.removeStream(userId))
+    );
+  }
 }

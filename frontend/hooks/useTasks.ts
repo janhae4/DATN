@@ -7,7 +7,7 @@ import {
 } from "@/services/taskService";
 import { streamHelper } from "@/services/apiClient";
 
-export function useTasks(projectId?: string) {
+export function useTasks(projectId?: string, teamId?: string) {
   const queryClient = useQueryClient();
   const tasksQueryKey = ["tasks", projectId];
   const labelsQueryKey = ["task-labels-project", projectId];
@@ -36,7 +36,7 @@ export function useTasks(projectId?: string) {
   // --- MUTATIONS ---
 
   const suggestTaskByAiMutation = useMutation({
-    mutationFn: ({ query, onChunk }: { query: string, onChunk: (chunk: string) => void }) => streamHelper('/tasks/suggest', { query }, onChunk),
+    mutationFn: ({ query, onChunk }: { query: string, onChunk: (chunk: string) => void }) => streamHelper('/tasks/suggest-stream', projectId || '',teamId || '', query, onChunk),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tasksQueryKey });
     },

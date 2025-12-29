@@ -6,7 +6,9 @@ from functools import partial
 from config import (
     SEARCH_EXCHANGE,
     EVENTS_EXCHANGE,
-    RABBITMQ_URL, 
+    RABBITMQ_URL,
+    SUGGEST_QUEUE,
+    SUGGEST_TASK_ROUTING_KEY, 
     THREADPOOL_MAX_WORKERS,
     INGESTION_QUEUE,
     REMOVE_QUEUE,
@@ -24,6 +26,7 @@ from services.vectorstore_service import VectorStoreService
 from services.retriever_service import RetrieverService
 from chains.rag_chain import RAGChain
 from chains.summarizer import Summarizer
+from chains.task_architect import TaskArchitect
 from sentence_transformers.cross_encoder import CrossEncoder
 from transformers import AutoTokenizer
 
@@ -40,8 +43,8 @@ async def main():
     try:
         loop = asyncio.get_running_loop()
         print("Đang tải Reranker model...")
-        constructor_call = partial(CrossEncoder, "Qwen/Qwen3-Reranker-0.6B", max_length=512)
-        reranker = await loop.run_in_executor(threadpool, constructor_call)
+        # constructor_call = partial(CrossEncoder, "Qwen/Qwen3-Reranker-0.6B", max_length=512)
+        # reranker = await loop.run_in_executor(threadpool, constructor_call)
         print("Tải Reranker thành công!")
     except Exception as e:
         print(f"Không load được reranker, sẽ dùng fallback: {e}")
@@ -50,6 +53,7 @@ async def main():
     retriever_service = RetrieverService(llm_service.get_embeddings(), reranker_model=reranker, use_reranker=(reranker is not None))
     rag_chain = RAGChain(llm_service, vectorstore_service, retriever_service, threadpool=threadpool)
     summarizer = Summarizer(llm_service)
+    task_architect = TaskArchitect(llm_service)
     print("Khởi tạo service hoàn tất.")
 
     connection = await connect_robust(RABBITMQ_URL)
@@ -84,7 +88,9 @@ async def main():
         rag_queue = await channel.declare_queue(RAG_QUEUE, durable=True)
         await rag_queue.bind(chatbot_exchange, routing_key=ASK_QUESTION_ROUTING_KEY)
         await rag_queue.bind(chatbot_exchange, routing_key=SUMMARIZE_DOCUMENT_ROUTING_KEY)
-        
+        await rag_queue.bind(chatbot_exchange, routing_key=SUGGEST_TASK_ROUTING_KEY)
+
+        print("-- Kết nối RabbitMQ thành công, khởi tạo consumer...")
 
         ingestion_consumer = partial(
             ingestion_callback, 
@@ -97,6 +103,7 @@ async def main():
             rag_chain=rag_chain, 
             summarizer=summarizer, 
             minio_service=minio_service,
+            task_architect=task_architect,
             channel=channel
         )
         remove_consumer = partial(
@@ -112,6 +119,7 @@ async def main():
         print(f"  - {INGESTION_QUEUE} (Xử lý tài liệu)")
         print(f"  - {RAG_QUEUE} (Hỏi đáp & Tóm tắt)")
         print(f"  - {REMOVE_QUEUE} (Xóa collection)")
+        print(f"  - {SUGGEST_QUEUE} (Gợi ý nhiệm vụ)")
         print(" [*] Bắt đầu lắng nghe. Để thoát, nhấn CTRL+C")
         await asyncio.Future()
 

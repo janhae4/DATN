@@ -29,17 +29,10 @@ const processQueue = (error: AxiosError | null) => {
  */
 const refreshAccessToken = async () => {
   try {
-    const refreshAxios = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-      withCredentials: true,
-    });
-
-    await authService.refreshToken()
-
+    await authService.refreshToken();
     return Promise.resolve();
-
   } catch (err) {
-    console.error('Could not refresh token (Refresh token expired or invalid)', err);
+    console.error('Refresh token expired or invalid', err);
     await logout();
     return Promise.reject(err);
   }
@@ -68,6 +61,13 @@ apiClient.interceptors.request.use(
   }
 );
 
+const getCookie = (name: string) => {
+  if (typeof document === 'undefined') return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift();
+  return null;
+};
 
 /**
  * Interceptor: Response
@@ -95,10 +95,10 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        console.log("Refreshing token...");
+        console.log("Refresh Token from cookie:", getCookie('refreshToken'));
         await refreshAccessToken();
-
         processQueue(null);
-
         return apiClient(originalRequest);
 
       } catch (refreshError) {
@@ -116,21 +116,27 @@ apiClient.interceptors.response.use(
 
 export const streamHelper = async (
   url: string,
-  body: any,
+  projectId: string,
+  teamId: string,
+  query: string,
   onChunk: (chunk: string) => void
 ): Promise<void> => {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${url}`, {
-    method: 'POST',
+  console.log("Starting streamHelper with url:", url, "and body:", query);
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}${url}?query=${query}&projectId=${projectId}&teamId=${teamId}`, {
+    method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
     },
     credentials: 'include',
-    body: JSON.stringify(body),
   });
+
+  console.log(response)
 
   if (response.status === 401) {
     await authService.refreshToken();
-    return streamHelper(url, body, onChunk);
+    return streamHelper(url, projectId, teamId, query, onChunk);
   }
 
   if (!response.body) throw new Error("No response body");

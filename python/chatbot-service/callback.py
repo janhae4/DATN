@@ -10,9 +10,11 @@ from config import (
     ASK_QUESTION_ROUTING_KEY,
     SEND_FILE_STATUS_ROUTING_KEY,
     SEND_NOTIFICATION_ROUTING_KEY,
+    SUGGEST_TASK_ROUTING_KEY,
     SUMMARIZE_DOCUMENT_ROUTING_KEY,
     STREAM_RESPONSE_ROUTING_KEY,
-    SOCKET_EXCHANGE
+    SOCKET_EXCHANGE,
+    TASK_EXCHANGE
 )
 
 async def publish_response(
@@ -48,6 +50,26 @@ async def publish_response(
         message_body,
         routing_key=STREAM_RESPONSE_ROUTING_KEY
     )
+
+async def publish_suggest_task_response(channel: Channel, user_id: str, content: dict):
+    """
+    Helper chuyên dụng để gửi dữ liệu Task về SSE Stream của NestJS qua RabbitMQ.
+    """
+    payload = {
+        "userId": user_id,
+        **content
+    }
+    
+    print(f"--> [Py->SSE] Chuẩn bị gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
+    
+    message_body = Message(body=json.dumps(payload).encode())
+    
+    exchange = await channel.get_exchange(TASK_EXCHANGE) 
+    await exchange.publish(
+        message_body,
+        routing_key="ai.result.tasks"
+    )
+    print(f"--> [Py->SSE] Gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
 
 async def send_notification(channel: Channel, user_id, file_name, status, message):
     """
@@ -160,6 +182,8 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
         pattern_from_key = "ask_question"
     elif actual_routing_key == SUMMARIZE_DOCUMENT_ROUTING_KEY:
         pattern_from_key = "summarize_document"
+    elif actual_routing_key == SUGGEST_TASK_ROUTING_KEY:
+        pattern_from_key = "suggest_task"
     
     async with message.process():
         try:
@@ -174,8 +198,11 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
 
             print(f"Socket ID: {socket_id}, User ID: {user_id}, Discussion ID: {discussion_id}, Team ID: {team_id}")
 
-            if not all([socket_id, user_id, discussion_id]):
-                raise ValueError("Tin nhắn thiếu socketId, userId, hoặc discussionId.")
+            if pattern_from_key == 'suggest_task':
+                if not user_id: raise ValueError("Thiếu userId cho luồng gợi ý task.")
+            else:
+                if not all([socket_id, user_id, discussion_id]):
+                    raise ValueError("Thiếu socketId hoặc discussionId cho luồng chat.")
 
             if pattern_from_key == 'ask_question':
                 question = payload_dto.get('question')
@@ -202,48 +229,63 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 async for chunk in summarizer.summarize(documents):
                     await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
             
-            elif pattern_from_key == 'task_architect':
+            elif pattern_from_key == 'suggest_task':
                 objective = payload_dto.get('objective')
                 members = payload_dto.get('members', [])
                 
-                if not objective: raise ValueError("Tin nhắn thiếu 'objective'.")
-                if not members: raise ValueError("Tin nhắn thiếu 'members'.")
+                print(f"--> [SUGGEST TASK] Bắt đầu gợi ý task cho user '{user_id}' với mục tiêu: {objective}")
                 
+                if not objective: raise ValueError("Tin nhắn thiếu 'objective'.")
+
+                print (f"--> [SUGGEST TASK] Objective: {objective}")
+                print (f"--> [SUGGEST TASK] Members: {members}")
+                buffer = ""
                 async for chunk in task_architect.suggest_and_assign(
                     objective=payload_dto.get('objective', ''),
                     members=payload_dto.get('members', [])
                 ):
-                    await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id)
-            else:
-                raise ValueError(f"Routing key không xác định: '{actual_routing_key}'")
+                    buffer += chunk
+                    if "\n" in buffer:
+                        print(f"--> [SUGGEST TASK] Buffer hiện tại:\n{buffer}")
+                        lines = buffer.split("\n")
+                        for line in lines[:-1]:
+                            line = line.strip()
+                            if "|" in line:
+                                parts = line.split("|")
+                                if len(parts) >= 2:
+                                    task_data = {
+                                        "userId": payload_dto.get('userId'),
+                                        "title": parts[0].strip(),
+                                        "memberId": parts[1].strip(),
+                                        "skillName": parts[2].strip(),
+                                        "experience": int(parts[3].strip()),
+                                        "reason": parts[4].strip() if len(parts) > 4 else "",
+                                        "type": "task"
+                                    }
+                                    print(f"--> [SUGGEST TASK] Gửi task: {task_data}")
+                                    await publish_suggest_task_response(channel, payload_dto.get('userId'), task_data)
+                                print(f"--> [SUGGEST TASK] line: {line}")
+                        
+                        buffer = lines[-1]
 
+                if buffer.strip() and "|" in buffer:
+                    print(f"--> [SUGGEST TASK] Gửi phần còn lại trong buffer:\n{buffer}")
+                    task_data = {
+                                        "userId": payload_dto.get('userId'),
+                                        "title": parts[0].strip(),
+                                        "memberId": parts[1].strip(),
+                                        "skillName": parts[2].strip(),
+                                        "experience": int(parts[3].strip()),
+                                        "reason": parts[4].strip() if len(parts) > 4 else "",
+                                        "type": "task"
+                                    }
+                    await publish_suggest_task_response(channel, payload_dto.get('userId'), task_data)
+                await publish_suggest_task_response(channel, payload_dto.get('userId'), {"type": "done"})
         except Exception as e:
-            error_message = f"Lỗi khi xử lý '{pattern_from_key}': {e}"
-            print(f"!!! LỖI: {error_message}")
-            
-            if socket_id and discussion_id:
-                error_metadata = {"error": str(error_message)}
-                try:
-                    await publish_response(
-                        channel, socket_id, discussion_id, 
-                        str(error_message), "error", 
-                        team_id, error_metadata, membersToNotify
-                    )
-                except Exception as e_pub:
-                    print(f"!!! LỖI KHI GỬI LỖI: {e_pub}")
-
-        finally:
-            if socket_id and discussion_id:
-                print(f"--> Đã gửi tín hiệu kết thúc stream cho tác vụ '{pattern_from_key}'.")
-                try:
-                    await publish_response(
-                        channel, socket_id, discussion_id, 
-                        "Stream has ended.", "end", 
-                        team_id, retrieved_metadata, membersToNotify
-                    )
-                except Exception as e_pub:
-                    print(f"!!! LỖI KHI GỬI 'END': {e_pub}")
-               
+            if pattern_from_key == 'suggest_task' and user_id:
+                await publish_suggest_task_response(channel, user_id, {"type": "error", "message": str(e)})
+            elif socket_id and discussion_id:
+                await publish_response(channel, socket_id, discussion_id, str(e), "error", team_id)         
 async def on_team_deleted(message: IncomingMessage, vector_store: VectorStoreService):
     """
     Callback lắng nghe sự kiện xóa team từ NestJS và xóa collection 

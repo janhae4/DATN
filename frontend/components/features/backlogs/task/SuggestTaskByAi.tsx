@@ -33,26 +33,33 @@ import {
   BrainCircuit,
   Check,
   Loader2,
+  Plus,
   Sparkles,
   Terminal,
   Trash2,
   UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-// Mock Members Data
-const MOCK_MEMBERS = [
-  { id: "dev-1", name: "Alex Nguyen", avatar: "https://github.com/shadcn.png" },
-  { id: "dev-2", name: "Sarah Tran", avatar: "" },
-  { id: "des-1", name: "Justin Lee", avatar: "" },
-  { id: "lead-1", name: "Hana Pham", avatar: "" },
-];
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { taskService } from "@/services/taskService";
+import { useTask, useTasks } from "@/hooks/useTasks";
+import { useParams } from "next/navigation";
+import { useTeamMembers } from "@/hooks/useTeam";
+import { MemberRole, UserSkill } from "@/types";
 
 interface SuggestedTask {
   id: string;
   title: string;
-  assigneeIds: string[];
+  memberIds: string[];
+  skillName: string;
+  experience: number;
+  reason: string;
+  type: string;
 }
 
 interface SuggestTaskByAiProps {
@@ -68,6 +75,14 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
   const [suggestedTasks, setSuggestedTasks] = React.useState<SuggestedTask[]>(
     []
   );
+  const [skillSearch, setSkillSearch] = React.useState("");
+
+  const param = useParams();
+  const teamId = param?.teamId as string;
+  const projectId = param?.projectId as string;
+  const { data: members = [], isLoading: isMembersLoading } =
+    useTeamMembers(teamId);
+  const { suggestTaskByAi } = useTasks(projectId, teamId);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -81,34 +96,53 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
     setIsThinking(true);
     setSuggestedTasks([]);
 
-    // Giả lập dữ liệu AI trả về: "Tên task | ID người thực hiện"
-    const mockResponse = [
-      { title: "Nghiên cứu thị trường và đối thủ", memberId: "lead-1" },
-      { title: "Thiết kế Wireframe cho các trang chính", memberId: "des-1" },
-      { title: "Lập trình giao diện Front-end cơ bản", memberId: "dev-1" },
-      { title: "Tối ưu hóa trải nghiệm người dùng", memberId: "dev-2" },
-    ];
+    let accumulatedTasks: SuggestedTask[] = [];
+    let buffer = "";
 
     try {
-      await new Promise((r) => setTimeout(r, 1500));
-      setIsThinking(false);
+      await suggestTaskByAi({
+        query,
+        onChunk: (chunk: string) => {
+          setIsThinking(false);
+          buffer += chunk;
 
-      for (let i = 0; i < mockResponse.length; i++) {
-        await new Promise((r) => setTimeout(r, 150));
-        setSuggestedTasks((prev) => [
-          ...prev,
-          {
-            id: `ai-${Date.now()}-${i}`,
-            title: mockResponse[i].title,
-            assigneeIds: [mockResponse[i].memberId],
-          },
-        ]);
-      }
-      toast.success("AI đã gợi ý xong!");
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          lines.forEach((line) => {
+            const trimmedLine = line.trim();
+            if (!trimmedLine.startsWith("data:")) return;
+
+            try {
+              const rawData = trimmedLine.replace(/^data:\s*/, "");
+              const parsed = JSON.parse(rawData);
+
+              if (parsed.type === "task") {
+                const newTask: SuggestedTask = {
+                  id: Math.random().toString(36).substr(2, 9),
+                  ...parsed,
+                  memberIds: parsed.memberId
+                    ? [parsed.memberId]
+                    : parsed.memberIds || [],
+                };
+                accumulatedTasks = [...accumulatedTasks, newTask];
+                setSuggestedTasks([...accumulatedTasks]);
+              } else if (parsed.type === "done") {
+                setIsThinking(false);
+                setIsStreaming(false);
+                toast.success("AI đã hoàn thành bản kế hoạch!");
+              }
+            } catch (e) {
+              console.error("Lỗi parse stream line:", line);
+            }
+          });
+        },
+      });
     } catch (error) {
-      toast.error("Failed to get AI suggestions.");
+      toast.error("Không thể kết nối với AI Architect.");
     } finally {
       setIsStreaming(false);
+      setIsThinking(false);
     }
   };
 
@@ -116,12 +150,12 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
     setSuggestedTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
-          const exists = t.assigneeIds.includes(memberId);
+          const exists = t.memberIds.includes(memberId);
           return {
             ...t,
-            assigneeIds: exists
-              ? t.assigneeIds.filter((id) => id !== memberId)
-              : [...t.assigneeIds, memberId],
+            memberIds: exists
+              ? t.memberIds.filter((id) => id !== memberId)
+              : [...t.memberIds, memberId],
           };
         }
         return t;
@@ -184,160 +218,285 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
             ref={scrollRef}
             className="min-h-[160px] max-h-[280px] overflow-y-auto rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 transition-all dark:border-zinc-800 dark:bg-zinc-900/30"
           >
-            {suggestedTasks.length === 0 && !isThinking ? (
+            {suggestedTasks.length === 0 && !isThinking && (
               <div className="h-[128px] flex flex-col items-center justify-center text-zinc-400 gap-3 border-2 border-dashed border-zinc-200 rounded-lg dark:border-zinc-800">
                 <BrainCircuit className="h-6 w-6 opacity-20" />
                 <p className="text-[13px] font-medium">
                   No tasks generated yet.
                 </p>
               </div>
-            ) : (
+            )}
+
+            {suggestedTasks.length === 0 && isThinking && (
+              <div className="h-[128px] flex flex-col items-center justify-center gap-4 text-zinc-500">
+                <div className="relative flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-zinc-300 dark:text-zinc-700" />
+                  <BrainCircuit className="absolute h-4 w-4 animate-pulse text-zinc-900 dark:text-zinc-100" />
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-sm font-semibold animate-pulse">
+                    Architecting roadmap...
+                  </p>
+                  <p className="text-[11px] text-zinc-400">
+                    AI is analyzing your objective
+                  </p>
+                </div>
+              </div>
+            )}
+            {suggestedTasks.length > 0 && (
               <div className="space-y-3">
                 {suggestedTasks.map((task, idx) => (
                   <div
                     key={task.id}
-                    className="group flex items-center gap-3 animate-in fade-in slide-in-from-bottom-1 duration-300"
+                    className="group relative flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm transition-all hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950"
                   >
-                    {/* Số thứ tự */}
-                    <div className="flex-none h-6 w-6 rounded border border-zinc-200 bg-white text-zinc-900 flex items-center justify-center text-[10px] font-bold dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
-                      {idx + 1}
-                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1 flex-none flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-[10px] text-white dark:bg-zinc-100 dark:text-zinc-900">
+                        {idx + 1}
+                      </div>
 
-                    {/* Tiêu đề Task */}
-                    <Input
-                      value={task.title}
-                      onChange={(e) => {
-                        const newTasks = [...suggestedTasks];
-                        newTasks[idx].title = e.target.value;
-                        setSuggestedTasks(newTasks);
-                      }}
-                      className="h-8 border-none bg-transparent p-0 text-[14px] focus-visible:ring-0 placeholder:text-zinc-300 flex-1"
-                    />
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <Input
+                          value={task.title}
+                          onChange={(e) => {
+                            const newTasks = [...suggestedTasks];
+                            newTasks[idx].title = e.target.value;
+                            setSuggestedTasks(newTasks);
+                          }}
+                          className="h-7 border-none bg-transparent p-0 text-sm font-semibold focus-visible:ring-0 shadow-none"
+                        />
 
-                    {/* Assignee Selector & Tooltip */}
-                    <div className="flex items-center gap-1">
-                      <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex -space-x-1.5 overflow-hidden cursor-help">
-                              {/* Hiển thị tối đa 2 Avatar đầu tiên */}
-                              {task.assigneeIds.slice(0, 2).map((id) => {
-                                const m = MOCK_MEMBERS.find(
-                                  (mem) => mem.id === id
-                                );
-                                return (
-                                  <Avatar
-                                    key={id}
-                                    className="h-6 w-6 border-2 border-white dark:border-zinc-950"
-                                  >
-                                    <AvatarImage src={m?.avatar} />
-                                    <AvatarFallback className="text-[8px] bg-zinc-100 uppercase">
-                                      {m?.name.charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                );
-                              })}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="inline-flex items-center rounded-md bg-blue-50/50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400">
+                                  <BrainCircuit className="mr-1 h-3 w-3" />
+                                  {task.skillName || "Add Skill"}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-[200px] p-0"
+                                align="start"
+                              >
+                                <Command shouldFilter={false}>
+                                  <CommandInput
+                                    placeholder="Type new skill..."
+                                    value={skillSearch}
+                                    onValueChange={setSkillSearch}
+                                    className="h-8 text-xs"
+                                  />
+                                  <CommandList>
+                                    {skillSearch && (
+                                      <CommandGroup>
+                                        <CommandItem
+                                          onSelect={() => {
+                                            const newTasks = [
+                                              ...suggestedTasks,
+                                            ];
+                                            newTasks[idx].skillName =
+                                              skillSearch;
+                                            setSuggestedTasks(newTasks);
+                                            setSkillSearch("");
+                                          }}
+                                          className="text-xs cursor-pointer font-medium text-blue-600"
+                                        >
+                                          <Plus className="mr-2 h-3 w-3" />
+                                          Use "{skillSearch}"
+                                        </CommandItem>
+                                      </CommandGroup>
+                                    )}
 
-                              {/* Badge +N nếu còn dư người */}
-                              {task.assigneeIds.length > 2 && (
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-100 border-2 border-white text-[9px] font-bold text-zinc-600 dark:bg-zinc-800 dark:border-zinc-950 dark:text-zinc-400">
-                                  +{task.assigneeIds.length - 2}
-                                </div>
-                              )}
+                                    <CommandGroup heading="Suggested Skills">
+                                      {[
+                                        "Frontend",
+                                        "Backend",
+                                        "Design",
+                                        "DevOps",
+                                        "Testing",
+                                      ]
+                                        .filter((s) =>
+                                          s
+                                            .toLowerCase()
+                                            .includes(skillSearch.toLowerCase())
+                                        )
+                                        .map((s) => (
+                                          <CommandItem
+                                            key={s}
+                                            onSelect={() => {
+                                              const newTasks = [
+                                                ...suggestedTasks,
+                                              ];
+                                              newTasks[idx].skillName = s;
+                                              setSuggestedTasks(newTasks);
+                                              setSkillSearch("");
+                                            }}
+                                            className="text-xs cursor-pointer"
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-3 w-3",
+                                                task.skillName === s
+                                                  ? "opacity-100"
+                                                  : "opacity-0"
+                                              )}
+                                            />
+                                            {s}
+                                          </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+
+                            <div className="flex items-center gap-1 group/exp">
+                              <Input
+                                type="number"
+                                value={task.experience}
+                                onChange={(e) => {
+                                  const newTasks = [...suggestedTasks];
+                                  newTasks[idx].experience =
+                                    parseInt(e.target.value) || 0;
+                                  setSuggestedTasks(newTasks);
+                                }}
+                                className="h-6 w-10 border-zinc-200 bg-transparent px-1 text-center text-[10px] font-bold focus-visible:ring-1 focus-visible:ring-blue-500"
+                              />
+                              <span className="text-[10px] font-medium text-zinc-500">
+                                exp
+                              </span>
                             </div>
-                          </TooltipTrigger>
-
-                          {/* Nội dung Tooltip: Hiện toàn bộ danh sách tên */}
-                          <TooltipContent
-                            side="top"
-                            className="p-2 bg-zinc-900 text-white border-zinc-800"
-                          >
-                            <div className="text-[11px] space-y-1">
-                              <p className="font-bold border-b border-zinc-700 pb-1 mb-1">
-                                Assignees:
-                              </p>
-                              {task.assigneeIds.map((id) => {
-                                const m = MOCK_MEMBERS.find(
-                                  (mem) => mem.id === id
-                                );
-                                return (
-                                  <div key={id}>{m?.name || "Unknown"}</div>
-                                );
-                              })}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      {/* Nút thêm Assignee */}
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800"
-                          >
-                            <UserPlus className="h-3.5 w-3.5 text-zinc-500" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[200px] p-0 shadow-2xl"
-                          align="end"
-                        >
-                          <Command>
-                            <CommandInput
-                              placeholder="Search member..."
-                              className="h-8 text-xs"
-                            />
-                            <CommandList>
-                              <CommandEmpty className="p-2 text-xs">
-                                No results found.
-                              </CommandEmpty>
-                              <CommandGroup>
-                                {MOCK_MEMBERS.map((member) => (
-                                  <CommandItem
-                                    key={member.id}
-                                    onSelect={() =>
-                                      toggleMember(task.id, member.id)
-                                    }
-                                    className="flex items-center justify-between py-1.5"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Avatar className="h-5 w-5">
-                                        <AvatarImage src={member.avatar} />
+                          </div>
+                          <div className="flex -space-x-1.5">
+                            {task.memberIds?.map((mId) => {
+                              const member = members.find((m) => m.id === mId);
+                              if (!member) return null;
+                              return (
+                                <TooltipProvider key={mId}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Avatar className="h-5 w-5 border border-white dark:border-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800">
+                                        <AvatarImage src={member?.avatar} />
                                         <AvatarFallback className="text-[8px]">
-                                          {member.name.charAt(0)}
+                                          {member?.name.charAt(0)}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <span className="text-xs">
-                                        {member.name}
-                                      </span>
-                                    </div>
-                                    {task.assigneeIds.includes(member.id) && (
-                                      <Check className="h-3 w-3 text-zinc-900" />
-                                    )}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="text-[10px]">
+                                      {member?.name}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 flex gap-1.5 border-dashed border-zinc-300 hover:border-zinc-400 dark:border-zinc-700"
+                            >
+                              <UserPlus className="h-3 w-3 text-zinc-500" />
+                              <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400">
+                                Adjust
+                              </span>
+                            </Button>
+                          </PopoverTrigger>
+
+                          <PopoverContent
+                            className="w-[240px] p-0 shadow-2xl"
+                            align="end"
+                          >
+                            <Command>
+                              <CommandInput
+                                placeholder="Search team..."
+                                className="h-8 text-xs"
+                              />
+                              <CommandList>
+                                <CommandEmpty className="text-xs p-2">
+                                  No one found.
+                                </CommandEmpty>
+                                <CommandGroup>
+                                  {members.map((member) => {
+                                    const isSelected = task.memberIds?.includes(
+                                      member.id
+                                    );
+
+                                    return (
+                                      <CommandItem
+                                        key={member.id}
+                                        onSelect={() => {
+                                          const newTasks = [...suggestedTasks];
+                                          const currentIds =
+                                            newTasks[idx].memberIds || [];
+                                          newTasks[idx].memberIds = isSelected
+                                            ? currentIds.filter(
+                                                (id) => id !== member.id
+                                              )
+                                            : [...currentIds, member.id];
+                                          setSuggestedTasks(newTasks);
+                                        }}
+                                        className="flex items-center gap-2 cursor-pointer py-1.5"
+                                      >
+                                        <div
+                                          className={cn(
+                                            "flex h-4 w-4 items-center justify-center rounded-sm border border-zinc-300 transition-colors",
+                                            isSelected
+                                              ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-900"
+                                              : "opacity-50"
+                                          )}
+                                        >
+                                          {isSelected && (
+                                            <Check className="h-2.5 w-2.5" />
+                                          )}
+                                        </div>
+                                        <Avatar className="h-6 w-6">
+                                          <AvatarImage src={member.avatar} />
+                                          <AvatarFallback className="text-[10px]">
+                                            {member.name.charAt(0)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <span className="flex-1 text-xs truncate">
+                                          {member.name}
+                                        </span>
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setSuggestedTasks((prev) =>
+                              prev.filter((t) => t.id !== task.id)
+                            )
+                          }
+                          className="h-7 w-7 text-zinc-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
-                    {/* Nút Xóa Task */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        setSuggestedTasks((prev) =>
-                          prev.filter((t) => t.id !== task.id)
-                        )
-                      }
-                      className="h-7 w-7 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {/* AI Reason */}
+                    {task.reason && (
+                      <div className="mt-1 border-t border-zinc-100 pt-2 dark:border-zinc-800">
+                        <p className="text-[11px] leading-relaxed text-zinc-500 italic">
+                          <Sparkles className="inline-block h-3 w-3 mr-1 text-amber-500" />
+                          {task.reason}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
 
