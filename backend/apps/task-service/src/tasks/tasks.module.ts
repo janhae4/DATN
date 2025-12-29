@@ -15,6 +15,7 @@ import {
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
+import { AiStreamService } from './ai-stream.service';
 
 @Module({
   imports: [
@@ -61,9 +62,9 @@ import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
         uri: configService.getRMQUrl(),
         connectionInitOptions: { wait: false },
       }),
-    })
+    }),
   ],
   controllers: [TasksController],
-  providers: [TasksService, TasksController],
+  providers: [TasksService, TasksController, AiStreamService],
 })
 export class TasksModule { }

@@ -1,5 +1,5 @@
 // types/team.interface.ts
-import { User } from "../auth";
+import { User, UserSkill } from "../auth";
 import { TeamStatus, MemberRole } from "../common/enums";
 
 export interface Team {
@@ -23,3 +23,16 @@ export interface TeamMember {
   joinedAt: string; 
   cachedUser: User;
 }   
+
+export interface Member {
+  id: string;
+  name: string;
+  avatar: string;
+  email: string;
+  bio: string;
+  role: MemberRole;
+  skills: UserSkill;
+  joinedAt: string;
+  teamId: string;
+  isActive: boolean;
+}

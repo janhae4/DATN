@@ -28,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 // Hooks
 import { useProjects } from "@/hooks/useProjects";
 import { useDiscussions } from "@/hooks/useTeam";
-import { TeamMember } from "@/types/social";
+import { Member, TeamMember } from "@/types/social";
 
 
 // Components
@@ -39,7 +39,7 @@ import { TeamMembersList } from "./TeamMembersList";
 
 interface TeamOverviewTabProps {
   teamId: string;
-  members: TeamMember[];
+  members: Member[];
 }
 
 export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {

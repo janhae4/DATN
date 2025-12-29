@@ -393,8 +393,14 @@ export class UserService {
 
     if (missingIds.length > 0) {
       this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from DB...`);
-      missingUsers = await this.userRepo.findBy({ id: In(missingIds) });
-      if (missingUsers.length > 0) {
+      missingUsers = await this.userRepo.find({
+        where: {
+          id: In(missingIds)
+        },
+        relations: {
+          skills: true
+        }
+      }); if (missingUsers.length > 0) {
         await this.amqp.publish(
           REDIS_EXCHANGE,
           REDIS_PATTERN.SET_MANY_USERS_INFO,
@@ -826,6 +832,20 @@ export class UserService {
     return await this.dataSource.transaction(async (manager) => {
       await this.syncUserSkills(manager, userId, skills);
     });
+  }
+
+  async getBulkUserSkill(userIds: string[]) {
+    return await this.userRepo.find({
+      where: { id: In(userIds) },
+      select: {
+        id: true,
+        name: true,
+        avatar: true
+      },
+      relations: {
+        skills: true
+      },
+    })
   }
 
   async handleBulkSkillIncrement(userIds: string[], skills: string[]) {

@@ -46,6 +46,16 @@ export class TaskController {
     return this.taskService.findAllByProjectId(projectId);
   }
 
+  // @Post('suggest')
+  // @UseGuards(RoleGuard)
+  // @Roles(Role.USER)
+  // suggestTask(
+  //   @CurrentUser('id') id: string,
+  //   @Body() objective: string,
+  // ) {
+  //   return this.taskService.suggestTask(userId, objective);
+  // }
+
   @Get(':id')
   @UseGuards(RoleGuard)
   @Roles(Role.USER)

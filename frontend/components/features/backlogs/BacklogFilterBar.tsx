@@ -31,6 +31,9 @@ import {
   Calendar,
   MinusCircle,
   SparkleIcon,
+  SearchCheckIcon,
+  SearchCodeIcon,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -217,156 +220,162 @@ export function BacklogFilterBar({
     filters.sprintIds.length > 0;
 
   return (
-    <div className="flex w-full items-center gap-2 py-2">
-      {/* Search Input */}
-      <div className="flex-1">
-        <Input
-          placeholder="Search by title..."
-          className="h-9 min-w-60 w-full"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-        />
+    <div className="flex flex-col w-full gap-3 py-2">
+      <div className="flex flex-col lg:flex-row w-full items-center gap-3">
+        <div className="relative w-full lg:flex-1">
+          <Input
+            placeholder="Search by title..."
+            className="h-10 w-full lg:w-8/12 pl-10 focus-visible:ring-primary shadow-sm"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            <Search className="h-4 w-4" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 w-full lg:w-auto justify-end">
+          <SuggestTaskByAi>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 px-3 border-primary/20 text-primary whitespace-nowrap flex-1 lg:flex-none"
+            >
+              <SparkleIcon className="mr-1.5 h-4 w-4" />
+              <span className="hidden xl:inline">Suggest Tasks</span>
+              <span className="xl:hidden">AI</span>
+            </Button>
+          </SuggestTaskByAi>
+
+          {activeSprint && !showCreateSprint && (
+            <CompleteSprintDialog sprint={activeSprint}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 px-3 whitespace-nowrap flex-1 lg:flex-none"
+              >
+                Complete
+              </Button>
+            </CompleteSprintDialog>
+          )}
+
+          {showCreateSprint && (
+            <SprintCreateDialog onSave={() => {}}>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-10 px-3 whitespace-nowrap flex-1 lg:flex-none"
+              >
+                New Sprint
+              </Button>
+            </SprintCreateDialog>
+          )}
+        </div>
       </div>
-
       {/* Assignee Filter */}
-      <MultiSelectFilter
-        label="Assignee"
-        icon={<User className="h-3.5 w-3.5" />}
-        options={userOptions.map((u) => {
-          // SỬA LẠI CÁCH RENDER ASSIGNEE ICON TRỰC TIẾP TRONG OPTIONS
-          const IconComponent =
-            u.value === "unassigned"
-              ? () => <MinusCircle className="h-4 w-4 text-muted-foreground" /> // Dùng MinusCircle cho Unassigned
-              : () => (
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={u.avatar} alt={u.label} />
-                    <AvatarFallback className="text-[10px] bg-primary text-primary-foreground font-medium">
-                      {getAssigneeInitial(u.label)}
-                    </AvatarFallback>
-                  </Avatar>
-                );
-
-          return {
+      <div className="flex flex-wrap items-center gap-4 overflow-x-auto pb-1 lg:pb-0 no-scrollbar">
+        {/* Assignee */}
+        <MultiSelectFilter
+          label="Assignee"
+          icon={<User className="h-3.5 w-3.5" />}
+          options={userOptions.map((u) => ({
             value: u.value,
             label: u.label,
-            icon: IconComponent, // Truyền vào component
-          };
-        })}
-        selectedValues={filters.assigneeIds}
-        onSelectionChange={(values) =>
-          handleFilterUpdate("assigneeIds", values)
-        }
-      />
-
-      {/* Priority Filter */}
-      <MultiSelectFilter
-        label="Priority"
-        icon={<Flag className="h-3.5 w-3.5" />}
-        options={
-          priorityList.map((p) => ({
-            ...p,
-            // SỬA: Icon Priority có màu sắc
-            icon: () => {
-              const Icon = p.icon;
-              return <Icon className={cn("h-4 w-4", p.color)} />;
-            },
-          })) as any
-        }
-        selectedValues={filters.priorities as any}
-        onSelectionChange={(values) =>
-          handleFilterUpdate("priorities", values as any)
-        }
-      />
-
-      {/* Status Filter */}
-      {showStatusFilter && (
-        <MultiSelectFilter
-          label="Status"
-          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-          options={listOptions}
-          selectedValues={filters.listIds}
-          onSelectionChange={(values) => handleFilterUpdate("listIds", values)}
+            icon:
+              u.value === "unassigned"
+                ? () => (
+                    <MinusCircle className="h-4 w-4 text-muted-foreground" />
+                  )
+                : () => (
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={u.avatar} />
+                      <AvatarFallback className="text-[10px]">
+                        {getAssigneeInitial(u.label)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ),
+          }))}
+          selectedValues={filters.assigneeIds}
+          onSelectionChange={(values) =>
+            handleFilterUpdate("assigneeIds", values)
+          }
         />
-      )}
 
-      {/* Epic Filter */}
-      <MultiSelectFilter
-        label="Epic"
-        icon={<Layers className="h-3.5 w-3.5" />}
-        options={epicOptions}
-        selectedValues={filters.epicIds}
-        onSelectionChange={(values) => handleFilterUpdate("epicIds", values)}
-      />
+        {/* Priority */}
+        <MultiSelectFilter
+          label="Priority"
+          icon={<Flag className="h-3.5 w-3.5" />}
+          options={
+            priorityList.map((p) => ({
+              ...p,
+              icon: () => {
+                const Icon = p.icon;
+                return <Icon className={cn("h-4 w-4", p.color)} />;
+              },
+            })) as any
+          }
+          selectedValues={filters.priorities as any}
+          onSelectionChange={(values) =>
+            handleFilterUpdate("priorities", values as any)
+          }
+        />
 
-      {/* Label Filter */}
-      <MultiSelectFilter
-        label="Label"
-        icon={<Tag className="h-3.5 w-3.5" />}
-        options={labelOptions}
-        selectedValues={filters.labelIds}
-        onSelectionChange={(values) => handleFilterUpdate("labelIds", values)}
-      />
+        {/* Status */}
+        {showStatusFilter && (
+          <MultiSelectFilter
+            label="Status"
+            icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+            options={listOptions}
+            selectedValues={filters.listIds}
+            onSelectionChange={(values) =>
+              handleFilterUpdate("listIds", values)
+            }
+          />
+        )}
 
-      {/* Sprint Filter */}
-      <MultiSelectFilter
-        label="Sprint"
-        icon={<Calendar className="h-3.5 w-3.5" />}
-        options={sprintOptions}
-        selectedValues={filters.sprintIds}
-        onSelectionChange={(values) => handleFilterUpdate("sprintIds", values)}
-      />
+        <MultiSelectFilter
+          label="Epic"
+          icon={<Layers className="h-3.5 w-3.5" />}
+          options={epicOptions}
+          selectedValues={filters.epicIds}
+          onSelectionChange={(values) => handleFilterUpdate("epicIds", values)}
+        />
 
-      {/* Clear Button */}
-      {isFiltered && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 px-3 text-muted-foreground"
-          onClick={resetFilters}
-        >
-          <X className="h-4 w-4 mr-1.5" />
-          Clear all
-        </Button>
-      )}
+        {/* Label Filter */}
+        <MultiSelectFilter
+          label="Label"
+          icon={<Tag className="h-3.5 w-3.5" />}
+          options={labelOptions}
+          selectedValues={filters.labelIds}
+          onSelectionChange={(values) => handleFilterUpdate("labelIds", values)}
+        />
 
-      <div className="flex-1" />
+        {/* Sprint Filter */}
+        <MultiSelectFilter
+          label="Sprint"
+          icon={<Calendar className="h-3.5 w-3.5" />}
+          options={sprintOptions}
+          selectedValues={filters.sprintIds}
+          onSelectionChange={(values) =>
+            handleFilterUpdate("sprintIds", values)
+          }
+        />
 
-      <SuggestTaskByAi>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 px-3 border-primary/20 hover:border-primary/50 text-primary hover:text-primary hover:bg-primary/5"
-        >
-          <SparkleIcon className="mr-1.5 h-4 w-4" />
-          Create Suggested Tasks
-        </Button>
-      </SuggestTaskByAi>
-
-      {/* Nút Complete Sprint */}
-      {activeSprint && !showCreateSprint && (
-        <CompleteSprintDialog sprint={activeSprint}>
+        {/* Clear Button - Chỉ hiện khi có lọc */}
+        {isFiltered && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="h-9 px-3 border-primary/20 hover:border-primary/50 text-primary hover:text-primary hover:bg-primary/5"
+            className="h-9 px-2 text-muted-foreground hover:text-destructive transition-colors"
+            onClick={resetFilters}
           >
-            Complete Sprint
+            <X className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Clear</span>
           </Button>
-        </CompleteSprintDialog>
-      )}
+        )}
+      </div>
 
-      {/* Nút Create Sprint */}
-      {showCreateSprint && (
-        <SprintCreateDialog
-          onSave={() => {
-            /* Không cần reload, React Query tự lo */
-          }}
-        >
-          <Button variant="default" size="sm" className="h-9 px-3">
-            Create Sprint
-          </Button>
-        </SprintCreateDialog>
-      )}
+      <div className="hidden lg:block flex-1" />
     </div>
   );
 }

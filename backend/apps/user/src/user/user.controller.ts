@@ -293,4 +293,14 @@ export class UserController {
     return this.userService.handleBulkSkillIncrement(data.userIds, data.skills);
   }
 
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+    queue: USER_PATTERNS.GET_BULK_SKILLS,
+    errorHandler: customErrorHandler
+  })
+  getBulkSkills(memberIds: string[]) {
+    return this.userService.getBulkUserSkill(memberIds)
+  }
+
 }

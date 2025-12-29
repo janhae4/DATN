@@ -1,16 +1,17 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
-import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS } from '@app/contracts';
+import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
 import { RabbitSubscribe, Nack, AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { EVENTS_EXCHANGE, LABEL_EXCHANGE, RPC_TIMEOUT } from '@app/contracts/constants';
+import { AUTH_EXCHANGE, CHATBOT_EXCHANGE, EVENTS_EXCHANGE, LABEL_EXCHANGE, RPC_TIMEOUT, TASK_EXCHANGE, TEAM_EXCHANGE, USER_EXCHANGE } from '@app/contracts/constants';
 import { LabelEvent } from '@app/contracts/events/label.event';
 import { Label } from '@app/contracts/label/entity/label.entity';
 import { TaskLabel as TaskLabelEvent } from '@app/contracts/events/task-label.event';
 import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
+import { unwrapRpcResult } from '@app/common';
 
 @Injectable()
 export class TasksService {
@@ -24,8 +25,15 @@ export class TasksService {
     @Inject(LABEL_CLIENT) private readonly labelClient: ClientProxy,
   ) { }
 
-
-
+  async getUserIdFromToken(token: string): Promise<string> {
+    const response = await this.amqpConnection.request<JwtDto>({
+      exchange: AUTH_EXCHANGE,
+      routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
+      payload: token,
+      timeout: RPC_TIMEOUT,
+    });
+    return response.id;
+  }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
     const { listId, position, labelIds, ...rest } = createTaskDto; //
@@ -118,7 +126,7 @@ export class TasksService {
     }
     return { success: true };
   }
- 
+
 
   // task-service/src/tasks/tasks.service.ts
 
@@ -127,7 +135,7 @@ export class TasksService {
       try {
 
         const labels = await lastValueFrom(
-          this.labelClient.send<Label[]>(TaskLabelEvent.GET_DETAILS, { labelIds  })
+          this.labelClient.send<Label[]>(TaskLabelEvent.GET_DETAILS, { labelIds })
         );
 
         console.log("labels------------ ", labels)
@@ -137,9 +145,9 @@ export class TasksService {
             const link = new TaskLabel();
             link.taskId = taskId;
             link.labelId = label.id;
-            link.name = label.name; 
+            link.name = label.name;
             link.projectId = label.projectId;
-            link.color = label.color; 
+            link.color = label.color;
             return link;
           });
 
@@ -211,15 +219,73 @@ export class TasksService {
 
 
 
-  async getAllTaskLabel(projectId: string){
-    try{
+  async getAllTaskLabel(projectId: string) {
+    try {
       return this.taskLabelRepository.find({
         where: { projectId },
       });
     }
-    catch(error){
+    catch (error) {
       console.error('Error handling label deleted:', error);
       return new Nack(true);
     }
   }
+
+  async suggestTask(userId: string, objective: string, projectId: string, teamId: string) {
+    console.log("Sending AI request for user:", userId, "with objective:", objective, "team Id:", teamId);
+    unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
+      timeout: RPC_TIMEOUT,
+    }))
+
+    const response = await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
+      payload: teamId,
+      timeout: RPC_TIMEOUT,
+    });
+    const memberIds = unwrapRpcResult(response);
+
+    console.log(memberIds)
+
+    const members = unwrapRpcResult(await this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+      payload: memberIds
+    }))
+
+    console.log(members)
+
+    await this.amqpConnection.publish(CHATBOT_EXCHANGE, 'suggest_task', {
+      userId,
+      objective,
+      members
+    });
+  }
+
+  async mockPythonAI(msg: any) {
+    const { userId, objective } = msg;
+    console.log(`[Mock AI] Đang xử lý yêu cầu cho user: ${userId} với mục tiêu: ${objective}`);
+
+    const mockTasks = [
+      { title: "Phân tích yêu cầu hệ thống", memberId: "dev-01", type: "task" },
+      { title: "Thiết kế cơ sở dữ liệu ERD", memberId: "des-02", type: "task" },
+      { title: "Cài đặt môi trường RabbitMQ", memberId: "dev-01", type: "task" },
+      { title: "Hoàn tất", memberId: null, type: "done" },
+    ];
+
+    for (const task of mockTasks) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      await this.amqpConnection.publish(TASK_EXCHANGE, 'ai.result.tasks', {
+        userId,
+        ...task,
+      });
+
+      console.log(`[Mock AI] Đã gửi task: ${task.title}`);
+    }
+  }
+
 }

@@ -32,14 +32,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return userProfile;
     } catch (error) {
       setUser(null);
-      throw error;
+      return null;
     }
   };
 
   useEffect(() => {
     const checkUserSession = async () => {
       try {
-        await fetchUserProfile();
+        if (document.cookie.includes("accessToken")) {
+          await fetchUserProfile();
+        }
       } catch (error) {
         console.error("Session check failed:", error);
       } finally {
@@ -121,7 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     register,
     logout,
-    refreshUser
+    refreshUser,
   };
 
   // Chỉ render khi đã check xong session
