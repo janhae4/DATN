@@ -40,7 +40,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
           },
           {
             name: GMAIL_EXCHANGE,
-            type: 'direct',
+            type: 'topic',
           },
           {
             name: NOTIFICATION_EXCHANGE,
@@ -48,7 +48,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
           }
         ],
         uri: cfg.getRMQUrl(),
-        connectionInitOptions: { wait: false },
+        connectionInitOptions: { wait: true, timeout: 20000 },
         logger: {
           error: (str: string) => {
             console.error(str);

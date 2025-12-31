@@ -27,6 +27,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         'https://www.googleapis.com/auth/gmail.send',
 
       ],
+      accessType: 'offline',
+      prompt: 'consent'
     } as StrategyOptionsWithRequest);
   }
 
@@ -64,7 +66,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       isLinking,
       linkedUser,
     };
-    console.log("User Data created:", user); 
+    console.log("User Data created:", user);
     done(null, user);
   }
 }

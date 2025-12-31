@@ -14,6 +14,7 @@ import {
   JwtDto,
   LoginDto,
   LoginResponseDto,
+  Provider,
   REDIS_EXCHANGE,
   REDIS_PATTERN,
   REFRESH_TTL,
@@ -28,6 +29,7 @@ import { UserOnboardingDto } from './dto/user-onboarding.dto';
 
 @Injectable()
 export class AuthService {
+  logger: any;
   constructor(private readonly amqp: AmqpConnection, private readonly userService: UserService) { }
 
   private setCookies(
@@ -237,14 +239,22 @@ export class AuthService {
 
   async getGoogleConnectionStatus(userId: string): Promise<boolean> {
     try {
-      const result = await this.amqp.request<LoginResponseDto>({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.GET_GOOGLE_TOKEN,
+      const user = await this.amqp.request<User>({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.FIND_ONE,
         payload: userId,
       });
-      console.log(result)
-      return !!result?.accessToken;
+
+      if (user && user.accounts) {
+        const isLinked = user.accounts.some(
+          (account) => account.provider === Provider.GOOGLE
+        );
+        return isLinked;
+      }
+
+      return false;
     } catch (error) {
+      console.error(`Error checking google status for user ${userId}:`, error);
       return false;
     }
   }

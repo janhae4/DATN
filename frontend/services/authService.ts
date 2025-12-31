@@ -55,12 +55,12 @@ export const logout = async (): Promise<void> => {
   try {
     await apiClient.delete('/auth/session');
     if (typeof window !== 'undefined') {
-      window.location.href = '/auth#login';
+      window.location.href = '/auth';
     }
   } catch (error) {
     console.error('Logout failed', error);
     if (typeof window !== 'undefined') {
-      window.location.href = '/auth#login';
+      window.location.href = '/auth';
     }
   }
 };

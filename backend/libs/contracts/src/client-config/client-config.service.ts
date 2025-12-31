@@ -278,6 +278,23 @@ export class ClientConfigService {
 
   /*
   -------------------------
+  --- GOOGLE OAUTH --------
+  -------------------------
+  */
+  getGoogleClientId(): string {
+    return this.config.get<string>('GOOGLE_CLIENT_ID', '');
+  }
+
+  getGoogleClientSecret(): string {
+    return this.config.get<string>('GOOGLE_CLIENT_SECRET', '');
+  }
+
+  getGoogleRedirectUri(): string {
+    return this.config.get<string>('GOOGLE_CALLBACK_URL', 'http://localhost:3000/auth/google/callback');
+  }
+
+  /*
+  -------------------------
   ------ VIDEO CHAT CLIENT -----
   -------------------------
   */
@@ -514,12 +531,12 @@ export class ClientConfigService {
 --------------
 */
 
-getFileDatabaseUrl(): string {
-  return this.config.get<string>(
-    'DATABASE_FILE_URL',
-    'mongodb://localhost:27017/file?directConnection=true', // Thêm tham số này
-  );
-}
+  getFileDatabaseUrl(): string {
+    return this.config.get<string>(
+      'DATABASE_FILE_URL',
+      'mongodb://localhost:27017/file?directConnection=true', // Thêm tham số này
+    );
+  }
 
   /*
   -------------------------
@@ -557,7 +574,7 @@ getFileDatabaseUrl(): string {
   getCalendarClientQueue(): string {
     return this.config.get<string>('CALENDAR_QUEUE', 'calendar_service_queue');
   }
-  
+
   get calendarClientOptions(): any {
     return {
       transport: Transport.RMQ,

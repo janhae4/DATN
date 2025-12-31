@@ -1,13 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useProjects } from "@/hooks/useProjects";
-import { EmptyProjectState } from "@/components/features/project/EmptyProjectState";
 import { TabsNav } from "@/components/tabsNav";
 import { TaskManagementProvider } from "@/components/providers/TaskManagementContext";
-import { Loader2 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 
 export function DashboardWrapper() {

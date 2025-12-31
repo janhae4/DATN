@@ -18,7 +18,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { UserProfile } from "@/types/auth";
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -29,11 +28,11 @@ const navigateTo = (path: string) => {
 
 export function ProfileButton() {
   const { user, logout } = useAuth();
-  
+
   const handleLogoutClick = async () => {
     try {
       await logout();
-      navigateTo('/auth#login');
+      navigateTo('/auth');
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -43,12 +42,12 @@ export function ProfileButton() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-            <Avatar className="h-10 w-10">
-                 <AvatarImage src={user?.avatar} alt={user?.name} />
-                 <AvatarFallback>
-                    {user?.name.charAt(0).toUpperCase()}
-                 </AvatarFallback>
-            </Avatar>
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={user?.avatar} alt={user?.name} />
+            <AvatarFallback>
+              {user?.name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
         </Button>
       </DropdownMenuTrigger>
 
@@ -61,7 +60,7 @@ export function ProfileButton() {
             </p>
           </div>
         </DropdownMenuLabel>
-        
+
         <DropdownMenuSeparator />
 
         <div className="px-2 py-1.5">

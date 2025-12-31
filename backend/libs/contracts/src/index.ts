@@ -77,6 +77,10 @@ export * from './gmail/gmail.patterns';
 export * from './gmail/email-subject.constant';
 export * from './gmail/dto/send-mail.dto';
 export * from './gmail/dto/send-email.dto';
+export * from './gmail/dto/get-mail-list.dto';
+export * from './gmail/dto/get-mail-detail.dto';
+export * from './gmail/dto/reply-mail.dto';
+export * from './gmail/dto/mail-response.dto';
 
 /*----
 NOTIFICATION

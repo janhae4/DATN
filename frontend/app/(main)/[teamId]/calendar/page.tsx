@@ -14,6 +14,7 @@ export default function CalendarPage() {
     const checkGoogleLink = async () => {
       try {
         const linked = await isGoogleLinked();
+        console.log("google linked chua: ",linked)
         setIsLinked(linked);
       } catch (error) {
         console.error('Error checking Google link status:', error);
@@ -40,19 +41,7 @@ export default function CalendarPage() {
   }
 
   return <div className='flex gap-2'>
-    <div className='p-6 w-[500px] border bg-white shadow-xl rounded-2xl'> 
-      Tasks
-      <div className='flex gap-2'>
-        <input type="text" placeholder='Search' className='w-full p-2 border rounded-md' />
-        <button className='p-2 border rounded-md'>Search</button>
-      </div>
-      <div className='flex gap-2'>
-        <button className='p-2 border rounded-md'>Add Task</button>
-      </div>
-      <div className='flex gap-2'>
-        <button className='p-2 border rounded-md'>Add Task</button>
-      </div>
-    </div>
+  
     <CalendarContent />;
   </div>
 }

@@ -15,6 +15,7 @@ export class CalendarController {
   }
   @MessagePattern('calendar.createEvent')
   async createEvent(@Payload() data: { userId: string; dto: CreateEventDto }) {
+    console.log("data calendar: ", data)
     return this.calendarService.createEvent(data.userId, data.dto);
   }
 

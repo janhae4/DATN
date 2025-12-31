@@ -109,14 +109,20 @@ export function useUpdateEvent() {
   });
 }
 
-// Hook xóa sự kiện
 export function useDeleteEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => calendarService.deleteEvent(id),
+    // SỬA Ở ĐÂY: Nhận object { id, calendarId }
+    mutationFn: ({ id, calendarId }: { id: string; calendarId?: string }) =>
+      calendarService.deleteEvent(id, calendarId),
+      
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [EVENTS_QUERY_KEY] }); 
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      // Thêm thông báo nếu thích
     },
+    onError: (err) => {
+        console.error("Delete failed:", err);
+    }
   });
 }
