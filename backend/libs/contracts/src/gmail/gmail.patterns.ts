@@ -7,4 +7,7 @@ export const GMAIL_PATTERNS = {
   SEND_EMAIL_PASSWORD_CHANGE: 'send_email_password_change',
   SEND_EMAIL_REGISTER: 'send_email_register',
   SEND_EMAIL_RESET_PASSWORD: 'send_email_reset_password',
+  GET_MAIL_LIST: 'get_mail_list',
+  GET_MAIL_DETAIL: 'get_mail_detail',
+  REPLY_MAIL: 'reply_mail',
 };

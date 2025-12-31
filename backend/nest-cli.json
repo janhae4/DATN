@@ -97,7 +97,14 @@
       "entryFile": "main",
       "sourceRoot": "apps/gmail/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/gmail/tsconfig.app.json"
+        "tsConfigPath": "apps/gmail/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "templates/**/*",
+            "outDir": "dist/apps/gmail/templates",
+            "watchAssets": true
+          }
+        ]
       }
     },
     "label-service": {

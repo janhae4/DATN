@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ApiGatewayController } from './api-gateway.controller';
 import { ApiGatewayService } from './api-gateway.service';
-import { ClientConfigModule, ClientConfigService, PROJECT_EXCHANGE, LIST_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { ClientConfigModule, ClientConfigService } from '@app/contracts';
+import { GatewayRabbitMQModule } from '../rabbitmq/gateway-rabbitmq.module';
 import { UserModule } from '../user/user.module';
 import { AuthModule } from '../auth/auth.module';
 import { TeamModule } from '../team/team.module';
@@ -20,24 +20,12 @@ import { EpicModule } from '../epic/epic.module';
 import { TaskModule } from '../task/task.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { VideoChatModule } from '../video-chat/video-chat.module';
-
+import { GmailModule } from '../gmail/gmail.module';
 
 @Module({
   imports: [
     ClientConfigModule,
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: true },
-        exchanges: [
-          { name: PROJECT_EXCHANGE, type: 'topic' },
-          { name: LIST_EXCHANGE, type: 'topic' },
-          { name: USER_EXCHANGE, type: 'direct' },
-        ],
-      }),
-    }),
+    GatewayRabbitMQModule,
     AuthModule,
     TeamModule,
     ChatbotModule,
@@ -52,8 +40,9 @@ import { VideoChatModule } from '../video-chat/video-chat.module';
     TaskModule,
     ProjectModule,
     CalendarModule,
-    WebhooksModule, 
-    VideoChatModule
+    WebhooksModule,
+    VideoChatModule,
+    GmailModule
   ],
   controllers: [ApiGatewayController],
   providers: [RpcErrorToHttpFilter, ApiGatewayService],

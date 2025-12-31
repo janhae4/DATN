@@ -12,7 +12,7 @@ import {
 import { TaskCompletionPieChart } from "../../charts/TaskCompletionPieChart";
 import { TaskActivityLineChart } from "../../charts/TaskActivityLineChart";
 import { AISummaryBox } from "./AISummaryBox";
-import { UnreadEmailBox } from "./UnreadEmailBox";
+import { EmailBox } from "./EmailBox";
 
 // Hooks & Types
 import { useTasks } from "@/hooks/useTasks";
@@ -147,8 +147,8 @@ const Summary = () => {
         <div className="bg-muted/50 aspect-video rounded-xl w-full">
           <AISummaryBox />
         </div>
-        <div className="bg-muted/50 aspect-video rounded-xl w-full">
-          <UnreadEmailBox />
+        <div className=" aspect-video rounded-xl w-full">
+          <EmailBox />
         </div>
       </div>
     </div>

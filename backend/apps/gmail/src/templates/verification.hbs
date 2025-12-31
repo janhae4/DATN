@@ -1,0 +1,12 @@
+<h1>Verify Your Account</h1>
+<p>Hi {{user.name}},</p>
+<p>Please use the following code to verify your account or reset your password:</p>
+<h2>{{code}}</h2>
+{{#if url}}
+<p>Or click the link below:</p>
+<p><a href="{{url}}">Verify Now</a></p>
+{{/if}}
+<br>
+<p>This code will expire shortly.</p>
+<p>Best regards,</p>
+<p>The Team</p>
