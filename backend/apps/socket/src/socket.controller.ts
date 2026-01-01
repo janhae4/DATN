@@ -22,6 +22,7 @@ import type {
   CreateTeamEventPayload,
   FileStatus,
   LeaveMemberEventPayload,
+  MeetingSummaryResponseDto,
   RemoveMemberEventPayload,
   RemoveTeamEventPayload,
   SendMessageEventPayload,
@@ -67,7 +68,7 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   handleCreateTeam(payload: CreateTeamEventPayload) {
-    const { membersToNotify, createdAt, owner, teamSnapshot} = payload;
+    const { membersToNotify, createdAt, owner, teamSnapshot } = payload;
     const createAtDate = new Date(createdAt);
     membersToNotify.map((m) =>
       this.socketGateway.sendNotificationToUser({
@@ -230,8 +231,68 @@ export class SocketController {
     queue: CHATBOT_PATTERN.STREAM_RESPONSE,
     errorHandler: customErrorHandler
   })
-  handleStreamResponse(response: ResponseStreamDto) {
-    this.socketGateway.handleStreamResponse(response);
+  async handleStreamResponse(response: ResponseStreamDto) {
+    await this.socketGateway.handleStreamResponse(response);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: CHATBOT_PATTERN.RESPONSE_SUMMARIZE_MEETING,
+    queue: CHATBOT_PATTERN.RESPONSE_SUMMARIZE_MEETING,
+    errorHandler: customErrorHandler
+  })
+  async handleSummarizeMeetingResponse(response: MeetingSummaryResponseDto) {
+    await this.socketGateway.handleMeetingSummaryStream(response);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: 'socket.video-call.request-unkick',
+    queue: 'socket.video-call.request-unkick',
+    errorHandler: customErrorHandler
+  })
+  async handleUnKickUser(payload: {
+    hostUserId: string,
+    message: string,
+    roomId: string,
+    targetUserId: string
+  }) {
+    await this.socketGateway.sendUnKickRequestToHost(payload.hostUserId, payload.message, payload.roomId, payload.targetUserId);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: 'socket.video-call.request-kick',
+    queue: 'socket.video-call.request-kick',
+    errorHandler: customErrorHandler
+  })
+  async handleKickUser(payload: {
+    hostUserId: string,
+    message: string,
+    roomId: string,
+    targetUserId: string
+  }) {
+    await this.socketGateway.sendKickRequestToHost(payload.hostUserId, payload.message, payload.roomId, payload.targetUserId);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: 'socket.video-call.user-kicked',
+    queue: 'socket.video-call.user-kicked',
+    errorHandler: customErrorHandler
+  })
+  async handleUserKicked(payload: { targetUserId: string, roomId: string, message: string }) {
+    await this.socketGateway.notifyUserKicked(payload.targetUserId, payload.message, payload.roomId);
+  }
+
+  @RabbitSubscribe({
+    exchange: SOCKET_EXCHANGE,
+    routingKey: 'socket.video-call.user-unkicked',
+    queue: 'socket.video-call.user-unkicked',
+    errorHandler: customErrorHandler
+  })
+  async handleUserUnKicked(payload: { targetUserId: string, roomId: string, message: string }) {
+    await this.socketGateway.notifyUserUnKicked(payload.targetUserId, payload.message, payload.roomId);
   }
 
   @RabbitSubscribe({
@@ -240,7 +301,7 @@ export class SocketController {
     queue: 'events_socket_file_status',
     errorHandler: customErrorHandler
   })
-  handleFileStatus(payload: { fileId: string, fileName: string, status: FileStatus ,userId: string, teamId?: string }) {
+  handleFileStatus(payload: { fileId: string, fileName: string, status: FileStatus, userId: string, teamId?: string }) {
     console.log(payload)
     this.socketGateway.handleFileStatus(
       payload.fileId,

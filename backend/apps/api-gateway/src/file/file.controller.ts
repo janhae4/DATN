@@ -9,6 +9,8 @@ import {
   Get,
   UseGuards,
   Res,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { FileService } from './file.service';
 import {
@@ -125,13 +127,33 @@ export class FileController {
   }
 
   @Get()
-  @ApiOperation({ summary: '6. List all files for user or team' })
+  @ApiOperation({ summary: '6. List all files with pagination' })
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
-  @ApiResponse({ status: 200, description: 'Returns a list of file metadata' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default: 1' }) // Swagger
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default: 10' }) // Swagger
+  @ApiResponse({ status: 200, description: 'Returns paginated files' })
   getFiles(
+    @CurrentUser('id') userId: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('teamId') teamId?: string,
+  ) {
+    return this.fileService.getFiles(userId, teamId, page, limit);
+  }
+
+  // --- THÊM ĐOẠN NÀY ---
+  @Post(':fileId/confirm')
+  @ApiOperation({ summary: '7. Confirm file upload completion' })
+  @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to confirm' })
+  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiResponse({ status: 200, description: 'File confirmed successfully' })
+  confirmUpload(
+    @Param('fileId') fileId: string,
     @CurrentUser('id') userId: string,
     @Query('teamId') teamId?: string,
   ) {
-    return this.fileService.getFiles(userId, teamId);
+    return this.fileService.confirmUpload(fileId, userId, teamId);
   }
+
+
 }

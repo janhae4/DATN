@@ -24,6 +24,7 @@ create_database "task_db"
 create_database "label_db"
 create_database "list_db"
 create_database "sprint_db"
+create_database "video_chat_db"
 
 
 echo "Đang thêm extensions..."

@@ -39,6 +39,7 @@ export const NOTIFICATION_QUEUE = 'notification_queue';
 export const SOCKET_EXCHANGE = 'socket_exchange';
 export const SOCKET_QUEUE = 'socket_queue';
 export const TASK_EXCHANGE = 'task_exchange';
+export const VIDEO_CHAT_EXCHANGE = 'video_chat_exchange';
 export const LABEL_EXCHANGE = 'label_exchange';
 export const SEARCH_QUEUE = 'search_queue';
 export const SEARCH_EXCHANGE = 'search_exchange';
