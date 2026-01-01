@@ -63,10 +63,17 @@ export class FileService {
         });
     }
 
-    async getFiles(userId: string, teamId?: string) {
+ async getFiles(
+        userId: string, 
+        teamId?: string, 
+        page: number = 1,  // Thêm tham số
+        limit: number = 10 // Thêm tham số
+    ) {
         return this.sendRpcRequest(FILE_PATTERN.GET_FILES, {
             userId,
             teamId,
+            page, 
+            limit,
         });
     }
 
@@ -84,5 +91,13 @@ export class FileService {
             userId,
             teamId,
         })
+    }
+
+    async confirmUpload(fileId: string, userId: string, teamId?: string) {
+        return this.sendRpcRequest('file.confirm_upload', { 
+            fileId,
+            userId,
+            teamId,
+        });
     }
 }

@@ -284,4 +284,26 @@ export class RedisController {
     const { teamId, members } = payload;
     return await this.redisService.setTeamMembers(teamId, members);
   }
+
+    @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.PUSH_MEETING_BUFFER,
+    queue: REDIS_PATTERN.PUSH_MEETING_BUFFER,
+    errorHandler: customErrorHandler
+  })
+  async pushToMeetingBuffer(payload: { roomId: string, userId: string, userName: string, content: string, timestamp: Date }) {
+    const { roomId, userId, userName, content, timestamp } = payload;
+    return await this.redisService.pushToMeetingBuffer(roomId, userId, userName, content, timestamp);
+  }
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.POP_MEETING_BUFFER,
+    queue: REDIS_PATTERN.POP_MEETING_BUFFER,
+    errorHandler: customErrorHandler
+  })
+  async popMeetingBuffer(roomId: string) {
+    return await this.redisService.popMeetingBuffer(roomId);
+  }
+
 }

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button"; // Đảm bảo bạn đã có Button component
+import { Button } from "@/components/ui/button";
 
 import {
   ArrowRight,

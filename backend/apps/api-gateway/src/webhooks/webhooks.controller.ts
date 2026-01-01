@@ -19,6 +19,7 @@ export class WebhooksController {
     @Body() payload: MinioWebhookEvent,
     @Res() res: Response,
   ) {
+    console.log("[WEBHOOK] handleUploadCompletion", payload);
     try { 
       const storageKey = payload.Records?.[0]?.s3?.object?.key;
       if (!storageKey) {

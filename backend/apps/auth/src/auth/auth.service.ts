@@ -308,6 +308,7 @@ export class AuthService {
     })
 
     this.logger.log(`Storing Google tokens for user ${user.id}.`);
+    console.log("access token when linking: ", accessToken)
     this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
       userId: user.id,
       accessToken,

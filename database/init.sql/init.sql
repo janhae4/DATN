@@ -1,6 +1,0 @@
-CREATE DATABASE project_db;
-CREATE DATABASE task_db;
-CREATE DATABASE label_db;
-CREATE DATABASE list_db;
-CREATE DATABASE epic_db;
-CREATE DATABASE sprint_db;
