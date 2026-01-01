@@ -7,7 +7,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import authService, { getMe } from "@/services/authService";
+import authService from "@/services/authService";
 import { UserProfile, LoginCredentials, RegisterData } from "@/types/auth";
 
 interface AuthContextType {
@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const checkUserSession = async () => {
       try {
         if (document.cookie.includes("accessToken")) {
@@ -52,9 +52,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     };
-    
+
     checkUserSession();
-    
+
     return () => {
       isMounted = false;
     };
@@ -69,49 +69,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Hàm login
   const login = async (credentials: LoginCredentials) => {
     try {
-      // 1. Gọi API login (BE sẽ set cookie)
       const loginResponse = await authService.login(credentials);
-
-      // 2. Lấy thông tin user nếu cần
-      // Chỉ gọi getMe nếu không có thông tin user trong response
       let userProfile = loginResponse.user;
       if (!userProfile) {
         userProfile = await authService.getMe();
       }
-
-      // 3. Cập nhật state toàn cục
       setUser(userProfile);
-
       return userProfile;
     } catch (error) {
       setUser(null);
-      throw error; // Ném lỗi ra cho form xử lý
+      throw error;
     }
   };
 
-  // Hàm register
   const register = async (data: RegisterData) => {
     try {
       await authService.register(data);
-
       const loginResponse = await authService.login({
         username: data.username,
         password: data.password,
       });
-
       let userProfile = loginResponse.user;
-
       if (!userProfile) {
         userProfile = await authService.getMe();
       }
-
       if (userProfile) {
         setUser(userProfile);
       }
-
       return loginResponse;
     } catch (error: any) {
       console.error("Registration error in AuthContext:", error);
@@ -119,11 +105,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Hàm logout
   const logout = () => {
-    authService.logout(); //
+    authService.logout();
     setUser(null);
-    // authService.logout() đã tự redirect rồi
   };
 
   const value = {
@@ -135,18 +119,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser,
   };
 
-  // Only show loading indicator for protected routes
-  if (isLoading && user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
   return (
     <AuthContext.Provider value={value}>
-      {" "}
       <GoogleOAuthProvider clientId="387020606917-73crp08jd6l5ntsi27c0kg0g9uo6u0jk.apps.googleusercontent.com">
         {children}
       </GoogleOAuthProvider>

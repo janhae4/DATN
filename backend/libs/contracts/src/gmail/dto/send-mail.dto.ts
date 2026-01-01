@@ -12,4 +12,11 @@ export class SendMailDto {
   messageText: string;
   content?: string;
   type?: EmailSystemType;
+  cc?: string | string[];
+  bcc?: string | string[];
+  attachments?: Array<{
+    filename: string;
+    content: any;
+    contentType: string;
+  }>;
 }

@@ -202,3 +202,148 @@
 
 
 
+/* --- GOOGLE CALENDAR THEME FOR REACT-BIG-CALENDAR --- */
+
+.my-custom-calendar {
+  font-family: "Google Sans", Roboto, Arial, sans-serif; /* Font giống Google */
+  color: #3c4043;
+  --grid-color: #dadce0; /* Màu đường kẻ chuẩn của Google */
+  --primary-color: #1a73e8; /* Màu xanh Google */
+  --today-bg: rgba(26, 115, 232, 0.04);
+}
+
+/* 1. Tổng thể khung lịch */
+.rbc-calendar {
+  border: none !important;
+}
+
+.rbc-month-view, 
+.rbc-time-view, 
+.rbc-agenda-view {
+  border: 1px solid var(--grid-color) !important;
+  border-top: none !important; /* Bỏ viền trên để thoáng header */
+}
+
+/* 2. Header (Thứ - Ngày) */
+.rbc-header {
+  border-bottom: 1px solid var(--grid-color) !important;
+  border-left: none !important; /* Bỏ vách ngăn dọc giữa các header */
+  padding: 8px 0 !important;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #70757a; /* Màu chữ xám của Google */
+  text-align: center;
+}
+
+.rbc-header + .rbc-header {
+  border-left: 1px solid var(--grid-color) !important; /* Chỉ kẻ dọc ngăn cách mờ */
+}
+
+/* --- QUAN TRỌNG: Style cho ngày HÔM NAY (Circle Blue) --- */
+.rbc-header.rbc-today {
+  color: var(--primary-color) !important;
+  border-bottom: 1px solid var(--grid-color) !important; /* Giữ nguyên border dưới */
+}
+
+/* Hack để tạo vòng tròn xanh quanh số ngày hôm nay (nếu cấu trúc HTML cho phép) */
+/* Lưu ý: RBC mặc định render text "Tue 30". Để làm tròn số "30", cần Custom Header Component. 
+   Nhưng CSS này sẽ highlight cả cụm text cho giống style text Google */
+.rbc-header.rbc-today span {
+  display: inline-block;
+}
+
+/* 3. Lưới thời gian (Time Grid) */
+.rbc-time-view .rbc-allday-cell {
+  border-bottom: 1px solid var(--grid-color) !important;
+}
+
+.rbc-time-content {
+  border-top: 1px solid var(--grid-color) !important;
+}
+
+/* Cột giờ bên trái */
+.rbc-time-gutter .rbc-timeslot-group {
+  border-bottom: none !important;
+}
+
+.rbc-time-gutter .rbc-time-slot {
+  font-size: 10px;
+  color: #70757a;
+  transform: translateY(-8px); /* Đẩy giờ lên khớp vạch kẻ giống Google */
+  padding-right: 8px;
+}
+
+/* Đường kẻ ngang */
+.rbc-timeslot-group {
+  border-bottom: 1px solid var(--grid-color) !important; /* Kẻ liền, không đứt */
+  min-height: 48px !important; /* Chiều cao mỗi giờ chuẩn Google (compact hơn) */
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: none !important;
+}
+
+/* Đường kẻ dọc phân ngày */
+.rbc-day-slot {
+  border-left: 1px solid var(--grid-color) !important;
+}
+
+/* Nền của ngày hôm nay */
+.rbc-day-slot.rbc-today {
+  background-color: transparent !important; /* Google Calendar nền trắng, không tô màu */
+}
+
+/* 4. Sự kiện (Event) */
+.rbc-event {
+  border: none !important;
+  border-radius: 4px !important; /* Bo góc 4px chuẩn Google */
+  padding: 2px 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important; /* Google Calendar phẳng, không shadow */
+  margin: 1px 2px !important; /* Cách lề một chút */
+  line-height: 1.4;
+}
+
+.rbc-event:hover {
+  filter: brightness(0.95); /* Tối đi chút khi hover */
+}
+
+.rbc-event-label {
+  display: none !important; /* Ẩn giờ trong event cho gọn giống Google */
+}
+
+/* Sự kiện All Day / Month View */
+.rbc-month-row {
+  min-height: 100px; /* Cho ô tháng cao hơn */
+}
+
+/* 5. Vạch chỉ giờ hiện tại (Current Time Indicator) */
+.rbc-current-time-indicator {
+  background-color: #ea4335 !important; /* Màu đỏ Google */
+  height: 2px !important;
+}
+
+.rbc-current-time-indicator::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #ea4335;
+}
+
+/* 6. Thanh cuộn (Scrollbar) tinh tế */
+.rbc-time-content::-webkit-scrollbar {
+  width: 8px;
+}
+.rbc-time-content::-webkit-scrollbar-thumb {
+  background-color: #dadce0;
+  border-radius: 4px;
+}
+.rbc-time-content::-webkit-scrollbar-track {
+  background: transparent;
+}

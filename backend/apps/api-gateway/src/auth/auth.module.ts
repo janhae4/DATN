@@ -10,31 +10,6 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
   imports: [
     ClientConfigModule,
     forwardRef(() => UserModule),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: AUTH_EXCHANGE,
-            type: 'direct',
-          },
-        ],
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-        logger: {
-          error: (str: string) => {
-            console.error(str);
-          },
-          log: (str: string) => {
-            console.log(str);
-          },
-          warn: (str: string) => {
-            console.warn(str);
-          },
-        }
-      })
-    }),
   ],
   controllers: [AuthController],
   providers: [

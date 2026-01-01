@@ -14,7 +14,7 @@ export interface CreateEventDto {
 }
 
 // calendar/dto/update-event.dto.ts (Dùng Partial của Create)
-export interface UpdateEventDto extends Partial<CreateEventDto> {}
+export interface UpdateEventDto extends Partial<CreateEventDto> { }
 
 
 // calendar/dto/get-event.dto.ts (Filter)
@@ -30,17 +30,17 @@ export interface CalendarEvent {
   id: string;
   title: string;
   description?: string;
-  start: string; 
-  end: string;   
-  link: string; 
-  calendarId?: string; 
+  start: string;
+  end: string;
+  link: string;
+  calendarId?: string;
   colorId?: string;
   status: 'confirmed' | 'cancelled';
 }
 
 export interface CalendarItem {
-  id: string; 
-  summary: string; 
+  id: string;
+  summary: string;
   description?: string;
   backgroundColor?: string;
   primary: boolean;
@@ -57,7 +57,7 @@ export const calendarService = {
     const response = await apiClient.get<CalendarItem[]>(`/calendar/list`);
     return response.data;
   },
-  
+
   /**
    * Lấy danh sách sự kiện có filter
    * GET /calendar?startTime=...&calendarId=...
@@ -91,22 +91,18 @@ export const calendarService = {
     return response.data;
   },
 
-  /**
-   * Cập nhật sự kiện
-   * PUT /calendar/{id}
-   */
+  deleteEvent: async (eventId: string, calendarId?: string): Promise<any> => {
+    // Nếu có calendarId thì gắn vào URL
+    const query = calendarId ? `?calendarId=${calendarId}` : '';
+    const response = await apiClient.delete(`/calendar/${eventId}${query}`);
+    return response.data;
+  },
+
+  // 2. updateEvent giữ nguyên, vì calendarId sẽ nằm trong `updates` (DTO)
   updateEvent: async (eventId: string, updates: UpdateEventDto): Promise<CalendarEvent> => {
     const response = await apiClient.put<CalendarEvent>(`/calendar/${eventId}`, updates);
     return response.data;
   },
 
-  /**
-   * Xóa sự kiện
-   * DELETE /calendar/{id}
-   */
-  deleteEvent: async (eventId: string): Promise<void> => {
-    await apiClient.delete(`/calendar/${eventId}`);
-  },
 
-  
 };

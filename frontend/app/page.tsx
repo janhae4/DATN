@@ -48,7 +48,7 @@ export default function Home() {
 
           <div className="flex items-center gap-4">
             <Link
-              href="/auth#login"
+              href="/auth"
               className="text-sm font-medium text-muted-foreground hover:text-foreground hidden sm:block"
             >
               Log in
