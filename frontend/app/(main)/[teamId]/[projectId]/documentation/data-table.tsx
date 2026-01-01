@@ -123,7 +123,7 @@ export function DataTable<TData, TValue>({
               variant="outline"
               size="sm"
               onClick={() => onPageChange(pageIndex - 1)}
-              disabled={pageIndex <= 1}
+              disabled={pageIndex <=0 }
             >
               <ChevronLeft className="h-4 w-4 mr-1" /> Previous
             </Button>

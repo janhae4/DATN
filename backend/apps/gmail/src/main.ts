@@ -1,13 +1,24 @@
 import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions } from '@nestjs/microservices';
 import { GmailModule } from './gmail/gmail.module';
-import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { ClientConfigService, GMAIL_QUEUE } from '@app/contracts';
 
 async function bootstrap() {
-  const app = await NestFactory.create(GmailModule);
-  const cfg = app.get(ClientConfigService);
-  app.connectMicroservice(cfg.gmailClientOptions as MicroserviceOptions);
-  await app.startAllMicroservices();
-  console.log('Gmail microservice is listening', cfg.getGmailClientPort());
+    const app = await NestFactory.create(GmailModule);
+    const configService = app.get(ClientConfigService);
+
+    app.connectMicroservice<MicroserviceOptions>({
+        transport: Transport.RMQ,
+        options: {
+            urls: [configService.getRMQUrl()],
+            queue: GMAIL_QUEUE,
+            queueOptions: {
+                durable: true
+            },
+        },
+    });
+
+    await app.startAllMicroservices();
+    console.log(`Gmail Microservice is listening on queue: ${GMAIL_QUEUE} (NestJS Standard)`);
 }
 bootstrap();

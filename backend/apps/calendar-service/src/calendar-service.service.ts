@@ -20,7 +20,7 @@ export class CalendarService {
         payload: userId,
       });
 
-      if (!tokens || !tokens.accessToken) {
+      if (!tokens || (!tokens.accessToken && !tokens.refreshToken)) {
         throw new UnauthorizedException('User has not linked Google Calendar');
       }
 
@@ -41,45 +41,73 @@ export class CalendarService {
     }
   }
 
-async listEvents(userId: string, filter: { startTime?: string; endTime?: string; calendarId?: string }) {
+  async listEvents(userId: string, filter: { startTime?: string; endTime?: string; calendarId?: string }) {
     const calendar = await this.getCalendarClient(userId);
-    
-    const timeMin = filter.startTime 
-      ? new Date(filter.startTime).toISOString() 
-      : new Date().toISOString();
-      
-    const calendarId = filter.calendarId || 'primary';
+
+    const params: any = {
+      timeMin: filter.startTime ? new Date(filter.startTime).toISOString() : new Date().toISOString(),
+      timeMax: filter.endTime ? new Date(filter.endTime).toISOString() : undefined,
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 250,
+    };
 
     try {
-      const params: any = {
-        calendarId: calendarId,
-        timeMin: timeMin,
-        maxResults: 250, // Tăng lên xíu để lấy nhiều
-        singleEvents: true,
-        orderBy: 'startTime',
-      };
-
-      // Nếu có chọn ngày kết thúc thì thêm vào (Google API gọi là timeMax)
-      if (filter.endTime) {
-        params.timeMax = new Date(filter.endTime).toISOString();
+      // CASE 1: Lấy 1 lịch cụ thể
+      if (filter.calendarId) {
+        const res = await calendar.events.list({
+          ...params,
+          calendarId: filter.calendarId,
+        });
+        return this.mapEvents(res.data.items || [], filter.calendarId);
       }
 
-      const res = await calendar.events.list(params);
-      
-      return res.data.items?.map(event => ({
-        id: event.id,
-        title: event.summary,
-        description: event.description,
-        start: event.start?.dateTime || event.start?.date,
-        end: event.end?.dateTime || event.end?.date,
-        link: event.htmlLink,
-        // Trả thêm màu sắc nếu muốn Frontend hiển thị đẹp
-        colorId: event.colorId 
-      }));
+      // CASE 2: Lấy tất cả
+      const calendarListRes = await calendar.calendarList.list({ minAccessRole: 'reader' });
+      const calendars = calendarListRes.data.items || [];
+
+      const allEventsPromises = calendars.map(async (cal) => {
+        // --- FIX Ở ĐÂY: Check xem có ID không rồi mới làm tiếp ---
+        if (!cal.id) return [];
+
+        try {
+          const res = await calendar.events.list({
+            ...params,
+            calendarId: cal.id, // Bây giờ TypeScript biết cal.id là string chắc chắn
+          });
+
+          // cal.backgroundColor có thể null/undefined, nhưng tham số defaultColor là optional (?) nên ok
+          return this.mapEvents(
+            res.data.items || [],
+            cal.id,
+            cal.backgroundColor || undefined // Convert null sang undefined cho chắc
+          );
+        } catch (err) {
+          console.warn(`Skipping calendar ${cal.summary}: ${err.message}`);
+          return [];
+        }
+      });
+
+      const results = await Promise.all(allEventsPromises);
+      return results.flat();
+
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException('Failed to fetch events');
     }
+  }
+
+  private mapEvents(items: calendar_v3.Schema$Event[], calendarId: string, defaultColor?: string) {
+    return items.map(event => ({
+      id: event.id,
+      title: event.summary || '(No Title)',
+      description: event.description,
+      start: event.start?.dateTime || event.start?.date,
+      end: event.end?.dateTime || event.end?.date,
+      link: event.htmlLink,
+      calendarId: calendarId,
+      colorId: event.colorId || defaultColor || '#3b82f6'
+    }));
   }
 
   async createEvent(userId: string, dto: CreateEventDto) {
@@ -102,12 +130,17 @@ async listEvents(userId: string, filter: { startTime?: string; endTime?: string;
     }
   }
 
-  async deleteEvent(userId: string, eventId: string) {
+  async deleteEvent(userId: string, eventId: string, calendarId: string = 'primary') {
     const calendar = await this.getCalendarClient(userId);
     try {
-      await calendar.events.delete({ calendarId: 'primary', eventId });
+      await calendar.events.delete({
+        calendarId: calendarId, // <--- QUAN TRỌNG: Dùng ID động
+        eventId
+      });
       return { success: true };
     } catch (error) {
+      // Log lỗi rõ ràng hơn để debug
+      console.error(`Failed to delete event ${eventId} on calendar ${calendarId}:`, error);
       throw new InternalServerErrorException('Failed to delete event');
     }
   }
@@ -124,24 +157,23 @@ async listEvents(userId: string, filter: { startTime?: string; endTime?: string;
       throw new InternalServerErrorException('Event not found or failed to fetch');
     }
   }
-  
+
   async updateEvent(userId: string, eventId: string, dto: UpdateEventDto) {
     const calendar = await this.getCalendarClient(userId);
+    const calendarId = dto.calendarId || 'primary';
+
     try {
-      // Map DTO sang Google Event Resource
       const patchBody: any = {};
       if (dto.summary) patchBody.summary = dto.summary;
       if (dto.description) patchBody.description = dto.description;
       if (dto.startTime) patchBody.start = { dateTime: dto.startTime };
       if (dto.endTime) patchBody.end = { dateTime: dto.endTime };
 
-      // Gọi API Patch (chỉ update những trường thay đổi)
       const res = await calendar.events.patch({
-        calendarId: 'primary',
+        calendarId: calendarId,
         eventId: eventId,
         requestBody: patchBody,
       });
-      console.log("updated calendar: ", res.data);
       return res.data;
     } catch (error) {
       console.error(error);
@@ -153,7 +185,7 @@ async listEvents(userId: string, filter: { startTime?: string; endTime?: string;
     const calendar = await this.getCalendarClient(userId);
     try {
       const res = await calendar.calendarList.list();
-      
+
       // Map data cho gọn
       return res.data.items?.map(cal => ({
         id: cal.id,

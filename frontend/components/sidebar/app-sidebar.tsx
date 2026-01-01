@@ -145,7 +145,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       if (item.url === "team") {
         resolvedUrl = `/${teamId}/team`
       } else if (item.url === "calendar") {
-        resolvedUrl = "/calendar"
+        resolvedUrl = `/${teamId}/calendar`
       } else if (item.url === "meeting") {
         resolvedUrl = `/${teamId}/meeting`
       } else {

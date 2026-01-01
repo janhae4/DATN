@@ -4,7 +4,6 @@ import { AuthService } from './auth.service';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -21,10 +20,7 @@ describe('AuthController', () => {
       ],
       controllers: [AuthController],
       providers: [
-        AuthService,
-        CLIENT_PROXY_PROVIDER.USER_CLIENT,
-        CLIENT_PROXY_PROVIDER.NOTIFICATION_CLIENT,
-        CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
+        AuthService
       ]
     }).compile();
 
