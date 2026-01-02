@@ -20,23 +20,17 @@ from config import (
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
-# async def publish_to_redis(channel: str, payload: dict):
-#     """
-#     Gửi dữ liệu trực tiếp vào Redis Channel để SSE Gateway ở NestJS nhận được.
-#     """
-#     redis_client.publish(channel, json.dumps(payload))
-    
-    # async def publish_to_redis(channel: str, discussion_id: str, content: str, is_completed: bool = False, metadata: dict = None):
-    # """
-    # Gửi dữ liệu trực tiếp vào Redis Channel để SSE Gateway ở NestJS nhận được.
-    # """
-    # channel = f"ai_stream:{discussion_id}"
-    # payload = {
-    #     "text": content,
-    #     "isCompleted": is_completed,
-    #     "metadata": metadata if metadata else {}
-    # }
-    # redis_client.publish(channel, json.dumps(payload))
+async def publish_to_redis(discussion_id: str, content: str, is_completed: bool = False, metadata: dict = None):
+    """
+    Gửi dữ liệu trực tiếp vào Redis Channel để SSE Gateway ở NestJS nhận được.
+    """
+    channel = f"ai_stream:{discussion_id}"
+    payload = {
+        "text": content,
+        "isCompleted": is_completed,
+        "metadata": metadata if metadata else {}
+    }
+    await redis_client.publish(channel, json.dumps(payload))
 
 async def publish_response(
     channel: Channel, 
@@ -218,7 +212,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
             if pattern_from_key == 'suggest_task':
                 if not user_id: raise ValueError("Thiếu userId cho luồng gợi ý task.")
             else:
-                if not all([socket_id, user_id, discussion_id]):
+                if not all([user_id, discussion_id]):
                     raise ValueError("Thiếu socketId hoặc discussionId cho luồng chat.")
 
             if pattern_from_key == 'ask_question':
@@ -227,14 +221,14 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 if not question: raise ValueError("Tin nhắn thiếu 'question'.")
 
                 print(f"--> [RAG] Câu hỏi từ user '{user_id}': {question}")
-                await publish_response(channel, socket_id, discussion_id, "Thinking...", "start", team_id, membersToNotify=membersToNotify)
+                # await publish_to_redis(discussion_id, question, is_completed=False)
                 
                 async for chunk in rag_chain.ask_question_for_user(question, user_id, team_id, chat_history):
-                    # await publish_to_redis(discussion_id, chunk, is_completed=False)
-                    await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
+                    await publish_to_redis(discussion_id, chunk, is_completed=False)
+                    # await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
                 
                 retrieved_metadata = rag_chain.get_last_retrieved_context()
-                # await publish_to_redis(discussion_id, "", is_completed=True, metadata=retrieved_metadata)
+                await publish_to_redis(discussion_id, "", is_completed=True, metadata=retrieved_metadata)
                 print(f"--> [RAG] Đã lấy được metadata: {retrieved_metadata}")
 
             elif pattern_from_key == 'summarize_document':

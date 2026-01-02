@@ -9,16 +9,13 @@ export interface PaginationMeta {
 
 export class Pagination<T> {
     data: T[];
-    meta: PaginationMeta;
-    constructor(data: T[], total: number, page: number, limit: number) {
+    total: number;
+    page: number;
+    totalPages: number;
+    constructor(data: T[], total: number, page: number, totalPages: number) {
         this.data = data;
-        this.meta = {
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-            hasNextPage: page < Math.ceil(total / limit),
-            hasPreviousPage: page > 1,
-        };
+        this.total = total;
+        this.page = page;
+        this.totalPages = totalPages;
     }
 }

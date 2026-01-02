@@ -15,6 +15,7 @@ import { AiDiscussion, AiDiscussionSchema } from './schema/ai-discussion.schema'
 import { AiDiscussionController } from './ai-discussion.controller';
 import { AiDiscussionService } from './ai-discussion.service';
 import { AiMessage, AiMessageSchema } from './schema/message.schema';
+import Redis from 'ioredis';
 @Module({
   imports: [
     ClientConfigModule,
@@ -64,7 +65,15 @@ import { AiMessage, AiMessageSchema } from './schema/message.schema';
   ],
   providers: [
     AiDiscussionController,
-    AiDiscussionService
+    AiDiscussionService,
+    {
+      provide: REDIS_EXCHANGE,
+      useFactory: (config: ClientConfigService) => new Redis({
+        host: config.getRedisHost(),
+        port: config.getRedisClientPort(),
+      }),
+      inject: [ClientConfigService],
+    }
   ],
   controllers: [AiDiscussionController],
 })

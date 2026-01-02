@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { FilterQuery, Model } from 'mongoose';
 import {
@@ -27,6 +27,7 @@ import {
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { AiDiscussion, TeamSnapshot } from './schema/ai-discussion.schema';
 import { AiMessage } from './schema/message.schema';
+import Redis from 'ioredis';
 
 @Injectable()
 export class AiDiscussionService {
@@ -40,6 +41,7 @@ export class AiDiscussionService {
     @InjectConnection()
     private readonly connection: mongoose.Connection,
     private readonly amqp: AmqpConnection,
+    @Inject(REDIS_EXCHANGE) private readonly redis: Redis
   ) { }
 
   private createLatestMessageSnapshot(messageDoc: AiMessage): AiMessageSnapshot {
@@ -301,7 +303,6 @@ export class AiDiscussionService {
     summarizeFileName?: string
   ) {
     const sender = await this.getSenderSnapshot(userId);
-    console.log(userId, message, metadata, discussionId, summarizeFileName);
     try {
       const aiDiscussion = await this.saveMessageToDiscussion(
         sender,
@@ -557,14 +558,23 @@ export class AiDiscussionService {
     userId: string,
     page: number = 1,
     limit: number = 15,
-    teamId?: string
+    id: string
   ) {
+
     const skip = (page - 1) * limit;
 
-    const discussion = await this.checkDiscussionAuth({ userId, teamId });
+    const discussion = await this.aiDiscussionModel.findOne({
+      _id: id,
+      ownerId: userId,
+      isDeleted: false
+    }).lean()
+
+    if (!discussion) {
+      throw new NotFoundException('Discussion not found or access denied');
+    }
     console.log("Discussion found:", discussion);
     const messagesQuery = this.aiMessageModel
-      .find({ discussionId: discussion._id })
+      .find({ discussionId: id })
       .sort({ timestamp: -1 })
       .skip(skip)
       .limit(limit);
@@ -590,11 +600,20 @@ export class AiDiscussionService {
 
   async deleteDiscussion(discussionId: string, userId: string) {
     try {
-      const discussion = await this.checkDiscussionAuth({ userId, discussionId });
 
       await Promise.all([
-        this.aiDiscussionModel.findByIdAndDelete(discussion._id),
-        this.aiMessageModel.deleteMany({ discussionId: discussion._id }),
+        this.aiDiscussionModel.findOneAndUpdate(
+          {
+            _id: discussionId,
+            ownerId: userId,
+            isDeleted: false
+          },
+          {
+            $set: { isDeleted: true }
+          },
+          { new: true }
+        ),
+        this.aiMessageModel.deleteMany({ discussionId: discussionId }),
       ]);
 
       return { message: 'Discussion deleted' };

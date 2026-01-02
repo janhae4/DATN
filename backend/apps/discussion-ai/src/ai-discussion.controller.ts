@@ -21,12 +21,13 @@ export class AiDiscussionController {
     userId: string;
     page: number;
     limit: number;
-    teamId?: string
+    id: string;
   }) {
     return await this.aiDiscussionService.findDiscussion(
       payload.userId,
       payload.page,
-      payload.limit
+      payload.limit,
+      payload.id
     );
   }
 
@@ -104,7 +105,7 @@ export class AiDiscussionController {
     );
   }
 
-  @RabbitSubscribe({
+  @RabbitRPC({
     exchange: CHATBOT_EXCHANGE,
     routingKey: CHATBOT_PATTERN.CREATE,
     queue: CHATBOT_PATTERN.CREATE,

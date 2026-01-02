@@ -384,11 +384,11 @@ export class UserService {
       exchange: REDIS_EXCHANGE,
       routingKey: REDIS_PATTERN.GET_USER_INFO,
       payload: ids,
-    }))
+    })) 
 
     const cachedIds = new Set(cachedUsers.map(u => u.id));
     const missingIds = ids.filter(id => !cachedIds.has(id));
-
+    console.log(missingIds)
     let missingUsers: Partial<User>[] = [];
 
     if (missingIds.length > 0) {
@@ -400,7 +400,11 @@ export class UserService {
         relations: {
           skills: true
         }
-      }); if (missingUsers.length > 0) {
+      });
+
+      this.logger.log(missingUsers)
+
+      if (missingUsers.length > 0) {
         await this.amqp.publish(
           REDIS_EXCHANGE,
           REDIS_PATTERN.SET_MANY_USERS_INFO,
@@ -410,7 +414,7 @@ export class UserService {
     }
 
     const allUsers = [...cachedUsers, ...missingUsers];
-
+    this.logger.log(`Returning ${allUsers.length} users`);
     if (forDiscussion) {
       allUsers.forEach(user => {
         if (user.id !== undefined) {
@@ -418,6 +422,7 @@ export class UserService {
           delete user.id;
         }
       })
+      this.logger.log(`Returning ${allUsers.length} users for discussion`);
     }
 
     return allUsers;
