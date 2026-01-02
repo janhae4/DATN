@@ -1,18 +1,25 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
 import {
+  AiDiscussionDto,
   CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
   ConversationResponseDto,
+  MessageMetadataDto,
+  MessageUserChatbot,
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Injectable()
 export class ChatbotService {
+  private readonly logger = new Logger(ChatbotService.name);
+
   constructor(
     private readonly amqp: AmqpConnection,
-  ) { }
+  ) {
+
+  }
 
   async askQuestion(question: string) {
     return unwrapRpcResult(await this.amqp.request<ConversationResponseDto>({
@@ -50,7 +57,7 @@ export class ChatbotService {
     })
     return unwrapRpcResult(files);
   }
-  
+
   async deleteFile(fileId: string, userId: string, teamId?: string) {
     const file = await this.amqp.request<string>({
       exchange: CHATBOT_EXCHANGE,
@@ -89,15 +96,14 @@ export class ChatbotService {
 
   async findConversation(
     userId: string,
-    conversationId: string,
+    id: string,
     page: number = 1,
     limit: number = 15,
-    teamId?: string
   ) {
     const conversations = await this.amqp.request<ConversationResponseDto>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.FIND_CONVERSATION,
-      payload: { userId, conversationId, page, limit, teamId },
+      payload: { userId, id, page, limit },
     })
     return unwrapRpcResult(conversations)
   }
@@ -166,5 +172,24 @@ export class ChatbotService {
       payload
     })
     return unwrapRpcResult(result)
+  }
+
+  async handleMessage(message: string, discussionId: string, userId: string) {
+    this.logger.log(`Received new message for ${discussionId}. Sender: ${userId}`);
+    console.log("User ID:", userId);
+    const result = await this.amqp.request<AiDiscussionDto>({
+      exchange: CHATBOT_EXCHANGE,
+      routingKey: CHATBOT_PATTERN.HANDLE_MESSAGE,
+      payload: { message, discussionId, userId }
+    })
+    return unwrapRpcResult(result)
+  }
+
+  async saveAiMessage(discussionId: string, message: string, metadata?: MessageMetadataDto) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: CHATBOT_EXCHANGE,
+      routingKey: CHATBOT_PATTERN.CREATE,
+      payload: { discussionId, message, metadata }
+    }))
   }
 }

@@ -33,7 +33,6 @@ import { AiDiscussionModule } from '../discussion-ai/ai-discussion.module';
     NotificationModule,
     UserModule,
     DiscussionModule,
-    AiDiscussionModule,
     FileModule,
     LabelModule,
     ListModule,

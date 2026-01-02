@@ -4,32 +4,41 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   MaxFileSizeValidator,
+  MessageEvent,
   Param,
   ParseFilePipe,
   Patch,
   Post,
   Query,
   Res,
+  Sse,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { ApiBearerAuth, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
-import { Role } from '@app/contracts';
+import { REDIS_CLIENT, Role } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
 import type { Response } from 'express';
 import { RoleGuard } from '../common/role/role.guard';
 import { CurrentUser } from '../common/role/current-user.decorator';
+import { finalize, Observable } from 'rxjs';
+import Redis from 'ioredis';
+import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Controller('ai-discussions')
 @ApiBearerAuth()
 @UseGuards(RoleGuard)
+@Roles(Role.USER, Role.ADMIN)
 export class ChatbotController {
-  constructor(private readonly chatbotService: ChatbotService) { }
+  constructor(private readonly chatbotService: ChatbotService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis
+  ) { }
 
   @Post('files')
   @Roles(Role.USER)
@@ -156,6 +165,76 @@ export class ChatbotController {
     );
   }
 
+  @Post('handle-message')
+  @Sse('handle-message')
+  async handleMessageStream(
+    @Body() body: { message: string, discussionId: string },
+    @CurrentUser('id') userId: string
+  ): Promise<Observable<MessageEvent>> {
+    console.log('handleMessageStream', body, userId);
+    const result = unwrapRpcResult(
+      await this.chatbotService.handleMessage(body.message, body.discussionId, userId)
+    )
+
+    const redisSub = this.redis.duplicate();
+    const channel = `ai_stream:${result._id}`;
+    let accumulatedText = '';
+
+    return new Observable<MessageEvent>((observer) => {
+      if (!body.discussionId) {
+        observer.next({
+          data: {
+            text: "",
+            isCompleted: false,
+            metadata: {
+              discussionId: result._id,
+              name: result.name,
+            }
+          }
+        });
+      }
+      redisSub.subscribe(channel);
+
+      redisSub.on('message', async (chan, message) => {
+        if (chan === channel) {
+          const data = JSON.parse(message);
+
+          if (data.text) {
+            accumulatedText += data.text;
+          }
+
+          observer.next({
+            data: {
+              text: data.text,
+              isCompleted: data.isCompleted,
+              metadata: data.metadata,
+            }
+          })
+
+          if (data.isCompleted) {
+            try {
+              await this.chatbotService.saveAiMessage(result._id, accumulatedText, data.metadata);
+              console.log('Successfully saved full message to DB');
+            } catch (err) {
+              console.error('Failed to save message to DB:', err);
+            }
+
+            observer.complete();
+          }
+        }
+      });
+
+      return () => {
+        if (redisSub.status !== 'end') {
+          redisSub.unsubscribe();
+          redisSub.quit();
+        }
+        console.log(`Unsubscribed and closed Redis connection for ${channel}`);
+      };
+
+    });
+  }
+
   @Post(':id')
   @Roles(Role.USER, Role.ADMIN)
   @ApiParam({ name: 'id', type: 'string' })
@@ -204,6 +283,8 @@ export class ChatbotController {
     );
   }
 
+
+
   @Get('/:id')
   @Roles(Role.USER)
   @ApiParam({ name: 'id', type: 'string' })
@@ -217,12 +298,12 @@ export class ChatbotController {
     @Query('limit') limit: number = 15,
     @Query('teamId') teamId?: string,
   ) {
+    console.log("id", id)
     return await this.chatbotService.findConversation(
       userId,
       id,
       page,
       limit,
-      teamId,
     );
   }
 
@@ -237,4 +318,5 @@ export class ChatbotController {
   ) {
     return await this.chatbotService.deleteConversation(id, userId, teamId);
   }
+
 }
