@@ -1,7 +1,9 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 import { EpicsService } from './epics.service';
-import { CreateEpicDto, EPIC_PATTERNS, UpdateEpicDto } from '@app/contracts';
+import { CreateEpicDto, EPIC_EXCHANGE, EPIC_PATTERNS, UpdateEpicDto } from '@app/contracts';
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
+import { customErrorHandler } from '@app/common';
 
 @Controller()
 export class EpicsController {
@@ -13,6 +15,15 @@ export class EpicsController {
     return body;
   }
 
+  @RabbitRPC({
+    exchange: EPIC_EXCHANGE,
+    routingKey: EPIC_PATTERNS.CREATE,
+    errorHandler: customErrorHandler
+  })
+  createEpic(createEpicDto: CreateEpicDto) {
+    console.log("create epic in service: ", createEpicDto)
+    return this.epicsService.create(createEpicDto);
+  }
 
   @MessagePattern(EPIC_PATTERNS.CREATE)
   create(createEpicDto: CreateEpicDto) {

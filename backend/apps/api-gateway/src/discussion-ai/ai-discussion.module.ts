@@ -6,6 +6,7 @@ import {
   ClientConfigModule,
   ClientConfigService,
   EVENTS_EXCHANGE,
+  REDIS_CLIENT,
   TEAM_EXCHANGE,
   USER_EXCHANGE,
 } from '@app/contracts';
@@ -14,8 +15,11 @@ import { AiDiscussionController } from './ai-discussion.controller';
 import { AiDiscussionService } from './ai-discussion.service';
 import { AiDiscussion, AiDiscussionSchema } from 'apps/discussion-ai/src/schema/ai-discussion.schema';
 import { AiMessage, AiMessageSchema } from 'apps/discussion-ai/src/schema/message.schema';
+import { AuthModule } from '../auth/auth.module';
+import Redis from 'ioredis';
 @Module({
   imports: [
+    AuthModule,
     ClientConfigModule,
     MongooseModule.forRootAsync({
       useFactory: (config: ClientConfigService) => ({
@@ -63,8 +67,19 @@ import { AiMessage, AiMessageSchema } from 'apps/discussion-ai/src/schema/messag
   ],
   providers: [
     AiDiscussionController,
-    AiDiscussionService
+    AiDiscussionService,
+    {
+      provide: REDIS_CLIENT,
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => {
+        return new Redis({
+          host: config.getRedisHost() || 'localhost',
+          port: config.getRedisClientPort() || 6379,
+        });
+      },
+    },
   ],
   controllers: [AiDiscussionController],
+
 })
 export class AiDiscussionModule { }

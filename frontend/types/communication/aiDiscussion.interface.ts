@@ -1,26 +1,25 @@
 // types/ai_discussion.interface.ts
 
 export interface AiDiscussion {
-  id: string; // uuid
+  _id: string;
   name?: string;
-  ownerId: string; // uuid
-  teamId?: string; // uuid
-  teamSnapshot?: any; // jsonb
-  latestMessageId?: string; // uuid
-  latestMessageSnapshot?: any; // jsonb
-  pinnedMessages?: any; // jsonb
+  ownerId: string;
+  teamId?: string;
+  teamSnapshot?: any;
+  latestMessageId?: string;
+  latestMessageSnapshot?: any; 
+  pinnedMessages?: any;
   isDeleted: boolean;
-  createdAt: string; // timestamp
-  updatedAt: string; // timestamp
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AiMessage {
-  id: string; // uuid
-  discussionId: string; // uuid
-  sender: any; // jsonb
+  _id: string; 
+  discussionId: string; 
+  sender: any;
   content: string;
-  createdDate?: string; // timestamp
-  metadata?: any; // jsonb
-  createdAt: string; // timestamp
-  updatedAt: string; // timestamp
+  createdDate?: string;
+  metadata?: any;
+  timestamp: string;
 }

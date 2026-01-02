@@ -1,6 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import authService, { logout } from './authService';
-import { ca } from 'date-fns/locale';
 
 let isRefreshing = false;
 let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void }[] = [];
@@ -116,27 +115,27 @@ apiClient.interceptors.response.use(
 
 export const streamHelper = async (
   url: string,
-  projectId: string,
-  teamId: string,
-  query: string,
-  onChunk: (chunk: string) => void
+  data: any,
+  onChunk: (chunk: string) => void,
 ): Promise<void> => {
-  console.log("Starting streamHelper with url:", url, "and body:", query);
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}${url}?query=${query}&projectId=${projectId}&teamId=${teamId}`, {
-    method: 'GET',
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+  const response = await fetch(` ${baseUrl}${url}`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
     },
+    body: JSON.stringify({
+      ...data
+    }),
     credentials: 'include',
   });
 
-  console.log(response)
-
   if (response.status === 401) {
     await authService.refreshToken();
-    return streamHelper(url, projectId, teamId, query, onChunk);
+    return streamHelper(url, data, onChunk);
   }
 
   if (!response.body) throw new Error("No response body");
@@ -147,7 +146,9 @@ export const streamHelper = async (
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    onChunk(decoder.decode(value));
+
+    const chunk = decoder.decode(value, { stream: true });
+    onChunk(chunk);
   }
 };
 

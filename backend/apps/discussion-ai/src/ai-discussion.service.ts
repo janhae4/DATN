@@ -149,6 +149,7 @@ export class AiDiscussionService {
     discussionId: string | undefined,
   ): Promise<AiDiscussion> {
     if (discussionId) {
+      console.log("Adding message to existing discussion...");
       return this.addMessageToExistingDiscussion(
         sender,
         discussionId,
@@ -289,6 +290,39 @@ export class AiDiscussionService {
       throw new BadRequestException(
         'An error occurred while handling the message.',
       );
+    }
+  }
+
+  async handleMessageForUser(
+    userId: string,
+    message: string,
+    metadata?: MessageMetadataDto,
+    discussionId?: string,
+    summarizeFileName?: string
+  ) {
+    const sender = await this.getSenderSnapshot(userId);
+    console.log(userId, message, metadata, discussionId, summarizeFileName);
+    try {
+      const aiDiscussion = await this.saveMessageToDiscussion(
+        sender,
+        message,
+        undefined,
+        metadata,
+        discussionId,
+      );
+
+      await this.publishToChatbotService(
+        aiDiscussion,
+        sender,
+        message,
+        [],
+        summarizeFileName,
+        undefined,
+      );
+      return aiDiscussion;
+    } catch (error) {
+      this.logger.error(`Error handling message: ${error.message}`);
+      throw new BadRequestException('Process message failed');
     }
   }
 
@@ -501,7 +535,7 @@ export class AiDiscussionService {
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean() 
+      .lean()
       .exec();
 
     const totalQuery = this.aiDiscussionModel.countDocuments(query);
@@ -540,10 +574,11 @@ export class AiDiscussionService {
     const [messages, totalMessages] = await Promise.all([messagesQuery, totalQuery]);
 
     const data = {
-      ...discussion,
       messages: messages.reverse(),
       totalMessage: totalMessages,
     };
+
+    console.log(data)
 
     return {
       data,

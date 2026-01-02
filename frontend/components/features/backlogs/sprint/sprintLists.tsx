@@ -13,11 +13,14 @@ import { useParams } from "next/navigation"
 import { useLists } from "@/hooks/useList"
 
 interface SprintListProps {
-  tasks: Task[]
+  tasks: Task[];
+  selectedIds: string[]; 
+  onSelect: (taskId: string, checked: boolean) => void;
+  onRowClick: (task: Task) => void
 }
 
-export function SprintList({ tasks }: SprintListProps) {
-  const { handleRowClick, sprints } = useTaskManagementContext()
+export function SprintList({ tasks, selectedIds, onSelect, onRowClick }: SprintListProps) {
+  const { sprints } = useTaskManagementContext()
   const params = useParams();
   const projectId = params.projectId as string;
 
@@ -40,9 +43,11 @@ export function SprintList({ tasks }: SprintListProps) {
           sprint={sprint}
           tasks={tasks}
           statusesList={lists}
-          handleRowClick={handleRowClick}
+          handleRowClick={onRowClick}
           addingNewRowToSprint={addingNewRowToSprint}
           setAddingNewRowToSprint={setAddingNewRowToSprint}
+          selectedIds={selectedIds}
+          onSelect={onSelect}
           onUpdateTask={updateTask}
         />
       ))}

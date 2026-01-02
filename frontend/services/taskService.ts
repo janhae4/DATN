@@ -54,8 +54,17 @@ export const taskService = {
     return response.data;
   },
 
+  createTasks: async (newTasks: CreateTaskDto[], epic: string, sprintId?: string): Promise<Task[]> => {
+    const response = await apiClient.post<Task[]>('/tasks/bulk', {
+      tasks: newTasks,
+      epicTitle: epic,
+      sprintId
+    });
+    return response.data;
+  },
+
   suggestTasksByAi: async (teamId: string, projectId: string, query: string, onChunk: (chunk: string) => void): Promise<void> => {
-    await streamHelper('/tasks/suggest-stream', projectId, teamId, query, onChunk)
+    await streamHelper('/tasks/suggest-stream', { teamId, projectId, query }, onChunk);
   },
 
   /**

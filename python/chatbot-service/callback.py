@@ -1,4 +1,5 @@
 import json
+import redis.asyncio as redis
 from aio_pika import Exchange, IncomingMessage, Channel, Message
 from services.vectorstore_service import VectorStoreService
 from services.minio_service import MinioService
@@ -16,6 +17,26 @@ from config import (
     SOCKET_EXCHANGE,
     TASK_EXCHANGE
 )
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+
+# async def publish_to_redis(channel: str, payload: dict):
+#     """
+#     Gửi dữ liệu trực tiếp vào Redis Channel để SSE Gateway ở NestJS nhận được.
+#     """
+#     redis_client.publish(channel, json.dumps(payload))
+    
+    # async def publish_to_redis(channel: str, discussion_id: str, content: str, is_completed: bool = False, metadata: dict = None):
+    # """
+    # Gửi dữ liệu trực tiếp vào Redis Channel để SSE Gateway ở NestJS nhận được.
+    # """
+    # channel = f"ai_stream:{discussion_id}"
+    # payload = {
+    #     "text": content,
+    #     "isCompleted": is_completed,
+    #     "metadata": metadata if metadata else {}
+    # }
+    # redis_client.publish(channel, json.dumps(payload))
 
 async def publish_response(
     channel: Channel, 
@@ -51,7 +72,7 @@ async def publish_response(
         routing_key=STREAM_RESPONSE_ROUTING_KEY
     )
 
-async def publish_suggest_task_response(channel: Channel, user_id: str, content: dict):
+async def publish_suggest_task_response(user_id: str, content: dict):
     """
     Helper chuyên dụng để gửi dữ liệu Task về SSE Stream của NestJS qua RabbitMQ.
     """
@@ -62,13 +83,9 @@ async def publish_suggest_task_response(channel: Channel, user_id: str, content:
     
     print(f"--> [Py->SSE] Chuẩn bị gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
     
-    message_body = Message(body=json.dumps(payload).encode())
+    message_json = json.dumps(payload)
     
-    exchange = await channel.get_exchange(TASK_EXCHANGE) 
-    await exchange.publish(
-        message_body,
-        routing_key="ai.result.tasks"
-    )
+    await redis_client.publish(f"task_suggest:{user_id}", message_json)
     print(f"--> [Py->SSE] Gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
 
 async def send_notification(channel: Channel, user_id, file_name, status, message):
@@ -213,9 +230,11 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 await publish_response(channel, socket_id, discussion_id, "Thinking...", "start", team_id, membersToNotify=membersToNotify)
                 
                 async for chunk in rag_chain.ask_question_for_user(question, user_id, team_id, chat_history):
+                    # await publish_to_redis(discussion_id, chunk, is_completed=False)
                     await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
                 
                 retrieved_metadata = rag_chain.get_last_retrieved_context()
+                # await publish_to_redis(discussion_id, "", is_completed=True, metadata=retrieved_metadata)
                 print(f"--> [RAG] Đã lấy được metadata: {retrieved_metadata}")
 
             elif pattern_from_key == 'summarize_document':
@@ -260,10 +279,12 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                                         "skillName": parts[2].strip(),
                                         "experience": int(parts[3].strip()),
                                         "reason": parts[4].strip() if len(parts) > 4 else "",
+                                        "startDate": parts[5].strip() if len(parts) > 5 else "",
+                                        "dueDate": parts[6].strip() if len(parts) > 6 else "",
                                         "type": "task"
                                     }
                                     print(f"--> [SUGGEST TASK] Gửi task: {task_data}")
-                                    await publish_suggest_task_response(channel, payload_dto.get('userId'), task_data)
+                                    await publish_suggest_task_response(payload_dto.get('userId'), task_data)
                                 print(f"--> [SUGGEST TASK] line: {line}")
                         
                         buffer = lines[-1]
@@ -277,13 +298,15 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                                         "skillName": parts[2].strip(),
                                         "experience": int(parts[3].strip()),
                                         "reason": parts[4].strip() if len(parts) > 4 else "",
+                                        "startDate": parts[5].strip() if len(parts) > 5 else "",
+                                        "dueDate": parts[6].strip() if len(parts) > 6 else "",
                                         "type": "task"
                                     }
-                    await publish_suggest_task_response(channel, payload_dto.get('userId'), task_data)
-                await publish_suggest_task_response(channel, payload_dto.get('userId'), {"type": "done"})
+                    await publish_suggest_task_response(payload_dto.get('userId'), task_data)
+                await publish_suggest_task_response(payload_dto.get('userId'), {"type": "done"})
         except Exception as e:
             if pattern_from_key == 'suggest_task' and user_id:
-                await publish_suggest_task_response(channel, user_id, {"type": "error", "message": str(e)})
+                await publish_suggest_task_response(user_id, {"type": "error", "message": str(e)})
             elif socket_id and discussion_id:
                 await publish_response(channel, socket_id, discussion_id, str(e), "error", team_id)         
 async def on_team_deleted(message: IncomingMessage, vector_store: VectorStoreService):

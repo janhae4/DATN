@@ -881,6 +881,4 @@ export class UserService {
 
     await manager.save(UserSkill, userSkill);
   }
-
-
 }

@@ -1,26 +1,29 @@
 import { Module } from '@nestjs/common';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { ClientConfigModule, ClientConfigService } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, REDIS_CLIENT } from '@app/contracts';
 import { AuthModule } from '../auth/auth.module';
 import { TaskController } from './task.controller';
 import { TaskService } from './task.service';
+import Redis from 'ioredis';
 
 @Module({
   imports: [
     ClientConfigModule,
     AuthModule,
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        exchanges: [{ name: 'task_exchange', type: 'topic' }],
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-      }),
-    }),
   ],
+  providers: [
+    TaskService,
+    {
+      provide: REDIS_CLIENT,
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => {
+        return new Redis({
+          host: config.getRedisHost() || 'localhost',
+          port: config.getRedisClientPort() || 6379,
+        });
+      },
+    }],
   controllers: [TaskController],
-  providers: [TaskService],
   exports: [TaskService],
 })
-export class TaskModule {}
+export class TaskModule { }

@@ -31,7 +31,10 @@ import {
 } from "@/components/ui/command";
 import {
   BrainCircuit,
+  CalendarIcon,
   Check,
+  Clock,
+  Layers,
   Loader2,
   Plus,
   Sparkles,
@@ -46,11 +49,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { taskService } from "@/services/taskService";
+import { CreateTaskDto, taskService } from "@/services/taskService";
 import { useTask, useTasks } from "@/hooks/useTasks";
 import { useParams } from "next/navigation";
 import { useTeamMembers } from "@/hooks/useTeam";
-import { MemberRole, UserSkill } from "@/types";
+import { ListCategoryEnum, MemberRole, Priority, UserSkill } from "@/types";
+import { useLists } from "@/hooks/useList";
+import { useSprints } from "@/hooks/useSprints";
 
 interface SuggestedTask {
   id: string;
@@ -59,23 +64,29 @@ interface SuggestedTask {
   skillName: string;
   experience: number;
   reason: string;
+  startDate: string;
+  dueDate: string;
   type: string;
 }
 
 interface SuggestTaskByAiProps {
   children: React.ReactNode;
-  onSave?: (tasks: SuggestedTask[]) => void;
+  onSave?: (tasks: CreateTaskDto[], epic: string, sprintId?: string) => void;
 }
 
 export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  const [selectedSprintId, setSelectedSprintId] = React.useState<string | null>(
+    null
+  );
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [isThinking, setIsThinking] = React.useState(false);
   const [suggestedTasks, setSuggestedTasks] = React.useState<SuggestedTask[]>(
     []
   );
   const [skillSearch, setSkillSearch] = React.useState("");
+  const [isSaving, setIsSaving] = React.useState(false);
 
   const param = useParams();
   const teamId = param?.teamId as string;
@@ -83,6 +94,8 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
   const { data: members = [], isLoading: isMembersLoading } =
     useTeamMembers(teamId);
   const { suggestTaskByAi } = useTasks(projectId, teamId);
+  const { lists } = useLists(projectId);
+  const { sprints = [] } = useSprints(projectId);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -101,7 +114,12 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
 
     try {
       await suggestTaskByAi({
-        query,
+        data: {
+          teamId,
+          projectId,
+          query,
+          sprintId: selectedSprintId || "",
+        },
         onChunk: (chunk: string) => {
           setIsThinking(false);
           buffer += chunk;
@@ -139,6 +157,7 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
         },
       });
     } catch (error) {
+      console.log(error);
       toast.error("Không thể kết nối với AI Architect.");
     } finally {
       setIsStreaming(false);
@@ -146,6 +165,43 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
     }
   };
 
+  const targetList = lists?.find(
+    (l) =>
+      l.category === ListCategoryEnum.TODO ||
+      l.name.toLowerCase().includes("to do")
+  );
+
+  const handleImport = async (tasks: SuggestedTask[]) => {
+    if (!targetList) {
+      toast.error(
+        "Không tìm thấy cột 'To Do' để gán task. Vui lòng kiểm tra lại dự án."
+      );
+      return;
+    }
+
+    const normalizedTasks: CreateTaskDto[] = tasks.map((t) => {
+      const hasSprint = !!selectedSprintId;
+      return {
+        title: t.title,
+        description: hasSprint ? `AI Suggestion: ${t.reason}` : "",
+        sprintId: selectedSprintId,
+        projectId: projectId,
+        listId: targetList.id,
+        priority: Priority.MEDIUM,
+        reporterId: null,
+        assigneeIds: t.memberIds,
+        startDate: t.startDate ? new Date(t.startDate).toISOString() : null,
+        dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : null,
+      };
+    });
+
+    if (onSave) {
+      console.log("normalizedTasks", normalizedTasks);
+      onSave(normalizedTasks, query, selectedSprintId || undefined);
+    }
+
+    setOpen(false);
+  };
   const toggleMember = (taskId: string, memberId: string) => {
     setSuggestedTasks((prev) =>
       prev.map((t) => {
@@ -166,7 +222,7 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] overflow-hidden border border-zinc-200 bg-white p-0 shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+      <DialogContent className="sm:max-w-[600px] overflow-hidden border border-zinc-200 bg-white p-0 shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="flex items-center gap-2.5 text-xl font-semibold tracking-tight">
             <div className="p-2 bg-zinc-900 text-white rounded-lg dark:bg-zinc-100 dark:text-zinc-900">
@@ -180,6 +236,73 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
         </DialogHeader>
 
         <div className="space-y-6 p-6">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+              Target Sprint (Optional)
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className={cn(
+                    "w-full justify-between bg-zinc-50 dark:bg-zinc-900 border-dashed",
+                    !selectedSprintId && "text-muted-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-zinc-400" />
+                    {selectedSprintId
+                      ? sprints.find((s) => s.id === selectedSprintId)?.title
+                      : "No Sprint (Self-assign tasks, no descriptions)"}
+                  </div>
+                  <Plus className="h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search sprint..." />
+                  <CommandList>
+                    <CommandEmpty>No sprint found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        onSelect={() => setSelectedSprintId(null)}
+                        className="cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedSprintId === null
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        None (Manual Mode)
+                      </CommandItem>
+                      {sprints.map((sprint) => (
+                        <CommandItem
+                          key={sprint.id}
+                          onSelect={() => setSelectedSprintId(sprint.id)}
+                          className="cursor-pointer"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedSprintId === sprint.id
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {sprint.title}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
           {/* Input Area */}
           <div className="space-y-3">
             <Label className="text-xs font-bold uppercase tracking-widest text-zinc-400">
@@ -367,111 +490,174 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
                               </span>
                             </div>
                           </div>
-                          <div className="flex -space-x-1.5">
-                            {task.memberIds?.map((mId) => {
-                              const member = members.find((m) => m.id === mId);
-                              if (!member) return null;
-                              return (
-                                <TooltipProvider key={mId}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Avatar className="h-5 w-5 border border-white dark:border-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800">
-                                        <AvatarImage src={member?.avatar} />
-                                        <AvatarFallback className="text-[8px]">
-                                          {member?.name.charAt(0)}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="text-[10px]">
-                                      {member?.name}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              );
-                            })}
+
+                          <div className="flex items-center gap-2 border-l border-zinc-200 pl-2 dark:border-zinc-800">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1.5">
+                                    <CalendarIcon className="h-3 w-3 text-zinc-400" />
+                                    <input
+                                      type="date"
+                                      value={task.startDate || ""}
+                                      onChange={(e) => {
+                                        const newTasks = [...suggestedTasks];
+                                        newTasks[idx].startDate =
+                                          e.target.value;
+                                        setSuggestedTasks(newTasks);
+                                      }}
+                                      className="bg-transparent text-[10px] font-medium text-zinc-600 focus:outline-none dark:text-zinc-400"
+                                    />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">
+                                  Start Date
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <span className="text-zinc-300">→</span>
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-3 w-3 text-zinc-400" />
+                                    <input
+                                      type="date"
+                                      value={task.dueDate || ""}
+                                      onChange={(e) => {
+                                        const newTasks = [...suggestedTasks];
+                                        newTasks[idx].dueDate = e.target.value;
+                                        setSuggestedTasks(newTasks);
+                                      }}
+                                      className={cn(
+                                        "bg-transparent text-[10px] font-medium focus:outline-none",
+                                        task.dueDate &&
+                                          task.startDate &&
+                                          task.dueDate < task.startDate
+                                          ? "text-red-500"
+                                          : "text-zinc-600 dark:text-zinc-400"
+                                      )}
+                                    />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">
+                                  Due Date
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 px-2 flex gap-1.5 border-dashed border-zinc-300 hover:border-zinc-400 dark:border-zinc-700"
-                            >
-                              <UserPlus className="h-3 w-3 text-zinc-500" />
-                              <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400">
-                                Adjust
-                              </span>
-                            </Button>
-                          </PopoverTrigger>
-
-                          <PopoverContent
-                            className="w-[240px] p-0 shadow-2xl"
-                            align="end"
-                          >
-                            <Command>
-                              <CommandInput
-                                placeholder="Search team..."
-                                className="h-8 text-xs"
-                              />
-                              <CommandList>
-                                <CommandEmpty className="text-xs p-2">
-                                  No one found.
-                                </CommandEmpty>
-                                <CommandGroup>
-                                  {members.map((member) => {
-                                    const isSelected = task.memberIds?.includes(
-                                      member.id
-                                    );
-
-                                    return (
-                                      <CommandItem
-                                        key={member.id}
-                                        onSelect={() => {
-                                          const newTasks = [...suggestedTasks];
-                                          const currentIds =
-                                            newTasks[idx].memberIds || [];
-                                          newTasks[idx].memberIds = isSelected
-                                            ? currentIds.filter(
-                                                (id) => id !== member.id
-                                              )
-                                            : [...currentIds, member.id];
-                                          setSuggestedTasks(newTasks);
-                                        }}
-                                        className="flex items-center gap-2 cursor-pointer py-1.5"
-                                      >
-                                        <div
-                                          className={cn(
-                                            "flex h-4 w-4 items-center justify-center rounded-sm border border-zinc-300 transition-colors",
-                                            isSelected
-                                              ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-900"
-                                              : "opacity-50"
-                                          )}
-                                        >
-                                          {isSelected && (
-                                            <Check className="h-2.5 w-2.5" />
-                                          )}
-                                        </div>
-                                        <Avatar className="h-6 w-6">
-                                          <AvatarImage src={member.avatar} />
-                                          <AvatarFallback className="text-[10px]">
-                                            {member.name.charAt(0)}
+                        {selectedSprintId ? (
+                          <>
+                            <div className="flex -space-x-1.5 mr-1">
+                              {task.memberIds?.map((mId) => {
+                                const member = members.find(
+                                  (m) => m.id === mId
+                                );
+                                if (!member) return null;
+                                return (
+                                  <TooltipProvider key={mId}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Avatar className="h-5 w-5 border border-white dark:border-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800">
+                                          <AvatarImage src={member?.avatar} />
+                                          <AvatarFallback className="text-[8px]">
+                                            {member?.name.charAt(0)}
                                           </AvatarFallback>
                                         </Avatar>
-                                        <span className="flex-1 text-xs truncate">
-                                          {member.name}
-                                        </span>
-                                      </CommandItem>
-                                    );
-                                  })}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="text-[10px]">
+                                        {member?.name}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                );
+                              })}
+                            </div>
+
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 flex gap-1.5 border-dashed border-zinc-300 hover:border-zinc-400 dark:border-zinc-700"
+                                >
+                                  <UserPlus className="h-3 w-3 text-zinc-500" />
+                                  <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400">
+                                    Adjust
+                                  </span>
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-[240px] p-0 shadow-2xl"
+                                align="end"
+                              >
+                                <Command>
+                                  <CommandInput
+                                    placeholder="Search team..."
+                                    className="h-8 text-xs"
+                                  />
+                                  <CommandList>
+                                    <CommandEmpty className="text-xs p-2">
+                                      No one found.
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      {members.map((member) => {
+                                        const isSelected =
+                                          task.memberIds?.includes(member.id);
+                                        return (
+                                          <CommandItem
+                                            key={member.id}
+                                            onSelect={() =>
+                                              toggleMember(task.id, member.id)
+                                            }
+                                            className="flex items-center gap-2 cursor-pointer py-1.5"
+                                          >
+                                            <div
+                                              className={cn(
+                                                "flex h-4 w-4 items-center justify-center rounded-sm border border-zinc-300",
+                                                isSelected
+                                                  ? "bg-zinc-900 text-white"
+                                                  : "opacity-50"
+                                              )}
+                                            >
+                                              {isSelected && (
+                                                <Check className="h-2.5 w-2.5" />
+                                              )}
+                                            </div>
+                                            <Avatar className="h-6 w-6">
+                                              <AvatarImage
+                                                src={member.avatar}
+                                              />
+                                              <AvatarFallback className="text-[10px]">
+                                                {member.name[0]}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <span className="flex-1 text-xs truncate">
+                                              {member.name}
+                                            </span>
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800/50">
+                            <Check className="h-3 w-3 text-zinc-500" />
+                            <span className="text-[9px] font-bold uppercase tracking-tight text-zinc-500">
+                              Personal
+                            </span>
+                          </div>
+                        )}
 
                         <Button
                           variant="ghost"
@@ -481,7 +667,7 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
                               prev.filter((t) => t.id !== task.id)
                             )
                           }
-                          className="h-7 w-7 text-zinc-400 hover:text-red-500 transition-colors"
+                          className="h-7 w-7 text-zinc-400 hover:text-red-500 transition-colors ml-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -523,15 +709,28 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
             Discard
           </Button>
           <Button
-            onClick={() => {
-              onSave?.(suggestedTasks);
-              setOpen(false);
-              toast.success(`Imported ${suggestedTasks.length} tasks`);
+            onClick={async () => {
+              setIsSaving(true);
+              try {
+                await handleImport(suggestedTasks);
+                toast.success(
+                  `Đã nhập ${suggestedTasks.length} công việc thành công!`
+                );
+              } catch (error) {
+                console.error("Lỗi khi nhập task:", error);
+                toast.error("Không thể lưu danh sách công việc.");
+              } finally {
+                setIsSaving(false);
+              }
             }}
-            disabled={suggestedTasks.length === 0 || isStreaming}
-            className="bg-zinc-900 text-white hover:bg-zinc-800 px-6 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-sm"
+            disabled={suggestedTasks.length === 0 || isStreaming || isSaving}
           >
-            <Check className="mr-2 h-4 w-4" /> Import Tasks
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="mr-2 h-4 w-4" />
+            )}
+            Import Tasks
           </Button>
         </DialogFooter>
       </DialogContent>
