@@ -50,15 +50,6 @@ export function TaskMetaBox({
   const { project } = useProject(task.projectId);
   const { data: members = [] } = useTeamMembers(project?.teamId || null);
 
-  const teamUsers = React.useMemo(() => {
-    return ((members ?? []) as any[])
-      .filter((m) => !!m.cachedUser)
-      .map((m) => ({
-        ...m.cachedUser,
-        id: m.userId
-      })) as User[];
-  }, [members]);
-
   const handleLabelsChange = (newLabels: Label[]) => {
     if (onLabelsChange) {
       onLabelsChange(newLabels.map(l => l.id));
@@ -86,7 +77,7 @@ export function TaskMetaBox({
         <DetailRow icon={<UserIcon className="h-4 w-4" />} label="Assignees">
           <div className="flex -space-x-2">
             <AssigneePicker
-              users={teamUsers}
+              users={members}
               value={task.assigneeIds || []} // Now uses "live" task.assigneeIds
               onChange={(assigneeIds) => updateTask(task.id, { assigneeIds })}
             />

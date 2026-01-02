@@ -52,6 +52,7 @@ import { useTeamMembers } from "@/hooks/useTeam";
 import { SprintCreateDialog } from "./sprint/SprintCreateDialog";
 import { CompleteSprintDialog } from "./sprint/CompleteSprintDialog";
 import { SuggestTaskByAi } from "./task/SuggestTaskByAi";
+import { useTask, useTasks } from "@/hooks/useTasks";
 
 // Định nghĩa Interface Filter (nếu chưa có trong types chung)
 export interface TaskFilters {
@@ -96,6 +97,7 @@ export function BacklogFilterBar({
   const { epics } = useEpics(projectId);
   const { labels } = useLabels(projectId);
   const { sprints } = useSprints(projectId);
+  const { createTasks } = useTasks(projectId);
   const { data: members } = useTeamMembers(teamId);
 
   // 3. Xử lý dữ liệu User (Map từ TeamMember sang User Option)
@@ -235,7 +237,7 @@ export function BacklogFilterBar({
         </div>
 
         <div className="flex items-center gap-4 w-full lg:w-auto justify-end">
-          <SuggestTaskByAi>
+          <SuggestTaskByAi onSave={(tasks, epic, sprintId) => createTasks({tasks, epic, sprintId})}>
             <Button
               variant="outline"
               size="sm"

@@ -1,33 +1,32 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Sprint, Task } from "@/types"
-import {
-  AccordionContent,
-  AccordionItem,
-} from "@/components/ui/accordion"
-import * as AccordionPrimitive from "@radix-ui/react-accordion"
-import { Table, TableRow, TableCell } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Rocket, PlusIcon, ChevronDown } from "lucide-react"
-import { formatDate } from "@/lib/backlog-utils"
-import { useDroppable, useDndContext } from "@dnd-kit/core"
-import { cn } from "@/lib/utils"
-import { TaskRowList } from "../task/TaskRowList"
-import { Button } from "@/components/ui/button"
-import { AddNewTaskRow } from "../task/AddNewTaskRow"
-import { StartSprintDialog } from "./StartSprintDialog"
-import { CompleteSprintDialog } from "./CompleteSprintDialog"
-import { SprintStatus } from "@/types/common/enums"
+import * as React from "react";
+import { Sprint, Task } from "@/types";
+import { AccordionContent, AccordionItem } from "@/components/ui/accordion";
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import { Table, TableRow, TableCell } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Rocket, PlusIcon, ChevronDown } from "lucide-react";
+import { formatDate } from "@/lib/backlog-utils";
+import { useDroppable, useDndContext } from "@dnd-kit/core";
+import { cn } from "@/lib/utils";
+import { TaskRowList } from "../task/TaskRowList";
+import { Button } from "@/components/ui/button";
+import { AddNewTaskRow } from "../task/AddNewTaskRow";
+import { StartSprintDialog } from "./StartSprintDialog";
+import { CompleteSprintDialog } from "./CompleteSprintDialog";
+import { SprintStatus } from "@/types/common/enums";
 
 interface SprintItemProps {
-  sprint: Sprint
-  tasks: Task[]
-  statusesList: any[]
-  handleRowClick: (task: Task) => void
-  addingNewRowToSprint: string | null
-  setAddingNewRowToSprint: (id: string | null) => void
-  onUpdateTask: (taskId: string, updates: any) => void; 
+  sprint: Sprint;
+  tasks: Task[];
+  statusesList: any[];
+  handleRowClick: (task: Task) => void;
+  selectedIds: string[];
+  onSelect: (taskId: string, checked: boolean) => void;
+  addingNewRowToSprint: string | null;
+  setAddingNewRowToSprint: (id: string | null) => void;
+  onUpdateTask: (taskId: string, updates: any) => void;
 }
 
 export function SprintItem({
@@ -38,9 +37,11 @@ export function SprintItem({
   addingNewRowToSprint,
   setAddingNewRowToSprint,
   onUpdateTask,
+  selectedIds,
+  onSelect,
 }: SprintItemProps) {
-  const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id)
-  const totalTasks = sprintTasks.length
+  const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id);
+  const totalTasks = sprintTasks.length;
 
   const { setNodeRef, isOver } = useDroppable({
     id: sprint.id,
@@ -48,7 +49,7 @@ export function SprintItem({
       type: "sprint-drop-area",
       sprint: sprint,
     },
-  })
+  });
 
   // --- VISUAL FEEDBACK FIX ---
   // Check if we are dragging over this sprint OR any task inside this sprint
@@ -62,8 +63,8 @@ export function SprintItem({
       ref={setNodeRef}
       className={cn(
         "flex flex-col rounded-lg border bg-card transition-all duration-300 ease-in-out",
-        shouldHighlight 
-          ? "border-primary ring-4 ring-primary/10 shadow-xl bg-primary/5 z-10" 
+        shouldHighlight
+          ? "border-primary ring-4 ring-primary/10 shadow-xl bg-primary/5 z-10"
           : "hover:border-primary/50 hover:shadow-sm"
       )}
     >
@@ -74,43 +75,43 @@ export function SprintItem({
               "flex flex-1 items-center gap-2 text-left cursor-pointer hover:no-underline group [&[data-state=open]>svg]:rotate-180"
             )}
           >
-             <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Rocket className="h-5 w-5 text-foreground/50 flex-shrink-0" />
-                <span
-                  className="text-base font-medium truncate"
-                  title={sprint.title}
-                >
-                  {sprint.title}
-                </span>
-                <p className="text-sm text-muted-foreground">
-                  {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
-                </p>
-              </div>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Rocket className="h-5 w-5 text-foreground/50 flex-shrink-0" />
+              <span
+                className="text-base font-medium truncate"
+                title={sprint.title}
+              >
+                {sprint.title}
+              </span>
+              <p className="text-sm text-muted-foreground">
+                {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
+              </p>
+            </div>
           </AccordionPrimitive.Trigger>
 
           <div className="flex items-center gap-4">
-              {sprint.status === SprintStatus.PLANNED && totalTasks > 0 && (
-                  <StartSprintDialog sprint={sprint}>
-                    <Button size="sm" variant="outline" >
-                      Start Sprint
-                    </Button>
-                  </StartSprintDialog>
-                )}
-                {sprint.status === SprintStatus.ACTIVE && (
-                  <CompleteSprintDialog sprint={sprint}>
-                    <Button size="sm" variant="outline" >
-                      Complete Sprint
-                    </Button>
-                  </CompleteSprintDialog>
-                )}
-               
-                <span className="text-sm font-normal text-muted-foreground">
-                  {totalTasks} {totalTasks === 1 ? "task" : "tasks"}
-                </span>
+            {sprint.status === SprintStatus.PLANNED && totalTasks > 0 && (
+              <StartSprintDialog sprint={sprint}>
+                <Button size="sm" variant="outline">
+                  Start Sprint
+                </Button>
+              </StartSprintDialog>
+            )}
+            {sprint.status === SprintStatus.ACTIVE && (
+              <CompleteSprintDialog sprint={sprint}>
+                <Button size="sm" variant="outline">
+                  Complete Sprint
+                </Button>
+              </CompleteSprintDialog>
+            )}
 
-                <AccordionPrimitive.Trigger className="[&[data-state=open]>svg]:rotate-180">
-                   <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 text-muted-foreground" />
-                </AccordionPrimitive.Trigger>
+            <span className="text-sm font-normal text-muted-foreground">
+              {totalTasks} {totalTasks === 1 ? "task" : "tasks"}
+            </span>
+
+            <AccordionPrimitive.Trigger className="[&[data-state=open]>svg]:rotate-180">
+              <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 text-muted-foreground" />
+            </AccordionPrimitive.Trigger>
           </div>
         </AccordionPrimitive.Header>
 
@@ -126,6 +127,8 @@ export function SprintItem({
                     isDraggable={true}
                     isSortable={true}
                     onRowClick={handleRowClick}
+                    selectedIds={selectedIds}
+                    onSelect={onSelect}
                   >
                     {addingNewRowToSprint === sprint.id ? (
                       <AddNewTaskRow
@@ -142,8 +145,8 @@ export function SprintItem({
                               size="sm"
                               className="h-8 px-3 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                setAddingNewRowToSprint(sprint.id)
+                                e.stopPropagation();
+                                setAddingNewRowToSprint(sprint.id);
                               }}
                             >
                               <PlusIcon className="mr-2 h-4 w-4" />
@@ -187,5 +190,5 @@ export function SprintItem({
         </AccordionContent>
       </AccordionItem>
     </div>
-  )
+  );
 }

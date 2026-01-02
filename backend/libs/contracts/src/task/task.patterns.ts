@@ -6,6 +6,7 @@ export const TASK_PATTERNS = {
   FIND_BY_USER_ID: 'tasks.findByUserId',
   PROCESS_NLP: 'process_task_intent',
   CREATE: 'task.create',
+  CREATE_MANY: 'task.createMany',
   UPDATE: 'task.update',
   REMOVE: 'task.remove',
   FIND_GOOGLE_EVENTS: 'task.findGoogleEvents',

@@ -101,6 +101,7 @@ TASK
 export * from './task/task.patterns';
 export * from './task/task.errors';
 export * from './task/entity/task.entity';
+export * from './task/entity/task-assignee.entity';
 export * from './task/create-task.dto';
 export * from './task/update-task.dto';
 export * from './task/dto/request-google-task.dto';

@@ -58,6 +58,87 @@ export class TasksService {
 
     return this.findOne(savedTask.id);
   }
+
+  async createBulk(createTaskDtos: CreateTaskDto[]): Promise<Task[]> {
+    if (!createTaskDtos || createTaskDtos.length === 0) return [];
+
+    const listId = createTaskDtos[0].listId;
+
+    const lastTask = await this.taskRepository.findOne({
+      where: { listId },
+      order: { position: 'DESC' },
+      select: ['position'],
+    });
+
+    let currentPosition = lastTask ? lastTask.position : 0;
+
+    const tasksToCreate = createTaskDtos.map((dto) => {
+      const { labelIds, ...rest } = dto;
+      console.log(rest)
+      currentPosition += 65535;
+      return this.taskRepository.create({
+        ...rest,
+        position: currentPosition,
+      });
+    });
+
+    const savedTasks = await this.taskRepository.save(tasksToCreate);
+
+    const labelsToAssign: { taskId: string; labelIds: string[] }[] = savedTasks.map((task, index) => ({
+      taskId: task.id,
+      labelIds: createTaskDtos[index].labelIds || [],
+    })).filter(item => item.labelIds.length > 0);
+
+    if (labelsToAssign.length > 0) {
+      await this.assignLabelsBulk(labelsToAssign);
+    }
+
+    return savedTasks;
+  }
+
+  async assignLabelsBulk(tasksWithLabels: { taskId: string; labelIds: string[] }[]) {
+    const allLabelIds = [...new Set(tasksWithLabels.flatMap(item => item.labelIds))];
+
+    try {
+      const labelsDetails = await lastValueFrom(
+        this.labelClient.send<Label[]>(TaskLabelEvent.GET_DETAILS, { labelIds: allLabelIds })
+      );
+
+      if (!labelsDetails || !Array.isArray(labelsDetails)) return;
+
+      const labelMap = new Map(labelsDetails.map(l => [l.id, l]));
+
+      const newLinks: Partial<TaskLabel>[] = [];
+
+      tasksWithLabels.forEach(item => {
+        item.labelIds.forEach(labelId => {
+          const label = labelMap.get(labelId);
+          if (label) {
+            newLinks.push({
+              taskId: item.taskId,
+              labelId: label.id,
+              name: label.name,
+              color: label.color,
+              projectId: label.projectId
+            });
+          }
+        });
+      });
+
+      if (newLinks.length > 0) {
+        await this.taskLabelRepository
+          .createQueryBuilder()
+          .insert()
+          .into(TaskLabel)
+          .values(newLinks)
+          .orIgnore()
+          .execute();
+      }
+    } catch (error) {
+      console.error('Error in assignLabelsBulk:', error);
+    }
+  }
+
   async findAllByProject(projectId: string): Promise<Task[]> {
     return this.taskRepository.find({
       where: { projectId },
@@ -126,9 +207,6 @@ export class TasksService {
     }
     return { success: true };
   }
-
-
-  // task-service/src/tasks/tasks.service.ts
 
   private async assignLabels(taskId: string, labelIds: string[]) {
     if (labelIds && labelIds.length > 0) {
@@ -231,7 +309,7 @@ export class TasksService {
     }
   }
 
-  async suggestTask(userId: string, objective: string, projectId: string, teamId: string) {
+  async suggestTask(userId: string, objective: string, projectId: string, sprintId: string, teamId: string) {
     console.log("Sending AI request for user:", userId, "with objective:", objective, "team Id:", teamId);
     unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
@@ -240,52 +318,28 @@ export class TasksService {
       timeout: RPC_TIMEOUT,
     }))
 
-    const response = await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
-      payload: teamId,
-      timeout: RPC_TIMEOUT,
-    });
-    const memberIds = unwrapRpcResult(response);
+    let members = []
 
-    console.log(memberIds)
+    if (sprintId) {
+      const response = await this.amqpConnection.request({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
+        payload: teamId,
+        timeout: RPC_TIMEOUT,
+      });
+      const memberIds = unwrapRpcResult(response);
 
-    const members = unwrapRpcResult(await this.amqpConnection.request({
-      exchange: USER_EXCHANGE,
-      routingKey: USER_PATTERNS.GET_BULK_SKILLS,
-      payload: memberIds
-    }))
-
-    console.log(members)
+      members = unwrapRpcResult(await this.amqpConnection.request({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+        payload: memberIds
+      }))
+    }
 
     await this.amqpConnection.publish(CHATBOT_EXCHANGE, 'suggest_task', {
       userId,
       objective,
-      members
+      members,
     });
   }
-
-  async mockPythonAI(msg: any) {
-    const { userId, objective } = msg;
-    console.log(`[Mock AI] Đang xử lý yêu cầu cho user: ${userId} với mục tiêu: ${objective}`);
-
-    const mockTasks = [
-      { title: "Phân tích yêu cầu hệ thống", memberId: "dev-01", type: "task" },
-      { title: "Thiết kế cơ sở dữ liệu ERD", memberId: "des-02", type: "task" },
-      { title: "Cài đặt môi trường RabbitMQ", memberId: "dev-01", type: "task" },
-      { title: "Hoàn tất", memberId: null, type: "done" },
-    ];
-
-    for (const task of mockTasks) {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      await this.amqpConnection.publish(TASK_EXCHANGE, 'ai.result.tasks', {
-        userId,
-        ...task,
-      });
-
-      console.log(`[Mock AI] Đã gửi task: ${task.title}`);
-    }
-  }
-
 }

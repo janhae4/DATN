@@ -36,7 +36,7 @@ export function useTasks(projectId?: string, teamId?: string) {
   // --- MUTATIONS ---
 
   const suggestTaskByAiMutation = useMutation({
-    mutationFn: ({ query, onChunk }: { query: string, onChunk: (chunk: string) => void }) => streamHelper('/tasks/suggest-stream', projectId || '',teamId || '', query, onChunk),
+    mutationFn: ({ data, onChunk }: { data: { query: string; projectId: string; teamId: string, sprintId: string }, onChunk: (chunk: string) => void }) => streamHelper('/tasks/suggest-stream', data, onChunk),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tasksQueryKey });
     },
@@ -48,6 +48,18 @@ export function useTasks(projectId?: string, teamId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tasksQueryKey });
     },
+  });
+
+  const createTasksMutation = useMutation({
+    mutationFn: ({ tasks, epic, sprintId }: { tasks: CreateTaskDto[], epic: string, sprintId?: string }) =>
+      taskService.createTasks(tasks, epic, sprintId),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+    },
+    onError: (error) => {
+      console.error(error);
+    }
   });
 
   // Update Task
@@ -117,6 +129,7 @@ export function useTasks(projectId?: string, teamId?: string) {
     isLoading: isLoadingTasks || isLoadingLabels,
     error: error as Error | null,
     createTask: createTaskMutation.mutateAsync,
+    createTasks: createTasksMutation.mutateAsync,
     suggestTaskByAi: suggestTaskByAiMutation.mutateAsync,
     updateTask: (id: string, updates: UpdateTaskDto) =>
       updateTaskMutation.mutateAsync({ id, updates }),

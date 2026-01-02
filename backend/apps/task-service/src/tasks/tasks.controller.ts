@@ -27,6 +27,16 @@ export class TasksController {
 
   @RabbitRPC({
     exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.CREATE_MANY,
+    queue: TASK_PATTERNS.CREATE_MANY,
+    errorHandler: customErrorHandler,
+  })
+  createMany(createTaskDtos: CreateTaskDto[]) {
+    return this.tasksService.createBulk(createTaskDtos);
+  }
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
     routingKey: TASK_PATTERNS.FIND_ALL,
     queue: TASK_PATTERNS.FIND_ALL,
     errorHandler: customErrorHandler,
@@ -137,68 +147,13 @@ export class TasksController {
     return this.tasksService.getAllTaskLabel(payload.projectId);
   }
 
-  // @RabbitRPC({
-  //   exchange: TASK_EXCHANGE,
-  //   routingKey: TASK_PATTERNS.SUGGEST_TASK,
-  //   queue: TASK_PATTERNS.SUGGEST_TASK,
-  //   errorHandler: customErrorHandler,
-  // })
-  // suggestTask(payload: { userId: string; objective: string }) {
-  //   return this.tasksService.suggestTask(payload.userId, payload.objective);
-  // }
-
-  // @RabbitSubscribe({
-  //   exchange: TEAM_EXCHANGE,
-  //   routingKey: 'ai.generate.tasks',
-  //   queue: 'ai.generate.tasks',
-  // })
-  // async mockPythonAI(msg: any) {
-  //   return this.tasksService.mockPythonAI(msg);
-  // }
-
-  @RabbitSubscribe({
+  @RabbitRPC({
     exchange: TASK_EXCHANGE,
-    routingKey: 'ai.result.tasks',
-    queue: 'ai.result.tasks',
+    routingKey: TASK_PATTERNS.SUGGEST_TASK,
+    queue: TASK_PATTERNS.SUGGEST_TASK,
+    errorHandler: customErrorHandler,
   })
-  async handleAiResult(data: {
-    userId: string;
-    type: string;
-    title?: string;
-    memberId?: string;
-    skillName?: string;
-    experience?: number;
-    reason?: string;
-  }) {
-    console.log(`[SSE Bridge] Nhận kết quả từ RabbitMQ cho User: ${data.userId}, Type: ${data.type}, Title: ${data.title}, MemberId: ${data.memberId}, SkillName: ${data.skillName}, Experience: ${data.experience}, Reason: ${data.reason}`);
-    const stream = this.streamService.getOrCreateStream(data.userId);
-    stream.next(data);
-  }
-
-  @Sse('suggest-stream')
-  async sse(
-    @Query('query') query: string,
-    @Query('projectId') projectId: string, 
-    @Query('teamId') teamId: string,
-    @Req() req: Request): Promise<Observable<MessageEvent>> {
-    const accessToken = req.cookies['accessToken'];
-    const userId = await this.tasksService.getUserIdFromToken(accessToken);
-    const userStream$ = this.streamService.getOrCreateStream(userId);
-
-    await this.tasksService.suggestTask(userId, query, projectId, teamId);
-
-    return userStream$.asObservable().pipe(
-      map((data) => ({
-        data: {
-          title: data.title,
-          memberId: data.memberId,
-          skillName: data.skillName,
-          experience: data.experience,
-          reason: data.reason,
-          type: data.type
-        },
-      } as MessageEvent)),
-      finalize(() => this.streamService.removeStream(userId))
-    );
+  suggestTask(payload: { userId: string; query: string, projectId: string, teamId: string, sprintId: string }) {
+    return this.tasksService.suggestTask(payload.userId, payload.query, payload.projectId, payload.sprintId, payload.teamId);
   }
 }

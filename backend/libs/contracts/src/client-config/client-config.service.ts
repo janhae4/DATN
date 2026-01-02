@@ -172,6 +172,10 @@ export class ClientConfigService {
   ------ REDIS CLIENT -----
   -------------------------
   */
+
+  getRedisHost(): string {
+    return this.config.get<string>('REDIS_HOST', 'localhost');
+  }
   getRedisClientPort(): number {
     return this.config.get<number>('REDIS_CLIENT_PORT', 6379);
   }

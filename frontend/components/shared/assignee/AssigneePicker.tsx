@@ -23,12 +23,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User } from "@/types";
+import { Member, User } from "@/types";
 
 interface AssigneePickerProps {
   value: string[]; // Array of assignee IDs
   onChange: (value: string[]) => void;
-  users: User[];   // Real users passed from parent
+  users: Member[]; // Real users passed from parent
   className?: string;
 }
 
@@ -40,9 +40,7 @@ export function AssigneePicker({
 }: AssigneePickerProps) {
   const [open, setOpen] = React.useState(false);
 
-  const selectedUsers = value
-    .map((id) => users.find((u) => u.id === id))
-    .filter(Boolean) as User[];
+  const selectedUsers = users.filter((user) => value.includes(user.id));
 
   const getInitials = (name: string) => {
     return name

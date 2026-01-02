@@ -11,31 +11,6 @@ export class AiDiscussionController {
   constructor(
     private readonly aiDiscussionService: AiDiscussionService,
   ) { }
-
-  @RabbitSubscribe({
-    exchange: EVENTS_EXCHANGE,
-    routingKey: EVENTS.CREATE_TEAM,
-    queue: 'events.user.created.chatbot',
-  })
-  createTeam(payload: CreateTeamEventPayload) {
-    return this.aiDiscussionService.createTeam(payload);
-  }
-
-  @RabbitSubscribe({
-    exchange: EVENTS_EXCHANGE,
-    routingKey: EVENTS.DELETE_DOCUMENT,
-    queue: 'events.delete.document.chatbot',
-  })
-
-  @RabbitSubscribe({
-    exchange: EVENTS_EXCHANGE,
-    routingKey: EVENTS.REMOVE_TEAM,
-    queue: 'events.remove.team.chatbot',
-  })
-  removeTeam(payload: RemoveTeamEventPayload) {
-    return this.aiDiscussionService.removeTeam(payload);
-  }
-
   @RabbitRPC({
     exchange: CHATBOT_EXCHANGE,
     routingKey: CHATBOT_PATTERN.FIND_CONVERSATION,
@@ -118,15 +93,14 @@ export class AiDiscussionController {
     errorHandler: customErrorHandler
   })
   async handleMessage(payload: MessageUserChatbot) {
-    const { discussionId, teamId, userId, message, metadata, socketId, summarizeFileName } = payload
-    return await this.aiDiscussionService.handleMessage(
+    const { discussionId, userId, message, metadata, summarizeFileName } = payload
+    console.log('handleMessage', payload);
+    return await this.aiDiscussionService.handleMessageForUser(
       userId,
       message,
-      teamId,
       metadata,
       discussionId,
-      summarizeFileName,
-      socketId,
+      summarizeFileName
     );
   }
 
