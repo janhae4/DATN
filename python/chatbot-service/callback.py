@@ -249,11 +249,16 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                     await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
             
             elif pattern_from_key == 'suggest_task':
-                objective = payload_dto.get('objective')
+                raw_objective = payload_dto.get('objective')
                 members = payload_dto.get('members', [])
                 
+                if len(raw_objective) > 20:
+                    print(f"--> [SUGGEST TASK] Objective quá dài, đang tóm tắt...")
+                    objective = await summarizer.summarize_objective(raw_objective)
+                    await publish_suggest_task_response(user_id, {"objective": objective, "type": "summarized"})
+                else: 
+                    objective = raw_objective
                 print(f"--> [SUGGEST TASK] Bắt đầu gợi ý task cho user '{user_id}' với mục tiêu: {objective}")
-                
                 if not objective: raise ValueError("Tin nhắn thiếu 'objective'.")
 
                 print (f"--> [SUGGEST TASK] Objective: {objective}")

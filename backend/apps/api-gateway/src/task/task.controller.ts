@@ -160,6 +160,15 @@ export class TaskController {
       };
     }).pipe(
       map((data) => {
+        if (data.type === 'summarized') {
+          return {
+            data: {
+              type: 'summarized',
+              objective: data.objective,
+            },
+          } as MessageEvent;
+        }
+        
         const isNoSprint = !sprintId || sprintId === "";
 
         let assignedMemberId = data.memberId;
