@@ -28,7 +28,7 @@ import { Member, User } from "@/types";
 interface AssigneePickerProps {
   value: string[];
   onChange: (value: string[]) => void;
-  users: Member[]; 
+  users: Member[];
   className?: string;
 }
 
@@ -73,42 +73,21 @@ export function AssigneePicker({
           }}
         >
           {selectedUsers.length > 0 ? (
-            <TooltipProvider>
-              <div className="flex -space-x-2 hover:space-x-1 transition-all duration-200">
-                {selectedUsers.slice(0, 3).map((user) => (
-                  <Tooltip key={user.id}>
-                    <TooltipTrigger asChild>
-                      <Avatar className="h-6 w-6 border-2 border-background ring-1 ring-border/10 transition-transform hover:scale-110 hover:z-10">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback className="text-[10px] bg-primary/5 text-primary font-medium">
-                          {getInitials(user.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{user.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-                {selectedUsers.length > 3 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="h-6 w-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground ring-1 ring-border/10">
-                        +{selectedUsers.length - 3}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        {selectedUsers
-                          .slice(3)
-                          .map((u) => u.name)
-                          .join(", ")}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-            </TooltipProvider>
+            <div className="flex -space-x-2 hover:space-x-1 transition-all duration-200">
+              {selectedUsers.slice(0, 3).map((user) => (
+                <Avatar key={user.id} className="h-6 w-6 border-2 border-background ring-1 ring-border/10 transition-transform hover:scale-110 hover:z-10" title={user.name}>
+                  <AvatarImage src={user.avatar} />
+                  <AvatarFallback className="text-[10px] bg-primary/5 text-primary font-medium">
+                    {getInitials(user.name)}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+              {selectedUsers.length > 3 && (
+                <div className="h-6 w-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground ring-1 ring-border/10" title={selectedUsers.slice(3).map((u) => u.name).join(", ")}>
+                  +{selectedUsers.length - 3}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="h-6 w-6 rounded-full border border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors bg-background">
               <UserIcon className="h-3 w-3 text-muted-foreground/50" />

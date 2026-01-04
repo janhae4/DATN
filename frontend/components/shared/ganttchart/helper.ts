@@ -119,12 +119,12 @@ export function mapProjectTaskToGanttTask(task: ProjectTask): GanttTask {
   const start = task.startDate
     ? new Date(task.startDate)
     : task.createdAt
-    ? new Date(task.createdAt)
-    : new Date(); 
+      ? new Date(task.createdAt)
+      : new Date();
 
   const end = task.dueDate
     ? new Date(task.dueDate)
-    : new Date(start.getTime() + 24 * 60 * 60 * 1000); 
+    : new Date(start.getTime() + 24 * 60 * 60 * 1000);
 
   return {
     id: task.id,
@@ -140,5 +140,16 @@ export function mapProjectTaskToGanttTask(task: ProjectTask): GanttTask {
 }
 
 export function mapProjectTasksToGanttTasks(tasks: ProjectTask[]): GanttTask[] {
-  return tasks?.filter(Boolean).map(mapProjectTaskToGanttTask) ?? [];
+  if (!tasks) return [];
+  const seenIds = new Set<string>();
+  const result: GanttTask[] = [];
+
+  for (const task of tasks) {
+    if (task && !seenIds.has(task.id)) {
+      seenIds.add(task.id);
+      result.push(mapProjectTaskToGanttTask(task));
+    }
+  }
+
+  return result;
 }

@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { Task, ViewMode, Gantt } from "gantt-task-react";
 import {
-  getStartEndDateForProject,
   mapProjectTasksToGanttTasks,
 } from "./helper";
 import "gantt-task-react/dist/index.css";
@@ -9,10 +8,9 @@ import { ViewSwitcher } from "@/components/shared/ganttchart/view-switcher";
 import { useTasks } from "@/hooks/useTasks";
 import { useParams } from "next/navigation";
 import { TaskDetailModal } from "@/components/features/backlogs/taskmodal";
-import { Task as AppTask, User } from "@/types";
+import { Task as AppTask } from "@/types";
 import { useLists } from "@/hooks/useList";
 import { useProject } from "@/hooks/useProjects";
-import { useTeamMembers } from "@/hooks/useTeam";
 import { toast } from "sonner";
 import { TaskFilters } from "@/hooks/useTaskManagement";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -21,7 +19,6 @@ import { GetTasksParams } from "@/services/taskService";
 const GanttPage = () => {
   const [view, setView] = React.useState<ViewMode>(ViewMode.Day);
   const params = useParams();
-  const [searchQuery, setSearchQuery] = useState("");
   const rawProjectId = params.projectId as unknown as
     | string
     | string[]
@@ -39,6 +36,7 @@ const GanttPage = () => {
     labelIds: [],
     sprintIds: [],
   });
+  const [expandedProjectIds, setExpandedProjectIds] = React.useState<Record<string, boolean>>({});
   const [debouncedSearch] = useDebounce(filters.searchText, 500);
 
   const apiParams: GetTasksParams = React.useMemo(
@@ -70,18 +68,15 @@ const GanttPage = () => {
   const [selectedTask, setSelectedTask] = React.useState<AppTask | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
-  const ganttTasks = React.useMemo(
-    () => mapProjectTasksToGanttTasks(projectTasks || []),
-    [projectTasks]
-  );
+  const ganttTasks = React.useMemo(() => {
+    const mapped = mapProjectTasksToGanttTasks(projectTasks || []);
+    return mapped.map(t => ({
+      ...t,
+      hideChildren: t.type === 'project' ? !!expandedProjectIds[t.id] : t.hideChildren
+    }));
+  }, [projectTasks, expandedProjectIds]);
 
-  const [tasks, setTasks] = React.useState<Task[]>(ganttTasks);
   const [isChecked, setIsChecked] = React.useState(true);
-
-  // Sync local tasks when server data changes
-  React.useEffect(() => {
-    setTasks(ganttTasks);
-  }, [ganttTasks]);
 
   // Calculate column width based on view mode
   let columnWidth = 65;
@@ -94,29 +89,7 @@ const GanttPage = () => {
   }
 
   const handleTaskChange = async (task: Task) => {
-    // Optimistic update locally
-    let newTasks = tasks.map((t) => (t.id === task.id ? task : t));
-
-    // Update parent project task logic
-    if (task.project) {
-      const projectTaskIndex = newTasks.findIndex((t) => t.id === task.project);
-      if (projectTaskIndex !== -1) {
-        const [start, end] = getStartEndDateForProject(newTasks, task.project);
-        const project = newTasks[projectTaskIndex];
-        if (
-          project.start.getTime() !== start.getTime() ||
-          project.end.getTime() !== end.getTime()
-        ) {
-          const changedProject = { ...project, start, end };
-          newTasks = newTasks.map((t) =>
-            t.id === task.project ? changedProject : t
-          );
-        }
-      }
-    }
-    setTasks(newTasks);
-
-    // Call API
+    // Call API - Optimistic update is already handled by useTasks mutation
     try {
       await updateTask(task.id, {
         startDate: task.start.toISOString(),
@@ -125,22 +98,19 @@ const GanttPage = () => {
     } catch (error) {
       console.error("Failed to update task", error);
       toast.error("Failed to update task date");
-      // Nên revert lại state cũ ở đây nếu cần thiết
-      setTasks(tasks); // Revert to old state
     }
   };
 
-  const handleTaskDelete = (task: Task) => {
+  const handleTaskDelete = async (task: Task) => {
     const conf = window.confirm("Are you sure about " + task.name + " ?");
     if (conf) {
-      setTasks(tasks.filter((t) => t.id !== task.id));
-      deleteTask(task.id)
-        .then(() => toast.success("Task deleted"))
-        .catch((err) => {
-          console.error(err);
-          toast.error("Failed to delete task");
-          // Re-fetch logic or revert state handled by parent query usually
-        });
+      try {
+        await deleteTask(task.id);
+        toast.success("Task deleted");
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to delete task");
+      }
     }
     return conf;
   };
@@ -162,7 +132,10 @@ const GanttPage = () => {
   };
 
   const handleExpanderClick = (task: Task) => {
-    setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
+    setExpandedProjectIds(prev => ({
+      ...prev,
+      [task.id]: !prev[task.id]
+    }));
   };
 
   // Modal Handlers
@@ -217,15 +190,15 @@ const GanttPage = () => {
         onViewListChange={setIsChecked}
         isChecked={isChecked}
         currentViewMode={view}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
+        searchQuery={filters.searchText}
+        onSearchQueryChange={(query) => setFilters(prev => ({ ...prev, searchText: query }))}
       />
 
       {/* LOGIC FIX: Chỉ hiển thị Gantt nếu có tasks */}
       <div className="flex-1 overflow-hidden">
-        {tasks.length > 0 ? (
+        {ganttTasks.length > 0 ? (
           <Gantt
-            tasks={tasks}
+            tasks={ganttTasks}
             viewMode={view}
             onDateChange={handleTaskChange}
             onDelete={handleTaskDelete}

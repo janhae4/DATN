@@ -30,7 +30,7 @@ const INITIAL_FILTERS: TaskFilters = {
 }
 
 export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
-  const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask } = useTasks(projectId)
+  const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask } = useTasks({ projectId })
   const { sprints: serverSprints, updateSprint: serverUpdateSprint } = useSprints(projectId)
   const { epics: serverEpics } = useEpics(projectId)
   const { labels: serverLabels } = useLabels(projectId)
@@ -39,11 +39,11 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
   const [sprints, setSprints] = React.useState<Sprint[]>([])
   const [epics, setEpics] = React.useState<Epic[]>([])
   const [labels, setLabels] = React.useState<Label[]>([])
-  
+
   // --- BUG FIX: STABILIZE DEPENDENCIES ---
   // Sử dụng useMemo với JSON.stringify để tạo ra một reference ổn định. 
   // Chỉ khi nội dung data thay đổi thì reference mới thay đổi.
-  
+
   const stableServerTasks = React.useMemo(() => serverTasks, [JSON.stringify(serverTasks)])
   const stableServerSprints = React.useMemo(() => serverSprints, [JSON.stringify(serverSprints)])
   const stableServerEpics = React.useMemo(() => serverEpics, [JSON.stringify(serverEpics)])
@@ -96,12 +96,12 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
         task.id === taskId ? { ...task, ...updates } : task
       )
     )
-    setSelectedTask(prevTask => 
+    setSelectedTask(prevTask =>
       prevTask && prevTask.id === taskId ? { ...prevTask, ...updates } : prevTask
     )
     // Server update
     serverUpdateTask(taskId, updates)
-  }, [serverUpdateTask]) 
+  }, [serverUpdateTask])
 
   const handleUpdateCell = React.useCallback((taskId: string, columnId: "title", value: string) => {
     updateTask(taskId, { [columnId]: value })
@@ -142,16 +142,16 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
   const handleSprintChange = React.useCallback((taskId: string, sprintId: string | null) => {
     updateTask(taskId, { sprintId: sprintId, epicId: null })
   }, [updateTask])
-  
+
   const handleReorderTask = React.useCallback((activeId: string, overId: string) => {
     setData((items) => {
       const oldIndex = items.findIndex(item => item.id === activeId);
       const newIndex = items.findIndex(item => item.id === overId);
-      
+
       if (oldIndex === -1 || newIndex === -1) {
         return items;
       }
-      
+
       return arrayMove(items, oldIndex, newIndex);
     });
   }, []);
@@ -167,7 +167,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
       id: `TASK-${Date.now()}`,
       title: newRowTitle.trim(),
       description: "",
-      listId: newTaskListId, 
+      listId: newTaskListId,
       priority: newTaskPriority,
       assigneeIds: newTaskAssignees,
       dueDate: newTaskDueDate ? newTaskDueDate.toISOString() : null,
@@ -181,7 +181,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
 
     // Optimistic update
     setData((prev) => [...prev, newTask])
-    
+
     // Server update
     // serverCreateTask(newTask)
 
@@ -196,20 +196,20 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
 
   const handleInputKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>, parentId: string | null, options?: { sprintId?: string, onCancel?: () => void }) => {
     if (e.key === "Enter") {
-      e.preventDefault(); 
+      e.preventDefault();
       handleAddNewRow(parentId, options?.sprintId)
       if (options?.onCancel) options.onCancel()
     }
     if (e.key === "Escape") {
       setIsAddingNewRow(false)
-      setNewRowTitle("") 
+      setNewRowTitle("")
       if (options?.onCancel) options.onCancel()
     }
   }, [handleAddNewRow])
-  
+
   const handleDragEnd = React.useCallback((event: DragEndEvent) => {
     const { active, over } = event
-    
+
     if (active.id !== over?.id) {
       if (over?.data?.current?.type === "epic-drop-area") {
         const epicId = over.data.current.epic.id
@@ -270,7 +270,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
         if (!task.sprintId || !filters.sprintIds.includes(task.sprintId)) return false
       }
 
-      return true 
+      return true
     })
   }, [data, filters])
 

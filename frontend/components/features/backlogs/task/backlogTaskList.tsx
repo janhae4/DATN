@@ -3,12 +3,9 @@
 import * as React from "react";
 import { PlusIcon, Loader2, AlertCircle, Trash2, X } from "lucide-react";
 
-import { Table } from "@/components/ui/table";
+import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { List, Task } from "@/types";
-
-import { toast } from "sonner";
-
 import { AddNewTaskRow } from "./AddNewTaskRow";
 import { TaskRowList } from "./TaskRowList";
 import { UpdateTaskDto } from "@/services/taskService";
@@ -89,45 +86,59 @@ export function BacklogTaskList({
   return (
     <div className="flex flex-col relative">
       <div className="rounded-lg">
-        <div>
-          {tasks.length === 0 ? (
-            <div
-              className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed text-muted-foreground hover:bg-muted/50 hover:border-primary/50 hover:text-primary transition-all"
-              onClick={() => setIsAddingNewRow(true)}
+        <Table>
+          {tasks.length > 0 ? (
+            <TaskRowList
+              key="backlog-task-row-list"
+              tasks={tasks}
+              allTasks={allTasks}
+              lists={listsList}
+              isDraggable={true}
+              onRowClick={onRowClick}
+              onUpdateTask={handleUpdateTask}
+              selectedIds={selectedIds}
+              onSelect={onSelect}
+              onMultiSelectChange={onMultiSelectChange}
             >
-              <PlusIcon className="h-8 w-8 opacity-50" />
-              <p className="text-sm font-medium">Your backlog is empty</p>
-              <p className="text-xs opacity-70">
-                Click here to create a new task
-              </p>
-            </div>
+              {isAddingNewRow && (
+                <AddNewTaskRow
+                  lists={listsList}
+                  onCancel={() => setIsAddingNewRow(false)}
+                />
+              )}
+            </TaskRowList>
           ) : (
-            <Table>
-              <TaskRowList
-                key="backlog-task-row-list"
-                tasks={tasks}
-                allTasks={allTasks}
-                lists={listsList}
-                isDraggable={true}
-                onRowClick={onRowClick}
-                onUpdateTask={handleUpdateTask}
-                selectedIds={selectedIds}
-                onSelect={onSelect}
-                onMultiSelectChange={onMultiSelectChange}
-              >
-                {isAddingNewRow && (
-                  <AddNewTaskRow
-                    lists={listsList}
-                    onCancel={() => setIsAddingNewRow(false)}
-                  />
-                )}
-              </TaskRowList>
-            </Table>
+            <TableBody>
+              {isAddingNewRow ? (
+                <AddNewTaskRow
+                  lists={listsList}
+                  onCancel={() => setIsAddingNewRow(false)}
+                />
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="p-0 border-none">
+                    <div
+                      className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed text-muted-foreground hover:bg-muted/50 hover:border-primary/50 hover:text-primary transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsAddingNewRow(true);
+                      }}
+                    >
+                      <PlusIcon className="h-8 w-8 opacity-50" />
+                      <p className="text-sm font-medium">Your backlog is empty</p>
+                      <p className="text-xs opacity-70">
+                        Click here to create a new task
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
           )}
-        </div>
+        </Table>
       </div>
 
-      {!isAddingNewRow && (
+      {!isAddingNewRow && tasks.length > 0 && (
         <Button
           variant="ghost"
           className="w-fit justify-start gap-2 bg-primary/5 hover:bg-primary/10 p-4 text-muted-foreground mt-2 ml-2"

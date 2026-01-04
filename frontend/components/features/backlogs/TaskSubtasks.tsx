@@ -18,8 +18,8 @@ interface TaskSubtasksProps {
 
 export function TaskSubtasks({ taskId, projectId, lists, onRowClick }: TaskSubtasksProps) {
   // 1. Lấy dữ liệu từ hook
-  const { tasks, updateTask } = useTasks(projectId);
-  
+  const { tasks, updateTask } = useTasks({ projectId });
+
   // 2. State cho việc thêm mới
   const [isAdding, setIsAdding] = React.useState(false);
 
@@ -59,10 +59,11 @@ export function TaskSubtasks({ taskId, projectId, lists, onRowClick }: TaskSubta
               {subtasks.map((subtask) => (
                 <BacklogTaskRow
                   key={subtask.id}
+                  allTasks={tasks}
                   task={subtask}
                   lists={lists}
                   // Trong Modal thì tắt kéo thả để tránh xung đột
-                  isDraggable={false} 
+                  isDraggable={false}
                   onRowClick={onRowClick} // Click vào subtask sẽ mở modal của subtask đó
                   onUpdateTask={handleUpdateTask}
                   level={0} // Trong modal hiển thị phẳng, không cần thụt lề quá nhiều

@@ -5,6 +5,7 @@ import { ClientConfigModule, ClientConfigService, NOTIFICATION_EXCHANGE, EVENTS_
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Notification } from './entity/notification.entity';
+import { NotificationGateway } from './notification.gateway';
 
 @Module({
   imports: [
@@ -41,7 +42,7 @@ import { Notification } from './entity/notification.entity';
       }),
     })
   ],
-  providers: [NotificationService, NotificationController],
+  providers: [NotificationService, NotificationController, NotificationGateway],
   controllers: [NotificationController],
 })
 export class NotificationModule { }
