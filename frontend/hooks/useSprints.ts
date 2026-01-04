@@ -10,7 +10,6 @@ export function useSprints(projectId?: string) {
   const queryClient = useQueryClient();
   const queryKey = ["sprints", projectId];
 
-  // 1. Fetch Sprints
   const {
     data: sprints = [],
     isLoading,

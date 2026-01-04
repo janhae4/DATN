@@ -32,7 +32,7 @@ const mockNotifications = [
 
 export function NotificationPopover() {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const itemsPerPage = 3; // Show 3 notifications per page
+  const itemsPerPage = 3;
 
   const totalPages = Math.ceil(mockNotifications.length / itemsPerPage);
 

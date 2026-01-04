@@ -3,6 +3,7 @@ import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, TASK_EXCHANGE, EPIC_EXCHANGE, EPIC_PATTERNS, EpicStatus } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
 import { Priority } from '@app/contracts/enums/priority.enum';
+import { GetTasksFilterDto } from './dto/get-task-filter.dto';
 
 @Injectable()
 export class TaskService {
@@ -20,7 +21,7 @@ export class TaskService {
     }));
   }
 
-  async createMany(createTaskDtos: CreateTaskDto[], epicTitle: string) {
+  async createMany(createTaskDtos: CreateTaskDto[], epicTitle: string, userId: string) {
     console.log(createTaskDtos)
     const projectId = createTaskDtos[0]?.projectId;
 
@@ -42,7 +43,8 @@ export class TaskService {
 
     const tasksWithEpic = createTaskDtos.map(task => ({
       ...task,
-      epicId: epicId
+      epicId: epicId,
+      reporterId: userId
     }));
 
     return unwrapRpcResult(
@@ -54,11 +56,39 @@ export class TaskService {
     );
   }
 
-  async findAllByProjectId(projectId: string) {
+  async deleteMany(taskIds: string[], userId: string) {
+    return unwrapRpcResult(
+      await this.amqp.request({
+        exchange: TASK_EXCHANGE,
+        routingKey: TASK_PATTERNS.DELETE_MANY,
+        payload: { taskIds, userId },
+      }),
+    );
+  }
+
+  async updateMany(taskIds: string[], updateTaskDto: UpdateTaskDto, userId: string) {
+    return unwrapRpcResult(
+      await this.amqp.request({
+        exchange: TASK_EXCHANGE,
+        routingKey: TASK_PATTERNS.UPDATE_MANY,
+        payload: { taskIds, updateTaskDto, userId },
+      }),
+    );
+  }
+
+  async getStatByProjectId(userId: string, projectId: string) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.GET_STATS,
+      payload: { userId, projectId },
+    }));
+  }
+
+  async findAllByProjectId(userId: string, filters: GetTasksFilterDto) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.FIND_ALL,
-      payload: { projectId },
+      payload: { userId, filters },
     }));
   }
 

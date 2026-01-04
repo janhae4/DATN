@@ -12,31 +12,44 @@ import { Archive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BacklogTaskList } from "./task/backlogTaskList";
 import { List, Task } from "@/types";
+import { PaginationControl } from "@/components/shared/PaginationControl";
 
 interface BacklogAccordionItemProps {
   lists: List[];
   taskCount: number;
   tasks: Task[];
+  allTasks: Task[];
   isLoading?: boolean;
   error?: any;
   onRowClick: (task: Task) => void;
   onUpdateTask: (taskId: string, updates: any) => void;
   onDeleteTasks: (ids: string[]) => Promise<void> | void;
   selectedIds?: string[];
+  onMultiSelectChange: (ids: string[]) => void;
   onSelect?: (taskId: string, checked: boolean) => void;
+  page: number;
+  setPage: (page: number) => void;
+  totalPages: number;
 }
 
-export function BacklogAccordionItem({
+export const BacklogAccordionItem = React.memo(BacklogAccordionItemComponent);
+
+function BacklogAccordionItemComponent({
   lists,
   taskCount,
   tasks,
+  allTasks,
   isLoading,
   error,
   onRowClick,
   onUpdateTask,
   onDeleteTasks,
   selectedIds,
+  onMultiSelectChange,
   onSelect,
+  page,
+  setPage,
+  totalPages,
 }: BacklogAccordionItemProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: "backlog-drop-area",
@@ -72,8 +85,10 @@ export function BacklogAccordionItem({
         </AccordionTrigger>
         <AccordionContent className="p-1 border-t bg-muted/20">
           <BacklogTaskList
+            key="backlog-task-list"
             lists={lists}
             tasks={tasks}
+            allTasks={allTasks}
             isLoading={isLoading}
             error={error}
             onRowClick={onRowClick}
@@ -81,6 +96,10 @@ export function BacklogAccordionItem({
             onDeleteTasks={onDeleteTasks}
             selectedIds={selectedIds}
             onSelect={onSelect}
+            onMultiSelectChange={onMultiSelectChange}
+            page={page}
+            setPage={setPage}
+            totalPages={totalPages}
           />
         </AccordionContent>
       </AccordionItem>

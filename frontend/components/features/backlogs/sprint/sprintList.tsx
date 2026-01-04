@@ -31,7 +31,6 @@ export function SprintList() {
   const params = useParams();
   const projectId = params.projectId as string;
 
-  const { updateTask } = useTasks(projectId)
   const { lists } = useLists(projectId)
   const [addingNewRowToSprint, setAddingNewRowToSprint] = React.useState<string | null>(null)
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
@@ -101,13 +100,16 @@ export function SprintList() {
                   {sprintTasks.length > 0 ? (
                     <Table>
                       <TaskRowList
+                        key={`sprint-task-row-list-${sprint.id}`}
                         selectedIds={selectedIds}
                         onSelect={handleSelectTask}
                         tasks={sprintTasks}
+                        allTasks={allTasks}
                         lists={lists}
                         isDraggable={true}
                         onRowClick={handleRowClick}
                         onUpdateTask={updateTask}
+                        onMultiSelectChange={setSelectedIds}
                       >
                         {addingNewRowToSprint === sprint.id ? (
                           <AddNewTaskRow

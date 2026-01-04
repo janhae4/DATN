@@ -1,7 +1,7 @@
 import { Body, Controller, Inject, Query, Req, Sse } from '@nestjs/common';
 import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, TEAM_EXCHANGE, CHATBOT_EXCHANGE } from '@app/contracts';
+import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, TEAM_EXCHANGE, CHATBOT_EXCHANGE, GetTasksFilterDto } from '@app/contracts';
 import { customErrorHandler } from '@app/common';
 import { LabelEvent } from '@app/contracts/events/label.event';
 import { finalize, map, Observable } from 'rxjs';
@@ -37,15 +37,43 @@ export class TasksController {
 
   @RabbitRPC({
     exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.DELETE_MANY,
+    queue: TASK_PATTERNS.DELETE_MANY,
+    errorHandler: customErrorHandler,
+  })
+  findAll(body: { taskIds: string[]; userId: string }) {
+    return this.tasksService.deleteMany(body.taskIds, body.userId);
+  }
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
     routingKey: TASK_PATTERNS.FIND_ALL,
     queue: TASK_PATTERNS.FIND_ALL,
     errorHandler: customErrorHandler,
   })
-  findAllByProject(payload: { projectId: string }) {
-    return this.tasksService.findAllByProject(payload.projectId);
+  findAllByProject(payload: { userId: string, filters: GetTasksFilterDto }) {
+    return this.tasksService.findAllByProject(payload.userId, payload.filters);
   }
 
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.GET_STATS,
+    queue: TASK_PATTERNS.GET_STATS,
+    errorHandler: customErrorHandler,
+  })
+  getStats(payload: { projectId: string, userId: string }) {
+    return this.tasksService.getProjectStats(payload.projectId, payload.userId);
+  }
 
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.UPDATE_MANY,
+    queue: TASK_PATTERNS.UPDATE_MANY,
+    errorHandler: customErrorHandler,
+  })
+  updateMany(payload: { taskIds: string[]; updateTaskDto: UpdateTaskDto; userId: string }) {
+    return this.tasksService.updateMany(payload.taskIds, payload.updateTaskDto, payload.userId);
+  }
 
   @RabbitRPC({
     exchange: TASK_EXCHANGE,

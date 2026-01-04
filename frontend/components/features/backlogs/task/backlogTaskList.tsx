@@ -13,10 +13,13 @@ import { AddNewTaskRow } from "./AddNewTaskRow";
 import { TaskRowList } from "./TaskRowList";
 import { UpdateTaskDto } from "@/services/taskService";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
+import { TaskListSkeleton } from "@/components/skeletons/TaskListSkeleton";
+import { PaginationControl } from "@/components/shared/PaginationControl";
 
 type BacklogTaskListProps = {
   lists?: List[];
   tasks: Task[];
+  allTasks: Task[];
   isLoading?: boolean;
   error?: any;
   onRowClick: (task: Task) => void;
@@ -24,29 +27,45 @@ type BacklogTaskListProps = {
   onDeleteTasks: (ids: string[]) => Promise<void> | void;
   selectedIds?: string[];
   onSelect?: (taskId: string, checked: boolean) => void;
+  onMultiSelectChange: (ids: string[]) => void;
+  page: number;
+  setPage: (page: number) => void;
+  totalPages: number;
 };
 
 export function BacklogTaskList({
   lists,
   tasks,
+  allTasks,
   isLoading = false,
   error,
   onRowClick,
   onUpdateTask,
-  onDeleteTasks,
   selectedIds,
   onSelect,
+  onMultiSelectChange,
+  page = 1,
+  setPage,
+  totalPages,
 }: BacklogTaskListProps) {
+  console.log("Rendering BacklogAccordionItem with", tasks.length, "tasks");
+
   const { isAddingNewRow, setIsAddingNewRow } = useTaskManagementContext();
 
-  // 3. Filter Backlog Tasks (No Sprint)
-  const backlogTasks = React.useMemo(
-    () => tasks.filter((task) => !task.sprintId && !task.parentId),
-    [tasks]
-  );
+  const [isSelectionDragging, setIsSelectionDragging] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      if (isSelectionDragging) {
+        setIsSelectionDragging(false);
+      }
+    };
+
+    window.addEventListener("pointerup", handleGlobalPointerUp);
+    return () => window.removeEventListener("pointerup", handleGlobalPointerUp);
+  }, [isSelectionDragging]);
 
   const listsList = lists ?? [];
-  const isEmpty = backlogTasks.length === 0 && !isAddingNewRow;
 
   const handleUpdateTask = (taskId: string, updates: UpdateTaskDto) => {
     onUpdateTask(taskId, updates);
@@ -55,12 +74,7 @@ export function BacklogTaskList({
   // --- Render ---
 
   if (isLoading) {
-    return (
-      <div className="flex h-32 w-full items-center justify-center text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" />
-        Loading backlog...
-      </div>
-    );
+    return <TaskListSkeleton />;
   }
 
   if (error) {
@@ -76,7 +90,7 @@ export function BacklogTaskList({
     <div className="flex flex-col relative">
       <div className="rounded-lg">
         <div>
-          {isEmpty ? (
+          {tasks.length === 0 ? (
             <div
               className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed text-muted-foreground hover:bg-muted/50 hover:border-primary/50 hover:text-primary transition-all"
               onClick={() => setIsAddingNewRow(true)}
@@ -90,13 +104,16 @@ export function BacklogTaskList({
           ) : (
             <Table>
               <TaskRowList
-                tasks={backlogTasks}
+                key="backlog-task-row-list"
+                tasks={tasks}
+                allTasks={allTasks}
                 lists={listsList}
                 isDraggable={true}
                 onRowClick={onRowClick}
                 onUpdateTask={handleUpdateTask}
                 selectedIds={selectedIds}
                 onSelect={onSelect}
+                onMultiSelectChange={onMultiSelectChange}
               >
                 {isAddingNewRow && (
                   <AddNewTaskRow
@@ -110,15 +127,25 @@ export function BacklogTaskList({
         </div>
       </div>
 
-      {!isAddingNewRow && !isEmpty && (
+      {!isAddingNewRow && (
         <Button
           variant="ghost"
-          className="w-fit justify-start gap-2 px-1 text-muted-foreground mt-2"
+          className="w-fit justify-start gap-2 bg-primary/5 hover:bg-primary/10 p-4 text-muted-foreground mt-2 ml-2"
           onClick={() => setIsAddingNewRow(true)}
         >
           <PlusIcon className="h-4 w-4" />
           Create Task
         </Button>
+      )}
+
+      {!isLoading && totalPages > 1 && (
+        <div className="mt-4 pt-4 border-t flex justify-center pb-2">
+          <PaginationControl
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
+        </div>
       )}
     </div>
   );

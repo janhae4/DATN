@@ -72,9 +72,25 @@ interface SuggestedTask {
 interface SuggestTaskByAiProps {
   children: React.ReactNode;
   onSave?: (tasks: CreateTaskDto[], epic: string, sprintId?: string) => void;
+  suggestTaskByAi: ({
+    data,
+    onChunk,
+  }: {
+    data: {
+      query: string;
+      projectId: string;
+      teamId: string;
+      sprintId: string;
+    };
+    onChunk: (chunk: string) => void;
+  }) => Promise<void>;
 }
 
-export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
+export function SuggestTaskByAi({
+  children,
+  onSave,
+  suggestTaskByAi,
+}: SuggestTaskByAiProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [selectedSprintId, setSelectedSprintId] = React.useState<string | null>(
@@ -94,7 +110,6 @@ export function SuggestTaskByAi({ children, onSave }: SuggestTaskByAiProps) {
   const projectId = param?.projectId as string;
   const { data: members = [], isLoading: isMembersLoading } =
     useTeamMembers(teamId);
-  const { suggestTaskByAi } = useTasks(projectId, teamId);
   const { lists } = useLists(projectId);
   const { sprints = [] } = useSprints(projectId);
 

@@ -1,36 +1,54 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Task, TaskLabel } from "@/types";
+import { useQuery, useMutation, useQueryClient, keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { Pagination, Task, TaskLabel } from "@/types";
 import {
   taskService,
   CreateTaskDto,
   UpdateTaskDto,
+  GetTasksParams,
 } from "@/services/taskService";
 import { streamHelper } from "@/services/apiClient";
+import { toast } from "sonner";
 
-export function useTasks(projectId?: string, teamId?: string) {
+export function useTasks(filters?: GetTasksParams) {
   const queryClient = useQueryClient();
-  const tasksQueryKey = ["tasks", projectId];
-  const labelsQueryKey = ["task-labels-project", projectId];
+  const tasksQueryKey = ["tasks", filters];
+  const labelsQueryKey = ["task-labels-project", filters?.projectId];
 
-  // 1. Fetch Tasks
   const {
-    data: tasks = [],
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading: isLoadingTasks,
+    isFetching,
     error,
-  } = useQuery<Task[]>({
+  } = useInfiniteQuery({
     queryKey: tasksQueryKey,
-    queryFn: () => taskService.getTasks(projectId!),
-    enabled: !!projectId,
+    queryFn: async ({ pageParam }) => {
+      return taskService.getTasks({
+        ...filters!,
+        page: pageParam as number
+      });
+    },
+    initialPageParam: filters?.page || 1,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.page < lastPage.totalPages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    enabled: !!filters?.projectId,
   });
 
-  // 2. Fetch Project Labels
+  const tasks = data?.pages.flatMap((page) => page.data) || [];
+
   const {
     data: projectLabels = [],
     isLoading: isLoadingLabels,
   } = useQuery<TaskLabel[]>({
     queryKey: labelsQueryKey,
-    queryFn: () => taskService.getAllTaskLabelByProjectId(projectId!),
-    enabled: !!projectId,
+    queryFn: () => taskService.getAllTaskLabelByProjectId(filters?.projectId!),
+    enabled: !!filters?.projectId,
   });
 
   // --- MUTATIONS ---
@@ -46,6 +64,7 @@ export function useTasks(projectId?: string, teamId?: string) {
   const createTaskMutation = useMutation({
     mutationFn: (newTask: CreateTaskDto) => taskService.createTask(newTask),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: tasksQueryKey });
     },
   });
@@ -55,6 +74,7 @@ export function useTasks(projectId?: string, teamId?: string) {
       taskService.createTasks(tasks, epic, sprintId),
 
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: tasksQueryKey });
     },
     onError: (error) => {
@@ -62,17 +82,15 @@ export function useTasks(projectId?: string, teamId?: string) {
     }
   });
 
-  // Update Task
   const updateTaskMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: UpdateTaskDto }) =>
       taskService.updateTask(id, updates),
 
-    // Optimistic Update
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
-      const previousTasks = queryClient.getQueryData<Task[]>(tasksQueryKey);
 
-      // Tìm label objects từ projectLabels để đắp vào UI ngay lập tức
+      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
+
       let optimisticLabels: TaskLabel[] | undefined = undefined;
       if (updates.labelIds && projectLabels.length > 0) {
         optimisticLabels = projectLabels.filter((label) =>
@@ -80,25 +98,29 @@ export function useTasks(projectId?: string, teamId?: string) {
         );
       }
 
-      queryClient.setQueryData<Task[]>(tasksQueryKey, (old) => {
-        if (!old) return [];
-        return old.map((task) =>
-          task.id === id
-            ? {
-              ...task,
-              ...updates,
-              ...(optimisticLabels ? { labels: optimisticLabels } : {}),
-            }
-            : task
-        );
+      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
+        if (!old || !old.data) return old;
+
+        return {
+          ...old,
+          data: old.data.map((task) =>
+            task.id === id
+              ? {
+                ...task,
+                ...updates,
+                ...(optimisticLabels ? { labels: optimisticLabels } : {}),
+              }
+              : task
+          ),
+        };
       });
 
-      return { previousTasks };
+      return { previousData };
     },
 
     onError: (_err, _newTodo, context) => {
-      if (context?.previousTasks) {
-        queryClient.setQueryData(tasksQueryKey, context.previousTasks);
+      if (context?.previousData) {
+        queryClient.setQueryData(tasksQueryKey, context.previousData);
       }
     },
 
@@ -114,32 +136,113 @@ export function useTasks(projectId?: string, teamId?: string) {
     },
   });
 
+  const updateTasksMutation = useMutation({
+    mutationFn: ({ ids, updates }: { ids: string[], updates: UpdateTaskDto }) => taskService.updateTasks(ids, updates),
+    onMutate: async ({ ids, updates }) => {
+      await queryClient.cancelQueries({ queryKey: tasksQueryKey });
+      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
+
+      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
+        if (!old || !old.data) return old!;
+
+        const isMovingSprint = updates.sprintId !== undefined;
+        const isMovingEpic = updates.epicId !== undefined;
+        if (isMovingSprint || isMovingEpic) {
+          return {
+            ...old,
+            data: old.data.filter((task) => !ids.includes(task.id)),
+            total: Math.max(0, old.total - ids.length),
+          };
+        }
+
+        return {
+          ...old,
+          data: old.data.map((task) =>
+            ids.includes(task.id)
+              ? { ...task, ...updates }
+              : task
+          ),
+        };
+      });
+
+      return { previousData };
+    },
+
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(tasksQueryKey, context.previousData);
+      }
+      toast.error("Failed to move tasks");
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
   // Delete Task
   const deleteTaskMutation = useMutation({
     mutationFn: (id: string) => taskService.deleteTask(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: tasksQueryKey });
       queryClient.invalidateQueries({ queryKey: labelsQueryKey });
     },
   });
 
+  const deleteTasksMutation = useMutation({
+    mutationFn: (ids: string[]) => taskService.deleteTasks(ids),
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: tasksQueryKey });
+      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
+      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
+        if (!old || !old.data) return old!;
+
+        return {
+          ...old,
+          data: old.data.filter((task) => !ids.includes(task.id)),
+          total: old.total - ids.length
+        };
+      });
+
+      return { previousData };
+    },
+    onError: (_err, _ids, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(tasksQueryKey, context.previousData);
+      }
+      toast.error("Failed to delete tasks");
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
   return {
     tasks,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+
+    total: data?.pages[data.pages.length - 1]?.total,
+    totalPages: data?.pages[data.pages.length - 1]?.totalPages || 0,
+
+    isFetching,
     projectLabels,
     isLoading: isLoadingTasks || isLoadingLabels,
     error: error as Error | null,
+
     createTask: createTaskMutation.mutateAsync,
     createTasks: createTasksMutation.mutateAsync,
     suggestTaskByAi: suggestTaskByAiMutation.mutateAsync,
     updateTask: (id: string, updates: UpdateTaskDto) =>
       updateTaskMutation.mutateAsync({ id, updates }),
+    updateTasks: updateTasksMutation.mutateAsync,
     deleteTask: deleteTaskMutation.mutateAsync,
+    deleteTasks: deleteTasksMutation.mutateAsync,
   };
 }
 
-// --- THÊM ĐOẠN NÀY VÀO CUỐI FILE ---
-
-// Hook lấy chi tiết 1 Task (Dùng cho TaskMetaBox / Modal)
 export function useTask(taskId: string | null) {
   const {
     data: task,

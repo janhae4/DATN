@@ -38,41 +38,56 @@ import { AddNewTaskRow } from "./AddNewTaskRow";
 
 // Hooks & Services
 import { UpdateTaskDto } from "@/services/taskService";
-import { useTaskLabels } from "@/hooks/useTaskLabel";
 import { useTeamMembers } from "@/hooks/useTeam";
-import { useTasks } from "@/hooks/useTasks";
 import { toast } from "sonner";
+import { isEqual } from "lodash";
+import { is } from "date-fns/locale";
 
 interface BacklogTaskRowProps {
   task: Task;
+  allTasks: Task[];
   lists: List[];
   isDraggable?: boolean;
   selected?: boolean;
   onRowClick?: (task: Task) => void;
   onSelect?: (taskId: string, checked: boolean) => void;
   onUpdateTask: (taskId: string, updates: UpdateTaskDto) => void;
+  isSelectionDragging?: boolean;
+  onStartSelection?: () => void;
+  onMoveSelection?: () => void;
   level?: number;
 }
 
-export function BacklogTaskRow({
+export const BacklogTaskRow = React.memo(_BacklogTaskRow, (prev, next) => {
+  if (prev.isSelectionDragging !== next.isSelectionDragging) return false;
+  if (next.isSelectionDragging) return false;
+
+  return (
+    prev.task === next.task &&
+    prev.selected === next.selected &&
+    prev.isDraggable === next.isDraggable &&
+    prev.level === next.level &&
+    isEqual(prev.lists, next.lists)
+  );
+});
+
+function _BacklogTaskRow({
   task,
+  allTasks,
   lists,
   isDraggable = false,
   selected = false,
   onRowClick,
   onSelect,
   onUpdateTask,
+  isSelectionDragging = false,
+  onStartSelection,
+  onMoveSelection,
   level = 0,
 }: BacklogTaskRowProps) {
   const params = useParams();
-  const projectId = params.projectId as string;
   const teamId = params.teamId as string;
 
-  // 1. Fetching Data
-  const { taskLabels_data } = useTaskLabels(task.id);
-  const { tasks: allTasks } = useTasks(projectId);
-
-  // 2. Subtask Logic
   const subTasks = React.useMemo(() => {
     return allTasks.filter((t) => t.parentId === task.id);
   }, [allTasks, task.id]);
@@ -80,21 +95,18 @@ export function BacklogTaskRow({
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [isAddingSubtask, setIsAddingSubtask] = React.useState(false);
 
-  // --- LOGIC TOGGLE CẬP NHẬT ---
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isExpanded) {
       setIsExpanded(false);
       setIsAddingSubtask(false);
     } else {
-      // Nếu đã có subtask, chỉ đơn giản mở rộng để xem
       if (subTasks.length > 0) {
         setIsExpanded(true);
         setIsAddingSubtask(false);
         return;
       }
 
-      // Nếu chưa có subtask, kiểm tra giới hạn level trước khi cho phép tạo mới
       if (level < MAX_LEVEL) {
         setIsExpanded(true);
         setIsAddingSubtask(true);
@@ -126,66 +138,6 @@ export function BacklogTaskRow({
     disabled: !isDraggable,
   });
 
-  const dragThreshold = 5;
-  const startPos = React.useRef({ x: 0, y: 0 });
-  const isMoving = React.useRef(false);
-  const isMouseDown = React.useRef(false);
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    console.log("onMouseDown");
-    const target = e.target as HTMLElement;
-    if (
-      target.closest("button") ||
-      target.closest("input") ||
-      target.closest('[role="combobox"]') ||
-      target.closest('[role="checkbox"]')
-    ) {
-      return;
-    }
-
-    isMouseDown.current = true;
-    startPos.current = { x: e.clientX, y: e.clientY };
-    isMoving.current = false;
-  };
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (e.buttons === 1) {
-      const dx = Math.abs(e.clientX - startPos.current.x);
-      const dy = Math.abs(e.clientY - startPos.current.y);
-
-      if (dx > dragThreshold || dy > dragThreshold) {
-        if (!isMoving.current) {
-          isMoving.current = true;
-          onSelect?.(task.id, !selected);
-        }
-      }
-    }
-  };
-
-  const onMouseUp = (e: React.MouseEvent) => {
-    if (!isMoving.current) {
-      console.log("onMouseUp");
-      const target = e.target as HTMLElement;
-      if (
-        !target.closest("button") &&
-        !target.closest("input") &&
-        !target.closest('[role="combobox"]') &&
-        !target.closest('[role="checkbox"]')
-      ) {
-        onRowClick?.(task);
-      }
-    }
-    isMoving.current = false;
-  };
-
-  const handleMouseEnterSelection = (e: React.MouseEvent) => {
-    setIsHovered(true);
-    if (e.buttons === 1 && !isDragging) {
-      onSelect?.(task.id, !selected);
-    }
-  };
-
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
@@ -194,7 +146,6 @@ export function BacklogTaskRow({
   const stopPropagation = (e: React.MouseEvent | React.PointerEvent) =>
     e.stopPropagation();
 
-  // 4. UI Handlers
   const [isHovered, setIsHovered] = React.useState(false);
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [localTitle, setLocalTitle] = React.useState(task.title);
@@ -217,9 +168,61 @@ export function BacklogTaskRow({
     setIsEditingTitle(false);
   };
 
+  const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
+  const startPos = React.useRef({ x: 0, y: 0 });
+  const pointerIdRef = React.useRef<number | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    pointerIdRef.current = e.pointerId;
+
+    const target = e.target as HTMLElement;
+    if (
+      target.closest("button") ||
+      target.closest("input") ||
+      target.closest('[role="checkbox"]')
+    )
+      return;
+
+    startPos.current = { x: e.clientX, y: e.clientY };
+
+    longPressTimer.current = setTimeout(() => {
+      onStartSelection?.();
+      if (navigator.vibrate) navigator.vibrate(50);
+
+      const targetEl = e.currentTarget as HTMLElement;
+      if (targetEl && targetEl.releasePointerCapture) {
+        try {
+          targetEl.releasePointerCapture(e.pointerId);
+        } catch (e) {}
+      }
+    }, 400);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (longPressTimer.current) {
+      const dx = Math.abs(e.clientX - startPos.current.x);
+      const dy = Math.abs(e.clientY - startPos.current.y);
+      if (dx > 10 || dy > 10) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handlePointerEnter = (e: React.PointerEvent) => {
+    onMoveSelection?.();
+  };
+
   const MAX_VISIBLE = 2;
   const MAX_LEVEL = 4;
-  const labels = taskLabels_data || [];
+  const labels = task.taskLabels || [];
   const visibleLabels = labels.slice(0, MAX_VISIBLE);
   const remainingCount = labels.length - MAX_VISIBLE;
   const hiddenLabels = labels.slice(MAX_VISIBLE);
@@ -231,21 +234,40 @@ export function BacklogTaskRow({
       <TableRow
         ref={setNodeRef}
         {...attributes}
-        style={style}
+        style={{
+          ...style,
+          touchAction: isSelectionDragging ? "none" : "pan-y",
+        }}
         className={cn(
-          "group cursor-pointer hover:bg-muted/50 transition-colors select-none",
+          "group cursor-pointer hover:bg-muted/50 transition-colors select-none p-2",
           isDragging &&
-            "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale"
+            "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale",
+          selected &&
+            "bg-primary/5 hover:bg-primary/15 data-[state=selected]:bg-primary/5 rounded-lg p-10"
         )}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseEnter={handleMouseEnterSelection}
-        onMouseLeave={() => setIsHovered(false)}
+        onClick={(e) => {
+          const target = e.target as HTMLElement;
+          if (isSelectionDragging) return;
+
+          if (
+            target.closest("button") ||
+            target.closest("input") ||
+            target.closest('[role="combobox"]') ||
+            target.closest('[role="checkbox"]')
+          ) {
+            return;
+          }
+          onRowClick?.(task);
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onPointerEnter={handlePointerEnter}
       >
         <TableCell className="w-full">
           <div
-            className="flex items-center gap-1 relative pr-1"
+            className="flex items-center gap-1 relative"
             style={{ paddingLeft: `${level * 24}px` }}
           >
             <Button
@@ -361,7 +383,7 @@ export function BacklogTaskRow({
               )}
               <LabelPopover
                 taskId={task.id}
-                initialSelectedLabels={taskLabels_data}
+                initialSelectedLabels={labels}
                 onSelectionChange={(newLabels) =>
                   onUpdateTask(task.id, {
                     labelIds: newLabels.map((l) => l.id),
@@ -481,6 +503,10 @@ export function BacklogTaskRow({
               onRowClick={onRowClick}
               onSelect={onSelect}
               onUpdateTask={onUpdateTask}
+              allTasks={allTasks}
+              isSelectionDragging={isSelectionDragging}
+              onStartSelection={onStartSelection}
+              onMoveSelection={onMoveSelection}
               level={level + 1} // Tăng level để thụt sâu hơn
             />
           ))}

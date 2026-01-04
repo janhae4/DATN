@@ -1,6 +1,7 @@
 import apiClient, { streamHelper } from "@/services/apiClient";
-import { Task, TaskLabel } from "@/types";
+import { Pagination, Task, TaskLabel } from "@/types";
 import { Priority } from "@/types/common/enums";
+import { update } from "lodash";
 
 // --- DTOs ---
 
@@ -24,6 +25,19 @@ export interface UpdateTaskDto extends Partial<Omit<CreateTaskDto, "projectId">>
   labelIds?: string[];
 }
 
+export interface GetTasksParams {
+  projectId: string;
+  search?: string;
+  assigneeIds?: string[];
+  priority?: Task['priority'][];
+  statusId?: string[];
+  epicId?: string[];
+  labelIds?: string[];
+  sprintId?: string[] | "null";
+  page?: number;
+  limit?: number;
+}
+
 // --- Service ---
 
 export const taskService = {
@@ -31,8 +45,8 @@ export const taskService = {
    * Lấy danh sách Task
    * GET /tasks?projectId=...
    */
-  getTasks: async (projectId: string): Promise<Task[]> => {
-    const response = await apiClient.get<Task[]>(`/tasks?projectId=${projectId}`);
+  getTasks: async (params: GetTasksParams): Promise<Pagination<Task>> => {
+    const response = await apiClient.get("/tasks", { params });
     return response.data;
   },
 
@@ -77,12 +91,21 @@ export const taskService = {
     return response.data;
   },
 
+  updateTasks: async (taskIds: string[], updates: UpdateTaskDto): Promise<Task[]> => {
+    const response = await apiClient.patch<Task[]>(`/tasks/bulk`, { taskIds, updates });
+    return response.data;
+  },
+
   /**
    * Xóa Task
    * DELETE /tasks/{id}
    */
   deleteTask: async (id: string): Promise<void> => {
     await apiClient.delete(`/tasks/${id}`);
+  },
+
+  deleteTasks: async (taskIds: string[]): Promise<void> => {
+    await apiClient.delete(`/tasks/bulk`, { data: { taskIds } });
   },
 
   /**

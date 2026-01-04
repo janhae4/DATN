@@ -40,24 +40,28 @@ export function StartSprintDialog({
   const { projectId } = useTaskManagementContext();
   const { updateSprint, isUpdating } = useSprints(projectId);
 
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
+    undefined
+  );
   const [duration, setDuration] = React.useState("custom");
 
   React.useEffect(() => {
     if (open) {
-      const startDate = sprint.startDate ? new Date(sprint.startDate) : new Date();
+      const startDate = sprint.startDate
+        ? new Date(sprint.startDate)
+        : new Date();
       const endDate = sprint.endDate ? new Date(sprint.endDate) : new Date();
-      
+
       // Default to 2 weeks if dates are invalid
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-         const start = new Date();
-         const end = new Date();
-         end.setDate(start.getDate() + 14);
-         setDateRange({ from: start, to: end });
-         setDuration("2w");
+        const start = new Date();
+        const end = new Date();
+        end.setDate(start.getDate() + 14);
+        setDateRange({ from: start, to: end });
+        setDuration("2w");
       } else {
-         setDateRange({ from: startDate, to: endDate });
-         // Calculate duration logic...
+        setDateRange({ from: startDate, to: endDate });
+        // Calculate duration logic...
       }
     }
   }, [open, sprint]);
@@ -73,27 +77,27 @@ export function StartSprintDialog({
     endDate.setDate(endDate.getDate() + days);
     setDateRange({ from: startDate, to: endDate });
   };
-    
+
   const handleDateRangeSelect = (range: DateRange | undefined) => {
-      setDateRange(range);
+    setDateRange(range);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dateRange?.from || !dateRange?.to) {
-        toast.error("Please select a date range");
-        return;
+      toast.error("Please select a date range");
+      return;
     }
 
     try {
       // Gọi API update status -> ACTIVE
       await updateSprint(sprint.id, {
-          // Mapping camelCase -> snake_case cho Backend DTO
-          start_date: dateRange.from.toISOString(),
-          end_date: dateRange.to.toISOString(),
-          status: SprintStatus.ACTIVE
+        // Mapping camelCase -> snake_case cho Backend DTO
+        start_date: dateRange.from.toISOString(),
+        end_date: dateRange.to.toISOString(),
+        status: SprintStatus.ACTIVE,
       });
-      
+
       toast.success(`Sprint "${sprint.title}" started!`);
       setOpen(false);
     } catch (error) {
@@ -117,7 +121,7 @@ export function StartSprintDialog({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-             <div className="grid gap-4">
+            <div className="grid gap-4">
               <div className="space-y-2">
                 <Label>Duration</Label>
                 <Select value={duration} onValueChange={handleDurationChange}>
@@ -145,7 +149,11 @@ export function StartSprintDialog({
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" type="button" onClick={() => setOpen(false)}>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isUpdating}>

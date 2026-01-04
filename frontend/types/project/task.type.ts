@@ -1,5 +1,6 @@
 // types/task.type.ts
 import { Priority } from "../common/enums";
+import { TaskLabel } from "./taskLabel.interface";
 
 export type Task = {
   id: string; // uuid
@@ -19,4 +20,5 @@ export type Task = {
   parentId?: string | null; // uuid (Task cha)
   createdAt: string; 
   updatedAt: string;
+  taskLabels: TaskLabel[];
 };

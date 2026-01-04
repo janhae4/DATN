@@ -11,7 +11,8 @@ import {
   Sse,
   Req,
   MessageEvent,
-  Inject
+  Inject,
+  Patch
 } from '@nestjs/common';
 import {
   CreateTaskDto,
@@ -26,6 +27,7 @@ import { TaskService } from './task.service';
 import { finalize, map, Observable } from 'rxjs';
 import type { Request } from 'express';
 import Redis from 'ioredis';
+import { GetTasksFilterDto } from './dto/get-task-filter.dto';
 
 @Controller('tasks')
 @UseGuards(RoleGuard)
@@ -36,36 +38,56 @@ export class TaskController {
   ) { }
 
   @Get("tasklabel")
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   getAllTaskLabel(@Query('projectId') projectId: string) {
     return this.taskService.getAllTaskLabel(projectId);
   }
 
   @Post()
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   create(@Body() createTaskDto: CreateTaskDto, @CurrentUser('id') id: string,) {
     return this.taskService.create({ ...createTaskDto, reporterId: id });
   }
 
   @Post('bulk')
-  createBulk(@Body() data: { tasks: CreateTaskDto[], epicTitle: string }) {
-    return this.taskService.createMany(data.tasks, data.epicTitle);
+  createBulk(
+    @Body() data: { tasks: CreateTaskDto[], epicTitle: string },
+    @CurrentUser('id') id: string
+  ) {
+    return this.taskService.createMany(data.tasks, data.epicTitle, id);
+  }
+
+  @Delete('bulk')
+  deleteBulk(
+    @Body() data: { taskIds: string[] },
+    @CurrentUser('id') id: string
+  ) {
+    return this.taskService.deleteMany(data.taskIds, id);
+  }
+
+  @Patch('bulk')
+  updateBulk(
+    @Body() data: { taskIds: string[], updates: UpdateTaskDto },
+    @CurrentUser('id') id: string
+  ) {
+    return this.taskService.updateMany(data.taskIds, data.updates, id);
   }
 
   @Get()
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   findAllByProjectId(
-    @Query('projectId') projectId: string,
+    @CurrentUser('id') userId: string,
+    @Query() filters: GetTasksFilterDto
   ) {
-    return this.taskService.findAllByProjectId(projectId);
+    return this.taskService.findAllByProjectId(userId, filters);
+  }
+
+  @Get('/project/:projectId/stat')
+  findAllByProject(
+    @Param('projectId') projectId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.getStatByProjectId(userId, projectId);
   }
 
   @Get(':id')
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   findOne(
     @Param('id') id: string,
   ) {
@@ -73,8 +95,6 @@ export class TaskController {
   }
 
   @Put(':id')
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   update(
     @Param('id') id: string,
     @Body() updateTaskDto: UpdateTaskDto,
@@ -83,8 +103,6 @@ export class TaskController {
   }
 
   @Delete(':id')
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   remove(
     @Param('id') id: string,
   ) {
@@ -92,8 +110,6 @@ export class TaskController {
   }
 
   @Post(':id/files')
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   addFiles(
     @Param('id') taskId: string,
     @Body() addFilesDto: { fileIds: string[] },
@@ -102,8 +118,6 @@ export class TaskController {
   }
 
   @Get(":id/labels")
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   findLabelsByTaskId(
     @Param('id') taskId: string,
   ) {
@@ -168,7 +182,7 @@ export class TaskController {
             },
           } as MessageEvent;
         }
-        
+
         const isNoSprint = !sprintId || sprintId === "";
 
         let assignedMemberId = data.memberId;

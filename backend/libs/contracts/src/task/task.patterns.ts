@@ -7,7 +7,9 @@ export const TASK_PATTERNS = {
   PROCESS_NLP: 'process_task_intent',
   CREATE: 'task.create',
   CREATE_MANY: 'task.createMany',
+  DELETE_MANY: 'task.deleteMany',
   UPDATE: 'task.update',
+  UPDATE_MANY: 'task.updateMany',
   REMOVE: 'task.remove',
   FIND_GOOGLE_EVENTS: 'task.findGoogleEvents',
   ADD_FILES: 'task.addFiles',
@@ -17,4 +19,5 @@ export const TASK_PATTERNS = {
   GET_ALL_TASK_LABEL: 'task.getAllTaskLabel',
   HANDLE_LABEL_DELETED: 'task.handleLabelDeleted',
   SUGGEST_TASK: 'task.suggestTask',
+  GET_STATS: 'task.getStats',
 };

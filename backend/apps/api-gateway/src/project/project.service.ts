@@ -3,7 +3,9 @@ import {
   CreateProjectDto,
   UpdateProjectDto,
   PROJECT_PATTERNS,
-  PROJECT_EXCHANGE, // <-- Nhớ import Exchange
+  PROJECT_EXCHANGE,
+  TASK_PATTERNS,
+  TASK_EXCHANGE, // <-- Nhớ import Exchange
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq'; // <-- Xài cái này
 import { unwrapRpcResult } from '../common/helper/rpc'; // <-- Xài cái helper xịn xò này
@@ -11,12 +13,25 @@ import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class ProjectService {
-  constructor(@Inject(PROJECT_EXCHANGE) private readonly client: ClientProxy) {}
+  constructor(
+    @Inject(PROJECT_EXCHANGE) private readonly client: ClientProxy,
+    private readonly amqpConnection: AmqpConnection,
+  ) { }
 
   // --- CREATE ---
   async create(createProjectDto: CreateProjectDto) {
     console.log('Creating project with data:', createProjectDto);
     return unwrapRpcResult(this.client.send(PROJECT_PATTERNS.CREATE, createProjectDto));
+  }
+
+  async getStat(id: string, userId: string) {
+    return unwrapRpcResult(
+      this.amqpConnection.request({
+        exchange: TASK_EXCHANGE,
+        routingKey: TASK_PATTERNS.GET_STATS,
+        payload: { userId, projectId: id },
+      })
+    );
   }
 
   // --- READ ---

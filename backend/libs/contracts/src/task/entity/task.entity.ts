@@ -3,12 +3,17 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { TaskLabel } from './task-label.entity';
 @Entity('tasks')
+@Index(['projectId', 'createdAt'])
+@Index(['projectId', 'listId', 'updatedAt'])
 export class Task {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -62,9 +67,16 @@ export class Task {
   @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;
 
-  @OneToMany(() => TaskLabel, (taskLabel) => taskLabel.task, { 
-    cascade: true 
+  @OneToMany(() => TaskLabel, (taskLabel) => taskLabel.task, {
+    cascade: true
   })
   taskLabels: TaskLabel[];
+
+  @ManyToOne(() => Task, (task) => task.children)
+  @JoinColumn({ name: 'parentId' })
+  parent: Task;
+
+  @OneToMany(() => Task, (task) => task.parent)
+  children: Task[];
 
 }

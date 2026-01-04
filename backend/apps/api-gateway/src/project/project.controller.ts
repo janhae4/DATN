@@ -21,12 +21,12 @@ import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 @Controller('project')
+@UseGuards(RoleGuard)
+@Roles(Role.ADMIN, Role.USER)
 export class ProjectController {
-  constructor(private readonly projectService: ProjectService) {}
+  constructor(private readonly projectService: ProjectService) { }
 
   @Post()
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
   create(
     @Body() createProjectDto: CreateProjectDto,
     @CurrentUser('id') id: string,
@@ -37,6 +37,13 @@ export class ProjectController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.projectService.findOne(id);
+  }
+
+  @Get(':id/stat')
+  getStat(@Param('id') id: string,
+    @CurrentUser('id') userId: string
+  ) {
+    return this.projectService.getStat(id, userId);
   }
 
   @Patch(':id')
