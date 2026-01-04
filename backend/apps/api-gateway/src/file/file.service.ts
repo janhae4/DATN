@@ -18,11 +18,12 @@ export class FileService {
         return unwrapRpcResult(response);
     }
 
-    async initiateUpload(fileName: string, userId: string, teamId?: string) {
+    async initiateUpload(fileName: string, fileType: string, userId: string, projectId?: string) {
         return this.sendRpcRequest(FILE_PATTERN.INITIAL_UPLOAD, {
             fileName,
+            fileType,
             userId,
-            teamId,
+            projectId,
         });
     }
 
@@ -30,14 +31,14 @@ export class FileService {
         fileId: string,
         newFileName: string,
         userId: string,
-        teamId?: string,
+        projectId?: string,
     ) {
-        console.log(fileId, newFileName, userId, teamId);
+        console.log(fileId, newFileName, userId, projectId);
         return await this.sendRpcRequest(FILE_PATTERN.INITIAL_UPDATE, {
             fileId,
             newFileName,
             userId,
-            teamId,
+            projectId,
         });
     }
 
@@ -45,59 +46,62 @@ export class FileService {
         fileId: string,
         newFileName: string,
         userId: string,
-        teamId?: string,
+        projectId?: string,
     ) {
         return this.sendRpcRequest(FILE_PATTERN.RENAME, {
             fileId,
             newFileName,
             userId,
-            teamId,
+            projectId,
         });
     }
 
-    async deleteFile(fileId: string, userId: string, teamId?: string) {
+    async deleteFile(fileId: string, userId: string, projectId?: string) {
         return this.sendRpcRequest(FILE_PATTERN.DELETE_FILE, {
             fileId,
             userId,
-            teamId,
+            projectId,
         });
     }
 
- async getFiles(
-        userId: string, 
-        teamId?: string, 
+    async getFiles(
+        userId: string,
+        projectId?: string,
         page: number = 1,  // Thêm tham số
         limit: number = 10 // Thêm tham số
     ) {
         return this.sendRpcRequest(FILE_PATTERN.GET_FILES, {
             userId,
-            teamId,
-            page, 
+            projectId,
+            page,
             limit,
         });
     }
 
-    async getDownloadUrl(fileId: string, userId: string, teamId?: string) {
+    async getDownloadUrl(fileId: string, userId: string, projectId?: string) {
         return this.sendRpcRequest(FILE_PATTERN.GET_DOWNLOAD_URL, {
             fileId,
             userId,
-            teamId,
+            projectId,
         })
     }
 
-    async getPreviewUrl(fileId: string, userId: string, teamId?: string) {
+    async getPreviewUrl(fileId: string, userId: string, projectId?: string) {
         return this.sendRpcRequest(FILE_PATTERN.GET_PREVIEW_URL, {
             fileId,
             userId,
-            teamId,
+            projectId,
         })
     }
 
-    async confirmUpload(fileId: string, userId: string, teamId?: string) {
-        return this.sendRpcRequest('file.confirm_upload', { 
+    async confirmUpload(fileId: string, userId: string, projectId?: string) {
+        return this.sendRpcRequest(FILE_PATTERN.CONFIRM_UPLOAD, {
             fileId,
             userId,
-            teamId,
+            projectId,
         });
+    }
+    async getFilesByIds(fileIds: string[]) {
+        return this.sendRpcRequest(FILE_PATTERN.GET_FILES_BY_IDS, { fileIds });
     }
 }

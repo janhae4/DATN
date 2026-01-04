@@ -20,70 +20,51 @@ import {
 } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useTeamMembers, useGetOrCreateDirectMessage } from "@/hooks/useTeam";
+import { useAddMember } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { useSearchUsers } from "@/hooks/useUsers";
+import { AxiosError } from "axios";
 
 interface AddMemberDialogProps {
   teamId: string | null;
   children?: React.ReactNode;
-  onSelectDiscussion?: (id: string | null) => void;
 }
 
 export function AddMemberDialog({
   teamId,
   children,
-  onSelectDiscussion,
 }: AddMemberDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  const { data: members, isLoading } = useTeamMembers(teamId);
   const { data: userProfile } = useUserProfile();
-  const getOrCreateDirectMessage = useGetOrCreateDirectMessage();
+  const addMemberMutation = useAddMember();
 
-  // --- LỌC DỮ LIỆU AN TOÀN ---
-  // 1. Lọc bỏ chính user hiện tại
-  // 2. QUAN TRỌNG: Lọc bỏ các member không có thông tin user (tránh lỗi undefined)
-  const availableMembers = React.useMemo(() => {
-    if (!members) return [];
-    
-    return members.filter(
-      (m) => 
-        m.user && // Kiểm tra user tồn tại
-        m.userId !== userProfile?.id // Không hiển thị chính mình
-    );
-  }, [members, userProfile?.id]);
+  // Search users NOT in the team
+  const { data: searchResults, isLoading } = useSearchUsers({
+    query: searchQuery,
+    teamId: teamId || undefined
+  });
 
-  // Lọc theo từ khóa tìm kiếm
-  const filteredMembers = React.useMemo(() => {
-    if (!searchQuery) return availableMembers;
-    const lowerQuery = searchQuery.toLowerCase();
-    return availableMembers.filter(
-      (m) =>
-        m.user.name.toLowerCase().includes(lowerQuery) ||
-        m.user.email.toLowerCase().includes(lowerQuery)
-    );
-  }, [availableMembers, searchQuery]);
 
-  const handleSelectMember = async (targetUserId: string) => {
-    if (!userProfile?.id) return;
+  const handleAddMember = async (targetUserId: string) => {
+    if (!userProfile?.id || !teamId) return;
 
     try {
-      // Tạo hoặc lấy đoạn chat DM
-      const discussion = await getOrCreateDirectMessage.mutateAsync({
-        currentUserId: userProfile.id,
-        targetUserId: targetUserId,
+      await addMemberMutation.mutateAsync({
+        teamId,
+        requesterId: userProfile.id,
+        memberIds: [targetUserId]
       });
 
-      if (discussion && onSelectDiscussion) {
-        onSelectDiscussion(discussion.id);
-      }
-      
-      setOpen(false); // Đóng modal
-    } catch (error) {
-      console.error("Failed to start conversation:", error);
-      toast.error("Failed to start conversation");
+      toast.success("Member added successfully");
+      setOpen(false);
+      setSearchQuery("");
+    } catch (error: any) {
+      console.error("Failed to add member:", error);
+      const errorMsg = (error as AxiosError<{ message: string }>)?.response?.data?.message || "Failed to add member";
+      toast.error(errorMsg);
     }
   };
 
@@ -98,61 +79,64 @@ export function AddMemberDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle>New Message</DialogTitle>
+          <DialogTitle>Add Team Member</DialogTitle>
           <DialogDescription>
-            Select a team member to start a direct message.
+            Search for users to add to your team.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="border-t">
           <Command shouldFilter={false} className="rounded-none border-none">
             <div className="px-3 py-2 border-b">
-                <div className="flex items-center gap-2 px-2">
-                    <Search className="h-4 w-4 text-muted-foreground opacity-50" />
-                    <input 
-                        className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Search people..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
+              <div className="flex items-center gap-2 px-2">
+                <Search className="h-4 w-4 text-muted-foreground opacity-50" />
+                <input
+                  className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Search by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
-            
+
             <CommandList className="max-h-[300px] p-2">
-              {isLoading ? (
+              {isLoading && searchQuery ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  Loading members...
+                  Searching users...
                 </div>
-              ) : filteredMembers.length === 0 ? (
-                <CommandEmpty>No members found.</CommandEmpty>
+              ) : !searchQuery ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Type to search users...
+                </div>
+              ) : searchResults?.length === 0 ? (
+                <CommandEmpty>No users found.</CommandEmpty>
               ) : (
-                <CommandGroup heading="Team Members">
-                  {filteredMembers.map((member) => (
+                <CommandGroup heading="Suggestions">
+                  {searchResults?.map((user) => (
                     <CommandItem
-                      key={member.id}
-                      value={member.user.id}
-                      onSelect={() => handleSelectMember(member.userId)}
+                      key={user.id}
+                      value={user.id}
+                      onSelect={() => handleAddMember(user.id)}
                       className="cursor-pointer rounded-md p-2"
                     >
                       <div className="flex items-center gap-3 w-full">
                         <Avatar className="h-9 w-9 border border-border">
-                          {/* Đã kiểm tra member.user ở trên nên an toàn */}
-                          <AvatarImage src={member.user.avatar || undefined} />
+                          <AvatarImage src={user.avatar || undefined} />
                           <AvatarFallback>
-                            {member.user.name?.substring(0, 2).toUpperCase() || "??"}
+                            {user.name?.substring(0, 2).toUpperCase() || "??"}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col flex-1 overflow-hidden">
                           <span className="font-medium truncate">
-                            {member.user.name}
+                            {user.name}
                           </span>
                           <span className="text-xs text-muted-foreground truncate">
-                            {member.user.email}
+                            {user.email}
                           </span>
                         </div>
-                        {member.isActive && (
-                            <div className="h-2 w-2 rounded-full bg-green-500" title="Online" />
-                        )}
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-primary">
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
                       </div>
                     </CommandItem>
                   ))}

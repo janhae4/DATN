@@ -43,6 +43,9 @@ export class Task {
   @Column('uuid', { array: true, nullable: true, default: [] })
   assigneeIds: string[];
 
+  @Column('varchar', { array: true, nullable: true, default: [] })
+  fileIds: string[];
+
   @Column({ type: 'timestamp', name: 'due_date', nullable: true })
   dueDate: Date | null;
 

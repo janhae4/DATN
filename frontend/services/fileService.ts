@@ -36,14 +36,14 @@ export interface PresignedUrlResponse {
 
 export const fileService = {
   // Lấy danh sách file
- getFiles: async (
-    teamId?: string, 
+  getFiles: async (
+    projectId?: string,
     page: number = 1,     // Mặc định trang 1
     limit: number = 10    // Mặc định 10 dòng/trang
   ): Promise<GetFilesResponse> => {
     const response = await apiClient.get<GetFilesResponse>("/files", {
-      params: { 
-        teamId, 
+      params: {
+        projectId,
         page,   // Gửi page lên backend
         limit   // Gửi limit lên backend
       },
@@ -54,38 +54,42 @@ export const fileService = {
   // Xin URL để upload
   // QUAN TRỌNG: Cần gửi cả fileType để Backend ký signature đúng với Content-Type
   initiateUpload: async (
-    data: { fileName: string; fileType: string }, 
-    teamId?: string
+    data: { fileName: string; fileType: string },
+    projectId?: string
   ): Promise<PresignedUrlResponse> => {
     const response = await apiClient.post<PresignedUrlResponse>(
-      "/files/initiate-upload", 
-      data, 
-      { params: { teamId } }
+      "/files/initiate-upload",
+      data,
+      { params: { projectId } }
     );
     return response.data;
   },
 
   // Lấy URL download
-  getDownloadUrl: async (fileId: string, teamId?: string): Promise<{ downloadUrl: string }> => {
+  getDownloadUrl: async (fileId: string, projectId?: string): Promise<{ downloadUrl: string }> => {
     const response = await apiClient.get<{ downloadUrl: string }>(
-      `/files/${fileId}/download`, 
-      { params: { teamId } }
+      `/files/${fileId}/download`,
+      { params: { projectId } }
     );
     return response.data;
   },
 
   // Lấy URL preview
-  getPreviewUrl: async (fileId: string, teamId?: string): Promise<{ viewUrl: string }> => {
+  getPreviewUrl: async (fileId: string, projectId?: string): Promise<{ viewUrl: string }> => {
     const response = await apiClient.get<{ viewUrl: string }>(
-      `/files/${fileId}/preview`, 
-      { params: { teamId } }
+      `/files/${fileId}/preview`,
+      { params: { projectId } }
     );
     return response.data;
   },
 
   // Xóa file
-  deleteFile: async (fileId: string, teamId?: string): Promise<void> => {
-    await apiClient.delete(`/files/${fileId}`, { params: { teamId } });
+  deleteFile: async (fileId: string, projectId?: string): Promise<void> => {
+    await apiClient.delete(`/files/${fileId}`, { params: { projectId } });
+  },
+
+  confirmUpload: async (fileId: string): Promise<void> => {
+    await apiClient.post(`/files/${fileId}/confirm`);
   },
 
   // Upload trực tiếp lên MinIO/S3

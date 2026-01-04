@@ -130,6 +130,25 @@ export const taskService = {
   addFileToTask: async (taskId: string, fileId: string): Promise<void> => {
     await apiClient.post(`/tasks/${taskId}/files`, { fileIds: [fileId] });
   },
+
+  /**
+   * Lấy danh sách File của 1 Task cụ thể
+   * GET /tasks/{id}/files
+   */
+  getFilesByTaskId: async (taskId: string): Promise<any[]> => {
+    // Return type should be Attachment[] or IFile[] but keeping any for flexibility as backend is unsure
+    const response = await apiClient.get<any[]>(`/tasks/${taskId}/files`);
+    return response.data;
+  },
+
+  /**
+   * Remove file from task
+   * DELETE /tasks/{id}/files/{fileId}
+   */
+  removeFileFromTask: async (taskId: string, fileId: string): Promise<void> => {
+    await apiClient.delete(`/tasks/${taskId}/files/${fileId}`);
+  },
+
   /**
    * Remove label from task
    * DELETE /tasks/{id}/label?labelId=...

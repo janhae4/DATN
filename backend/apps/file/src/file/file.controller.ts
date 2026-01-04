@@ -21,7 +21,7 @@ export class FileController {
       payload.fileId,
       payload.newFileName,
       payload.userId,
-      payload.teamId,
+      payload.projectId,
     );
   }
 
@@ -35,7 +35,7 @@ export class FileController {
     return await this.fileService.createPreSignedUrl(
       payload.fileName,
       payload.userId,
-      payload.teamId,
+      payload.projectId,
     );
   }
 
@@ -49,7 +49,7 @@ export class FileController {
     return await this.fileService.deleteFile(
       payload.fileId,
       payload.userId,
-      payload.teamId,
+      payload.projectId,
     );
   }
 
@@ -61,13 +61,13 @@ export class FileController {
   })
   async getFiles(payload: {
     userId: string,
-    teamId?: string,
-    page?: number,  
-    limit?: number   
+    projectId?: string,
+    page?: number,
+    limit?: number
   }) {
     return await this.fileService.getFiles(
       payload.userId,
-      payload.teamId,
+      payload.projectId,
       payload.page,
       payload.limit
     );
@@ -79,9 +79,9 @@ export class FileController {
     queue: FILE_PATTERN.RENAME,
     errorHandler: customErrorHandler
   })
-  async renameFile(payload: { fileId: string, newFileName: string, userId: string, teamId?: string }) {
-    const { fileId, newFileName, userId, teamId } = payload;
-    return await this.fileService.renameFile(fileId, newFileName, userId, teamId);
+  async renameFile(payload: { fileId: string, newFileName: string, userId: string, projectId?: string }) {
+    const { fileId, newFileName, userId, projectId } = payload;
+    return await this.fileService.renameFile(fileId, newFileName, userId, projectId);
   }
 
   @RabbitRPC({
@@ -90,10 +90,10 @@ export class FileController {
     queue: FILE_PATTERN.INITIAL_UPDATE,
     errorHandler: customErrorHandler
   })
-  async initiateUpdate(payload: { fileId: string, newFileName: string, userId: string, teamId?: string }) {
-    const { fileId, newFileName, userId, teamId } = payload;
-    console.log("initiateUpdate", fileId, newFileName, userId, teamId);
-    return await this.fileService.createPreSignedUpdateUrl(fileId, newFileName, userId, teamId);
+  async initiateUpdate(payload: { fileId: string, newFileName: string, userId: string, projectId?: string }) {
+    const { fileId, newFileName, userId, projectId } = payload;
+    console.log("initiateUpdate", fileId, newFileName, userId, projectId);
+    return await this.fileService.createPreSignedUpdateUrl(fileId, newFileName, userId, projectId);
   }
 
   @RabbitSubscribe({
@@ -113,8 +113,8 @@ export class FileController {
     queue: FILE_PATTERN.GET_PREVIEW_URL,
     errorHandler: customErrorHandler
   })
-  async getFileStream(payload: { fileId: string, userId: string, teamId?: string }) {
-    return await this.fileService.getViewUrl(payload.fileId, payload.userId, payload.teamId);
+  async getFileStream(payload: { fileId: string, userId: string, projectId?: string }) {
+    return await this.fileService.getViewUrl(payload.fileId, payload.userId, payload.projectId);
   }
 
   @RabbitRPC({
@@ -123,8 +123,28 @@ export class FileController {
     queue: FILE_PATTERN.GET_DOWNLOAD_URL,
     errorHandler: customErrorHandler
   })
-  async downloadFile(payload: { fileId: string, userId: string, teamId?: string }) {
-    return await this.fileService.getDownloadUrl(payload.fileId, payload.userId, payload.teamId);
+  async downloadFile(payload: { fileId: string, userId: string, projectId?: string }) {
+    return await this.fileService.getDownloadUrl(payload.fileId, payload.userId, payload.projectId);
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.GET_FILES_BY_IDS,
+    queue: FILE_PATTERN.GET_FILES_BY_IDS,
+    errorHandler: customErrorHandler
+  })
+  async getFilesByIds(payload: { fileIds: string[] }) {
+    return await this.fileService.getFilesByIds(payload.fileIds);
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.CONFIRM_UPLOAD,
+    queue: FILE_PATTERN.CONFIRM_UPLOAD,
+    errorHandler: customErrorHandler
+  })
+  async confirmUpload(payload: { fileId: string, userId: string, projectId?: string }) {
+    return await this.fileService.confirmUpload(payload.fileId, payload.userId, payload.projectId);
   }
 
   @RabbitSubscribe({
@@ -138,13 +158,13 @@ export class FileController {
     fileName: string,
     status: FileStatus,
     userId: string,
-    teamId?: string
+    projectId?: string
   }) {
     console.log(payload);
     return await this.fileService.handleFileStatus(
       payload.fileId,
       payload.status,
-      payload.teamId
+      payload.projectId
     );
   }
 }

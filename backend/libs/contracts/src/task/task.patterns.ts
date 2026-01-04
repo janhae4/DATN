@@ -18,6 +18,5 @@ export const TASK_PATTERNS = {
   FIND_ALL_LABELS_BY_TASK_ID: 'task.findAllLabelsByTaskId',
   GET_ALL_TASK_LABEL: 'task.getAllTaskLabel',
   HANDLE_LABEL_DELETED: 'task.handleLabelDeleted',
-  SUGGEST_TASK: 'task.suggestTask',
-  GET_STATS: 'task.getStats',
+  REMOVE_FILE: 'task.removeFile',
 };

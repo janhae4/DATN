@@ -18,6 +18,7 @@ interface DateRangePickerProps {
   onRangeSelect: (range: DateRange | undefined) => void
   disabled?: boolean
   className?: string
+  align?: "start" | "center" | "end"
 }
 
 export function DateRangePicker({
@@ -25,6 +26,7 @@ export function DateRangePicker({
   onRangeSelect,
   disabled = false,
   className,
+  align = "start",
 }: DateRangePickerProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -61,7 +63,7 @@ export function DateRangePicker({
         // "Quay xe": Swap tụi nó lại
         rangeToSet = { from: selectedRange.to, to: selectedRange.from }
       }
-      
+
       // Đã chọn xong 2 ngày -> Đóng popover
       setOpen(false)
 
@@ -110,7 +112,7 @@ export function DateRangePicker({
           <CalendarIcon className="ml-2 h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+      <PopoverContent className="w-auto overflow-hidden p-0" align={align}>
         {/* --- 2. SỬA onSelect VÀ BỎ onDayClick --- */}
         <Calendar
           mode="range"

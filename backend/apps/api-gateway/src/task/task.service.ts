@@ -124,6 +124,14 @@ export class TaskService {
     }));
   }
 
+  async removeFile(taskId: string, fileId: string) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.REMOVE_FILE,
+      payload: { taskId, fileId },
+    }));
+  }
+
   async findLabelsByTaskId(taskId: string) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,

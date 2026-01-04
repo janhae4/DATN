@@ -37,6 +37,7 @@ import {
   Loader2,
   Send,
   X,
+  ArrowRight
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -45,6 +46,7 @@ import { toast } from "sonner"
 
 import { useGmail } from "@/hooks/useGmail";
 import { GmailMessage } from "@/services/gmailService";
+import { isGoogleLinked, linkGoogleAccount } from "@/services/authService";
 
 // Helpers
 const truncateText = (text: string, maxLength: number) => {
@@ -223,6 +225,23 @@ export function EmailBox() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeData, setComposeData] = useState<any>(null);
 
+  const [isLinked, setIsLinked] = useState<boolean | null>(null);
+  const [checkingLink, setCheckingLink] = useState(true);
+
+  useEffect(() => {
+    const checkLink = async () => {
+      try {
+        const linked = await isGoogleLinked();
+        setIsLinked(linked);
+      } catch (e) {
+        setIsLinked(false);
+      } finally {
+        setCheckingLink(false);
+      }
+    };
+    checkLink();
+  }, []);
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
     if (scrollHeight - scrollTop <= clientHeight + 50) { // Load more when near bottom
@@ -304,7 +323,29 @@ export function EmailBox() {
         </CardHeader>
 
         <CardContent>
-          {loading ? (
+          {checkingLink ? (
+            <div className="flex h-[250px] items-center justify-center flex-col gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm font-medium text-muted-foreground animate-pulse">Verifying connection...</p>
+            </div>
+          ) : !isLinked ? (
+            <div className="h-[250px] flex flex-col items-center justify-center text-center p-4 space-y-4 animate-in fade-in duration-500">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold tracking-tight">Connect Gmail</h3>
+                <p className="text-sm text-muted-foreground max-w-[250px] mx-auto">
+                  Sync your emails to manage tasks and communications directly from here.
+                </p>
+              </div>
+
+              <Button
+                onClick={linkGoogleAccount}
+                className="rounded-full font-bold shadow-lg"
+              >
+                Connect Google Account
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          ) : loading ? (
             <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
           ) : error ? (
             <div className="text-red-500 text-sm">{error}</div>

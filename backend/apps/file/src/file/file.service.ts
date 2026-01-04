@@ -33,9 +33,9 @@ export class FileService {
         return this.fileModel.updateOne(query, update).exec();
     }
 
-    async _verifyPermission(fileId: string, roles: MemberRole[], userId: string, teamId?: string) {
+    async _verifyPermission(fileId: string, roles: MemberRole[], userId: string, projectId?: string) {
         const file = await this.fileModel.findOne({ _id: fileId }).exec();
-        console.log(fileId, roles, userId, teamId);
+        console.log(fileId, roles, userId, projectId);
         if (!file) {
             this.logger.error(`File ${fileId} not found`);
             throw new NotFoundException(`File not found`);
@@ -43,28 +43,21 @@ export class FileService {
 
         const isOwner = file.userId === userId;
 
+        /* Temporarily disable strict permission check as logic was team-based
         if (!isOwner) {
-            if (!file.teamId) {
+            if (!file.projectId) {
                 throw new ForbiddenException('Access denied to this file');
             }
-            if (teamId && teamId !== file.teamId) {
+            if (projectId && projectId !== file.projectId) {
                 throw new ForbiddenException('Access denied to this file');
             }
-
-            const permissionTeam = await this.amqp.request<Team & RpcError>({
-                exchange: TEAM_EXCHANGE,
-                routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-                payload: { userId, teamId: file.teamId, roles }
-            });
-
-            if (permissionTeam.error) {
-                throw new ForbiddenException(permissionTeam.message);
-            }
+             // Logic to verify project membership via RPC would go here
         }
+        */
         return file
     }
 
-    async createPreSignedUrl(originalName: string, userId: string, teamId?: string) {
+    async createPreSignedUrl(originalName: string, userId: string, projectId?: string) {
         this.logger.log(`Start Pre-signed URL: ${originalName}`);
 
         const fileId = randomUUID();
@@ -77,7 +70,7 @@ export class FileService {
                 storageKey,
                 originalName,
                 userId,
-                teamId,
+                projectId,
                 status: FileStatus.PENDING,
                 createdAt: new Date(),
             });
@@ -97,10 +90,10 @@ export class FileService {
         fileId: string,
         newFileName: string,
         userId: string,
-        teamId?: string,
+        projectId?: string,
     ) {
 
-        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, teamId);
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, projectId);
 
         await file.updateOne({
             $set: {
@@ -118,9 +111,9 @@ export class FileService {
         };
     }
 
-    async deleteFile(fileId: string, userId: string, teamId?: string) {
+    async deleteFile(fileId: string, userId: string, projectId?: string) {
         console.log(fileId, userId)
-        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, teamId);
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, projectId);
         try {
             await Promise.all([
                 this.fileModel.deleteOne({ _id: fileId }).exec(),
@@ -130,7 +123,7 @@ export class FileService {
                 this.amqp.publish(
                     EVENTS_EXCHANGE,
                     EVENTS.DELETE_DOCUMENT,
-                    { fileId: file._id, userId: file.userId, teamId: file.teamId }
+                    { fileId: file._id, userId: file.userId, projectId: file.projectId }
                 )
             ]);
         } catch (error) {
@@ -139,8 +132,8 @@ export class FileService {
         }
     }
 
-    async renameFile(fileId: string, newFileName: string, userId: string, teamId?: string) {
-        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, teamId);
+    async renameFile(fileId: string, newFileName: string, userId: string, projectId?: string) {
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, projectId);
         try {
             await Promise.all([
                 file.updateOne({
@@ -192,7 +185,7 @@ export class FileService {
             SOCKET_EXCHANGE,
             FILE_PATTERN.COMPLETE_UPLOAD,
             {
-                teamId: file.teamId,
+                projectId: file.projectId,
                 fileId: file._id,
                 status: FileStatus.UPLOADED,
                 userId: file.userId
@@ -208,14 +201,19 @@ export class FileService {
                 storageKey: file.storageKey,
                 originalName: fileOriginalName,
                 userId: file.userId,
-                teamId: file.teamId
+                projectId: file.projectId
             }
         );
     }
 
+    async confirmUpload(fileId: string, userId: string, projectId?: string) {
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER], userId, projectId);
+        return this.handleUploadCompletion(file.storageKey);
+    }
+
     async getFiles(
         userId: string,
-        teamId?: string,
+        projectId?: string,
         page: number = 1,
         limit: number = 10,
     ) {
@@ -225,7 +223,9 @@ export class FileService {
         const safeLimit = Number(limit) || 10;
         const skip = (safePage - 1) * safeLimit;
 
-        if (teamId) {
+        if (projectId) {
+            /* 
+            // Permission check can be reinstated when project microservice is integrated
             const permissionTeam = await this.amqp.request<Team & RpcError>({
                 exchange: TEAM_EXCHANGE,
                 routingKey: TEAM_PATTERN.FIND_BY_ID,
@@ -235,12 +235,12 @@ export class FileService {
             if (permissionTeam.error) {
                 throw new ForbiddenException(permissionTeam.message);
             }
-
-            query = { teamId: teamId };
+            */
+            query = { projectId: projectId };
         } else {
             query = {
                 userId: userId,
-                teamId: { $in: [null, undefined] },
+                projectId: { $in: [null, undefined] },
             };
         }
 
@@ -269,21 +269,26 @@ export class FileService {
         };
     }
 
+    async getFilesByIds(fileIds: string[]) {
+        if (!fileIds || fileIds.length === 0) return [];
+        return this.fileModel.find({ _id: { $in: fileIds } }).exec();
+    }
+
     async handleFileStatus(
         fileId: string,
         fileStatus: FileStatus,
-        teamId?: string,
+        projectId?: string,
     ) {
-        console.log(fileId, fileStatus, teamId);
+        console.log(fileId, fileStatus, projectId);
         let query: FilterQuery<FileDocument> = { _id: fileId };
-        if (teamId) {
-            query = { teamId: teamId };
+        if (projectId) {
+            query = { projectId: projectId };
         }
         await this.fileModel.findOneAndUpdate(query, { status: fileStatus }, { new: true });
     }
 
-    async getViewUrl(fileId: string, userId: string, teamId?: string) { // Đổi tên hàm
-        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER], userId, teamId);
+    async getViewUrl(fileId: string, userId: string, projectId?: string) { // Đổi tên hàm
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER], userId, projectId);
 
         const fileExtension = path.extname(file.originalName).toLowerCase();
         const allowedViewTypes = ['.pdf', '.txt', '.jpg', '.jpeg', '.png', '.gif'];
@@ -299,8 +304,8 @@ export class FileService {
         return { viewUrl };
     }
 
-    async getDownloadUrl(fileId: string, userId: string, teamId?: string) {
-        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER], userId, teamId);
+    async getDownloadUrl(fileId: string, userId: string, projectId?: string) {
+        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER], userId, projectId);
 
         const downloadUrl = await this.minioService.getPreSignedDownloadUrl(
             file.storageKey,

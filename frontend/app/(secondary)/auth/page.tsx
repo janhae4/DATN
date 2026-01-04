@@ -10,7 +10,7 @@ import { SignupForm } from "@/components/auth/signupForm";
 import loginImage from "@/public/assets/login_signup_resources/auth_img_dark.jpg";
 
 export default function AuthPage() {
- 
+
   const [isLoginView, setIsLoginView] = useState(true);
 
   useEffect(() => {
@@ -26,9 +26,8 @@ export default function AuthPage() {
     <div className="flex h-screen">
       {/* Form Section: Di chuyển dựa trên state */}
       <div
-        className={`${styles.form_section} ${
-          !isLoginView ? styles.form_section_signup : ""
-        }`}
+        className={`${styles.form_section} ${!isLoginView ? styles.form_section_signup : ""
+          }`}
       >
         <div className={styles.form_wrapper}>
           {/* Truyền hàm toggleView vào props */}
@@ -39,9 +38,8 @@ export default function AuthPage() {
 
       {/* Image Section: Di chuyển ngược lại */}
       <div
-        className={`${styles.image_section} ${
-          !isLoginView ? styles.image_section_signup : ""
-        }`}
+        className={`${styles.image_section} ${!isLoginView ? styles.image_section_signup : ""
+          }`}
       >
         <Image
           src={loginImage}

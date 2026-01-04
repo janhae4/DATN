@@ -177,11 +177,22 @@ export class TasksController {
 
   @RabbitRPC({
     exchange: TASK_EXCHANGE,
-    routingKey: TASK_PATTERNS.SUGGEST_TASK,
-    queue: TASK_PATTERNS.SUGGEST_TASK,
+    routingKey: TASK_PATTERNS.REMOVE_FILE,
+    queue: TASK_PATTERNS.REMOVE_FILE,
     errorHandler: customErrorHandler,
   })
-  suggestTask(payload: { userId: string; query: string, projectId: string, teamId: string, sprintId: string }) {
-    return this.tasksService.suggestTask(payload.userId, payload.query, payload.projectId, payload.sprintId, payload.teamId);
+  removeFile(payload: { taskId: string; fileId: string }) {
+    return this.tasksService.removeFile(payload.taskId, payload.fileId);
   }
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.ADD_FILES,
+    queue: TASK_PATTERNS.ADD_FILES,
+    errorHandler: customErrorHandler,
+  })
+  addFiles(payload: { taskId: string; fileIds: string[] }) {
+    return this.tasksService.addFiles(payload.taskId, payload.fileIds);
+  }
+
 }

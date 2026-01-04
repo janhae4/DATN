@@ -20,25 +20,25 @@ const getMimeTypeByExtension = (fileName: string): string => {
 };
 
 // 1. Nhận thêm tham số page và limit
-export function useFiles(teamId?: string, page: number = 1, limit: number = 10) {
+export function useFiles(projectId?: string, page: number = 1, limit: number = 10) {
   const queryClient = useQueryClient();
-  
+
   // 2. QueryKey phải chứa page và limit để cache riêng từng trang
-  const queryKey = ["files", teamId || "personal", page, limit];
+  const queryKey = ["files", projectId || "personal", page, limit];
 
   const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey,
-    queryFn: () => fileService.getFiles(teamId, page, limit),
+    queryFn: () => fileService.getFiles(projectId, page, limit),
     staleTime: 1000 * 60 * 5, // 5 phút
     placeholderData: keepPreviousData, // QUAN TRỌNG: Giữ data trang cũ khi đang fetch trang mới (UX mượt hơn)
-    
+
     // 3. Select: Transform data nhưng KHÔNG ĐƯỢC vứt pagination đi
     select: (response: GetFilesResponse) => {
       const mappedFiles: Attachment[] = response.data.map((file) => {
         return {
           id: file._id,
           fileName: file.originalName,
-          fileSize: file.size, 
+          fileSize: file.size,
           fileType: file.mimetype || getMimeTypeByExtension(file.originalName),
           uploadedById: file.userId || "System",
           uploadedAt: file.createdAt,
@@ -47,7 +47,7 @@ export function useFiles(teamId?: string, page: number = 1, limit: number = 10) 
           status: file.status
         };
       });
-      
+
       return {
         files: mappedFiles,
         pagination: response.pagination
@@ -61,14 +61,14 @@ export function useFiles(teamId?: string, page: number = 1, limit: number = 10) 
       const { uploadUrl, fileId } = await fileService.initiateUpload({
         fileName: file.name,
         fileType: file.type // BẮT BUỘC CÓ
-      }, teamId);
-      
+      }, projectId);
+
       await fileService.uploadFileToMinIO(uploadUrl, file);
       return fileId;
     },
     onSuccess: () => {
       // Invalidate toàn bộ cache liên quan đến teamId (bất kể trang nào)
-      queryClient.invalidateQueries({ queryKey: ["files", teamId || "personal"] });
+      queryClient.invalidateQueries({ queryKey: ["files", projectId || "personal"] });
       toast.success("Tải lên thành công!");
     },
     onError: (error: any) => {
@@ -78,9 +78,9 @@ export function useFiles(teamId?: string, page: number = 1, limit: number = 10) 
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (fileId: string) => fileService.deleteFile(fileId, teamId),
+    mutationFn: (fileId: string) => fileService.deleteFile(fileId, projectId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["files", teamId || "personal"] });
+      queryClient.invalidateQueries({ queryKey: ["files", projectId || "personal"] });
       toast.success("Đã xóa tập tin");
     },
     onError: () => {
@@ -90,7 +90,7 @@ export function useFiles(teamId?: string, page: number = 1, limit: number = 10) 
 
   const downloadFile = async (fileId: string) => {
     try {
-      const { downloadUrl } = await fileService.getDownloadUrl(fileId, teamId);
+      const { downloadUrl } = await fileService.getDownloadUrl(fileId, projectId);
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', '');
@@ -104,7 +104,7 @@ export function useFiles(teamId?: string, page: number = 1, limit: number = 10) 
 
   const previewFile = async (fileId: string): Promise<string | null> => {
     try {
-      const { viewUrl } = await fileService.getPreviewUrl(fileId, teamId);
+      const { viewUrl } = await fileService.getPreviewUrl(fileId, projectId);
       return viewUrl || null;
     } catch (err) {
       toast.error("Không thể xem trước tập tin");
@@ -118,13 +118,13 @@ export function useFiles(teamId?: string, page: number = 1, limit: number = 10) 
     pagination: data?.pagination || null, // Trả về pagination cho UI dùng
     isLoading,
     isPlaceholderData, // Cờ này để UI biết đang load trang kế tiếp (có thể làm mờ bảng)
-    
+
     uploadFile: uploadMutation.mutateAsync,
     isUploading: uploadMutation.isPending,
-    
+
     deleteFile: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
-    
+
     downloadFile,
     previewFile,
     refreshFiles: () => queryClient.invalidateQueries({ queryKey })

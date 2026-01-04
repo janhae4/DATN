@@ -5,12 +5,26 @@ import {
   NotificationUpdateDto,
   NOTIFICATION_PATTERN,
   NOTIFICATION_EXCHANGE,
+  EVENTS,
+  EVENTS_EXCHANGE,
+  EVENTS_NOTIFICATION_QUEUE,
+
 } from '@app/contracts';
+import type { AddMemberEventPayload } from '@app/contracts';
 import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 
 @Controller('notification')
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) { }
+
+  @RabbitRPC({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.ADD_MEMBER,
+    queue: EVENTS_NOTIFICATION_QUEUE,
+  })
+  handleTeamAddMember(payload: AddMemberEventPayload) {
+    this.notificationService.handleTeamAddMember(payload);
+  }
 
 
   @RabbitRPC({

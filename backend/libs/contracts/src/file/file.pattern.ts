@@ -9,12 +9,13 @@ export const FILE_PATTERN = {
     GET_FILE_BY_USER_ID: 'file.get.userId',
     GET_FILE_BY_TEAM_ID: 'file.get.teamId',
     GET_FILES: 'file.get.all',
-    GET_PREVIEW_URL : 'file.preview.url',
+    GET_PREVIEW_URL: 'file.preview.url',
     GET_DOWNLOAD_URL: 'file.download.url',
     INITIAL_UPLOAD: 'file.initial.upload',
     INITIAL_UPDATE: 'file.initial.update',
     COMPLETE_UPLOAD: 'file.complete.upload',
     COMPLETE_UPDATE: 'file.complete.update',
     FILE_STATUS: 'file.status',
-
+    GET_FILES_BY_IDS: 'file.get.ids',
+    CONFIRM_UPLOAD: 'file.confirm_upload',
 }

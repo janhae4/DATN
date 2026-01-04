@@ -19,7 +19,7 @@ export class File {
     userId: string;
 
     @Prop({ index: true })
-    teamId?: string;
+    projectId?: string;
 
     @Prop()
     mimetype: string;

@@ -28,13 +28,15 @@ import { finalize, map, Observable } from 'rxjs';
 import type { Request } from 'express';
 import Redis from 'ioredis';
 import { GetTasksFilterDto } from './dto/get-task-filter.dto';
+import { FileService } from '../file/file.service';
 
 @Controller('tasks')
 @UseGuards(RoleGuard)
 @Roles(Role.USER, Role.ADMIN)
 export class TaskController {
-  constructor(private readonly taskService: TaskService,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis
+  constructor(
+    private readonly taskService: TaskService,
+    private readonly fileService: FileService
   ) { }
 
   @Get("tasklabel")
@@ -117,7 +119,30 @@ export class TaskController {
     return this.taskService.addFiles(taskId, addFilesDto.fileIds);
   }
 
+  @Delete(':id/files/:fileId')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  removeFile(
+    @Param('id') taskId: string,
+    @Param('fileId') fileId: string,
+  ) {
+    return this.taskService.removeFile(taskId, fileId);
+  }
+
+  @Get(':id/files')
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
+  async getTaskFiles(@Param('id') taskId: string) {
+    const task = await this.taskService.findOne(taskId);
+    if (!task || !task.fileIds || task.fileIds.length === 0) {
+      return [];
+    }
+    return this.fileService.getFilesByIds(task.fileIds);
+  }
+
   @Get(":id/labels")
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
   findLabelsByTaskId(
     @Param('id') taskId: string,
   ) {

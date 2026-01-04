@@ -208,6 +208,7 @@ export class TeamService {
         id: u.id,
         name: u.name,
         avatar: u.avatar,
+        email: u.email,
       })),
     ];
 
@@ -335,6 +336,7 @@ export class TeamService {
           id: u.id,
           name: u.name,
           avatar: u.avatar,
+          email: u.email,
         })),
       ];
 
@@ -404,6 +406,7 @@ export class TeamService {
       const cachedData = {
         name: user.name,
         avatar: user.avatar,
+        email: user.email,
       };
       cachedUsers.push({ ...cachedData, id });
       return memberRepo.create({
@@ -837,16 +840,70 @@ export class TeamService {
       return [];
     }
 
-    const userIds = membersFromDb.map(m => m.userId);
+    const memberIds = membersFromDb.map((m) => m.userId);
 
-    const membersInfo: Partial<User>[] = unwrapRpcResult(await this.amqp.request({
-      exchange: USER_EXCHANGE,
-      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-      payload: { userIds }
-    }));
+    // 1. Thử lấy từ Cache trước
+    let usersFromCache: EventUserSnapshot[] = [];
+    try {
+      usersFromCache = await this.amqp.request<EventUserSnapshot[]>({
+        exchange: REDIS_EXCHANGE,
+        routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
+        payload: memberIds,
+        timeout: 2000,
+      });
+    } catch (cacheError) {
+      this.logger.warn(
+        `Failed to get profiles from cache for ${teamId}.`,
+        cacheError,
+      );
+    }
 
-    const result = membersFromDb.map(member => {
-      const profile = membersInfo.find(u => u.id === member.userId);
+    // 2. Tìm những ID bị thiếu trong Cache
+    const foundInCacheIds = new Set(usersFromCache.map((u) => u.id));
+    const missingIds = memberIds.filter((id) => !foundInCacheIds.has(id));
+
+    let usersFromDb: User[] = [];
+
+    // 3. Nếu thiếu, gọi sang User Service để lấy
+    if (missingIds.length > 0) {
+      this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from User Service...`);
+      try {
+        const result = await this.amqp.request<User[]>({
+          exchange: USER_EXCHANGE,
+          routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+          payload: { userIds: missingIds },
+        });
+        usersFromDb = Array.isArray(result) ? result : (result ? [result] : []);
+
+        // 4. Cập nhật lại vào Cache để lần sau nhanh hơn
+        if (usersFromDb.length > 0) {
+          this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, {
+            users: usersFromDb,
+          });
+        }
+      } catch (rpcError) {
+        this.logger.error(`Failed to fetch users from User Service`, rpcError);
+      }
+    }
+
+    // 5. Gộp danh sách từ Cache và DB
+    const allFoundUsers = [
+      ...usersFromCache,
+      ...usersFromDb.map((u) => ({
+        id: u.id,
+        name: u.name,
+        avatar: u.avatar,
+      })),
+    ];
+
+    // Tạo Map để lookup nhanh
+    const profileMap = new Map(allFoundUsers.map((p) => [p.id, p]));
+
+    const combinedMembers = membersFromDb.map((member) => {
+      const cachedUser = profileMap.get(member.userId) || {
+        name: 'Unknown',
+        avatar: null,
+      };
 
       return {
         id: member.userId,
