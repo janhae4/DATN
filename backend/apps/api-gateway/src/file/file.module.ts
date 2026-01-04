@@ -14,12 +14,13 @@ import { AuthModule } from '../auth/auth.module';
       useFactory: (config: ClientConfigService) => ({
         uri: config.getRMQUrl(),
         exchanges: [
-          { name: FILE_EXCHANGE, type: 'direct', options: { durable: true }},
+          { name: FILE_EXCHANGE, type: 'direct', options: { durable: true } },
         ],
       })
     })
   ],
   controllers: [FileController],
   providers: [FileService],
+  exports: [FileService],
 })
-export class FileModule {}
+export class FileModule { }

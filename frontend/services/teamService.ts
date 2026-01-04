@@ -12,7 +12,7 @@ export interface CreateTeamDto {
   memberIds?: string[];
 }
 
-export interface UpdateTeamDto extends Partial<CreateTeamDto> {}
+export interface UpdateTeamDto extends Partial<CreateTeamDto> { }
 
 export interface AddMemberDto {
   requesterId: string; // ID của người đang thực hiện hành động (Admin/Owner)
@@ -40,7 +40,7 @@ export interface TransferOwnershipDto {
 export interface ChangeRoleMemberDto {
   requesterId: string;
   teamId: string;
-  targetId: string; 
+  targetId: string;
   newRole: MemberRole;
 }
 
@@ -48,7 +48,7 @@ export interface ChangeRoleMemberDto {
 
 export const teamService = {
 
-  
+
   // Get teams for the current user
   getTeams: async (): Promise<(Team & { role: string })[]> => {
     const response = await apiClient.get<Team[]>('/teams/me');
@@ -86,7 +86,8 @@ export const teamService = {
 
   // Add member to team
   addMember: async (payload: AddMemberDto): Promise<void> => {
-    await apiClient.post(`/teams/${payload.teamId}/member`, payload);
+    const { teamId, memberIds } = payload;
+    await apiClient.post(`/teams/${teamId}/member`, { memberIds });
   },
 
   // Remove member from team
@@ -144,7 +145,7 @@ export const teamService = {
 
   getOrCreateDirectMessage: async (targetUserId: string): Promise<Discussion> => {
     const response = await apiClient.post<Discussion>('/discussions/direct', {
-      targetUserId
+      partnerId: targetUserId
     });
     return response.data;
   },

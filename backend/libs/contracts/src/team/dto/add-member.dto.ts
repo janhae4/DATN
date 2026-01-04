@@ -1,13 +1,13 @@
-import { ArrayMinSize, IsArray, IsNotEmpty, IsString } from 'class-validator';
+import { ArrayMinSize, IsArray, IsNotEmpty, IsString, IsOptional } from 'class-validator';
 import { EventUserSnapshot } from './create-team.dto';
 
 export class AddMember {
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   requesterId: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   teamId: string;
 
   @IsArray()

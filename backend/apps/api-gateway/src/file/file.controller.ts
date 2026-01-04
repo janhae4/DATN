@@ -41,94 +41,94 @@ export class FileController {
 
   @Post('initiate-upload')
   @ApiOperation({ summary: '1. Get Pre-signed URL for a new file' })
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
   @ApiBody({ type: InitiateUploadDto })
   @ApiResponse({ status: 201, description: 'Returns the Pre-signed URL and fileId' })
   initiateUpload(
     @Body() body: InitiateUploadDto,
     @CurrentUser('id') userId: string,
-    @Query('teamId') teamId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.initiateUpload(body.fileName, userId, teamId);
+    return this.fileService.initiateUpload(body.fileName, body.fileType, userId, projectId);
   }
 
   @Post(':fileId/initiate-update')
   @ApiOperation({ summary: '2. Get Pre-signed URL to update/overwrite an existing file' })
   @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to update' })
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
   @ApiBody({ type: InitiateUpdateDto })
   @ApiResponse({ status: 201, description: 'Returns the Pre-signed URL' })
   initiateUpdate(
     @Param('fileId') fileId: string,
     @Body() body: InitiateUpdateDto,
     @CurrentUser('id') userId: string,
-    @Query('teamId') teamId?: string,
+    @Query('projectId') projectId?: string,
   ) {
     return this.fileService.initiateUpdate(
       fileId,
       body.newFileName,
       userId,
-      teamId,
+      projectId,
     );
   }
 
   @Get(':fileId/preview')
   @ApiOperation({ summary: '3. Get Pre-signed URL to preview a file' })
   @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to download' })
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
   @ApiResponse({ status: 201, description: 'Returns the Pre-signed URL' })
   getFile(
     @Param('fileId') fileId: string,
     @CurrentUser('id') userId: string,
-    @Query('teamId') teamId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.getPreviewUrl(fileId, userId, teamId);
+    return this.fileService.getPreviewUrl(fileId, userId, projectId);
   }
 
   @Get(':fileId/download')
   @ApiOperation({ summary: '4. Get Pre-signed URL to download a file' })
   @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to download' })
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
   @ApiResponse({ status: 201, description: 'Returns the Pre-signed URL' })
   downloadFile(
     @Param('fileId') fileId: string,
     @CurrentUser('id') userId: string,
-    @Query('teamId') teamId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.getDownloadUrl(fileId, userId, teamId);
+    return this.fileService.getDownloadUrl(fileId, userId, projectId);
   }
 
   @Patch(':fileId/rename')
   @ApiOperation({ summary: '4. Rename a file (Metadata only)' })
   @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to rename' })
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
   @ApiBody({ type: RenameFileDto })
   @ApiResponse({ status: 200, description: 'File renamed successfully' })
   renameFile(
     @Param('fileId') fileId: string,
     @Body() body: RenameFileDto,
     @CurrentUser('id') userId: string,
-    @Query('teamId') teamId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.renameFile(fileId, body.newFileName, userId, teamId);
+    return this.fileService.renameFile(fileId, body.newFileName, userId, projectId);
   }
 
   @Delete(':fileId')
   @ApiOperation({ summary: '5. Delete a file (from Minio and DB)' })
   @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to delete' })
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
   @ApiResponse({ status: 200, description: 'File deleted successfully' })
   deleteFile(
     @Param('fileId') fileId: string,
     @CurrentUser('id') userId: string,
-    @Query('teamId') teamId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.deleteFile(fileId, userId, teamId);
+    return this.fileService.deleteFile(fileId, userId, projectId);
   }
 
   @Get()
   @ApiOperation({ summary: '6. List all files with pagination' })
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default: 1' }) // Swagger
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default: 10' }) // Swagger
   @ApiResponse({ status: 200, description: 'Returns paginated files' })
@@ -136,23 +136,23 @@ export class FileController {
     @CurrentUser('id') userId: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-    @Query('teamId') teamId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.getFiles(userId, teamId, page, limit);
+    return this.fileService.getFiles(userId, projectId, page, limit);
   }
 
   // --- THÊM ĐOẠN NÀY ---
   @Post(':fileId/confirm')
   @ApiOperation({ summary: '7. Confirm file upload completion' })
   @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to confirm' })
-  @ApiQuery({ name: 'teamId', required: false, type: 'string' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
   @ApiResponse({ status: 200, description: 'File confirmed successfully' })
   confirmUpload(
     @Param('fileId') fileId: string,
     @CurrentUser('id') userId: string,
-    @Query('teamId') teamId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.confirmUpload(fileId, userId, teamId);
+    return this.fileService.confirmUpload(fileId, userId, projectId);
   }
 
 

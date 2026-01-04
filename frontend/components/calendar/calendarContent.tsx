@@ -2,24 +2,28 @@
 
 import React, { useState, useCallback, useMemo } from "react";
 import { Calendar, View, dateFnsLocalizer, Views } from "react-big-calendar";
-import { startOfMonth, endOfMonth, startOfWeek, getDay, format, parse } from "date-fns";
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, getDay, format, parse } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CustomToolbar from "./CustomToolbar";
 import EventDialog from "./EventDialog";
 import { useCalendarList, useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hooks/useCalendar';
+import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
+import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
+
+const DnDCalendar = withDragAndDrop(Calendar);
 
 const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
-  getDay,
-  locales,
+    format,
+    parse,
+    startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
+    getDay,
+    locales,
 });
 
-export default function CalendarContent() {
+export default function CalendarContent({ onToggleTaskList, isTaskListOpen }: { onToggleTaskList: () => void, isTaskListOpen: boolean }) {
     const [date, setDate] = useState(new Date());
     const [view, setView] = useState<View>(Views.WEEK);
     const [selectedCalendar, setSelectedCalendar] = useState<string>("all");
@@ -30,11 +34,11 @@ export default function CalendarContent() {
 
     // --- Hooks ---
     const { calendarList } = useCalendarList();
-    
+
     // Logic filter thời gian
     const { events: apiEvents, isLoading: eventsLoading } = useEvents({
-        startTime: startOfMonth(date).toISOString(),
-        endTime: endOfMonth(date).toISOString(),
+        startTime: startOfWeek(startOfMonth(date), { weekStartsOn: 1 }).toISOString(),
+        endTime: endOfWeek(endOfMonth(date), { weekStartsOn: 1 }).toISOString(),
         calendarId: selectedCalendar === "all" ? undefined : selectedCalendar
     });
 
@@ -82,14 +86,14 @@ export default function CalendarContent() {
     const handleUpdate = useCallback((id: string, data: any) => {
         const payload = {
             ...data,
-            calendarId: modalData?.calendarId 
+            calendarId: modalData?.calendarId
         };
 
         updateEvent.mutate({ id, updates: payload }, {
             onSuccess: () => setIsModalOpen(false),
             onError: () => alert("Failed to update event")
         });
-    }, [updateEvent, modalData]); 
+    }, [updateEvent, modalData]);
 
     // --- ENHANCEMENT: Thêm Alert xác nhận xóa ---
     const handleDelete = useCallback((id: string) => {
@@ -99,9 +103,9 @@ export default function CalendarContent() {
         }
 
         // 2. Thực hiện xóa
-        deleteEvent.mutate({ 
-            id, 
-            calendarId: modalData?.calendarId 
+        deleteEvent.mutate({
+            id,
+            calendarId: modalData?.calendarId
         }, {
             onSuccess: () => {
                 setIsModalOpen(false);
@@ -113,9 +117,52 @@ export default function CalendarContent() {
 
     const isLoadingAction = createEvent.isPending || updateEvent.isPending || deleteEvent.isPending;
 
+    // --- DnD Handler ---
+    const handleDropFromOutside = useCallback(({ start, end, allDay }: any) => {
+        const taskDataString = localStorage.getItem("draggedTask");
+        if (taskDataString) {
+            try {
+                const task = JSON.parse(taskDataString);
+                // Open modal to confirm creation with this task data
+                setModalData({
+                    start,
+                    end,
+                    title: task.title,
+                    description: task.description || `Task from project: ${task.projectId}`,
+                    isTaskDrop: true
+                });
+                setIsModalOpen(true);
+                // Clear drag data
+                localStorage.removeItem("draggedTask");
+            } catch (e) {
+                console.error("Failed to parse dragged task", e);
+            }
+        }
+    }, []);
+
+    const dragFromOutsideItem = useCallback(() => {
+        return {
+            title: "New Task",
+            duration: 60
+        };
+    }, []);
+    // --- ENHANCEMENT: Move/Resize Event ---
+    const handleMoveEvent = useCallback(({ event, start, end }: any) => {
+        const updates = {
+            summary: event.title,
+            description: event.desc,
+            startTime: start.toISOString(),
+            endTime: end.toISOString(),
+            calendarId: event.calendarId
+        };
+        updateEvent.mutate({ id: event.id, updates }, {
+            onError: () => alert("Failed to move/resize event")
+        });
+    }, [updateEvent]);
+
     // --- ENHANCEMENT: Styling cho Event đẹp hơn ---
     const eventPropGetter = useCallback((event: any) => {
-        const backgroundColor = event.bgColor;
+        const backgroundColor = event.bgColor || '#3b82f6';
         return {
             style: {
                 backgroundColor: backgroundColor,
@@ -142,10 +189,13 @@ export default function CalendarContent() {
                 </div>
             )}
 
-            <Card className="w-full pt-0! max-h-[600px] shadow-lg border-slate-200 overflow-hidden">
+            <Card className="w-full pt-0! max-h-[600px] shadow-lg  border-slate-200 overflow-hidden">
                 <CardContent className="bg-white p-0">
-                    <div className="px-4 pb-4 h-[600px] w-full">
-                        <Calendar
+                    <div
+                        className="px-4 pb-4 h-[600px] w-full"
+                        onDragOver={(e) => e.preventDefault()}
+                    >
+                        <DnDCalendar
                             localizer={localizer}
                             events={events}
                             defaultView={Views.WEEK}
@@ -153,18 +203,26 @@ export default function CalendarContent() {
                             onView={setView}
                             date={date}
                             onNavigate={setDate}
-                            scrollToTime={new Date(1970, 1, 1, 6)} // Scroll tới 6h sáng
+                            scrollToTime={new Date(1970, 1, 1, 6)}
                             selectable
-                            popup // Hiển thị "Show more" khi quá nhiều event
+                            popup
                             onSelectEvent={handleSelectEvent}
                             onSelectSlot={handleSelectSlot}
+                            onDropFromOutside={handleDropFromOutside}
+                            dragFromOutsideItem={dragFromOutsideItem}
+                            onEventDrop={handleMoveEvent}
+                            onEventResize={handleMoveEvent}
+                            resizable
+                            draggableAccessor={() => true}
                             components={{
                                 toolbar: (props) => (
-                                    <CustomToolbar 
-                                        {...props} 
-                                        selectedCalendar={selectedCalendar} 
-                                        onCalendarChange={setSelectedCalendar} 
-                                        calendarList={calendarList || []} 
+                                    <CustomToolbar
+                                        {...props}
+                                        selectedCalendar={selectedCalendar}
+                                        onCalendarChange={setSelectedCalendar}
+                                        calendarList={calendarList || []}
+                                        onToggleTaskList={onToggleTaskList}
+                                        isTaskListOpen={isTaskListOpen}
                                     />
                                 )
                             }}
@@ -179,7 +237,7 @@ export default function CalendarContent() {
                 </CardContent>
             </Card>
 
-            <EventDialog 
+            <EventDialog
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 initialData={modalData}
@@ -195,5 +253,6 @@ export default function CalendarContent() {
 
 // Helper để làm tối màu (cho border)
 function adjustColor(color: string, amount: number) {
+    if (!color) return '#000000';
     return '#' + color.replace(/^#/, '').replace(/../g, color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
 }

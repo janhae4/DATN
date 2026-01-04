@@ -22,6 +22,7 @@ export interface EventUserSnapshot {
   id: string;
   name: string;
   avatar?: string;
+  email?: string;
 }
 
 export interface TeamSnapshot {
@@ -32,7 +33,7 @@ export interface TeamSnapshot {
 
 export interface CreateTeamEventPayload {
   owner: EventUserSnapshot;
-  members: EventUserSnapshot[]; 
+  members: EventUserSnapshot[];
   teamSnapshot: TeamSnapshot;
   membersToNotify: string[];
   createdAt: Date;

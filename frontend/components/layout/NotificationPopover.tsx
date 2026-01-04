@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BellIcon } from "lucide-react";
+import { BellIcon, CheckIcon, TrashIcon } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -16,29 +16,28 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-
-// 1. Mock JSON Data
-// In a real app, you would fetch this from an API.
-const mockNotifications = [
-  { id: 1, title: "New Message", message: "You have a new message from Jane Doe." },
-  { id: 2, title: "System Update", message: "Your system will restart for an update at 2:00 AM." },
-  { id: 3, title: "Friend Request", message: "John Smith sent you a friend request." },
-  { id: 4, title: "Payment Received", message: "Your invoice #1234 has been paid." },
-  { id: 5, title: "Password Changed", message: "Your password was successfully changed." },
-  { id: 6, title: "New Login", message: "There was a new login to your account from a different device." },
-  { id: 7, title: "Project Deadline", message: "Project 'Alpha' is due tomorrow." },
-  { id: 8, title: "Team Mention", message: "You were mentioned in the #general channel." },
-];
+import { useNotifications } from "@/hooks/useNotifications";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDistanceToNow } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 export function NotificationPopover() {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const itemsPerPage = 3;
+  const {
+    notifications,
+    unreadCount,
+    markAllAsRead,
+    markAsRead,
+    deleteNotification
+  } = useNotifications();
 
-  const totalPages = Math.ceil(mockNotifications.length / itemsPerPage);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 5;
+
+  const totalPages = Math.ceil(notifications.length / itemsPerPage);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentNotifications = mockNotifications.slice(startIndex, endIndex);
+  const currentNotifications = notifications.slice(startIndex, endIndex);
 
   const handlePreviousPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
@@ -51,72 +50,130 @@ export function NotificationPopover() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="icon">
+        <Button variant="outline" size="icon" className="relative">
           <BellIcon className="h-4 w-4" />
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px]"
+            >
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Badge>
+          )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 m-2">
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <h4 className="font-medium leading-none">Notifications</h4>
-            <p className="text-sm text-muted-foreground">
-              You have {mockNotifications.length} unread messages.
-            </p>
-          </div>
-          <Separator />
-          <div className="grid gap-4">
-            {/* 3. Loop through the current page's notifications */}
-            {currentNotifications.length > 0 ? (
-              currentNotifications.map((notification, index) => (
-                <React.Fragment key={notification.id}>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-medium leading-none">{notification.title}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {notification.message}
-                    </p>
-                  </div>
-                  {/* Don't add a separator after the last item */}
-                  {index < currentNotifications.length - 1 && <Separator />}
-                </React.Fragment>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No new notifications.</p>
+      <PopoverContent className="w-96 m-2 p-0" align="end">
+        <div className="grid gap-0">
+          <div className="flex items-center justify-between p-4 bg-muted/30">
+            <div className="space-y-1">
+              <h4 className="font-medium leading-none">Notifications</h4>
+              <p className="text-xs text-muted-foreground">
+                You have {unreadCount} unread messages.
+              </p>
+            </div>
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto px-2 text-xs"
+                onClick={() => markAllAsRead()}
+              >
+                Mark all as read
+              </Button>
             )}
           </div>
+          <Separator />
 
-          {/* 4. Pagination Component */}
+          <ScrollArea className="h-[300px]">
+            <div className="grid gap-1 p-1">
+              {currentNotifications.length > 0 ? (
+                currentNotifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`flex flex-col gap-1 p-3 rounded-lg transition-colors hover:bg-muted/50 ${!notification.isRead ? 'bg-muted/20 border-l-2 border-primary' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h5 className={`text-sm leading-none ${!notification.isRead ? 'font-semibold' : 'font-medium'}`}>
+                        {notification.title}
+                      </h5>
+                      <div className="flex items-center gap-1">
+                        {!notification.isRead && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            title="Mark as read"
+                            onClick={() => markAsRead(notification.id)}
+                          >
+                            <span className="sr-only">Mark as read</span>
+                            <div className="h-2 w-2 rounded-full bg-primary" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          title="Delete"
+                          onClick={() => deleteNotification(notification.id)}
+                        >
+                          <TrashIcon className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {notification.message}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <BellIcon className="h-8 w-8 mb-2 opacity-50" />
+                  <p className="text-sm">No notifications</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <Separator />
+
           {totalPages > 1 && (
-             <Pagination>
+            <div className="p-2 border-t bg-muted/30">
+              <Pagination className="justify-center">
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
-                      href="#" 
+                    <PaginationPrevious
+                      href="#"
+                      size="sm"
                       onClick={(e) => {
-                          e.preventDefault();
-                          handlePreviousPage();
+                        e.preventDefault();
+                        handlePreviousPage();
                       }}
-                      // Disable if on the first page
                       className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                     />
                   </PaginationItem>
-                   <PaginationItem>
-                        <span className="text-sm text-muted-foreground">
-                            Page {currentPage} of {totalPages}
-                        </span>
-                   </PaginationItem>
                   <PaginationItem>
-                    <PaginationNext 
-                      href="#" 
+                    <span className="text-xs text-muted-foreground px-2">
+                      {currentPage} / {totalPages}
+                    </span>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      size="sm"
                       onClick={(e) => {
-                          e.preventDefault();
-                          handleNextPage();
+                        e.preventDefault();
+                        handleNextPage();
                       }}
-                       // Disable if on the last page
                       className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
                     />
                   </PaginationItem>
                 </PaginationContent>
-            </Pagination>
+              </Pagination>
+            </div>
           )}
         </div>
       </PopoverContent>

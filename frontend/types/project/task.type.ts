@@ -6,19 +6,19 @@ export type Task = {
   id: string; // uuid
   title: string;
   description?: string | null;
-  listId: string; 
-  projectId: string; 
+  listId: string;
+  projectId: string;
   reporterId?: string | null; // uuid (Người tạo task)
   priority?: Priority | null;
   assigneeIds?: string[] | null; // Người được assign
   labelIds?: string[]; // Nhãn
-  startDate?: string | null; 
-  dueDate?: string | null; 
+  startDate?: string | null;
+  dueDate?: string | null;
   epicId?: string | null; // uuid
   position?: number;
   sprintId?: string | null; // uuid
   parentId?: string | null; // uuid (Task cha)
-  createdAt: string; 
+  createdAt: string;
   updatedAt: string;
-  taskLabels: TaskLabel[];
+  fileIds?: string[]; // IDs of attached files
 };

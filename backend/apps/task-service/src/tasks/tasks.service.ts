@@ -350,6 +350,9 @@ export class TasksService {
     return { success: true };
   }
 
+
+  // task-service/src/tasks/tasks.service.ts
+
   private async assignLabels(taskId: string, labelIds: string[]) {
     if (labelIds && labelIds.length > 0) {
       try {
@@ -451,156 +454,35 @@ export class TasksService {
     }
   }
 
-  async suggestTask(userId: string, objective: string, projectId: string, sprintId: string, teamId: string) {
-    console.log("Sending AI request for user:", userId, "with objective:", objective, "team Id:", teamId);
-    unwrapRpcResult(await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
-      timeout: RPC_TIMEOUT,
-    }))
-
-    let members = []
-
-    if (sprintId) {
-      const response = await this.amqpConnection.request({
-        exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
-        payload: teamId,
-        timeout: RPC_TIMEOUT,
-      });
-      const memberIds = unwrapRpcResult(response);
-
-      members = unwrapRpcResult(await this.amqpConnection.request({
-        exchange: USER_EXCHANGE,
-        routingKey: USER_PATTERNS.GET_BULK_SKILLS,
-        payload: memberIds
-      }))
+  async addFiles(taskId: string, fileIds: string[]) {
+    const task = await this.findOne(taskId);
+    if (!task) {
+      throw new NotFoundException(`Task with ID ${taskId} not found`);
     }
 
-    await this.amqpConnection.publish(CHATBOT_EXCHANGE, 'suggest_task', {
-      userId,
-      objective,
-      members,
-    });
+    // Combine existing and new file IDs, ensuring uniqueness
+    const currentFiles = task.fileIds || [];
+    const newFileIds = fileIds.filter(id => !currentFiles.includes(id));
+
+    if (newFileIds.length > 0) {
+      task.fileIds = [...currentFiles, ...newFileIds];
+      await this.taskRepository.save(task);
+    }
+
+    return task;
   }
 
-  async getProjectStats(projectId: string, userId: string) {
-    console.log(projectId, userId);
-    const project = unwrapRpcResult(
-      await firstValueFrom<Project>(this.projectClient.send<Project>(PROJECT_PATTERNS.GET_BY_ID, { id: projectId })
-      ));
+  async removeFile(taskId: string, fileId: string) {
+    const task = await this.findOne(taskId);
+    if (!task) {
+      throw new NotFoundException(`Task with ID ${taskId} not found`);
+    }
 
-    unwrapRpcResult(await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId: project.teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
-      timeout: RPC_TIMEOUT,
-    }))
+    if (task.fileIds && task.fileIds.includes(fileId)) {
+      task.fileIds = task.fileIds.filter(id => id !== fileId);
+      await this.taskRepository.save(task);
+    }
 
-    const lists: List[] = unwrapRpcResult(
-      await firstValueFrom<List[]>(
-        this.listClient.send(LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId })
-      )
-    )
-
-    const doneListIds = lists
-      .filter((l) => l.category === ListCategoryEnum.DONE)
-      .map((l) => l.id);
-
-    const doneIdsParam = doneListIds.length > 0 ? doneListIds : [null];
-
-    const now = new Date();
-    const startOfToday = new Date(now.setHours(0, 0, 0, 0)).toISOString();
-
-    const next7Days = new Date(now);
-    next7Days.setDate(now.getDate() + 7);
-    const endOfNext7Days = next7Days.toISOString();
-
-    const safeDoneIds = doneListIds.length > 0 ? doneListIds : [null];
-
-    const [statsResult, distribution, activity] = await Promise.all([
-      this.taskRepository
-        .createQueryBuilder('task')
-        .select([
-          `SUM(CASE WHEN task.listId IN (:...doneIds) THEN 1 ELSE 0 END) ::int as completed`,
-          `SUM(CASE WHEN task.listId NOT IN (:...doneIds) OR task.listId IS NULL THEN 1 ELSE 0 END) ::int as pending`,
-          `SUM(CASE 
-            WHEN (task.listId NOT IN (:...doneIds) OR task.listId IS NULL) 
-            AND task.dueDate < :startOfToday 
-            THEN 1 ELSE 0 
-         END) ::int as overdue`,
-          `SUM(CASE 
-            WHEN (task.listId NOT IN (:...doneIds) OR task.listId IS NULL) 
-            AND task.dueDate >= :startOfToday 
-            AND task.dueDate <= :endOfNext7Days
-            THEN 1 ELSE 0 
-         END) ::int as "dueSoon"`,
-        ])
-        .where('task.projectId = :projectId', { projectId })
-        .setParameters({
-          doneIds: doneIdsParam,
-          startOfToday,
-          endOfNext7Days,
-        })
-        .getRawOne(),
-
-      this.taskRepository
-        .createQueryBuilder('task')
-        .select('task.listId', 'listId')
-        .addSelect('COUNT(task.id)', 'count')
-        .where('task.projectId = :projectId', { projectId })
-        .groupBy('task.listId')
-        .getRawMany(),
-
-      await this.taskRepository.query(
-        `
-      WITH dates AS (
-        SELECT to_char(d, 'YYYY-MM-DD') as date_str
-        FROM generate_series(NOW() - INTERVAL '6 days', NOW(), '1 day') as d
-      ),
-      created_counts AS (
-        SELECT 
-          to_char("createdAt", 'YYYY-MM-DD') as date_str, 
-          COUNT(*) as count
-        FROM tasks
-        WHERE "projectId" = $1 
-          AND "createdAt" >= NOW() - INTERVAL '6 days'
-        GROUP BY 1
-      ),
-      completed_counts AS (
-        SELECT 
-          to_char("updatedAt", 'YYYY-MM-DD') as date_str, 
-          COUNT(*) as count
-        FROM tasks
-        WHERE "projectId" = $1 
-        AND "listId" = ANY($2) -- Cú pháp check array trong Postgres
-          AND "updatedAt" >= NOW() - INTERVAL '6 days'
-          GROUP BY 1
-      )
-      SELECT 
-        dates.date_str as "date",
-        COALESCE(created.count, 0)::int as "tasksCreated",
-        COALESCE(completed.count, 0)::int as "tasksCompleted"
-        FROM dates
-      LEFT JOIN created_counts created ON dates.date_str = created.date_str
-      LEFT JOIN completed_counts completed ON dates.date_str = completed.date_str
-      ORDER BY dates.date_str ASC;
-      `,
-        [projectId, safeDoneIds]
-      )
-    ])
-
-    return {
-      stats: {
-        completed: statsResult.completed || 0,
-        pending: statsResult.pending || 0,
-        overdue: statsResult.overdue || 0,
-        dueSoon: statsResult.dueSoon || 0,
-      },
-      distribution,
-      activity,
-      lists,
-    };
+    return task;
   }
 }

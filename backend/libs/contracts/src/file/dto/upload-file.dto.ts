@@ -7,5 +7,5 @@ export class UploadFilePayload {
     userId: string;
     @IsString()
     @IsOptional()
-    teamId?: string;
+    projectId?: string;
 }

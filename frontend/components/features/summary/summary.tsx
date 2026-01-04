@@ -11,8 +11,9 @@ import {
 } from "lucide-react";
 import { TaskCompletionPieChart } from "../../charts/TaskCompletionPieChart";
 import { TaskActivityLineChart } from "../../charts/TaskActivityLineChart";
-import { AISummaryBox } from "./AISummaryBox";
+// import { AISummaryBox } from "./AISummaryBox";
 import { EmailBox } from "./EmailBox";
+import { EpicList } from "@/components/shared/epic/EpicList";
 
 // Hooks & Types
 import { useTasks } from "@/hooks/useTasks";
@@ -42,6 +43,7 @@ const Summary = () => {
           title="Completed"
           period="All time"
           unit="tasks"
+        // Hiện tại chưa có API lịch sử để tính % change, để trống hoặc mock
         />
         <StatsCard
           icon={<ClockIcon className="text-blue-600" />}
@@ -78,9 +80,10 @@ const Summary = () => {
         </div>
       </div>
 
-      <div className="flex gap-4">
-        <div className="bg-muted/50 aspect-video rounded-xl w-full">
-          <AISummaryBox />
+      {/* AI & Email Row (Keep Mock/AI as requested) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[400px]">
+        <div className="bg-background rounded-xl w-full h-full shadow-sm border p-4">
+          <EpicList />
         </div>
         <div className=" aspect-video rounded-xl w-full">
           <EmailBox />

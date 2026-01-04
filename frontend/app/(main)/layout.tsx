@@ -21,7 +21,7 @@ export default function MainLayout({
             <div className={styles.mainLayout}>
               <main className={styles.content}>
                 <Header />
-                <ChatWidget/>
+                {/* <ChatWidget/> */}
                 <div className={styles.pageWrapper}>{children}</div>
               </main>
             </div>

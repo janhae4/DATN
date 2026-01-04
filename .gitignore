@@ -8,3 +8,6 @@ __pycache__
 output_model/
 output/
 chroma_db
+
+# MeiliSearch Data
+meili-data/

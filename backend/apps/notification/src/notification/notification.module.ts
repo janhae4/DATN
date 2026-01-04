@@ -1,13 +1,23 @@
 import { Module } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { PrismaService } from './prisma.service';
 import { NotificationController } from './notification.controller';
-import { ClientConfigModule, ClientConfigService, NOTIFICATION_EXCHANGE } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, NOTIFICATION_EXCHANGE, EVENTS_EXCHANGE, GMAIL_EXCHANGE } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Notification } from './entity/notification.entity';
 
 @Module({
   imports: [
     ClientConfigModule,
+    TypeOrmModule.forRootAsync({
+      useFactory: () => ({
+        type: 'postgres',
+        url: process.env.DATABASE_NOTIFICATION_URL,
+        autoLoadEntities: true,
+        synchronize: true,
+      }),
+    }),
+    TypeOrmModule.forFeature([Notification]),
     RabbitMQModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],
@@ -16,6 +26,14 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
           {
             name: NOTIFICATION_EXCHANGE,
             type: 'direct',
+          },
+          {
+            name: EVENTS_EXCHANGE,
+            type: 'topic',
+          },
+          {
+            name: GMAIL_EXCHANGE,
+            type: 'topic',
           }
         ],
         uri: cfg.getRMQUrl(),
@@ -23,7 +41,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       }),
     })
   ],
-  providers: [NotificationService, PrismaService, NotificationController],
+  providers: [NotificationService, NotificationController],
   controllers: [NotificationController],
 })
 export class NotificationModule { }

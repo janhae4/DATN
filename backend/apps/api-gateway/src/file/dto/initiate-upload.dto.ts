@@ -9,4 +9,12 @@ export class InitiateUploadDto {
     @IsString()
     @IsNotEmpty()
     fileName: string;
+
+    @ApiProperty({
+        example: 'application/pdf',
+        description: 'The MIME type of the file',
+    })
+    @IsString()
+    @IsNotEmpty()
+    fileType: string;
 }

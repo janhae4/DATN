@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { ClientConfigModule, ClientConfigService, REDIS_CLIENT } from '@app/contracts';
 import { AuthModule } from '../auth/auth.module';
+import { FileModule } from '../file/file.module';
 import { TaskController } from './task.controller';
 import { TaskService } from './task.service';
-import Redis from 'ioredis';
+import { FileModule } from '../file/file.module';
 
 @Module({
   imports: [
+    FileModule,
     ClientConfigModule,
     AuthModule,
   ],
@@ -24,6 +26,7 @@ import Redis from 'ioredis';
       },
     }],
   controllers: [TaskController],
+  providers: [TaskService],
   exports: [TaskService],
 })
 export class TaskModule { }

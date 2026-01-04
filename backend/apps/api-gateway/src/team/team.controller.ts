@@ -45,7 +45,7 @@ export class TeamController {
   find(@CurrentUser('id') id: string) {
     console.log('Finding teams for user:', id);
     return this.teamService.findByUserId(id);
-    
+
   }
 
   @Get(':id')
@@ -95,16 +95,22 @@ export class TeamController {
   @ApiParam({ name: 'teamId', description: 'Team id' })
   @ApiBody({ type: AddMember })
   @Roles(Role.ADMIN, Role.USER)
-  addMember(
+  async addMember(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
     @Body() payload: AddMember,
   ) {
-    return this.teamService.addMember({
-      ...payload,
-      teamId,
-      requesterId,
-    });
+    try {
+      console.log('Adding member:', { teamId, requesterId, payload });
+      return await this.teamService.addMember({
+        ...payload,
+        teamId,
+        requesterId,
+      });
+    } catch (error) {
+      console.error('Error adding member:', error);
+      throw error;
+    }
   }
 
   @Delete(':teamId/member/')
