@@ -9,6 +9,11 @@ import {
   DragStartEvent,
   DragOverlay,
   pointerWithin,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  KeyboardSensor,
+  MeasuringStrategy,
 } from "@dnd-kit/core";
 
 // Components
@@ -31,33 +36,111 @@ import { calculateNewPositionForTask } from "@/lib/position-utils";
 import { Button } from "@/components/ui/button";
 import { Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/useDebounce";
+import { GetTasksParams } from "@/services/taskService";
+import { PaginationControl } from "@/components/shared/PaginationControl";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 export default function Backlogs() {
   // 1. Get Project ID from URL
   const params = useParams();
   const projectId = params.projectId as string;
 
-  // 2. Fetch Data using Hooks
-  const { tasks, updateTask, deleteTask, isLoading, error } =
-    useTasks(projectId);
+  const [filters, setFilters] = React.useState<TaskFilters>({
+    searchText: "",
+    assigneeIds: [],
+    priorities: [],
+    listIds: [],
+    epicIds: [],
+    labelIds: [],
+    sprintIds: [],
+  });
+
+  const [debouncedSearch] = useDebounce(filters.searchText, 500);
+  const [backLogPage, setBackLogPage] = React.useState(1);
+  const [sprintPage, setSprintPage] = React.useState(1);
+
   const { sprints } = useSprints(projectId);
   const { lists } = useLists(projectId);
-  const { epics } = useEpics(projectId);
 
-  // 3. Local UI State
+  console.log("Sprints loaded in Backlogs:", sprints.length);
+
+  const sprintQueryFilters: GetTasksParams = React.useMemo(() => {
+    const { sprintIds, ...otherFilters } = filters;
+
+    return {
+      projectId,
+      search: debouncedSearch,
+      assigneeIds:
+        filters.assigneeIds.length > 0 ? filters.assigneeIds : undefined,
+      priority: filters.priorities.length > 0 ? filters.priorities : undefined,
+      statusId: filters.listIds.length > 0 ? filters.listIds : undefined,
+      epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
+      labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
+      sprintId: sprints.length > 0 ? sprints.map((s) => s.id) : undefined,
+      limit: 50,
+      page: sprintPage,
+    };
+  }, [projectId, debouncedSearch, filters, sprintPage, sprints]);
+
+  const backlogQueryFilters: GetTasksParams = React.useMemo(() => {
+    return {
+      projectId,
+      search: debouncedSearch,
+      assigneeIds:
+        filters.assigneeIds.length > 0 ? filters.assigneeIds : undefined,
+      priority: filters.priorities.length > 0 ? filters.priorities : undefined,
+      statusId: filters.listIds.length > 0 ? filters.listIds : undefined,
+      epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
+      labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
+      parentId: "null",
+      sprintId: "null",
+      limit: 8,
+      page: backLogPage,
+    };
+  }, [projectId, debouncedSearch, filters, backLogPage]);
+
+  // const { epics } = useEpics(projectId);
+  const {
+    tasks: backlogTasks,
+    updateTask,
+    updateTasks,
+    deleteTasks,
+    isLoading,
+    error,
+    createTasks,
+    suggestTaskByAi,
+    totalPages,
+    total: backlogTotal,
+  } = useTasks(backlogQueryFilters);
+
+  console.log("🏷️ Backlogs Rendered with filters:", backlogTasks.length);
+
+  const { tasks: sprintTasks, isLoading: isLoadingSprint } =
+    useTasks(sprintQueryFilters);
+
+  console.log("🏷️ Sprints Rendered with filters:", sprintTasks.length);
+
+  const allVisibleTasks = React.useMemo(() => {
+    return [...sprintTasks, ...backlogTasks];
+  }, [sprintTasks, backlogTasks]);
+
+  const tasksInSprints = sprintTasks;
+  const tasksInBacklog = backlogTasks;
+  console.log("Tasks in Backlog:", tasksInBacklog.length);
+
   const [selectedTask, setSelectedTask] = React.useState<Task | null>(null);
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [accordionValue, setAccordionValue] = React.useState<string[]>([
+    "backlog",
+    "sprints",
+    "epics",
+  ]);
   const [isSelectingMode, setIsSelectingMode] = React.useState<boolean | null>(
     null
   );
-
-  // 4. Derived State (Backlog Count)
-  const backlogTaskCount = React.useMemo(() => {
-    return tasks.filter((task) => !task.sprintId).length;
-  }, [tasks]);
-
-  // --- Handlers Wrapper around updateTask Mutation ---
+  const backlogTaskCount = tasksInBacklog.length;
 
   const handleUpdateCell = (
     taskId: string,
@@ -125,7 +208,7 @@ export default function Backlogs() {
     }
   }
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveTask(null);
 
@@ -134,9 +217,63 @@ export default function Backlogs() {
     const task = active.data.current?.task as Task | undefined;
     if (!task) return;
 
+    let tasksToMoveIds: string[] = [task.id];
+
+    if (selectedIds.includes(task.id)) {
+      tasksToMoveIds = selectedIds;
+    }
+
     const dropType = over.data.current?.type;
 
-    // 1. Drop onto Epic (Kéo thả vào nhóm Epic bên trái/phải nếu có)
+    if (dropType === "sprint-drop-area") {
+      const sprint = over.data.current?.sprint as Sprint | undefined;
+      console.log("Dropped into sprint:", sprint);
+      if (sprint) {
+        const idsNeedUpdate = tasksToMoveIds.filter((id) => {
+          const t = allVisibleTasks.find((x) => x.id === id);
+          return t && t.sprintId !== sprint.id;
+        });
+
+        if (idsNeedUpdate.length > 0) {
+          try {
+            await updateTasks({
+              ids: idsNeedUpdate,
+              updates: { sprintId: sprint.id },
+            });
+            toast.success(`Moved ${idsNeedUpdate.length} tasks to sprint`);
+            setSelectedIds([]);
+          } catch (error) {
+            console.error(error);
+            toast.error("Failed to move tasks to sprint");
+          }
+        }
+      }
+      return;
+    }
+
+    if (over.id === "backlog-drop-area") {
+      const idsNeedUpdate = tasksToMoveIds.filter((id) => {
+        const t = allVisibleTasks.find((x) => x.id === id);
+        return t && t.sprintId;
+      });
+
+      if (idsNeedUpdate.length > 0) {
+        try {
+          await updateTasks({
+            ids: idsNeedUpdate,
+            updates: { sprintId: null },
+          });
+          toast.success(`Moved ${idsNeedUpdate.length} tasks to backlog`);
+          setSelectedIds([]);
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed to move tasks to backlog");
+        }
+      }
+      return;
+    }
+
+    // --- CASE 3: Thả vào Epic ---
     if (dropType === "epic-drop-area") {
       const epic = over.data.current?.epic as Epic | undefined;
       if (epic && task.epicId !== epic.id) {
@@ -145,36 +282,18 @@ export default function Backlogs() {
       return;
     }
 
-    // 2. Drop onto Sprint Container (Kéo vào vùng header/trống của Sprint)
-    if (dropType === "sprint-drop-area") {
-      const sprint = over.data.current?.sprint as Sprint | undefined;
-      // Chỉ update nếu task chưa thuộc sprint này
-      if (sprint && task.sprintId !== sprint.id) {
-        handleSprintChange(task.id, sprint.id);
-      }
-      return;
-    }
-
-    // 3. Drop onto Backlog Area (Kéo vào vùng header Backlog)
-    if (over.id === "backlog-drop-area") {
-      if (task.sprintId) {
-        handleSprintChange(task.id, null);
-      }
-      return;
-    }
-
-    // 4. Drop onto another Task (Xử lý Reorder & Move)
     const overTask = over.data.current?.task as Task | undefined;
 
     if (overTask) {
       const targetSprintId = overTask.sprintId || null;
 
-      const targetTasks = tasks
+      const targetTasks = allVisibleTasks
         .filter(
           (t) =>
             t.sprintId === targetSprintId && !t.parentId && t.position != null
         )
         .sort((a, b) => a.position! - b.position!);
+
       const newPosition = calculateNewPositionForTask(
         task.id,
         overTask.id,
@@ -199,7 +318,7 @@ export default function Backlogs() {
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
     try {
-      await Promise.all(selectedIds.map((id) => deleteTask(id)));
+      await deleteTasks(selectedIds);
       toast.success(`Deleted ${selectedIds.length} tasks`);
       setSelectedIds([]);
     } catch (err) {
@@ -207,78 +326,25 @@ export default function Backlogs() {
     }
   };
 
-  // ---- Filtering ----
-
-  const [filters, setFilters] = React.useState<TaskFilters>({
-    searchText: "",
-    assigneeIds: [],
-    priorities: [],
-    listIds: [],
-    epicIds: [],
-    labelIds: [],
-    sprintIds: [],
-  });
-
-  const filterTasksByFilters = React.useCallback(
-    (source: Task[], f: TaskFilters) => {
-      const search = f.searchText.trim().toLowerCase();
-      return source.filter((task) => {
-        if (search && !task.title?.toLowerCase().includes(search)) return false;
-
-        if (f.assigneeIds.length) {
-          const hasUnassigned = f.assigneeIds.includes("unassigned");
-          const assignees = task.assigneeIds ?? [];
-          const matchAssigned = assignees.some((id) =>
-            f.assigneeIds.includes(id)
-          );
-          if (!matchAssigned && !(hasUnassigned && assignees.length === 0))
-            return false;
-        }
-
-        if (f.priorities.length && !f.priorities.includes(task.priority))
-          return false;
-
-        if (
-          f.listIds.length &&
-          (!task.listId || !f.listIds.includes(task.listId))
-        )
-          return false;
-
-        if (
-          f.epicIds.length &&
-          (!task.epicId || !f.epicIds.includes(task.epicId))
-        )
-          return false;
-
-        if (f.labelIds.length) {
-          const labels = task.labelIds ?? [];
-          if (!labels.some((id) => f.labelIds.includes(id))) return false;
-        }
-
-        if (
-          f.sprintIds.length &&
-          (!task.sprintId || !f.sprintIds.includes(task.sprintId))
-        )
-          return false;
-
-        return true;
-      });
-    },
-    []
-  );
-
-  const filteredTasks = React.useMemo(
-    () => filterTasksByFilters(tasks, filters),
-    [tasks, filters, filterTasksByFilters]
-  );
-
-  const filteredBacklogTasks = React.useMemo(
-    () => filteredTasks.filter((task) => !task.sprintId && !task.parentId),
-    [filteredTasks]
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
   return (
     <DndContext
+      sensors={sensors}
+      measuring={{
+        droppable: {
+          strategy: MeasuringStrategy.Always
+        }
+      }}
       onDragEnd={handleDragEnd}
       onDragStart={handleDragStart}
       onDragCancel={handleDragCancel}
@@ -286,7 +352,13 @@ export default function Backlogs() {
     >
       <DragOverlay dropAnimation={null}>
         {activeTask ? (
-          <TaskDragOverlay task={activeTask} lists={lists} />
+          <TaskDragOverlay
+            task={activeTask}
+            lists={lists}
+            selectedCount={
+              selectedIds.includes(activeTask.id) ? selectedIds.length : 1
+            }
+          />
         ) : null}
       </DragOverlay>
 
@@ -348,34 +420,49 @@ export default function Backlogs() {
           onDescriptionChange={handleDescriptionChange}
           onLabelsChange={handleLabelsChange}
           onTaskSelect={setSelectedTask}
+          updateTask={updateTask}
         />
         <Accordion
           type="multiple"
-          defaultValue={["backlog", "sprints", "epics"]}
+          value={accordionValue}
+          onValueChange={setAccordionValue}
           className="w-full flex flex-col gap-4"
         >
-          <BacklogFilterBar filters={filters} onFilterChange={setFilters} />
+          <BacklogFilterBar
+            filters={filters}
+            onFilterChange={setFilters}
+            createTasks={createTasks}
+            suggestTaskByAi={suggestTaskByAi}
+          />
           {/* Sprints Section */}
           <SprintList
-            tasks={filteredTasks}
+            key="sprint-list"
+            tasks={tasksInSprints.filter((task) => !task.parentId)}
+            allTasks={allVisibleTasks}
+            onRowClick={handleRowClick}
+            onUpdateTask={updateTask}
             selectedIds={selectedIds}
             onSelect={handleSelectTask}
-            onRowClick={handleRowClick} 
+            onMultiSelectChange={setSelectedIds}
           />
           {/* Backlog Section */}
           <BacklogAccordionItem
+            key="backlog-item"
             lists={lists}
-            taskCount={filteredBacklogTasks.length}
-            tasks={filteredBacklogTasks}
+            taskCount={backlogTotal || 0}
+            tasks={tasksInBacklog.filter((task) => !task.parentId)}
+            allTasks={allVisibleTasks}
             isLoading={isLoading}
+            totalPages={totalPages}
+            page={backLogPage}
+            setPage={setBackLogPage}
             error={error}
             onRowClick={handleRowClick}
             onUpdateTask={updateTask}
-            onDeleteTasks={async (ids) => {
-              await Promise.all(ids.map((id) => deleteTask(id)));
-            }}
+            onDeleteTasks={deleteTasks}
             selectedIds={selectedIds}
             onSelect={handleSelectTask}
+            onMultiSelectChange={setSelectedIds}
           />
         </Accordion>
       </div>

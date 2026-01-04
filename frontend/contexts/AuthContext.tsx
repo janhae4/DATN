@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useRef,
 } from "react";
 import authService from "@/services/authService";
 import { UserProfile, LoginCredentials, RegisterData } from "@/types/auth";
@@ -13,7 +14,7 @@ import { UserProfile, LoginCredentials, RegisterData } from "@/types/auth";
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<UserProfile>;
+  login: (credentials: LoginCredentials) => Promise<any>;
   register: (data: RegisterData) => Promise<any>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -24,10 +25,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isChecked = useRef(false);
 
   const fetchUserProfile = async () => {
     try {
       const userProfile = await authService.getMe();
+      console.log("User profile fetched:", userProfile);
       setUser(userProfile);
       return userProfile;
     } catch (error) {
@@ -37,13 +40,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    
+    if (isChecked.current) return;
+    isChecked.current = true;
     let isMounted = true;
 
     const checkUserSession = async () => {
       try {
-        if (document.cookie.includes("accessToken")) {
-          await fetchUserProfile();
-        }
+        await fetchUserProfile();
       } catch (error) {
         console.error("Session check failed:", error);
       } finally {
@@ -72,12 +76,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (credentials: LoginCredentials) => {
     try {
       const loginResponse = await authService.login(credentials);
-      let userProfile = loginResponse.user;
-      if (!userProfile) {
-        userProfile = await authService.getMe();
-      }
-      setUser(userProfile);
-      return userProfile;
+      await fetchUserProfile();
+      return loginResponse;
     } catch (error) {
       setUser(null);
       throw error;
@@ -91,13 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         username: data.username,
         password: data.password,
       });
-      let userProfile = loginResponse.user;
-      if (!userProfile) {
-        userProfile = await authService.getMe();
-      }
-      if (userProfile) {
-        setUser(userProfile);
-      }
+      await fetchUserProfile();
       return loginResponse;
     } catch (error: any) {
       console.error("Registration error in AuthContext:", error);

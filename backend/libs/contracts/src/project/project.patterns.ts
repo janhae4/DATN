@@ -5,4 +5,5 @@ export const PROJECT_PATTERNS = {
   UPDATE: 'project.update',
   REMOVE: 'project.remove',
   FIND_ALL_BY_TEAM_ID: 'project.findAllByTeamId',
+  GET_STAT: 'project.getStat',
 };

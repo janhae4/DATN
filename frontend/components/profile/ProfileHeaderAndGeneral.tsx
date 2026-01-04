@@ -51,13 +51,20 @@ const POPULAR_SKILLS = [
 
 export function ProfileHeaderAndGeneral() {
   const { user, refreshUser } = useAuth();
-  const [name, setName] = React.useState(user?.name);
-  const [phone, setPhone] = React.useState(user?.phone || "");
+  const [name, setName] = React.useState("");
+  const [phone, setPhone] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const router = useRouter();
 
   const [editingSkills, setEditingSkills] = React.useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (user) {
+      setName(user.name || "");
+      setPhone(user.phone || "");
+    }
+  }, [user]);
 
   const openEditModal = () => {
     setEditingSkills(user?.skills?.map((s) => s.skillName) || []);

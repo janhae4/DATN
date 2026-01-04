@@ -26,9 +26,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Member, User } from "@/types";
 
 interface AssigneePickerProps {
-  value: string[]; // Array of assignee IDs
+  value: string[];
   onChange: (value: string[]) => void;
-  users: Member[]; // Real users passed from parent
+  users: Member[]; 
   className?: string;
 }
 

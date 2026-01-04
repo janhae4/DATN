@@ -7,6 +7,7 @@ export const REDIS_CLIENT_PORT = 6379;
 export const NOTIFICATION_CLIENT = Symbol('NOTIFICATION_CLIENT');
 export const NOTIFICATION_CLIENT_PORT = 4001;
 export const PROJECT_CLIENT = Symbol('PROJECT_CLIENT');
+export const LIST_CLIENT = Symbol('LIST_CLIENT');
 export const PROJECT_CLIENT_PORT = 3003;
 export const GMAIL_CLIENT = Symbol('GMAIL_CLIENT');
 export const GMAIL_CLIENT_PORT = 3005;

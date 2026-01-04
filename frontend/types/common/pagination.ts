@@ -10,6 +10,7 @@ export interface PaginationMeta {
 export class Pagination<T> {
     data: T[];
     total: number;
+    limit?: number;
     page: number;
     totalPages: number;
     constructor(data: T[], total: number, page: number, totalPages: number) {

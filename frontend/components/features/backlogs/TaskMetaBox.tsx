@@ -24,6 +24,7 @@ interface TaskMetaBoxProps {
   onDateChange?: (date: Date | undefined) => void;
   onPriorityChange?: (priority: Task["priority"]) => void;
   onLabelsChange?: (labelIds: string[]) => void;
+  updateTask: (id: string, updates: any) => void;
 }
 
 export function TaskMetaBox({
@@ -32,6 +33,7 @@ export function TaskMetaBox({
   onDateChange,
   onPriorityChange,
   onLabelsChange,
+  updateTask
 }: TaskMetaBoxProps) {
 
   // 2. USE LIVE DATA FROM CACHE
@@ -42,8 +44,6 @@ export function TaskMetaBox({
   // Use live data if available, otherwise fallback to the prop (initial)
   const task = liveTask || initialTask;
 
-  // Setup Hooks for Data & Actions
-  const { updateTask } = useTasks(task.projectId);
   const { taskLabels_data } = useTaskLabels(task.id);
 
   // Fetch Real Users

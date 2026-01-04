@@ -28,7 +28,6 @@ export class ProjectsController {
     return project;
   }
 
- 
   @MessagePattern(PROJECT_PATTERNS.UPDATE)
   async update(payload: { id: string; updateProjectDto: UpdateProjectDto }) {
     const { id, updateProjectDto } = payload;
@@ -44,6 +43,4 @@ export class ProjectsController {
   async findAllByTeamId(payload: { teamId: string }) {
     return await this.projectService.findAllByTeamId(payload.teamId);
   }
-
-
 }

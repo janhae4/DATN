@@ -82,15 +82,6 @@ export function KanbanCardContent({ task, lists, className }: { task: Task; list
     return allData.filter(t => t.parentId === task.id);
   }, [allData, task.id]);
 
-  const teamUsers = React.useMemo(() => {
-    return ((members ?? []) as any[])
-      .filter((m) => !!m.cachedUser)
-      .map((m) => ({
-        ...m.cachedUser,
-        id: m.userId
-      })) as User[];
-  }, [members]);
-
   const doneListId = React.useMemo(() => {
     return lists.find((l) => l.category === ListCategoryEnum.DONE)?.id ?? null;
   }, [lists]);
@@ -169,7 +160,7 @@ export function KanbanCardContent({ task, lists, className }: { task: Task; list
             <div onPointerDown={(e) => e.stopPropagation()}>
               <AssigneePicker
                 value={task.assigneeIds || []}
-                users={teamUsers}
+                users={members}
                 onChange={(assigneeIds) => handleAssigneeChange(task.id, assigneeIds)}
               />
             </div>

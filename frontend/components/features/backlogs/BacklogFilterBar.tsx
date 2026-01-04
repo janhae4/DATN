@@ -53,6 +53,7 @@ import { SprintCreateDialog } from "./sprint/SprintCreateDialog";
 import { CompleteSprintDialog } from "./sprint/CompleteSprintDialog";
 import { SuggestTaskByAi } from "./task/SuggestTaskByAi";
 import { useTask, useTasks } from "@/hooks/useTasks";
+import { CreateTaskDto } from "@/services/taskService";
 
 // Định nghĩa Interface Filter (nếu chưa có trong types chung)
 export interface TaskFilters {
@@ -76,9 +77,29 @@ const priorityList = Object.entries(priorityMap).map(([key, value]) => ({
 interface BacklogFilterBarProps {
   showCreateSprint?: boolean;
   showStatusFilter?: boolean;
-  // Props để nhận State từ cha
   filters: TaskFilters;
   onFilterChange: (newFilters: TaskFilters) => void;
+  createTasks: ({
+    tasks,
+    epic,
+    sprintId,
+  }: {
+    tasks: CreateTaskDto[];
+    epic: string;
+    sprintId?: string;
+  }) => void;
+  suggestTaskByAi: ({
+    data,
+    onChunk,
+  }: {
+    data: {
+      query: string;
+      projectId: string;
+      teamId: string;
+      sprintId: string;
+    };
+    onChunk: (chunk: string) => void;
+  }) => Promise<void>;
 }
 
 export function BacklogFilterBar({
@@ -86,6 +107,8 @@ export function BacklogFilterBar({
   showStatusFilter = true,
   filters,
   onFilterChange,
+  createTasks,
+  suggestTaskByAi,
 }: BacklogFilterBarProps) {
   // 1. Lấy IDs từ URL
   const params = useParams();
@@ -97,24 +120,7 @@ export function BacklogFilterBar({
   const { epics } = useEpics(projectId);
   const { labels } = useLabels(projectId);
   const { sprints } = useSprints(projectId);
-  const { createTasks } = useTasks(projectId);
   const { data: members } = useTeamMembers(teamId);
-
-  // 3. Xử lý dữ liệu User (Map từ TeamMember sang User Option)
-  const userOptions = React.useMemo(() => {
-    const users = ((members ?? []) as any[])
-      .filter((m) => !!m.cachedUser)
-      .map((m) => ({
-        value: m.userId,
-        label: m.cachedUser.name,
-        avatar: m.cachedUser.avatar,
-      }));
-
-    return [
-      ...users,
-      { value: "unassigned", label: "Unassigned", avatar: null },
-    ];
-  }, [members]);
 
   // 4. Xử lý dữ liệu Options khác
 
@@ -237,7 +243,12 @@ export function BacklogFilterBar({
         </div>
 
         <div className="flex items-center gap-4 w-full lg:w-auto justify-end">
-          <SuggestTaskByAi onSave={(tasks, epic, sprintId) => createTasks({tasks, epic, sprintId})}>
+          <SuggestTaskByAi
+            onSave={(tasks, epic, sprintId) =>
+              createTasks({ tasks, epic, sprintId })
+            }
+            suggestTaskByAi={suggestTaskByAi}
+          >
             <Button
               variant="outline"
               size="sm"
@@ -280,11 +291,11 @@ export function BacklogFilterBar({
         <MultiSelectFilter
           label="Assignee"
           icon={<User className="h-3.5 w-3.5" />}
-          options={userOptions.map((u) => ({
-            value: u.value,
-            label: u.label,
+          options={(members || []).map((u) => ({
+            value: u.id,
+            label: u.name,
             icon:
-              u.value === "unassigned"
+              u.id === "unassigned"
                 ? () => (
                     <MinusCircle className="h-4 w-4 text-muted-foreground" />
                   )
@@ -292,7 +303,7 @@ export function BacklogFilterBar({
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={u.avatar} />
                       <AvatarFallback className="text-[10px]">
-                        {getAssigneeInitial(u.label)}
+                        {getAssigneeInitial(u.name)}
                       </AvatarFallback>
                     </Avatar>
                   ),

@@ -16,32 +16,37 @@ import { AddNewTaskRow } from "../task/AddNewTaskRow";
 import { StartSprintDialog } from "./StartSprintDialog";
 import { CompleteSprintDialog } from "./CompleteSprintDialog";
 import { SprintStatus } from "@/types/common/enums";
+import { on } from "events";
 
 interface SprintItemProps {
   sprint: Sprint;
   tasks: Task[];
+  allTasks: Task[];
   statusesList: any[];
   handleRowClick: (task: Task) => void;
   selectedIds: string[];
   onSelect: (taskId: string, checked: boolean) => void;
-  addingNewRowToSprint: string | null;
-  setAddingNewRowToSprint: (id: string | null) => void;
   onUpdateTask: (taskId: string, updates: any) => void;
+  onMultiSelectChange: (ids: string[]) => void;
 }
 
 export function SprintItem({
   sprint,
   tasks,
+  allTasks,
   statusesList,
   handleRowClick,
-  addingNewRowToSprint,
-  setAddingNewRowToSprint,
   onUpdateTask,
   selectedIds,
   onSelect,
+  onMultiSelectChange,
 }: SprintItemProps) {
   const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id);
   const totalTasks = sprintTasks.length;
+
+  const [addingNewRowToSprint, setAddingNewRowToSprint] = React.useState<
+    string | null
+  >(null);
 
   const { setNodeRef, isOver } = useDroppable({
     id: sprint.id,
@@ -52,11 +57,14 @@ export function SprintItem({
   });
 
   // --- VISUAL FEEDBACK FIX ---
-  // Check if we are dragging over this sprint OR any task inside this sprint
   const { over } = useDndContext();
-  const isOverSprint = isOver; // Direct drop on sprint container
+  const isOverSprint = isOver;
   const isOverTaskInSprint = over?.data?.current?.task?.sprintId === sprint.id;
   const shouldHighlight = isOverSprint || isOverTaskInSprint;
+  const shouldShowTaskList =
+    sprintTasks.length > 0 || addingNewRowToSprint === sprint.id;
+
+  console.log("should show task list:", shouldShowTaskList);
 
   return (
     <div
@@ -117,11 +125,12 @@ export function SprintItem({
 
         <AccordionContent className="border-t bg-background/50 p-0 data-[state=closed]:animate-none">
           <div className="p-1">
-            {sprintTasks.length > 0 ? (
-              <>
-                <Table>
+            {shouldShowTaskList ? (
+              <Table>
+                {sprintTasks.length > 0 ? (
                   <TaskRowList
                     onUpdateTask={onUpdateTask}
+                    allTasks={allTasks}
                     tasks={sprintTasks}
                     lists={statusesList}
                     isDraggable={true}
@@ -129,6 +138,7 @@ export function SprintItem({
                     onRowClick={handleRowClick}
                     selectedIds={selectedIds}
                     onSelect={onSelect}
+                    onMultiSelectChange={onMultiSelectChange}
                   >
                     {addingNewRowToSprint === sprint.id ? (
                       <AddNewTaskRow
@@ -146,6 +156,10 @@ export function SprintItem({
                               className="h-8 px-3 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                console.log(
+                                  "Adding new row to sprint:",
+                                  sprint.id
+                                );
                                 setAddingNewRowToSprint(sprint.id);
                               }}
                             >
@@ -157,8 +171,18 @@ export function SprintItem({
                       </TableRow>
                     )}
                   </TaskRowList>
-                </Table>
-              </>
+                ) : (
+                  <tbody className="w-full">
+                    {addingNewRowToSprint === sprint.id && (
+                      <AddNewTaskRow
+                        lists={statusesList}
+                        sprintId={sprint.id}
+                        onCancel={() => setAddingNewRowToSprint(null)}
+                      />
+                    )}
+                  </tbody>
+                )}
+              </Table>
             ) : (
               <div
                 className={cn(
@@ -178,7 +202,14 @@ export function SprintItem({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setAddingNewRowToSprint(sprint.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log(
+                      "Adding new row to sprint for no task:",
+                      sprint.id
+                    );
+                    setAddingNewRowToSprint(sprint.id);
+                  }}
                   className="gap-2"
                 >
                   <PlusIcon className="h-4 w-4" />

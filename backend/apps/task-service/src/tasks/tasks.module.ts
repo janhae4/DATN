@@ -11,7 +11,9 @@ import {
   TASK_EXCHANGE,
   Task,
   USER_EXCHANGE,
-  LABEL_CLIENT
+  LABEL_CLIENT,
+  PROJECT_CLIENT,
+  LIST_CLIENT
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
@@ -30,8 +32,8 @@ import { AiStreamService } from './ai-stream.service';
       })
     }),
 
-    TypeOrmModule.forFeature([Task, TaskLabel]), 
-    
+    TypeOrmModule.forFeature([Task, TaskLabel]),
+
     ClientConfigModule,
     ClientsModule.registerAsync([
       {
@@ -40,6 +42,18 @@ import { AiStreamService } from './ai-stream.service';
         inject: [ClientConfigService],
         useFactory: (configService: ClientConfigService) => configService.labelClientOptions,
       },
+      {
+        name: PROJECT_CLIENT,
+        imports: [ClientConfigModule],
+        inject: [ClientConfigService],
+        useFactory: (configService: ClientConfigService) => configService.projectClientOptions,
+      },
+      {
+        name: LIST_CLIENT,
+        imports: [ClientConfigModule],
+        inject: [ClientConfigService],
+        useFactory: (configService: ClientConfigService) => configService.listClientOptions,
+      }
     ]),
     RabbitMQModule.forRootAsync({
       imports: [ClientConfigModule],

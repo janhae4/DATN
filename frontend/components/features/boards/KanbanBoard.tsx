@@ -26,7 +26,10 @@ import { KanbanColumn } from "./KanbanColumn";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import { ListCategoryEnum } from "@/types/common/enums";
-import { calculateNewPositionForTask, calculatePosition } from "@/lib/position-utils";
+import {
+  calculateNewPositionForTask,
+  calculatePosition,
+} from "@/lib/position-utils";
 import { KanbanMinimap } from "./KanbanMinimap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +47,8 @@ import { TaskDetailModal } from "../backlogs/taskmodal";
 import { KanbanSprintSelection } from "./KanbanSprintSelection";
 import { toast } from "sonner";
 import { ResolveSubtasksDialog } from "./ResolveSubtasksDialog";
+import { GetTasksParams } from "@/services/taskService";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({
@@ -65,8 +70,7 @@ const collisionDetectionStrategy: CollisionDetection = (args) => {
 
 export function KanbanBoard() {
   const {
-    data,
-    allData, // Đảm bảo context trả về allData (toàn bộ task chưa filter)
+    allData,
     projectId,
     selectedTask,
     setSelectedTask,
@@ -78,13 +82,11 @@ export function KanbanBoard() {
     activeSprint,
     sprints,
     startSprint,
-    handleListChange
+    handleListChange,
   } = useTaskManagementContext();
 
   const { lists, createList, deleteList, updateList } = useLists(projectId);
-  const { updateTask } = useTasks(projectId);
 
-  const [items, setItems] = React.useState<Task[]>(data);
   const [filters, setFilters] = React.useState<TaskFilters>({
     searchText: "",
     assigneeIds: [],
@@ -94,6 +96,46 @@ export function KanbanBoard() {
     labelIds: [],
     sprintIds: [],
   });
+  const [debouncedSearch] = useDebounce(filters.searchText, 500);
+
+  const apiParams: GetTasksParams = React.useMemo(
+    () => ({
+      projectId,
+      search: debouncedSearch,
+      assigneeIds:
+        filters.assigneeIds.length > 0 ? filters.assigneeIds : undefined,
+      priority: filters.priorities.length > 0 ? filters.priorities : undefined,
+      statusId: filters.listIds.length > 0 ? filters.listIds : undefined,
+      epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
+      labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
+      sprintId: filters.sprintIds.length > 0 ? filters.sprintIds : undefined,
+      limit: 50,
+    }),
+    [projectId, debouncedSearch, filters]
+  );
+
+  const {
+    tasks,
+    fetchNextPage,
+    hasNextPage, 
+    isFetchingNextPage,
+    updateTask,
+    createTasks,
+    suggestTaskByAi,
+  } = useTasks(apiParams);
+
+  const [items, setItems] = React.useState<Task[]>([]);
+
+  React.useEffect(() => {
+    const parentTasks = tasks.filter((t) => !t.parentId);
+    setItems(parentTasks);
+  }, [tasks]);
+
+  React.useEffect(() => {
+    if (lists && lists.length > 0) {
+      setUILists(lists);
+    }
+  }, [lists]);
 
   // --- Subtask Resolution State ---
   const [isResolveDialogOpen, setIsResolveDialogOpen] = React.useState(false);
@@ -105,64 +147,15 @@ export function KanbanBoard() {
     isMovedColumn: boolean;
   } | null>(null);
 
-  const filterTasksByFilters = React.useCallback(
-    (source: Task[], f: TaskFilters) => {
-      const search = f.searchText.trim().toLowerCase();
-      return source.filter((task) => {
-        if (search && !task.title?.toLowerCase().includes(search)) return false;
-
-        if (f.assigneeIds.length) {
-          const hasUnassigned = f.assigneeIds.includes("unassigned");
-          const assignees = task.assigneeIds ?? [];
-          const matchAssigned = assignees.some((id) => f.assigneeIds.includes(id));
-          if (!matchAssigned && !(hasUnassigned && assignees.length === 0)) return false;
-        }
-
-        if (f.priorities.length && !f.priorities.includes(task.priority)) return false;
-        if (f.listIds.length && (!task.listId || !f.listIds.includes(task.listId))) return false;
-        if (f.epicIds.length && (!task.epicId || !f.epicIds.includes(task.epicId))) return false;
-
-        if (f.labelIds.length) {
-          const labels = task.labelIds ?? [];
-          if (!labels.some((id) => f.labelIds.includes(id))) return false;
-        }
-
-        if (f.sprintIds.length && (!task.sprintId || !f.sprintIds.includes(task.sprintId))) return false;
-
-        return true;
-      });
-    },
-    []
-  );
-
-  const filteredTasks = React.useMemo(
-    () => filterTasksByFilters(data, filters),
-    [data, filters, filterTasksByFilters]
-  );
-
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
   const [overColumnId, setOverColumnId] = React.useState<string | null>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [isAddingList, setIsAddingList] = React.useState(false);
   const [newListName, setNewListName] = React.useState("");
-  const [newListCategory, setNewListCategory] = React.useState<ListCategoryEnum>(ListCategoryEnum.TODO);
+  const [newListCategory, setNewListCategory] =
+    React.useState<ListCategoryEnum>(ListCategoryEnum.TODO);
   const [UILists, setUILists] = React.useState<List[]>(lists);
 
-  // Sync items with filtered data
-  React.useEffect(() => {
-    if (activeSprint) {
-      setItems(
-        filteredTasks.filter((t) =>
-          // Chỉ hiện task thuộc sprint này VÀ là task cha (parentId null/undefined)
-          t.sprintId === activeSprint.id && !t.parentId
-        )
-      );
-    } else {
-      setItems([]);
-    }
-  }, [filteredTasks, activeSprint]);
-
-  // Sync UILists with server lists
   React.useEffect(() => {
     if (lists && lists.length > 0) {
       setUILists(lists);
@@ -185,11 +178,15 @@ export function KanbanBoard() {
     setIsAddingList(false);
   };
 
-  const handleMoveList = async (listId: string, direction: "left" | "right") => {
+  const handleMoveList = async (
+    listId: string,
+    direction: "left" | "right"
+  ) => {
     const currentIndex = UILists.findIndex((l) => l.id === listId);
     if (currentIndex === -1) return;
 
-    const targetIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1;
+    const targetIndex =
+      direction === "left" ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= UILists.length) return;
 
     const newLists = [...UILists];
@@ -198,7 +195,10 @@ export function KanbanBoard() {
 
     const prevItem = newLists[targetIndex - 1];
     const nextItem = newLists[targetIndex + 1];
-    const newPosition = calculatePosition(prevItem?.position, nextItem?.position);
+    const newPosition = calculatePosition(
+      prevItem?.position,
+      nextItem?.position
+    );
 
     setUILists(newLists);
     await updateList(listId, { position: newPosition });
@@ -215,13 +215,12 @@ export function KanbanBoard() {
     }
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
-  );
-
   const tasksByList = React.useMemo(() => {
     const grouped: { [key: string]: Task[] } = {};
-    lists.forEach((list) => { grouped[list.id] = []; });
+    lists.forEach((list) => {
+      grouped[list.id] = [];
+    });
+
     items.forEach((task) => {
       const listId = task.listId || lists[0]?.id;
       if (listId && grouped[listId]) {
@@ -232,6 +231,10 @@ export function KanbanBoard() {
     });
     return grouped;
   }, [items, lists]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -247,7 +250,8 @@ export function KanbanBoard() {
     if (!overId || active.id === overId) return;
 
     const overTask = over.data.current?.task as Task;
-    const overContainerId = over.data.current?.type === "KANBAN_COLUMN" ? overId : overTask?.listId;
+    const overContainerId =
+      over.data.current?.type === "KANBAN_COLUMN" ? overId : overTask?.listId;
 
     if (overContainerId) setOverColumnId(overContainerId as string);
 
@@ -255,27 +259,33 @@ export function KanbanBoard() {
 
     const currentItem = items.find((i) => i.id === active.id);
     if (currentItem && currentItem.listId !== overContainerId) {
-      setItems((prev) => prev.map((t) =>
-        t.id === active.id ? { ...t, listId: overContainerId as string } : t
-      ));
+      setItems((prev) =>
+        prev.map((t) =>
+          t.id === active.id ? { ...t, listId: overContainerId as string } : t
+        )
+      );
     }
   };
 
-  // Helper thực hiện di chuyển Task
-  const executeMoveTask = (task: Task, targetListId: string, newPosition: number, isMovedColumn: boolean) => {
+  const executeMoveTask = (
+    task: Task,
+    targetListId: string,
+    newPosition: number,
+    isMovedColumn: boolean
+  ) => {
     setItems((prev) => {
-      const newItems = prev.filter(t => t.id !== task.id);
+      const newItems = prev.filter((t) => t.id !== task.id);
       const updatedTask = {
         ...task,
         listId: targetListId,
-        position: newPosition
+        position: newPosition,
       };
       return [...newItems, updatedTask];
     });
 
     updateTask(task.id, {
       listId: targetListId,
-      position: newPosition
+      position: newPosition,
     });
 
     const targetList = lists.find((l) => l.id === targetListId);
@@ -284,94 +294,100 @@ export function KanbanBoard() {
     }
   };
 
+  const checkAndHandleSubtasks = (
+    activeTask: Task,
+    overContainerId: string,
+    newPosition: number,
+    isMovedColumn: boolean
+  ) => {
+    const targetList = lists.find((l) => l.id === overContainerId);
+    const isTargetDone = targetList?.category === ListCategoryEnum.DONE;
+
+    if (!isTargetDone) return false;
+
+    // Logic: Kiểm tra subtask trong allData (Context) vì API GetTasks có thể bị filter ẩn mất subtask
+    const subtasks = allData.filter((t) => t.parentId === activeTask.id);
+    const doneListIds = lists
+      .filter((l) => l.category === ListCategoryEnum.DONE)
+      .map((l) => l.id);
+
+    const unfinishedSubtasks = subtasks.filter(
+      (t) => !t.listId || !doneListIds.includes(t.listId)
+    );
+
+    if (unfinishedSubtasks.length > 0) {
+      setPendingSubtasks(unfinishedSubtasks);
+      setPendingMove({
+        task: activeTask,
+        overContainerId,
+        newPosition,
+        isMovedColumn,
+      });
+      setIsResolveDialogOpen(true);
+      return true;
+    }
+
+    return false;
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
     setOverColumnId(null);
 
+    // Revert nếu thả ra ngoài (Sync lại từ API tasks)
     if (!over) {
-      // Nếu thả ra ngoài, revert lại state gốc
-      setItems(filteredTasks.filter((t) => t.sprintId === activeSprint?.id && !t.parentId));
+      setItems(tasks.filter((t) => !t.parentId));
       return;
     }
 
-    const activeTask = active.data.current?.task as Task;
+    const activeTaskData = active.data.current?.task as Task;
     const overId = over.id as string;
-
     const overContainerId =
       over.data.current?.type === "KANBAN_COLUMN"
         ? overId
         : over.data.current?.task?.listId;
 
-    if (overContainerId && activeTask) {
+    if (overContainerId && activeTaskData) {
       const targetListTasks = tasksByList[overContainerId] || [];
-      const newPosition = calculateNewPositionForTask(activeTask.id, overId, targetListTasks);
+      const newPosition = calculateNewPositionForTask(
+        activeTaskData.id,
+        overId,
+        targetListTasks
+      );
 
-      const isMovedColumn = activeTask.listId !== overContainerId;
-      const isMovedPosition = activeTask.position !== newPosition;
+      const isMovedColumn = activeTaskData.listId !== overContainerId;
 
-        // --- CHECK SUBTASKS LOGIC ---
-        // 1. Tìm thông tin List đích
-        const targetList = lists.find(l => l.id === overContainerId);
-        const isTargetDone = targetList?.category === ListCategoryEnum.DONE;
+      const hasPendingSubtasks = checkAndHandleSubtasks(
+        activeTaskData,
+        overContainerId,
+        newPosition,
+        isMovedColumn
+      );
 
-        // Debug log để kiểm tra
-        console.log("Dragging to:", targetList?.name, "Category:", targetList?.category);
-
-        if (isTargetDone ) {
-          console.log("--------------------------------")
-          // 2. Tìm tất cả subtasks (dùng allData vì subtask không hiển thị trên board)
-          const subtasks = allData.filter(t => t.parentId === activeTask.id);
-
-          // 3. Lấy danh sách ID của các cột DONE
-          const doneListIds = lists
-            .filter(l => l.category === ListCategoryEnum.DONE)
-            .map(l => l.id);
-
-          console.log("doneListIds: --------", doneListIds)
-          // 4. Lọc ra các subtask CHƯA hoàn thành (không nằm trong cột DONE)
-          const unfinishedSubtasks = subtasks.filter(t =>
-            !t.listId || !doneListIds.includes(t.listId)
-          );
-
-          if (unfinishedSubtasks.length > 0) {
-            console.log("Unfinished subtasks found:", unfinishedSubtasks);
-            // STOP: Lưu state và hiện Dialog
-            setPendingSubtasks(unfinishedSubtasks);
-            setPendingMove({
-              task: activeTask,
-              overContainerId, // Đây chính là ID của cột DONE vừa thả vào
-              newPosition,
-              isMovedColumn
-            });
-            setIsResolveDialogOpen(true);
-            return; // Return sớm để chặn executeMoveTask
-          }
-        }
-        // -----------------------------
-
-        executeMoveTask(activeTask, overContainerId, newPosition, isMovedColumn);
-      
+      if (!hasPendingSubtasks) {
+        executeMoveTask(
+          activeTaskData,
+          overContainerId,
+          newPosition,
+          isMovedColumn
+        );
+      }
     }
   };
 
   const handleConfirmResolve = async () => {
     if (!pendingMove) return;
 
-    // 1. Tìm cột DONE đích thực (để chắc chắn)
-    // Nếu overContainerId là cột DONE thì dùng luôn, hoặc tìm cột DONE đầu tiên của project
-    const doneList = lists.find(l => l.category === ListCategoryEnum.DONE);
+    const doneList = lists.find((l) => l.category === ListCategoryEnum.DONE);
     const targetDoneListId = doneList?.id || pendingMove.overContainerId;
 
-    // 2. Update tất cả subtasks vào cột DONE này
-    const promises = pendingSubtasks.map(subtask =>
+    const promises = pendingSubtasks.map((subtask) =>
       updateTask(subtask.id, { listId: targetDoneListId })
     );
 
-    // Chờ server update xong
     await Promise.all(promises);
 
-    // 3. Di chuyển Task Cha vào cột đích (pendingMove.overContainerId)
     executeMoveTask(
       pendingMove.task,
       pendingMove.overContainerId,
@@ -379,32 +395,30 @@ export function KanbanBoard() {
       pendingMove.isMovedColumn
     );
 
-    // 4. Cleanup
     setIsResolveDialogOpen(false);
     setPendingMove(null);
     setPendingSubtasks([]);
-    toast.success(`Moved task and resolved ${pendingSubtasks.length} subtasks.`);
+    toast.success(
+      `Moved task and resolved ${pendingSubtasks.length} subtasks.`
+    );
   };
 
   const handleCancelResolve = () => {
     setIsResolveDialogOpen(false);
     setPendingMove(null);
     setPendingSubtasks([]);
-    // Revert items về state ban đầu để task cha "bay" về chỗ cũ
-    setItems(filteredTasks.filter((t) => t.sprintId === activeSprint?.id && !t.parentId));
+    // Revert về state cũ từ API
+    setItems(tasks.filter((t) => !t.parentId));
   };
 
   const handleIgnoreResolve = () => {
     if (!pendingMove) return;
-
-    // Chỉ di chuyển task cha, bỏ qua subtasks
     executeMoveTask(
       pendingMove.task,
       pendingMove.overContainerId,
       pendingMove.newPosition,
       pendingMove.isMovedColumn
     );
-
     setIsResolveDialogOpen(false);
     setPendingMove(null);
     setPendingSubtasks([]);
@@ -421,7 +435,7 @@ export function KanbanBoard() {
       onDragCancel={() => {
         setActiveTask(null);
         setOverColumnId(null);
-        setItems(filteredTasks.filter((t) => t.sprintId === activeSprint?.id && !t.parentId));
+        setItems(tasks.filter((t) => !t.parentId));
       }}
     >
       <div className="h-full w-full min-w-0 relative group/board flex flex-col">
@@ -430,16 +444,21 @@ export function KanbanBoard() {
             showCreateSprint={false}
             showStatusFilter={false}
             filters={filters}
+            createTasks={createTasks}
+            suggestTaskByAi={suggestTaskByAi}
             onFilterChange={setFilters}
           />
         </div>
         <div
           ref={scrollContainerRef}
-          className="flex-1 w-full overflow-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent pb-2"
+          className="flex-1 w-full overflow-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent pb-2"
         >
-          <div className="flex w-max gap-6 pt-4">
+          <div className="flex h-full gap-4 py-4 pr-4">
             {!activeSprint && (
-              <KanbanSprintSelection sprints={sprints} onStartSprint={startSprint} />
+              <KanbanSprintSelection
+                sprints={sprints}
+                onStartSprint={startSprint}
+              />
             )}
             {UILists.map((list) => (
               <KanbanColumn
@@ -448,12 +467,17 @@ export function KanbanBoard() {
                 list={list}
                 sprintId={activeSprint?.id || ""}
                 tasks={tasksByList[list.id] || []}
+                hasNextPage={!!hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                fetchNextPage={fetchNextPage}
                 allLists={UILists}
                 onMoveLeft={() => handleMoveList(list.id, "left")}
                 onMoveRight={() => handleMoveList(list.id, "right")}
                 onDeleteList={() => handleDeleteList(list.id)}
-                onUpdateLimit={(limit) => updateList(list.id, { limited: limit })}
-                onListUpdate={() => { }}
+                onUpdateLimit={(limit) =>
+                  updateList(list.id, { limited: limit })
+                }
+                onListUpdate={() => {}}
               />
             ))}
             <div className="shrink-0">
@@ -473,7 +497,9 @@ export function KanbanBoard() {
                     />
                     <Select
                       value={newListCategory}
-                      onValueChange={(value) => setNewListCategory(value as ListCategoryEnum)}
+                      onValueChange={(value) =>
+                        setNewListCategory(value as ListCategoryEnum)
+                      }
                     >
                       <SelectTrigger className="w-full bg-background">
                         <SelectValue placeholder="Select category" />
@@ -495,7 +521,12 @@ export function KanbanBoard() {
                     </Select>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    <Button variant="outline" className="cursor-pointer" onClick={handleAddList} size="icon">
+                    <Button
+                      variant="outline"
+                      className="cursor-pointer"
+                      onClick={handleAddList}
+                      size="icon"
+                    >
                       <Check />
                     </Button>
                     <Button
@@ -553,7 +584,11 @@ export function KanbanBoard() {
               damping: 20,
             }}
           >
-            <KanbanCardContent task={activeTask} lists={lists} className="cursor-grabbing" />
+            <KanbanCardContent
+              task={activeTask}
+              lists={lists}
+              className="cursor-grabbing"
+            />
           </motion.div>
         ) : null}
       </DragOverlay>
@@ -569,6 +604,7 @@ export function KanbanBoard() {
         onTitleChange={handleUpdateCell}
         onDescriptionChange={handleDescriptionChange}
         onTaskSelect={setSelectedTask}
+        updateTask={updateTask}
         lists={lists}
       />
 

@@ -79,8 +79,8 @@ export const teamService = {
   },
 
   // Get members of a specific team
-  getTeamMembers: async (teamId: string): Promise<(Member)[]> => {
-    const response = await apiClient.get<(Member)[]>(`/teams/${teamId}/members`);
+  getTeamMembers: async (teamId: string): Promise<Member[]> => {
+    const response = await apiClient.get<Member[]>(`/teams/${teamId}/members`);
     return response.data;
   },
 

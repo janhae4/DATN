@@ -105,6 +105,7 @@ export * from './task/entity/task-assignee.entity';
 export * from './task/create-task.dto';
 export * from './task/update-task.dto';
 export * from './task/dto/request-google-task.dto';
+export * from './task/dto/get-task.dto';
 
 /*----
 PROJECT

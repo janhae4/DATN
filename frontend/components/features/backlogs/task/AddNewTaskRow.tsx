@@ -34,14 +34,18 @@ export function AddNewTaskRow({
   const params = useParams();
   const projectId = params.projectId as string;
 
-  const { createTask, isLoading } = useTasks(projectId);
+  const { createTask, isLoading } = useTasks();
+
+  React.useEffect(() => {
+    console.log("🟢 MOUNT AddNewTaskRow");
+    return () => console.log("🔴 UNMOUNT AddNewTaskRow");
+  }, []);
   
   const [title, setTitle] = React.useState("");
   const [selectedListId, setSelectedListId] = React.useState<string>("");
 
   const stopPropagation = (e: React.MouseEvent | React.PointerEvent) => e.stopPropagation();
 
-  // Auto-select "To Do" list
   React.useEffect(() => {
     if (lists && lists.length > 0 && !selectedListId) {
       const todoList = lists.find(
@@ -60,13 +64,12 @@ export function AddNewTaskRow({
         projectId: projectId,
         listId: selectedListId,
         sprintId: sprintId || undefined,
-        parentId: parentId || undefined, // <-- 3. Gửi parentId lên API
+        parentId: parentId || undefined,
         epicId: epicId || undefined,
       };
 
       await createTask(newTaskPayload);
       setTitle("");
-      // Không gọi onCancel ngay để user có thể nhập tiếp subtask khác liên tục
     } catch (error) {
       console.error("Failed to create task:", error);
     }
@@ -102,7 +105,6 @@ export function AddNewTaskRow({
         </div>
       </TableCell>
 
-      {/* Các cột trống để giữ layout table */}
       <TableCell></TableCell>
       <TableCell></TableCell>
       <TableCell></TableCell>
