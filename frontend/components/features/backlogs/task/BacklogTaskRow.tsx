@@ -64,6 +64,7 @@ export const BacklogTaskRow = React.memo(_BacklogTaskRow, (prev, next) => {
 
   return (
     prev.task === next.task &&
+    prev.allTasks === next.allTasks &&
     prev.selected === next.selected &&
     prev.isDraggable === next.isDraggable &&
     prev.level === next.level &&
@@ -193,7 +194,7 @@ function _BacklogTaskRow({
       if (targetEl && targetEl.releasePointerCapture) {
         try {
           targetEl.releasePointerCapture(e.pointerId);
-        } catch (e) {}
+        } catch (e) { }
       }
     }, 400);
   };
@@ -241,9 +242,9 @@ function _BacklogTaskRow({
         className={cn(
           "group cursor-pointer hover:bg-muted/50 transition-colors select-none p-2",
           isDragging &&
-            "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale",
+          "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale",
           selected &&
-            "bg-primary/5 hover:bg-primary/15 data-[state=selected]:bg-primary/5 rounded-lg p-10"
+          "bg-primary/5 hover:bg-primary/15 data-[state=selected]:bg-primary/5 rounded-lg p-10"
         )}
         onClick={(e) => {
           const target = e.target as HTMLElement;
@@ -384,22 +385,22 @@ function _BacklogTaskRow({
               <LabelPopover
                 taskId={task.id}
                 initialSelectedLabels={labels}
-                onSelectionChange={(newLabels) =>
+                onSelectionChange={(newLabels: any[]) =>
                   onUpdateTask(task.id, {
-                    labelIds: newLabels.map((l) => l.id),
+                    labelIds: newLabels.map((l: any) => l.id),
                   })
                 }
               />
             </div>
             <div className="flex items-center gap-2 justify-end">
-              {visibleLabels.map((label) => (
+              {visibleLabels.map((label: any) => (
                 <LabelTag
                   key={label.id}
                   label={label}
                   onRemove={() => {
                     const newLabelIds = labels
-                      .filter((l) => l.id !== label.id)
-                      .map((l) => l.id);
+                      .filter((l: any) => l.id !== label.id)
+                      .map((l: any) => l.id);
                     onUpdateTask(task.id, { labelIds: newLabelIds });
                   }}
                 />
@@ -417,7 +418,7 @@ function _BacklogTaskRow({
                     </TooltipTrigger>
                     <TooltipContent className="p-2 bg-background">
                       <div className="flex flex-col gap-1">
-                        {hiddenLabels.map((hiddenLabel) => (
+                        {hiddenLabels.map((hiddenLabel: any) => (
                           <LabelTag key={hiddenLabel.id} label={hiddenLabel} />
                         ))}
                       </div>

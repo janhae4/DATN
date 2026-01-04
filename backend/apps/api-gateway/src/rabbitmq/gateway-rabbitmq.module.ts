@@ -20,8 +20,8 @@ import {
                 uri: config.getRMQUrl(),
                 connectionInitOptions: { wait: true, timeout: 20000 },
                 exchanges: [
-                    { name: PROJECT_EXCHANGE, type: 'direct' },
-                    { name: LIST_EXCHANGE, type: 'direct' },
+                    { name: PROJECT_EXCHANGE, type: 'topic' },
+                    { name: LIST_EXCHANGE, type: 'topic' },
                     { name: USER_EXCHANGE, type: 'direct' },
                     { name: AUTH_EXCHANGE, type: 'direct' },
                     { name: GMAIL_EXCHANGE, type: 'topic' },

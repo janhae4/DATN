@@ -55,7 +55,7 @@ export class CreateTaskDto {
     description: 'IDs of the label this task is in',
     format: 'uuid',
   })
-  @IsUUID()
+  @IsUUID('all', { each: true })
   @IsOptional()
   labelIds: string[];
 

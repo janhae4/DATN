@@ -108,34 +108,31 @@ export function KanbanBoard() {
       statusId: filters.listIds.length > 0 ? filters.listIds : undefined,
       epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
-      sprintId: filters.sprintIds.length > 0 ? filters.sprintIds : undefined,
+      // Automatically filter by active sprint, or use manual filter if set
+      sprintId: filters.sprintIds.length > 0
+        ? filters.sprintIds
+        : activeSprint
+          ? [activeSprint.id]
+          : undefined,
       limit: 50,
     }),
-    [projectId, debouncedSearch, filters]
+    [projectId, debouncedSearch, filters, activeSprint]
   );
 
   const {
     tasks,
     fetchNextPage,
-    hasNextPage, 
+    hasNextPage,
     isFetchingNextPage,
     updateTask,
     createTasks,
     suggestTaskByAi,
   } = useTasks(apiParams);
 
-  const [items, setItems] = React.useState<Task[]>([]);
-
-  React.useEffect(() => {
-    const parentTasks = tasks.filter((t) => !t.parentId);
-    setItems(parentTasks);
+  const items = React.useMemo(() => {
+    return tasks.filter((t) => !t.parentId);
   }, [tasks]);
 
-  React.useEffect(() => {
-    if (lists && lists.length > 0) {
-      setUILists(lists);
-    }
-  }, [lists]);
 
   // --- Subtask Resolution State ---
   const [isResolveDialogOpen, setIsResolveDialogOpen] = React.useState(false);
@@ -154,13 +151,7 @@ export function KanbanBoard() {
   const [newListName, setNewListName] = React.useState("");
   const [newListCategory, setNewListCategory] =
     React.useState<ListCategoryEnum>(ListCategoryEnum.TODO);
-  const [UILists, setUILists] = React.useState<List[]>(lists);
 
-  React.useEffect(() => {
-    if (lists && lists.length > 0) {
-      setUILists(lists);
-    }
-  }, [lists]);
 
   const handleAddList = async () => {
     if (!newListName.trim()) return;
@@ -169,7 +160,7 @@ export function KanbanBoard() {
     await createList({
       name: newListName,
       category: newListCategory,
-      position: UILists.length + 1,
+      position: lists.length + 1,
       projectId,
     });
 
@@ -178,18 +169,18 @@ export function KanbanBoard() {
     setIsAddingList(false);
   };
 
-  const handleMoveList = async (
+  const handleMoveList = React.useCallback(async (
     listId: string,
     direction: "left" | "right"
   ) => {
-    const currentIndex = UILists.findIndex((l) => l.id === listId);
+    const currentIndex = lists.findIndex((l) => l.id === listId);
     if (currentIndex === -1) return;
 
     const targetIndex =
       direction === "left" ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= UILists.length) return;
+    if (targetIndex < 0 || targetIndex >= lists.length) return;
 
-    const newLists = [...UILists];
+    const newLists = [...lists];
     const [movedList] = newLists.splice(currentIndex, 1);
     newLists.splice(targetIndex, 0, movedList);
 
@@ -200,11 +191,10 @@ export function KanbanBoard() {
       nextItem?.position
     );
 
-    setUILists(newLists);
     await updateList(listId, { position: newPosition });
-  };
+  }, [lists, updateList]);
 
-  const handleDeleteList = async (listId: string) => {
+  const handleDeleteList = React.useCallback(async (listId: string) => {
     const target = lists.find((l) => l.id === listId);
     if (target?.category === ListCategoryEnum.DONE) {
       toast.warning("The Done list cannot be deleted.");
@@ -213,7 +203,7 @@ export function KanbanBoard() {
     if (confirm("Are you sure you want to delete this list?")) {
       await deleteList(listId);
     }
-  };
+  }, [lists, deleteList]);
 
   const tasksByList = React.useMemo(() => {
     const grouped: { [key: string]: Task[] } = {};
@@ -257,14 +247,7 @@ export function KanbanBoard() {
 
     if (!active.data.current?.task || !overContainerId) return;
 
-    const currentItem = items.find((i) => i.id === active.id);
-    if (currentItem && currentItem.listId !== overContainerId) {
-      setItems((prev) =>
-        prev.map((t) =>
-          t.id === active.id ? { ...t, listId: overContainerId as string } : t
-        )
-      );
-    }
+    // Optimistic update removed - will update when API call completes
   };
 
   const executeMoveTask = (
@@ -273,15 +256,7 @@ export function KanbanBoard() {
     newPosition: number,
     isMovedColumn: boolean
   ) => {
-    setItems((prev) => {
-      const newItems = prev.filter((t) => t.id !== task.id);
-      const updatedTask = {
-        ...task,
-        listId: targetListId,
-        position: newPosition,
-      };
-      return [...newItems, updatedTask];
-    });
+    // Optimistic update removed - will update when API call completes
 
     updateTask(task.id, {
       listId: targetListId,
@@ -335,9 +310,8 @@ export function KanbanBoard() {
     setActiveTask(null);
     setOverColumnId(null);
 
-    // Revert nếu thả ra ngoài (Sync lại từ API tasks)
+    // No need to revert - items is derived from tasks
     if (!over) {
-      setItems(tasks.filter((t) => !t.parentId));
       return;
     }
 
@@ -407,8 +381,7 @@ export function KanbanBoard() {
     setIsResolveDialogOpen(false);
     setPendingMove(null);
     setPendingSubtasks([]);
-    // Revert về state cũ từ API
-    setItems(tasks.filter((t) => !t.parentId));
+    // No need to revert - items is derived from tasks
   };
 
   const handleIgnoreResolve = () => {
@@ -435,7 +408,7 @@ export function KanbanBoard() {
       onDragCancel={() => {
         setActiveTask(null);
         setOverColumnId(null);
-        setItems(tasks.filter((t) => !t.parentId));
+        // No need to revert - items is derived from tasks
       }}
     >
       <div className="h-full w-full min-w-0 relative group/board flex flex-col">
@@ -460,26 +433,31 @@ export function KanbanBoard() {
                 onStartSprint={startSprint}
               />
             )}
-            {UILists.map((list) => (
-              <KanbanColumn
-                key={list.id}
-                projectId={projectId}
-                list={list}
-                sprintId={activeSprint?.id || ""}
-                tasks={tasksByList[list.id] || []}
-                hasNextPage={!!hasNextPage}
-                isFetchingNextPage={isFetchingNextPage}
-                fetchNextPage={fetchNextPage}
-                allLists={UILists}
-                onMoveLeft={() => handleMoveList(list.id, "left")}
-                onMoveRight={() => handleMoveList(list.id, "right")}
-                onDeleteList={() => handleDeleteList(list.id)}
-                onUpdateLimit={(limit) =>
-                  updateList(list.id, { limited: limit })
-                }
-                onListUpdate={() => {}}
-              />
-            ))}
+            {lists.map((list) => {
+              const handleMoveLeftForList = () => handleMoveList(list.id, "left");
+              const handleMoveRightForList = () => handleMoveList(list.id, "right");
+              const handleDeleteForList = () => handleDeleteList(list.id);
+              const handleUpdateLimitForList = (limit: number | null) => updateList(list.id, { limited: limit });
+
+              return (
+                <KanbanColumn
+                  key={list.id}
+                  projectId={projectId}
+                  list={list}
+                  sprintId={activeSprint?.id || ""}
+                  tasks={tasksByList[list.id] || []}
+                  hasNextPage={!!hasNextPage}
+                  isFetchingNextPage={isFetchingNextPage}
+                  fetchNextPage={fetchNextPage}
+                  allLists={lists}
+                  onMoveLeft={handleMoveLeftForList}
+                  onMoveRight={handleMoveRightForList}
+                  onDeleteList={handleDeleteForList}
+                  onUpdateLimit={handleUpdateLimitForList}
+                  onListUpdate={() => { }}
+                />
+              );
+            })}
             <div className="shrink-0">
               {isAddingList ? (
                 <div className="w-80">

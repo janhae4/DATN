@@ -19,4 +19,7 @@ export const TASK_PATTERNS = {
   GET_ALL_TASK_LABEL: 'task.getAllTaskLabel',
   HANDLE_LABEL_DELETED: 'task.handleLabelDeleted',
   REMOVE_FILE: 'task.removeFile',
+  GET_STATS: 'task.getStats',
+  SUGGEST_TASK: 'task.suggestTask'
 };
+ 

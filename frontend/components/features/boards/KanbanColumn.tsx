@@ -100,7 +100,8 @@ export function KanbanColumn({
       console.log("Load more triggered for list:", list.name);
       fetchNextPage();
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView, hasNextPage, isFetchingNextPage]);
 
   const [isAdding, setIsAdding] = React.useState(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -108,8 +109,13 @@ export function KanbanColumn({
     list.limited?.toString() || ""
   );
 
+  const prevLimitedRef = React.useRef(list.limited);
+
   React.useEffect(() => {
-    setLimitInput(list.limited?.toString() || "");
+    if (prevLimitedRef.current !== list.limited) {
+      setLimitInput(list.limited?.toString() || "");
+      prevLimitedRef.current = list.limited;
+    }
   }, [list.limited]);
 
   const handleSaveLimit = () => {
@@ -128,6 +134,9 @@ export function KanbanColumn({
   const hasLimit = typeof list.limited === "number" && list.limited > 0;
   const isLimitExceeded = hasLimit && tasks.length > list.limited!;
 
+  const currentIndex = allLists.findIndex((l) => l.id === list.id);
+  const nextList = allLists[currentIndex + 1];
+  const isNextDone = nextList?.category === ListCategoryEnum.DONE;
   const isFirst = allLists[0]?.id === list.id;
   const isLast = allLists[allLists.length - 1]?.id === list.id;
 
@@ -141,48 +150,21 @@ export function KanbanColumn({
             ? "bg-green-500/10 border-green-500/30 ring-2 ring-green-500/20"
             : "bg-secondary/60 border-primary/20 ring-2 ring-primary/10"
           : isLimitExceeded
-          ? "bg-red-500/5 border-red-500/20"
-          : ""
+            ? "bg-red-500/5 border-red-500/20"
+            : ""
       )}
     >
-      {/* Header */}
-      <div className="flex bg-secondary mb-2 px-4 pt-4 pb-2 z-10 items-center justify-between shrink-0">
+      <div className="flex bg-secondary px-4 pt-4 pb-3 z-20 items-center justify-between shrink-0 border-b border-border/10">
         <div className="flex items-center gap-2.5">
           {list.category === ListCategoryEnum.TODO && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="cursor-help">
-                  <Circle className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>To Do</p>
-              </TooltipContent>
-            </Tooltip>
+            <Circle className="h-4 w-4 text-muted-foreground" />
+
           )}
           {list.category === ListCategoryEnum.IN_PROGRESS && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Clock className="h-4 w-4 text-blue-500" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>In Progress</p>
-              </TooltipContent>
-            </Tooltip>
+            <Clock className="h-4 w-4 text-blue-500" />
           )}
           {list.category === ListCategoryEnum.DONE && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Done</p>
-              </TooltipContent>
-            </Tooltip>
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
           )}
           <h3 className="font-semibold text-sm text-foreground/90">
             {list.name}
@@ -202,16 +184,7 @@ export function KanbanColumn({
 
           {/* Chỉ hiện icon cảnh báo nếu quá limit */}
           {isLimitExceeded && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <AlertCircle className="h-4 w-4 text-destructive" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>WIP Limit Exceeded!</p>
-              </TooltipContent>
-            </Tooltip>
+            <AlertCircle className="h-4 w-4 text-destructive" />
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -240,7 +213,7 @@ export function KanbanColumn({
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Move Left
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={isLast} onClick={onMoveRight}>
+                <DropdownMenuItem disabled={isLast || isNextDone} onClick={onMoveRight}>
                   <ArrowRight className="mr-2 h-4 w-4" />
                   Move Right
                 </DropdownMenuItem>
@@ -311,8 +284,30 @@ export function KanbanColumn({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-3 flex flex-col">
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pt-2 pb-5 flex flex-col gap-2 relative">
+        {/* Add Button / Form at TOP for better visibility and to avoid overlap */}
+        <AnimatePresence mode="wait">
+          {isAdding && (
+            <motion.div
+              key="add-new-card"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="w-full shrink-0"
+            >
+              <KanbanAddNewCard
+                listId={list.id}
+                projectId={projectId}
+                sprintId={sprintId}
+                onCancel={() => setIsAdding(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Content (Task List) */}
+
         {/* 1. SortableContext CHỈ bọc danh sách Task */}
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {/* 2. SỬA QUAN TRỌNG: Thay h-full bằng min-h-[50px] */}
@@ -349,45 +344,21 @@ export function KanbanColumn({
               </span>
             ) : (
               <span className="text-xs text-muted-foreground/50">
-                End of list
               </span>
             )}
           </div>
         )}
 
-        {/* Add Button / Form */}
-        <AnimatePresence mode="wait">
-          {isAdding ? (
-            <motion.div
-              key="add-new-card"
-              initial={{ opacity: 0, y: -10, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0, y: -10, height: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <KanbanAddNewCard
-                listId={list.id}
-                projectId={projectId}
-                sprintId={sprintId}
-                onCancel={() => setIsAdding(false)}
-              />
-            </motion.div>
-          ) : (
-            <motion.button
-              key="add-button"
-              initial={{ height: 0 }}
-              animate={{ height: "auto" }}
-              exit={{ height: 0, opacity: 0 }}
-              onClick={() => setIsAdding(true)}
-              className="hidden group-hover:block transition-all cursor-pointer duration-200 items-center gap-2 p-3 rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5 text-sm font-medium text-muted-foreground hover:text-primary w-full text-left mt-2 shrink-0"
-            >
-              <div className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Create new task
-              </div>
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {/* Global Create Button at bottom (only show when not adding at top) */}
+        {!isAdding && (
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex hover:bg-background/20 transition-all cursor-pointer duration-200 items-center gap-2 p-2 rounded-lg border-2 border-dashed border-muted-foreground/10 hover:border-primary/30 text-xs font-medium text-muted-foreground/60 hover:text-primary w-full text-left mt-auto shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Create task
+          </button>
+        )}
       </div>
     </div>
   );

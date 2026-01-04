@@ -33,7 +33,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
         connectionInitOptions: { wait: false },
         exchanges: [{
           name: PROJECT_EXCHANGE,
-          type: 'direct',
+          type: 'topic',
         }],
         enableControllerDiscovery: true
       })

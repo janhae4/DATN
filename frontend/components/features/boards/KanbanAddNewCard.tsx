@@ -25,7 +25,7 @@ export function KanbanAddNewCard({ listId, sprintId, projectId, onCancel }: Kanb
   } = useTaskManagementContext()
 
 
-  const { createTask } = useTasks(projectId)
+  const { createTask } = useTasks({ projectId })
 
   React.useEffect(() => {
     setNewTaskListId(listId)
@@ -37,7 +37,7 @@ export function KanbanAddNewCard({ listId, sprintId, projectId, onCancel }: Kanb
       const newTask = {
         title: newRowTitle,
         listId: listId,
-        sprintId: sprintId,
+        sprintId: sprintId || undefined,
         projectId: projectId,
       }
       createTask(newTask)
@@ -59,8 +59,8 @@ export function KanbanAddNewCard({ listId, sprintId, projectId, onCancel }: Kanb
   };
 
   return (
-    <Card className="mb-2 shadow-lg ring-2 ring-primary/20">
-      <CardContent className=" space-y-3">
+    <Card className="group/card relative border-border/40 bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/50 mb-2">
+      <CardContent className="flex flex-col gap-2.5">
         <Input
           autoFocus
           placeholder="What needs to be done?"

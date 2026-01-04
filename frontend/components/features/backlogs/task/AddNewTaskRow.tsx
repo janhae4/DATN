@@ -18,15 +18,15 @@ interface AddNewTaskRowProps {
   lists: List[];
   sprintId?: string;
   epicId?: string | null;
-  parentId?: string; 
+  parentId?: string;
   onCancel?: () => void;
-  isSubtask?: boolean; 
+  isSubtask?: boolean;
 }
 
-export function AddNewTaskRow({ 
-  lists, 
-  sprintId, 
-  parentId, 
+export function AddNewTaskRow({
+  lists,
+  sprintId,
+  parentId,
   epicId,
   onCancel,
   isSubtask = false
@@ -34,13 +34,13 @@ export function AddNewTaskRow({
   const params = useParams();
   const projectId = params.projectId as string;
 
-  const { createTask, isLoading } = useTasks();
+  const { createTask, isLoading } = useTasks({ projectId });
 
   React.useEffect(() => {
     console.log("🟢 MOUNT AddNewTaskRow");
     return () => console.log("🔴 UNMOUNT AddNewTaskRow");
   }, []);
-  
+
   const [title, setTitle] = React.useState("");
   const [selectedListId, setSelectedListId] = React.useState<string>("");
 
@@ -49,8 +49,8 @@ export function AddNewTaskRow({
   React.useEffect(() => {
     if (lists && lists.length > 0 && !selectedListId) {
       const todoList = lists.find(
-          (l) => l.category === ListCategoryEnum.TODO || l.name.toLowerCase() === "to do"
-        ) || lists[0];
+        (l) => l.category === ListCategoryEnum.TODO || l.name.toLowerCase() === "to do"
+      ) || lists[0];
       if (todoList) setSelectedListId(todoList.id);
     }
   }, [lists, selectedListId]);
@@ -110,7 +110,7 @@ export function AddNewTaskRow({
       <TableCell></TableCell>
       <TableCell></TableCell>
       <TableCell></TableCell>
-      
+
       <TableCell className="w-fit">
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={handleCreate} disabled={isLoading || !title.trim()}>

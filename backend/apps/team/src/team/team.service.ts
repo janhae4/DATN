@@ -887,12 +887,13 @@ export class TeamService {
     }
 
     // 5. Gộp danh sách từ Cache và DB
-    const allFoundUsers = [
+    const allFoundUsers: EventUserSnapshot[] = [
       ...usersFromCache,
       ...usersFromDb.map((u) => ({
         id: u.id,
         name: u.name,
         avatar: u.avatar,
+        email: u.email,
       })),
     ];
 
@@ -900,26 +901,23 @@ export class TeamService {
     const profileMap = new Map(allFoundUsers.map((p) => [p.id, p]));
 
     const combinedMembers = membersFromDb.map((member) => {
-      const cachedUser = profileMap.get(member.userId) || {
-        name: 'Unknown',
-        avatar: null,
-      };
+      const profile = profileMap.get(member.userId);
 
       return {
         id: member.userId,
         name: profile?.name || 'Unknown',
         avatar: profile?.avatar || '',
-        bio: profile?.bio || '',
+        bio: '',
         role: member.role,
         email: profile?.email || '',
-        skills: profile?.skills || [],
+        skills: [],
         joinedAt: member.joinedAt,
-        isActive: profile?.isActive || false,
+        isActive: false,
         teamId: teamId,
       };
     });
 
-    return result;
+    return combinedMembers;
   }
 
   async findAll() {

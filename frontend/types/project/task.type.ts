@@ -21,4 +21,6 @@ export type Task = {
   createdAt: string;
   updatedAt: string;
   fileIds?: string[]; // IDs of attached files
+  taskLabels?: TaskLabel[];
+  children?: Task[];
 };

@@ -13,24 +13,24 @@ import { List, Task, User } from "@/types";
 import { TaskTitle } from "./TaskTitle";
 import { TaskDescription } from "./TaskDescription";
 import { TaskMetaBox } from "./TaskMetaBox";
-// 1. IMPORT COMPONENT MỚI
 import { TaskSubtasks } from "./TaskSubtasks"
 import { TaskDocuments } from "./TaskDocuments"
 
 type TaskDetailModalProps = {
-    task: Task | null
-    open?: boolean
-    users?: User[]
-    lists: List[]
-    onOpenChange?: (open: boolean) => void
-    onListChange: (taskId: string, listId: string) => void
-    onDateChange: (taskId: string, newDate: Date | undefined) => void
-    onPriorityChange: (taskId: string, priority: Task["priority"]) => void
-    onAssigneeChange: (taskId: string, assigneeIds: string[]) => void
-    onTitleChange: (taskId: string, columnId: "title", value: string) => void
-    onDescriptionChange: (taskId: string, description: string) => void
-    onLabelsChange?: (taskId: string, labelIds: string[]) => void
-    onTaskSelect?: (task: Task) => void
+  task: Task | null
+  open?: boolean
+  users?: User[]
+  lists: List[]
+  onOpenChange?: (open: boolean) => void
+  onListChange: (taskId: string, listId: string) => void
+  onDateChange: (taskId: string, newDate: Date | undefined) => void
+  onPriorityChange: (taskId: string, priority: Task["priority"]) => void
+  onAssigneeChange: (taskId: string, assigneeIds: string[]) => void
+  onTitleChange: (taskId: string, columnId: "title", value: string) => void
+  onDescriptionChange: (taskId: string, description: string) => void
+  onLabelsChange?: (taskId: string, labelIds: string[]) => void
+  onTaskSelect?: (task: Task) => void
+  updateTask: (taskId: string, updates: any) => void
 }
 
 export function TaskDetailModal({
@@ -85,8 +85,6 @@ export function TaskDetailModal({
     onDescriptionChange(task.id, description);
   const handleTaskLabelsChange = (labelIds: string[]) =>
     onLabelsChange?.(task.id, labelIds);
-
-  // Khi click vào 1 subtask trong modal -> yêu cầu component cha switch sang task đó
   const handleSubtaskClick = (subtask: Task) => {
     onTaskSelect?.(subtask);
   };
@@ -108,43 +106,44 @@ export function TaskDetailModal({
           />
         </SheetHeader>
 
-                <div className="mt-6 space-y-6">
-                    {/* Description */}
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-medium">Description</h3>
-                        <TaskDescription
-                            description={description}
-                            onDescriptionChange={setDescription}
-                            onBlur={() => handleTaskDescriptionChange(description)}
-                        />
-                    </div>
-                     {/* Task Meta Information */}
-                    <TaskMetaBox
-                        task={task}
-                        lists={lists}
-                        onDateChange={handleTaskDateChange}
-                        onPriorityChange={handleTaskPriorityChange}
-                        onLabelsChange={handleTaskLabelsChange}
-                    />
+        <div className="mt-6 space-y-6">
+          {/* Description */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium">Description</h3>
+            <TaskDescription
+              description={description}
+              onDescriptionChange={setDescription}
+              onBlur={() => handleTaskDescriptionChange(description)}
+            />
+          </div>
+          {/* Task Meta Information */}
+          <TaskMetaBox
+            task={task}
+            lists={lists}
+            onDateChange={handleTaskDateChange}
+            onPriorityChange={handleTaskPriorityChange}
+            onLabelsChange={handleTaskLabelsChange}
+            updateTask={updateTask}
+          />
 
-                    {/* 2. SUBTASKS SECTION */}
-                    <TaskSubtasks
-                        taskId={task.id}
-                        projectId={task.projectId}
-                        lists={lists}
-                        onRowClick={handleSubtaskClick}
-                    />
+          {/* 2. SUBTASKS SECTION */}
+          <TaskSubtasks
+            taskId={task.id}
+            projectId={task.projectId}
+            lists={lists}
+            onRowClick={handleSubtaskClick}
+          />
 
-                    {/* 3. DOCUMENTS SECTION */}
-                    <TaskDocuments
-                        taskId={task.id}
-                        projectId={task.projectId}
-                    />
+          {/* 3. DOCUMENTS SECTION */}
+          <TaskDocuments
+            taskId={task.id}
+            projectId={task.projectId}
+          />
 
-                   
 
-                </div>
-            </SheetContent>
-        </Sheet>
-    )
+
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
 }

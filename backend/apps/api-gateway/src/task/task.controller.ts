@@ -36,7 +36,8 @@ import { FileService } from '../file/file.service';
 export class TaskController {
   constructor(
     private readonly taskService: TaskService,
-    private readonly fileService: FileService
+    private readonly fileService: FileService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis
   ) { }
 
   @Get("tasklabel")

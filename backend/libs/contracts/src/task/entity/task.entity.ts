@@ -75,7 +75,7 @@ export class Task {
   })
   taskLabels: TaskLabel[];
 
-  @ManyToOne(() => Task, (task) => task.children)
+  @ManyToOne(() => Task, (task) => task.children, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'parentId' })
   parent: Task;
 

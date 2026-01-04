@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import QueryProvider from "@/providers/QueryProvider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const roboto = Roboto({
   subsets: ["latin", "vietnamese"],
@@ -24,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${roboto.variable}`}>
-      <body>
+    <html lang="en" className={`${roboto.variable}`} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>
             <ThemeProvider
@@ -34,8 +35,10 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              {children}
-              <Toaster />
+              <TooltipProvider delayDuration={0}>
+                {children}
+                <Toaster />
+              </TooltipProvider>
             </ThemeProvider>
           </AuthProvider>
         </QueryProvider>

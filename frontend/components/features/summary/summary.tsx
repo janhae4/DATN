@@ -28,7 +28,7 @@ const Summary = () => {
 
   const { data, isLoading } = useProjectStats(projectId);
 
-  if (isLoading || !data) {
+  if (isLoading || !data || !data.stats) {
     return <SummarySkeleton />;
   }
 

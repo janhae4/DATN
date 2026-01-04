@@ -100,19 +100,73 @@ export class TasksService {
   }
 
   async deleteMany(taskIds: string[], userId: string) {
-    if (!taskIds.length) return;
-    try {
+    console.log('deleteMany called with:', { taskIds, userId });
+    if (!taskIds || !taskIds.length) {
+      console.log('No task IDs provided or empty array');
+      return { success: true, deleted: 0 };
+    }
 
-      await this.taskRepository
+    try {
+      // Get first task to verify project access
+      const firstTask = await this.taskRepository.findOne({
+        where: { id: In(taskIds) }
+      });
+
+      if (!firstTask) {
+        console.log('No tasks found for IDs:', taskIds);
+        throw new NotFoundException('No tasks found to delete');
+      }
+
+      console.log('Verifying project for task:', firstTask.id, 'projectId:', firstTask.projectId);
+
+      // Verify user has access to the project
+      let project: Project;
+      try {
+        project = await firstValueFrom(
+          this.projectClient.send<Project>(PROJECT_PATTERNS.GET_BY_ID, { id: firstTask.projectId })
+        );
+      } catch (err) {
+        console.error('Failed to fetch project from project-service:', err);
+        throw new BadRequestException('Could not verify project access');
+      }
+
+      if (!project) {
+        console.log('Project not found:', firstTask.projectId);
+        throw new NotFoundException('Project not found');
+      }
+
+      console.log('Verifying permission for user:', userId, 'teamId:', project.teamId);
+
+      // Verify team permission
+      try {
+        const permissionResult = await this.amqpConnection.request({
+          exchange: TEAM_EXCHANGE,
+          routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+          payload: { userId, teamId: project.teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+        });
+        unwrapRpcResult(permissionResult);
+      } catch (err) {
+        console.error('Permission verification failed:', err);
+        throw new BadRequestException('You do not have permission to delete tasks in this project');
+      }
+
+      // Delete all tasks in the list
+      console.log('Executing delete for tasks:', taskIds);
+      const result = await this.taskRepository
         .createQueryBuilder()
         .delete()
         .from(Task)
         .where("id IN (:...ids)", { ids: taskIds })
-        .andWhere("reporterId = :userId", { userId })
         .execute();
-      return { success: true };
+
+      console.log(`Deleted ${result.affected} tasks`);
+      return { success: true, deleted: result.affected };
     } catch (error) {
-      throw new BadRequestException(error.message);
+      console.error('Error in deleteMany:', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(error?.message || 'Failed to delete tasks');
     }
   }
 
@@ -226,7 +280,7 @@ export class TasksService {
     }
 
     console.log("Parents filter:", parentId, shouldFetchSubtasks);
-    if (parentId === null || parentId === 'null') query.andWhere('task.parentId IS NULL');
+    if (parentId === null || parentId === 'null' || (shouldFetchSubtasks && parentId === undefined)) query.andWhere('task.parentId IS NULL');
     else if (parentId) query.andWhere('task.parentId = :parentId', { parentId });
     if (priority && priority.length > 0) query.andWhere('task.priority IN (:...priorities)', { priorities: priority });
     if (statusId) query.andWhere('task.listId IN (:...statusId) ', { statusId });
@@ -484,5 +538,90 @@ export class TasksService {
     }
 
     return task;
+  }
+
+  async getProjectStats(projectId: string, userId: string) {
+    // Get all lists for this project
+    const lists = await firstValueFrom(
+      this.listClient.send<List[]>(LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId })
+    );
+
+    // Find the "Done" category list
+    const doneList = lists.find(l => l.category === ListCategoryEnum.DONE);
+    const doneListId = doneList?.id;
+
+    // Count completed tasks (tasks in Done list)
+    const completed = doneListId
+      ? await this.taskRepository.count({ where: { projectId, listId: doneListId } })
+      : 0;
+
+    // Count pending tasks (tasks not in Done list)
+    const pending = await this.taskRepository.count({
+      where: { projectId, listId: doneListId ? In(lists.filter(l => l.id !== doneListId).map(l => l.id)) : In(lists.map(l => l.id)) }
+    });
+
+    // Count overdue tasks (dueDate < now and not in Done)
+    const now = new Date();
+    const overdue = await this.taskRepository
+      .createQueryBuilder('task')
+      .where('task.projectId = :projectId', { projectId })
+      .andWhere('task.dueDate < :now', { now })
+      .andWhere(doneListId ? 'task.listId != :doneListId' : '1=1', { doneListId })
+      .getCount();
+
+    // Count due soon (next 7 days)
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const dueSoon = await this.taskRepository
+      .createQueryBuilder('task')
+      .where('task.projectId = :projectId', { projectId })
+      .andWhere('task.dueDate BETWEEN :now AND :sevenDays', { now, sevenDays: sevenDaysFromNow })
+      .andWhere(doneListId ? 'task.listId != :doneListId' : '1=1', { doneListId })
+      .getCount();
+
+    // Get distribution (count per list)
+    const distribution = await this.taskRepository
+      .createQueryBuilder('task')
+      .select('task.listId', 'listId')
+      .addSelect('COUNT(task.id)', 'count')
+      .where('task.projectId = :projectId', { projectId })
+      .groupBy('task.listId')
+      .getRawMany();
+
+    // Get activity (tasks created/completed per day for last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const activity = await this.taskRepository
+      .createQueryBuilder('task')
+      .select('DATE(task.createdAt)', 'date')
+      .addSelect('COUNT(task.id)', 'tasksCreated')
+      .addSelect(
+        doneListId
+          ? `SUM(CASE WHEN task.listId = '${doneListId}' THEN 1 ELSE 0 END)`
+          : '0',
+        'tasksCompleted'
+      )
+      .where('task.projectId = :projectId', { projectId })
+      .andWhere('task.createdAt >= :thirtyDaysAgo', { thirtyDaysAgo })
+      .groupBy('DATE(task.createdAt)')
+      .orderBy('DATE(task.createdAt)', 'ASC')
+      .getRawMany();
+
+    return {
+      stats: {
+        completed,
+        pending,
+        overdue,
+        dueSoon,
+      },
+      distribution,
+      lists,
+      activity: activity.map(a => ({
+        date: a.date,
+        tasksCreated: parseInt(a.tasksCreated || '0'),
+        tasksCompleted: parseInt(a.tasksCompleted || '0'),
+      })),
+    };
   }
 }
