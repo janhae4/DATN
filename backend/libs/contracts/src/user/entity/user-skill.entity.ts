@@ -7,8 +7,11 @@ export class UserSkill {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
+    @Column()
+    userId: string;
+
     @ManyToOne(() => User, (user) => user.skills)
-    @JoinColumn({ name: 'userId'})
+    @JoinColumn({ name: 'userId' })
     user: User;
 
     @Column()

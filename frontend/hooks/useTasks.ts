@@ -5,15 +5,19 @@ import {
   CreateTaskDto,
   UpdateTaskDto,
   GetTasksParams,
+  GetTasksByTeamParams,
 } from "@/services/taskService";
 import { streamHelper } from "@/services/apiClient";
 import { toast } from "sonner";
 
-export function useTasks(filters?: GetTasksParams) {
+type UseTasksFilters = GetTasksParams | GetTasksByTeamParams;
+
+export function useTasks(filters?: UseTasksFilters) {
   const queryClient = useQueryClient();
   const tasksQueryKey = ["tasks", filters];
-  const labelsQueryKey = ["task-labels-project", filters?.projectId];
-
+  const projectId = filters && 'projectId' in filters ? filters.projectId : undefined;
+  const teamId = filters && 'teamId' in filters ? filters.teamId : undefined;
+  const labelsQueryKey = ["labels", projectId];
   const {
     data,
     fetchNextPage,
@@ -25,10 +29,24 @@ export function useTasks(filters?: GetTasksParams) {
   } = useInfiniteQuery({
     queryKey: tasksQueryKey,
     queryFn: async ({ pageParam }) => {
-      return taskService.getTasks({
-        ...filters!,
-        page: pageParam as number
-      });
+      const page = pageParam as number;
+      console.log("Fetching tasks for page", page, "with filters", filters);
+      if (!filters) throw new Error("No filters provided");
+      if ('projectId' in filters && filters.projectId) {
+        return taskService.getTasks({
+          ...filters,
+          page,
+        });
+      }
+
+      if ('teamId' in filters && filters.teamId) {
+        return taskService.getTasksByTeam({
+          ...filters,
+          page,
+        });
+      }
+
+      throw new Error("Missing projectId or teamId");
     },
     initialPageParam: filters?.page || 1,
     getNextPageParam: (lastPage, allPages) => {
@@ -37,7 +55,7 @@ export function useTasks(filters?: GetTasksParams) {
       }
       return undefined;
     },
-    enabled: !!filters?.projectId,
+    enabled: !!projectId || !!teamId,
   });
 
   const tasks = data?.pages.flatMap((page) => page.data) || [];
@@ -47,8 +65,8 @@ export function useTasks(filters?: GetTasksParams) {
     isLoading: isLoadingLabels,
   } = useQuery<TaskLabel[]>({
     queryKey: labelsQueryKey,
-    queryFn: () => taskService.getAllTaskLabelByProjectId(filters?.projectId!),
-    enabled: !!filters?.projectId,
+    queryFn: () => taskService.getAllTaskLabelByProjectId(projectId!),
+    enabled: !!projectId,
   });
 
   // --- MUTATIONS ---
@@ -125,14 +143,8 @@ export function useTasks(filters?: GetTasksParams) {
     },
 
     onSettled: (data, error, variables) => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: tasksQueryKey });
-        queryClient.invalidateQueries({ queryKey: labelsQueryKey });
-        queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
-        queryClient.invalidateQueries({
-          queryKey: ["task-labels", variables.id],
-        });
-      }, 50);
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
     },
   });
 

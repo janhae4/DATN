@@ -6,4 +6,6 @@ export const SPRINT_PATTERNS = {
   GET_ACTIVE_SPRINT: 'sprint.getActiveSprint',
   START_SPRINT: 'sprint.startSprint',
   FIND_ONE_BY_ID: 'sprint.findOneById',
+  COMPLETE_SPRINT: 'sprint.completeSprint', 
+  FIND_ALL: 'sprint.findAll',
 };

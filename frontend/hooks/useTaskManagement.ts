@@ -29,9 +29,9 @@ const INITIAL_FILTERS: TaskFilters = {
   sprintIds: [],
 }
 
-export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
+export const useTaskManagement = (projectId: string = "project-phoenix-1", teamId: string = "team-1") => {
   const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask } = useTasks({ projectId })
-  const { sprints: serverSprints, updateSprint: serverUpdateSprint } = useSprints(projectId)
+  const { sprints: serverSprints, updateSprint: serverUpdateSprint } = useSprints(projectId, teamId);
   const { epics: serverEpics } = useEpics(projectId)
   const { labels: serverLabels } = useLabels(projectId)
 

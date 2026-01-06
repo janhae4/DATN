@@ -9,11 +9,15 @@ import {
   UpdateSprintDto,
   TASK_EXCHANGE,
   TASK_PATTERNS,
+  TEAM_EXCHANGE,
+  TEAM_PATTERN,
+  MemberRole,
 } from '@app/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, QueryBuilder, In } from 'typeorm';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Sprint } from '@app/contracts/sprint/entity/sprint.entity';
+import { unwrapRpcResult } from '@app/common';
 
 @Injectable()
 export class SprintsService {
@@ -21,10 +25,9 @@ export class SprintsService {
     @InjectRepository(Sprint)
     private readonly sprintRepository: Repository<Sprint>,
     private readonly amqpConnection: AmqpConnection,
-  ) {}
+  ) { }
 
   async create(createSprintDto: CreateSprintDto) {
-    // Permission checks should be done in the API Gateway.
     const sprintData: Partial<Sprint> = {
       title: createSprintDto.title,
       goal: createSprintDto.goal,
@@ -41,8 +44,6 @@ export class SprintsService {
   }
 
   async findAllByProjectId(projectId: string) {
-    // The new architecture separates concerns. The sprint-service only manages sprints.
-    // To get tasks within a sprint, the client (e.g., API Gateway) will need to make a separate call to the task-service.
     return this.sprintRepository.find({
       where: { projectId },
       order: { startDate: 'DESC' },
@@ -54,20 +55,16 @@ export class SprintsService {
     if (!sprint) {
       throw new NotFoundException(`Sprint with ID ${id} not found`);
     }
-    // Similar to findAll, task details are handled by the task-service.
     return sprint;
   }
 
   async update(id: string, updateSprintDto: UpdateSprintDto) {
-    // Permission checks are assumed to be handled upstream.
-    await this.findOneById(id); // Ensures sprint exists
-
+    await this.findOneById(id);
     if (updateSprintDto.status === SprintStatus.COMPLETED) {
-      // When a sprint is completed, we notify the task-service to handle moving incomplete tasks.
       this.amqpConnection.publish(
         TASK_EXCHANGE,
-        TASK_PATTERNS.MOVE_INCOMPLETE_TASKS_TO_BACKLOG,
-        { sprintId: id },
+        TASK_PATTERNS.COMPLETE_SPRINT,
+        { sprintId: id, projectId: updateSprintDto.projectId },
       );
     }
 
@@ -88,10 +85,8 @@ export class SprintsService {
   }
 
   async remove(id: string) {
-    // Permission check upstream.
-    await this.findOneById(id); // Ensures sprint exists
+    await this.findOneById(id);
 
-    // Notify task-service to un-assign tasks from this sprint before deleting it.
     this.amqpConnection.publish(
       TASK_EXCHANGE,
       TASK_PATTERNS.UNASSIGN_TASKS_FROM_SPRINT,
@@ -105,7 +100,6 @@ export class SprintsService {
   }
 
   async getActiveSprint(projectId: string) {
-    // Permission check upstream.
     return this.sprintRepository.findOne({
       where: {
         projectId,
@@ -115,7 +109,6 @@ export class SprintsService {
   }
 
   async startSprint(id: string) {
-    // Permission check upstream.
     const sprintToStart = await this.findOneById(id);
 
     const activeSprint = await this.sprintRepository.findOne({
@@ -134,5 +127,33 @@ export class SprintsService {
 
     await this.sprintRepository.update(id, { status: SprintStatus.ACTIVE });
     return this.findOneById(id);
+  }
+
+  async findAll(projectId: string, userId: string, teamId: string, status?: SprintStatus[]) {
+    if (!projectId || !teamId) {
+      throw new BadRequestException('Project ID and Team ID are required');
+    }
+
+    unwrapRpcResult(
+      await this.amqpConnection.request({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+        payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+      })
+    )
+
+    const query = this.sprintRepository.createQueryBuilder('sprint')
+      .where('sprint.projectId = :projectId', { projectId });
+
+    if (status && status.length > 0) {
+      const statusArray = Array.isArray(status) ? status : [status];
+      query.andWhere('sprint.status IN (:...status)', { status: statusArray });
+    }
+
+    const sprints = await query
+      .orderBy('sprint.startDate', 'DESC')
+      .getMany();
+
+    return sprints;
   }
 }

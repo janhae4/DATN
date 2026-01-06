@@ -8,6 +8,7 @@ export const LIST_PATTERNS = {
   REMOVE: 'list.remove',
   FIND_ONE_BY_ID: 'list.findOneById',
   FIND_ALL_BY_PROJECT: 'list.findAllByProject',
+  FIND_ALL_BY_TEAM: 'list.findAllByTeam',
   UPDATE: 'list.update',
   REMOVE_BY_PROJECT: 'list.removeByProject',
   UPDATE_POSITION: 'list.updatePosition',

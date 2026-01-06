@@ -59,7 +59,6 @@ export const useNotifications = () => {
     useEffect(() => {
         fetchNotifications();
 
-        // Polling every 30 seconds for new notifications
         const interval = setInterval(() => {
             fetchNotifications();
         }, 30000);

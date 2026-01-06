@@ -67,4 +67,11 @@ export class CreateSprintDto {
   @IsUUID()
   @IsOptional()
   userId?: string;
+
+  @ApiPropertyOptional({
+    example: '19f14dbd-5eaf-4c71-873d-286215ce6ad7',
+  })
+  @IsUUID()
+  @IsOptional()
+  teamId?: string;
 }

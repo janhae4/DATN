@@ -40,48 +40,44 @@ class TaskArchitect:
             print(f"--> [SUGGEST TASK] Chế độ: Team Assignment")
             members_context = self._build_members_context(members)
             assignment_rules = """
-                Ưu tiên 70% task cho người đã có kinh nghiệm (History) để đảm bảo tiến độ.
-                Dành 30% task (độ khó trung bình/thấp) cho người có 'Target Skills' trùng với task đó dù họ chưa có kinh nghiệm, để giúp họ mở rộng kỹ năng (extend).
-                Dựa vào Lịch sử (Task History) để đánh giá kinh nghiệm thực tế. Ưu tiên giao task tương tự những gì họ đã làm tốt.
-                Nếu một task đòi hỏi kỹ năng mà không ai có nổi bật, hãy giao cho người có kỹ năng gần nhất hoặc người có Bio là "Lead".
-                Phân bổ đều khối lượng công việc, không dồn quá nhiều cho một người.
-                Nếu danh sách thành viên trống, hãy trả về Id người giao là người yếu cầu.
-
+                - CHẾ ĐỘ: TEAM ASSIGNMENT.
+                - NGUỒN ID: Chỉ sử dụng các UUID có trong danh sách thành viên bên trên.
+                - QUY TẮC: 70% dựa trên Kinh nghiệm (History), 30% dựa trên Kỹ năng mục tiêu (Target Skills).
+                - CÂN BẰNG: Phân bổ đều khối lượng công việc, ưu tiên người có Bio là "Lead" cho task khó.
+                - LÝ DO: Ghi ngắn gọn lý do tại sao người này được chọn (dựa trên Skill/History).
             """
         else:
             print(f"--> [SUGGEST TASK] Chế độ: Personal Roadmap")
-            members_context = "N/A (Chế độ cá nhân)"
+            members_context = "User hiện tại (Cá nhân)"
             assignment_rules = """
-                Đây là kế hoạch cá nhân cho người dùng hiện tại.
-                TẤT CẢ các task phải để ID_Người_Giao là "self".
-                Cột Lý_Do hãy để trống.
+                - CHẾ ĐỘ: PERSONAL ROADMAP.
+                - NGUỒN ID: Luôn luôn trả về giá trị "self".
+                - LÝ DO: Luôn luôn để trống (không ghi gì cả).
+                - TỔNG QUAN: Tự xây dựng lộ trình học tập/làm việc tuần tự cho một người.
             """
         
         prompt_template = """
-            Bạn là Project Manager AI
+            ROLE: Senior Project Manager & System Architect AI.
             
-            MỤC TIÊU: {{objective}}
-                
-            DƯỚI ĐÂY LÀ DANH SÁCH THÀNH VIÊN VÀ NĂNG LỰC:
+            CONTEXT:
+            - Objective: {objective}
+            - Current Date: {current_date}
+            - Team Members Context: 
             {members_context}
 
-            YÊU CẦU CỦA NGƯỜI DÙNG:
-            {objective}
-
-            QUY TẮC PHÂN CÔNG:
+            ASSIGNMENT ALGORITHM:
             {assignment_rules}
-            Ngày hiện tại là {current_date}. 
-            Hãy tự động tính toán Thời_Gian_Bắt_Đầu và Thời_Gian_Kết_Thúc sao cho hợp lý với độ khó của task và trình tự thực hiện (Task sau bắt đầu sau task trước).
-            Định dạng ngày phải là YYYY-MM-DD.
-
-            ĐỊNH DẠNG PHẢN HỒI (MANDATORY):
-            Mỗi task trả về trên một dòng duy nhất. KHÔNG GIẢI THÍCH GÌ THÊM.
-            KHÔNG trả về markdown (không dùng dấu ```).
-            KHÔNG có lời dẫn hay kết bài.
-            Bắt đầu phân công ngay lập tức.
-            Dựa trên chính xác id người giao từ danh sách thành viên đã cho.
-            Trả về các dòng dữ liệu thuần túy, kết thúc mỗi dòng bằng dấu xuống dòng (\n).
-            Trả về danh sách các task theo định dạng: 
+            STRICT CONSTRAINTS (MANDATORY):
+                1. Task Sequence: Các task phải có tính kế thừa. Task phụ thuộc phải bắt đầu SAU KHI task trước kết thúc ít nhất 1 ngày.
+                2. Duration: Ước tính thời gian dựa trên độ khó (Dễ: 1-3 ngày, Trung bình: 4-7 ngày, Khó: 8-14 ngày).
+                3. Assignment ID: 
+                - Nếu Team Assignment: BẮT BUỘC sử dụng chính xác ID (UUID) từ danh sách thành viên. Không tự chế ID.
+                - Nếu Personal Roadmap: BẮT BUỘC ghi giá trị "self".
+                4. Formatting: 
+                - Trả về mỗi task trên một dòng.
+                - Phân cách bởi dấu '|'.
+                - KHÔNG markdown, KHÔNG lời dẫn, KHÔNG dấu nháy, KHÔNG giải thích.
+                5. Content: Skill_Liên_Quan phải trùng khớp hoặc gần nhất với 'Target Skills' hoặc 'History' của thành viên.            Trả về danh sách các task theo định dạng: 
             Tên_Task | ID_Người_Giao | Skill_Liên_Quan | EXP_Nhận_Được | Lý_Do_Phân_Công | Thời_Gian_Bắt_Dầu | Thời_Gian_Kết_Thúc
 
             Ví dụ:

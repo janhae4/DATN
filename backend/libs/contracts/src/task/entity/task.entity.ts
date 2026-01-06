@@ -27,6 +27,10 @@ export class Task {
   @Column({ type: 'uuid', name: 'projectId', nullable: false })
   projectId: string;
 
+  @Column({ type: 'uuid', name: 'teamId', nullable: true }) 
+  @Index()
+  teamId: string | null;
+
   @Column({ type: 'uuid', name: 'listId', nullable: false })
   listId: string;
 
@@ -39,6 +43,12 @@ export class Task {
     default: Priority.MEDIUM,
   })
   priority: Priority;
+
+  @Column({ type: 'varchar', name: 'skill', nullable: true })
+  skillName: string | null;
+
+  @Column({ type: 'real', name: 'exp', nullable: true })
+  exp: number | null;
 
   @Column('uuid', { array: true, nullable: true, default: [] })
   assigneeIds: string[];

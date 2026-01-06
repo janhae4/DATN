@@ -31,8 +31,6 @@ import {
   Calendar,
   MinusCircle,
   SparkleIcon,
-  SearchCheckIcon,
-  SearchCodeIcon,
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,21 +39,17 @@ import { Separator } from "@/components/ui/separator";
 import { SprintStatus } from "@/types/common/enums";
 import { Task } from "@/types";
 
-// --- Hooks Data ---
 import { useEpics } from "@/hooks/useEpics";
 import { useLabels } from "@/hooks/useLabels";
 import { useLists } from "@/hooks/useList";
 import { useSprints } from "@/hooks/useSprints";
 import { useTeamMembers } from "@/hooks/useTeam";
 
-// --- Components ---
 import { SprintCreateDialog } from "./sprint/SprintCreateDialog";
 import { CompleteSprintDialog } from "./sprint/CompleteSprintDialog";
 import { SuggestTaskByAi } from "./task/SuggestTaskByAi";
-import { useTask, useTasks } from "@/hooks/useTasks";
 import { CreateTaskDto } from "@/services/taskService";
 
-// Định nghĩa Interface Filter (nếu chưa có trong types chung)
 export interface TaskFilters {
   searchText: string;
   assigneeIds: string[];
@@ -66,17 +60,17 @@ export interface TaskFilters {
   sprintIds: string[];
 }
 
-// Lấy list priority từ map
 const priorityList = Object.entries(priorityMap).map(([key, value]) => ({
   value: key as Task["priority"],
   label: value.label,
-  icon: value.icon, // Icon component
-  color: value.color, // Màu sắc cho Icon
+  icon: value.icon,
+  color: value.color,
 }));
 
 interface BacklogFilterBarProps {
   showCreateSprint?: boolean;
   showStatusFilter?: boolean;
+  showSprintDone?: boolean;
   filters: TaskFilters;
   onFilterChange: (newFilters: TaskFilters) => void;
   createTasks: ({
@@ -105,31 +99,29 @@ interface BacklogFilterBarProps {
 export function BacklogFilterBar({
   showCreateSprint = true,
   showStatusFilter = true,
+  showSprintDone = false,
   filters,
   onFilterChange,
   createTasks,
   suggestTaskByAi,
 }: BacklogFilterBarProps) {
-  // 1. Lấy IDs từ URL
   const params = useParams();
   const projectId = params.projectId as string;
   const teamId = params.teamId as string;
 
-  // 2. Fetch Data bằng các Hook riêng biệt
   const { lists } = useLists(projectId);
   const { epics } = useEpics(projectId);
   const { labels } = useLabels(projectId);
-  const { sprints } = useSprints(projectId);
+  const sprintStatus = [
+    SprintStatus.PLANNED,
+    SprintStatus.ACTIVE,
+    SprintStatus.ARCHIVED,
+  ];
+  showSprintDone && sprintStatus.push(SprintStatus.COMPLETED);
+  const { sprints } = useSprints(projectId, teamId, sprintStatus);
   const { data: members } = useTeamMembers(teamId);
 
-  // 4. Xử lý dữ liệu Options khác
-
-  // --- START SỬA ĐỔI ---
-
-  // LỌC: Chỉ giữ lại các Sprint chưa bị Archive
   const nonArchivedSprints = React.useMemo(() => {
-    // Giả định Sprint object có property `isArchived: boolean`.
-    // Nếu bạn dùng trường khác (ví dụ: status đặc biệt), hãy thay đổi logic lọc tại đây.
     return sprints.filter(
       (s: any) =>
         s.category !== SprintStatus.ARCHIVED ||
@@ -137,25 +129,20 @@ export function BacklogFilterBar({
     );
   }, [sprints]);
 
-  // Tìm active sprint cho nút Complete
   const activeSprint = React.useMemo(
     () => sprints.find((s) => s.status === SprintStatus.ACTIVE),
     [sprints]
   );
 
-  // SPRINT OPTIONS: Sử dụng danh sách đã lọc
   const sprintOptions = nonArchivedSprints.map((s) => ({
     value: s.id,
     label: s.title,
     icon: () => <Calendar className="h-3 w-3 text-muted-foreground/70" />,
   }));
 
-  // --- END SỬA ĐỔI ---
-
   const listOptions = lists.map((l) => ({
     value: l.id,
     label: l.name,
-    // SỬA: Icon Status có thể dùng dấu chấm màu
     icon: () => (
       <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
     ),
@@ -164,7 +151,6 @@ export function BacklogFilterBar({
   const epicOptions = epics.map((e) => ({
     value: e.id,
     label: e.title,
-    // SỬA: Icon Epic là hình vuông màu sắc
     icon: () => (
       <div
         className="h-3 w-3 rounded-sm border border-border"
@@ -176,7 +162,6 @@ export function BacklogFilterBar({
   const labelOptions = labels.map((l) => ({
     value: l.id,
     label: l.name,
-    // SỬA: Icon Label là hình tròn màu sắc
     icon: () => (
       <div
         className="h-3 w-3 rounded-full border border-border"
@@ -185,7 +170,6 @@ export function BacklogFilterBar({
     ),
   }));
 
-  // 5. Logic Debounce Search
   const [searchText, setSearchText] = React.useState(filters.searchText);
 
   React.useEffect(() => {
@@ -197,7 +181,6 @@ export function BacklogFilterBar({
     return () => clearTimeout(handler);
   }, [searchText, filters, onFilterChange]);
 
-  // 6. Handlers
   const handleFilterUpdate = <K extends keyof TaskFilters>(
     key: K,
     value: TaskFilters[K]
@@ -363,18 +346,18 @@ export function BacklogFilterBar({
           onSelectionChange={(values) => handleFilterUpdate("labelIds", values)}
         />
 
-        {/* Sprint Filter */}
         <MultiSelectFilter
           label="Sprint"
           icon={<Calendar className="h-3.5 w-3.5" />}
-          options={sprintOptions}
+          options={sprintOptions.filter((s) =>
+            showSprintDone ? true : s.value !== SprintStatus.COMPLETED
+          )}
           selectedValues={filters.sprintIds}
           onSelectionChange={(values) =>
             handleFilterUpdate("sprintIds", values)
           }
         />
 
-        {/* Clear Button - Chỉ hiện khi có lọc */}
         {isFiltered && (
           <Button
             variant="ghost"
@@ -393,14 +376,12 @@ export function BacklogFilterBar({
   );
 }
 
-// --- Component con cho Filter Popover (Không thay đổi) ---
 interface MultiSelectFilterProps<T> {
   label: string;
   icon: React.ReactNode;
   options: {
     value: T;
     label: string;
-    // CHỈNH SỬA: icon có thể là component hoặc ReactNode
     icon: React.ComponentType<any> | (() => React.ReactNode);
   }[];
   selectedValues: T[];
@@ -458,14 +439,12 @@ function MultiSelectFilter<T extends string | null>({
                   onSelect={() => toggleSelection(option.value)}
                   className="cursor-pointer"
                 >
-                  {/* SỬA: ICON/AVATAR HIỂN THỊ NGAY BÊN CẠNH CHECKBOX */}
                   <div className="mr-2 flex h-5 w-5 items-center justify-center">
                     <option.icon />
                   </div>
 
                   <span className="flex-1 truncate">{option.label}</span>
 
-                  {/* CHECKBOX/CHECK ICON HIỂN THỊ Ở PHÍA BÊN PHẢI */}
                   <div
                     className={cn(
                       "ml-auto flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
@@ -477,7 +456,7 @@ function MultiSelectFilter<T extends string | null>({
                     <Check
                       className={cn(
                         "h-4 w-4 transition-opacity duration-100",
-                        !selectedValues.includes(option.value) && "opacity-0" // Ẩn Check nếu không chọn
+                        !selectedValues.includes(option.value) && "opacity-0"
                       )}
                     />
                   </div>

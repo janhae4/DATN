@@ -79,16 +79,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function TeamAnalytics({ members, projects }: TeamAnalyticsProps) {
   
-  // 1. DATA PREPARATION
-  // Normalize members (handle cachedUser if exists)
-  const enrichedMembers = useMemo(() => {
-    return ((members ?? []) as any[]).map((m) => ({
-      ...m,
-      user: m.cachedUser ? { ...m.cachedUser, id: m.userId } : m.user,
-    })) as (TeamMember & { user?: { name?: string; avatar?: string } })[];
-  }, [members]);
-
-  // 2. GROWTH DATA & PULSE CALCULATION
   const { growthData, monthlyPulse } = useMemo(() => {
     const today = new Date();
     const last6Months = Array.from({ length: 6 }, (_, i) => subMonths(today, 5 - i));
@@ -101,7 +91,7 @@ export function TeamAnalytics({ members, projects }: TeamAnalyticsProps) {
       const monthStr = format(date, "MMM");
       const isCurrentMonth = differenceInCalendarMonths(today, date) === 0;
 
-      const membersCount = enrichedMembers.filter(m => {
+      const membersCount = members.filter(m => {
         const joinDate = m.joinedAt ? parseISO(m.joinedAt) : new Date();
         if (isCurrentMonth && differenceInCalendarMonths(today, joinDate) === 0) {
             newMembersThisMonth++;
@@ -128,33 +118,32 @@ export function TeamAnalytics({ members, projects }: TeamAnalyticsProps) {
         growthData: data, 
         monthlyPulse: { members: newMembersThisMonth, projects: newProjectsThisMonth } 
     };
-  }, [enrichedMembers, projects]);
+  }, [members, projects]);
 
   // 3. ROLE DATA
   const roleData = useMemo(() => {
     const counts = { [MemberRole.OWNER]: 0, [MemberRole.ADMIN]: 0, [MemberRole.MEMBER]: 0 };
-    enrichedMembers.forEach((m) => { if (counts[m.role] !== undefined) counts[m.role]++; });
+    members.forEach((m) => { if (counts[m.role] !== undefined) counts[m.role]++; });
     return [
       { name: "Owners", value: counts[MemberRole.OWNER] },
       { name: "Admins", value: counts[MemberRole.ADMIN] },
       { name: "Members", value: counts[MemberRole.MEMBER] },
     ].filter(item => item.value > 0);
-  }, [enrichedMembers]);
+  }, [members]);
 
-  // 4. RECENT ACTIVITY
   const recentActivities = useMemo(() => {
     const activities: ActivityItem[] = [];
     
-    enrichedMembers.forEach((m) => {
+    members.forEach((m) => {
       if (m.joinedAt) {
-        const name = m.user?.name ?? "Unknown";
+        const name = m.name ?? "Unknown";
         activities.push({
           id: `member-${m.id}`,
           type: 'MEMBER_JOIN',
           date: parseISO(m.joinedAt),
           title: "Team Member Joined",
           subtitle: `${name} joined as ${m.role.toLowerCase()}`,
-          user: { name, avatar: m.user?.avatar }
+          user: { name, avatar: m.avatar }
         });
       }
     });
@@ -172,7 +161,7 @@ export function TeamAnalytics({ members, projects }: TeamAnalyticsProps) {
     });
 
     return activities.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
-  }, [enrichedMembers, projects]);
+  }, [members, projects]);
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">

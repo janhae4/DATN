@@ -3,6 +3,7 @@ export const TASK_PATTERNS = {
   FIND_ONE: 'task.findOne',
   FIND_ONE_BY_ID: 'task.findOneById',
   FIND_ALL_BY_PROJECT_ID: 'task.findAllByProjectId',
+  FIND_ALL_BY_TEAM_ID: 'task.findAllByTeam',
   FIND_BY_USER_ID: 'tasks.findByUserId',
   PROCESS_NLP: 'process_task_intent',
   CREATE: 'task.create',
@@ -20,6 +21,6 @@ export const TASK_PATTERNS = {
   HANDLE_LABEL_DELETED: 'task.handleLabelDeleted',
   REMOVE_FILE: 'task.removeFile',
   GET_STATS: 'task.getStats',
-  SUGGEST_TASK: 'task.suggestTask'
+  SUGGEST_TASK: 'task.suggestTask',
+  COMPLETE_SPRINT: 'task.completeSprint',
 };
- 
