@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { ApiGatewayModule } from './../src/api-gateway.module';
+import { ApiGatewayModule } from '../src/api-gateway/api-gateway.module';
 
 describe('ApiGatewayController (e2e)', () => {
   let app: INestApplication;

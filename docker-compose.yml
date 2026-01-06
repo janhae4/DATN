@@ -1,9 +1,192 @@
 services:
-  frontend:
-    build: ./frontend
+  rabbitmq:
+    image: rabbitmq:management
+    hostname: "rabbitmq"
+    container_name: rabbitmq_broker
     ports:
-      - "3000:3000"
-  backend:
-    build: ./backend
+      - "5672:5672" 
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+  redis:
+    image: redis:alpine
+    hostname: "redis"
+    container_name: redis_backend
     ports:
-      - "3001:3001"
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  postgres:
+    image: postgres:alpine
+    hostname: "postgres"
+    container_name: postgres_backend
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com 
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80" 
+    depends_on:
+      - postgres
+      
+  meili-search:
+    image: getmeili/meilisearch:v1.16
+    container_name: meili_search
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_MASTER_KEY: "A7Uu1TlCVUtQRaUpFY9Z2sLoJeZMYVi0"
+    volumes:
+      - ./meili-data:/meili_data
+
+  chroma:
+    image: chromadb/chroma
+    command: run --host 0.0.0.0 --port 8000
+    container_name: chroma_db_server
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/.chroma/chroma
+
+  # worker:
+  #   build: 
+  #     context: ./python/ner-service
+  #     dockerfile: Dockerfile
+    
+  #   container_name: task_ner
+
+  #   command: ["python", "main.py"]
+    
+  #   volumes:
+  #     - ./python/ner-service:/app
+    
+  #   ports:
+  #     - "4002:4002"
+      
+  #   environment:
+  #     RABBITMQ_HOST: rabbitmq
+  #     QUEUE_NAME: process_nlp
+      
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+
+  # chatbot: 
+  #   build: 
+  #     context: ./python/chatbot-service
+  #     dockerfile: dockerfile
+  #   container_name: rag_chatbot
+  #   command: ["python", "main.py"]
+  #   volumes:
+  #     - ./python/chatbot-service:/app
+  #   ports:
+  #     - "4003:4003"
+  #   environment:
+  #     RABBITMQ_HOST: rabbitmq
+  #     INGESTION_QUEUE: ingestion_queue
+  #     RAG_QUEUE: rag_queue
+  #     SUMMARIZE_QUEUE: summarize_queue
+  #     RESPONSE_QUEUE: chatbot_service_queue
+  #     NOTIFICATION_QUEUE: notifications_service_queue
+  #     CHROMA_HOST: chroma
+  #     CHROMA_PORT: 8000      
+  #     OLLAMA_BASE_URL: http://ollama:11434 
+  #     OLLAMA_MODEL: gemma3:4b
+
+  # ollama:
+  #   image: ollama/ollama
+  #   container_name: ollama_service
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #     - ./init-ollama.sh:/init-ollama.sh
+  #   entrypoint: ["/bin/sh", "/init-ollama.sh"]
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  
+  minio:
+    image: minio/minio
+    container_name: minio_service
+    ports:
+      - "9000:9000"
+      - "9001:9001" 
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_NOTIFY_WEBHOOK_ENABLE_primary: "on"
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_primary: "http://host.docker.internal:3000/webhooks/upload-completed"
+    command: [ "server", "--console-address", ":9001", "/data" ]
+    volumes:
+      - minio-data:/data
+
+  mongo_db:
+    image: mongo:8.0
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - mongo-data:/data/db
+      - ./init-mongo.sh:/scripts/init-mongo.sh
+    environment:
+      - MONGODB_URI=mongodb://mongo_db:27017/mongo_db?directConnection=true
+      - MONGO_HOST=mongo_db
+  mongo_rs_init:
+    image: mongo:8.0
+    depends_on:
+      - mongo_db
+    volumes:
+      - ./init-mongo.sh:/scripts/init-mongo.sh
+    entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root  # (Tùy chọn nếu mongo có pass)
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root # (Tùy chọn nếu mongo có pass)
+      ME_CONFIG_MONGODB_URL: mongodb://mongo_db:27017/ # Kết nối nội bộ Docker
+      ME_CONFIG_BASICAUTH: "false" # Tắt đăng nhập web cho tiện dev
+    depends_on:
+      - mongo_db
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  ollama-data:
+  minio-data:
+  chroma-data:
+  mongo-data:
+  meili-data:

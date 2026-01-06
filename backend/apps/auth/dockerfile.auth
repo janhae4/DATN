@@ -1,0 +1,30 @@
+FROM node:18-alpine AS deps
+WORKDIR /app
+
+# copy đúng file package.json của backend
+COPY package*.json ./
+
+RUN npm install --legacy-peer-deps
+
+# copy toàn bộ backend code
+COPY . .
+
+# Build auth app
+RUN npx nest build auth
+
+FROM node:18-alpine
+WORKDIR /app
+
+# Environment for TCP microservice
+ENV NODE_ENV=production \
+    AUTH_CLIENT_PORT=3002
+
+# Copy runtime artifacts
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/dist ./dist
+
+# Expose TCP microservice port
+EXPOSE 3002
+
+# Adjust path if your build output differs
+CMD ["node", "dist/apps/auth/main.js"]

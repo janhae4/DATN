@@ -1,0 +1,32 @@
+export const CHATBOT_PATTERN = {
+  ASK_QUESTION: 'ask_question',
+  PROCESS_DOCUMENT: 'process_document',
+  DELETE_DOCUMENT_VECTOR: 'delete_document_vector',
+  SUMMARIZE_DOCUMENT: 'summarize_document',
+  RESPONSE_CHUNK: 'chatbot.response_chunk',
+  RESPONSE_START: 'chatbot.response_start',
+  RESPONSE_ERROR: 'chatbot.response_error',
+  RESPONSE_END: 'chatbot.response_end',
+  CREATE: 'chatbot.create',
+  STREAM_RESPONSE: 'rag_response',
+  UPLOAD_FILE: 'chatbot.upload_file',
+  GET_FILES_BY_PREFIX: 'chatbot.get_files_by_prefix',
+  DELETE_FILE: 'chatbot.delete_file',
+  FIND_CONVERSATIONS: 'chatbot.find_conversations',
+  FIND_CONVERSATION: 'chatbot.find_conversation',
+  FIND_TEAM_CONVERSATIONS: 'chatbot.find_team_conversations',
+  DELETE_CONVERSATION: 'chatbot.delete_conversation',
+  HANDLE_MESSAGE: 'chatbot.handle_message',
+  GET_FILE_BY_ID: 'chatbot.get_file_by_id',
+  UPDATE_FILE: 'chatbot.update_file',
+  RENAME_FILE: 'chatbot.rename_file',
+  REMOVE_COLLECTION: 'chatbot.remove_collection',
+  UPDATE_STATUS_DOCUMENT: 'file.update.status', 
+  SUMMARIZE_MEETING: 'summarize_meeting',
+
+  RESPONSE_SUMMARIZE_MEETING: 'summarize_meeting.response',
+  RESPONSE_END_MEETING: 'summarize_meeting.end',
+
+  GET_MESSAGES: 'chatbot.get_messages',
+
+};

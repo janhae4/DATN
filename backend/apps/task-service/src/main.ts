@@ -1,15 +1,20 @@
 import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions } from '@nestjs/microservices';
-import { TaskServiceModule } from './task-service.module';
-import { ClientConfigService } from '@app/contracts/client-config/client-config.service';
+import { TasksModule } from './tasks/tasks.module';
+import { Transport } from '@nestjs/microservices';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
-  const appCtx = await NestFactory.createApplicationContext(TaskServiceModule);
-  const cfg = appCtx.get(ClientConfigService);
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    TaskServiceModule,
-    cfg.taskClientOptions as MicroserviceOptions,
-  );
-  await app.listen();
+  const app = await NestFactory.create(TasksModule);
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+  app.use(cookieParser())
+  await app.init();
+
+  console.log('Task Service is running:');
+  console.log('- Microservice: Listening to RabbitMQ');
 }
 bootstrap();

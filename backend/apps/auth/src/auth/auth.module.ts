@@ -1,26 +1,69 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
-import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
+import { AUTH_EXCHANGE, ClientConfigModule, ClientConfigService, EVENTS_EXCHANGE, GMAIL_EXCHANGE, NOTIFICATION_EXCHANGE, REDIS_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
+import { JwtModule } from '@nestjs/jwt';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
   imports: [
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '60s' },
-    }),
     ClientConfigModule,
+    JwtModule.registerAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (cfg: ClientConfigService) => ({
+        secret: cfg.getJWTSecret(),
+      }),
+    }),
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (cfg: ClientConfigService) => ({
+        exchanges: [
+          {
+            name: AUTH_EXCHANGE,
+            type: 'direct'
+          },
+          {
+            name: EVENTS_EXCHANGE,
+            type: 'topic',
+          },
+          {
+            name: USER_EXCHANGE,
+            type: 'direct',
+          },
+          {
+            name: REDIS_EXCHANGE,
+            type: 'direct',
+          },
+          {
+            name: GMAIL_EXCHANGE,
+            type: 'topic',
+          },
+          {
+            name: NOTIFICATION_EXCHANGE,
+            type: 'direct',
+          }
+        ],
+        uri: cfg.getRMQUrl(),
+        connectionInitOptions: { wait: true, timeout: 20000 },
+        logger: {
+          error: (str: string) => {
+            console.error(str);
+          },
+          log: (str: string) => {
+            console.log(str);
+          },
+          warn: (str: string) => {
+            console.warn(str);
+          },
+        },
+      }),
+    })
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    CLIENT_PROXY_PROVIDER.USER_CLIENT,
-    CLIENT_PROXY_PROVIDER.NOTIFICATION_CLIENT,
-    CLIENT_PROXY_PROVIDER.REDIS_CLIENT,
-  ],
+  providers: [AuthService, AuthController],
 })
-export class AuthModule {}
+export class AuthModule { }

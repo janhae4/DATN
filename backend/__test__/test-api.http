@@ -1,0 +1,89 @@
+### Create a new user
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "password": "Password123!",
+  "name": "New User"
+}
+
+### Login as the new user
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "password": "Password123!"
+}
+
+### Create a new team
+POST http://localhost:3000/api/team
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Awesome Team"
+}
+
+### Create a new project
+POST http://localhost:3000/api/project
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Awesome Project",
+  "description": "Project for testing",
+  "teamId": "{{team_id}}"
+}
+
+### Create a new sprint
+POST http://localhost:3000/api/sprint
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Sprint 1",
+  "projectId": "{{project_id}}",
+  "startDate": "2025-11-27",
+  "endDate": "2025-12-04"
+}
+
+### Create a new epic
+POST http://localhost:3000/api/epic
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Epic 1",
+  "projectId": "{{project_id}}"
+}
+
+### Create a new task
+POST http://localhost:3000/api/task
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "title": "Task 1",
+  "description": "First task",
+  "projectId": "{{project_id}}",
+  "sprintId": "{{sprint_id}}",
+  "epicId": "{{epic_id}}"
+}
+
+### Get all tasks for the project
+GET http://localhost:3000/api/task?projectId={{project_id}}
+Authorization: Bearer {{access_token}}
+
+### Get all sprints for the project
+GET http://localhost:3000/api/sprint?projectId={{project_id}}
+Authorization: Bearer {{access_token}}
+
+### Get all epics for the project
+GET http://localhost:3000/api/epic?projectId={{project_id}}
+Authorization: Bearer {{access_token}}
+
+### Get all teams for the user
+GET http://localhost:3000/api/team
+Authorization: Bearer {{access_token}}

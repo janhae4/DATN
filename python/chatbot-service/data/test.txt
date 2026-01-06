@@ -1,0 +1,58 @@
+📄 Dữ liệu Văn bản Mẫu để Kiểm tra RAG
+Tiêu đề: Giới thiệu về Hệ thống Quản lý Dự án QuantumLeap
+
+Phần 1: Tổng quan
+
+QuantumLeap là một nền tảng quản lý dự án dựa trên đám mây được thiết kế để tối ưu hóa quy trình làm việc và tăng cường sự hợp tác giữa các nhóm. Được phát triển bởi NovaTech Solutions vào năm 2021, hệ thống này nhằm mục đích giải quyết các thách thức phổ biến trong quản lý dự án hiện đại như giao tiếp rời rạc, theo dõi tiến độ không hiệu quả và phân bổ tài nguyên khó khăn. Mục tiêu chính của QuantumLeap là cung cấp một không gian làm việc tập trung, trực quan và mạnh mẽ. Nền tảng này phù hợp cho các đội nhóm thuộc mọi quy mô, từ các startup nhỏ đến các tập đoàn lớn.
+
+Phần 2: Các Tính năng Chính
+
+Hệ thống QuantumLeap bao gồm nhiều mô-đun chức năng cốt lõi:
+
+Quản lý Tác vụ: Cho phép tạo, gán, và theo dõi các tác vụ riêng lẻ. Người dùng có thể đặt ngày hết hạn, mức độ ưu tiên, và thêm các tệp đính kèm. Bảng Kanban và chế độ xem Gantt chart cung cấp cái nhìn tổng quan trực quan về tiến độ.
+
+Bảng điều khiển Dự án: Cung cấp một cái nhìn tổng hợp về tất cả các dự án đang hoạt động, bao gồm trạng thái, ngân sách, và các mốc thời gian quan trọng. Các widget có thể tùy chỉnh để hiển thị các chỉ số hiệu suất chính (KPIs).
+
+Quản lý Tài nguyên: Giúp các nhà quản lý dự án phân bổ công việc cho các thành viên trong nhóm dựa trên khối lượng công việc và kỹ năng hiện có. Tính năng này giúp tránh tình trạng quá tải hoặc phân bổ không đều.
+
+Giao tiếp và Hợp tác: Tích hợp các công cụ chat theo thời gian thực, diễn đàn thảo luận cho từng dự án, và khả năng bình luận trực tiếp trên các tác vụ. Điều này giảm thiểu nhu cầu sử dụng các ứng dụng liên lạc bên ngoài.
+
+Theo dõi Thời gian: Cho phép các thành viên ghi lại thời gian họ dành cho từng tác vụ, giúp tính toán chi phí dự án và đánh giá hiệu quả làm việc.
+
+Báo cáo và Phân tích: Cung cấp các báo cáo tùy chỉnh về tiến độ dự án, hiệu suất nhóm, và việc sử dụng ngân sách. Dữ liệu có thể được xuất ra dưới dạng CSV hoặc PDF.
+
+Phần 3: Quy trình Làm việc Cơ bản
+
+Tạo Dự án: Người quản lý dự án bắt đầu bằng cách tạo một dự án mới, đặt tên, mô tả, và ngày bắt đầu/kết thúc dự kiến.
+
+Thêm Thành viên: Mời các thành viên vào dự án và phân quyền truy cập phù hợp (ví dụ: Quản trị viên, Thành viên, Khách).
+
+Lập Kế hoạch: Chia dự án thành các giai đoạn (milestones) và tạo các tác vụ con. Gán tác vụ cho các thành viên và đặt hạn chót.
+
+Thực hiện: Các thành viên cập nhật trạng thái tác vụ, ghi lại thời gian, và trao đổi thông tin trong hệ thống.
+
+Theo dõi: Người quản lý sử dụng Bảng điều khiển và Báo cáo để giám sát tiến độ, xác định các vấn đề tiềm ẩn, và điều chỉnh kế hoạch nếu cần.
+
+Hoàn thành: Đánh dấu dự án là hoàn thành và lưu trữ thông tin liên quan.
+
+Phần 4: So sánh QuantumLeap và ProjectFlow
+
+Trong khi QuantumLeap tập trung vào giao diện người dùng trực quan và khả năng hợp tác mạnh mẽ, đối thủ cạnh tranh chính là ProjectFlow lại nổi trội hơn về các tính năng quản lý tài chính dự án chi tiết. QuantumLeap phù hợp hơn cho các đội nhóm ưu tiên sự linh hoạt và giao tiếp nhanh chóng. Ngược lại, ProjectFlow có thể là lựa chọn tốt hơn cho các tổ chức cần kiểm soát ngân sách chặt chẽ và báo cáo tài chính phức tạp. Cả hai hệ thống đều cung cấp API để tích hợp với các công cụ khác, nhưng QuantumLeap có hệ sinh thái tích hợp sẵn rộng hơn với các ứng dụng như Slack, Google Drive và GitHub. Bản cập nhật gần đây nhất của QuantumLeap (phiên bản 3.5, phát hành tháng 9 năm 2025) đã bổ sung tính năng tự động hóa quy trình làm việc cơ bản.
+
+Phần 5: Lịch sử Phát triển
+
+2020: NovaTech Solutions bắt đầu nghiên cứu thị trường và lên ý tưởng ban đầu.
+
+2021: Phiên bản Beta đầu tiên của QuantumLeap được phát hành cho một nhóm nhỏ người dùng thử nghiệm. Phản hồi ban đầu rất tích cực.
+
+2022: Ra mắt chính thức phiên bản 1.0. Tập trung vào các tính năng quản lý tác vụ và bảng điều khiển.
+
+2023: Phiên bản 2.0 bổ sung mô-đun Quản lý Tài nguyên và Theo dõi Thời gian.
+
+2024: Phiên bản 3.0 ra mắt với giao diện người dùng được thiết kế lại hoàn toàn và cải thiện hiệu suất đáng kể. Tích hợp API được mở rộng.
+
+Tháng 9, 2025: Phiên bản 3.5 được phát hành, thêm tính năng tự động hóa cơ bản.
+
+Phần 6: Hỗ trợ Kỹ thuật
+
+Người dùng có thể truy cập tài liệu hướng dẫn chi tiết tại https://www.google.com/search?q=docs.quantumleap.com. Đối với các vấn đề kỹ thuật, vui lòng gửi yêu cầu hỗ trợ qua cổng thông tin https://www.google.com/search?q=support.novatech.com hoặc liên hệ qua email support@novatech.com. Thời gian phản hồi tiêu chuẩn là trong vòng 24 giờ làm việc. Các gói hỗ trợ cao cấp với thời gian phản hồi nhanh hơn cũng có sẵn.

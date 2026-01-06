@@ -1,0 +1,159 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  CreateSprintDto,
+  SprintStatus,
+  UpdateSprintDto,
+  TASK_EXCHANGE,
+  TASK_PATTERNS,
+  TEAM_EXCHANGE,
+  TEAM_PATTERN,
+  MemberRole,
+} from '@app/contracts';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Not, QueryBuilder, In } from 'typeorm';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { Sprint } from '@app/contracts/sprint/entity/sprint.entity';
+import { unwrapRpcResult } from '@app/common';
+
+@Injectable()
+export class SprintsService {
+  constructor(
+    @InjectRepository(Sprint)
+    private readonly sprintRepository: Repository<Sprint>,
+    private readonly amqpConnection: AmqpConnection,
+  ) { }
+
+  async create(createSprintDto: CreateSprintDto) {
+    const sprintData: Partial<Sprint> = {
+      title: createSprintDto.title,
+      goal: createSprintDto.goal,
+      projectId: createSprintDto.projectId,
+      startDate: createSprintDto.start_date
+        ? new Date(createSprintDto.start_date)
+        : undefined,
+      endDate: createSprintDto.end_date
+        ? new Date(createSprintDto.end_date)
+        : undefined,
+    };
+    const sprint = this.sprintRepository.create(sprintData);
+    return this.sprintRepository.save(sprint);
+  }
+
+  async findAllByProjectId(projectId: string) {
+    return this.sprintRepository.find({
+      where: { projectId },
+      order: { startDate: 'DESC' },
+    });
+  }
+
+  async findOneById(id: string) {
+    const sprint = await this.sprintRepository.findOne({ where: { id } });
+    if (!sprint) {
+      throw new NotFoundException(`Sprint with ID ${id} not found`);
+    }
+    return sprint;
+  }
+
+  async update(id: string, updateSprintDto: UpdateSprintDto) {
+    await this.findOneById(id);
+    if (updateSprintDto.status === SprintStatus.COMPLETED) {
+      this.amqpConnection.publish(
+        TASK_EXCHANGE,
+        TASK_PATTERNS.COMPLETE_SPRINT,
+        { sprintId: id, projectId: updateSprintDto.projectId },
+      );
+    }
+
+    const { start_date, end_date, ...rest } = updateSprintDto;
+    const dataToUpdate: Partial<Sprint> = {
+      ...rest,
+      status: rest.status as Sprint['status'],
+    };
+    if (start_date) {
+      dataToUpdate.startDate = new Date(start_date);
+    }
+    if (end_date) {
+      dataToUpdate.endDate = new Date(end_date);
+    }
+
+    await this.sprintRepository.update(id, dataToUpdate);
+    return this.findOneById(id);
+  }
+
+  async remove(id: string) {
+    await this.findOneById(id);
+
+    this.amqpConnection.publish(
+      TASK_EXCHANGE,
+      TASK_PATTERNS.UNASSIGN_TASKS_FROM_SPRINT,
+      {
+        sprintId: id,
+      },
+    );
+
+    await this.sprintRepository.delete(id);
+    return { message: `Sprint ${id} deleted successfully` };
+  }
+
+  async getActiveSprint(projectId: string) {
+    return this.sprintRepository.findOne({
+      where: {
+        projectId,
+        status: SprintStatus.ACTIVE,
+      },
+    });
+  }
+
+  async startSprint(id: string) {
+    const sprintToStart = await this.findOneById(id);
+
+    const activeSprint = await this.sprintRepository.findOne({
+      where: {
+        projectId: sprintToStart.projectId,
+        status: SprintStatus.ACTIVE,
+        id: Not(id),
+      },
+    });
+
+    if (activeSprint) {
+      throw new BadRequestException(
+        'An active sprint already exists in this project. Complete it before starting a new one.',
+      );
+    }
+
+    await this.sprintRepository.update(id, { status: SprintStatus.ACTIVE });
+    return this.findOneById(id);
+  }
+
+  async findAll(projectId: string, userId: string, teamId: string, status?: SprintStatus[]) {
+    if (!projectId || !teamId) {
+      throw new BadRequestException('Project ID and Team ID are required');
+    }
+
+    unwrapRpcResult(
+      await this.amqpConnection.request({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+        payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+      })
+    )
+
+    const query = this.sprintRepository.createQueryBuilder('sprint')
+      .where('sprint.projectId = :projectId', { projectId });
+
+    if (status && status.length > 0) {
+      const statusArray = Array.isArray(status) ? status : [status];
+      query.andWhere('sprint.status IN (:...status)', { status: statusArray });
+    }
+
+    const sprints = await query
+      .orderBy('sprint.startDate', 'DESC')
+      .getMany();
+
+    return sprints;
+  }
+}

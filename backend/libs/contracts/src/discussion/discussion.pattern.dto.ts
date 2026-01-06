@@ -1,0 +1,15 @@
+export const DISCUSSION_PATTERN = {
+  CREATE: 'chat.createDiscussion',
+  CREATE_MESSAGE: 'chat.createMessage',
+  CREATE_DIRECT_MESSAGE: 'chat.createDirectMessage',
+  GET: 'chat.getDiscussion',
+  GET_DISCUSSION_BY_ID: 'chat.getDiscussionById',
+  GET_DISCUSSION_BY_TEAM_ID: 'chat.getDiscussionByTeamId',
+  GET_MESSAGES: 'chat.getMessagesFromDiscussion',
+  GET_ALL_MESSAGES: 'chat.getAllMessages',
+  UPDATE_USER: 'chat.updateUser',
+  LEAVE_TEAM: 'chat.leaveTeam',
+  REMOVE_MEMBER: 'chat.removeMember',
+  ADD_MEMBER: 'chat.addMember',
+  SEARCH_MESSAGES: 'chat.searchMessages',
+};
