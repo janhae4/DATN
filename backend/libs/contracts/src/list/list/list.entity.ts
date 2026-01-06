@@ -22,6 +22,9 @@ export class List {
   @Column({ type: 'uuid', nullable: false })
   projectId: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  teamId: string;
+
   @Column({ type: 'int', nullable: true })
   limited: number;
 

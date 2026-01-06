@@ -29,6 +29,9 @@ export class Sprint {
   @Column({ name: 'project_id' })
   projectId: string;
 
+  @Column({ name: 'team_id', nullable: true, type: 'uuid' })
+  teamId: string | null;
+
   @Column({
     type: 'enum',
     enum: SprintStatus,

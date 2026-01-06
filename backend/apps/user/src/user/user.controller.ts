@@ -289,8 +289,8 @@ export class UserController {
     queue: USER_PATTERNS.INCREMENT_BULK_SKILLS,
     errorHandler: customErrorHandler
   })
-  incrementBulkSkills(data: { skills: string[], userIds: string[] }) {
-    return this.userService.handleBulkSkillIncrement(data.userIds, data.skills);
+  incrementBulkSkills(data: Array<{ userId: string, skills: { skillName: string, exp: number }[] }>) {
+    return this.userService.handleBulkSkillIncrement(data);
   }
 
   @RabbitRPC({

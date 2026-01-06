@@ -1,11 +1,11 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 import { SprintsService } from './sprints.service';
-import { CreateSprintDto, SPRINT_PATTERNS, UpdateSprintDto } from '@app/contracts';
+import { CreateSprintDto, SPRINT_PATTERNS, SprintStatus, UpdateSprintDto } from '@app/contracts';
 
 @Controller()
 export class SprintsController {
-  constructor(private readonly sprintsService: SprintsService) {}
+  constructor(private readonly sprintsService: SprintsService) { }
 
   @MessagePattern(SPRINT_PATTERNS.CREATE)
   create(createSprintDto: CreateSprintDto) {
@@ -20,6 +20,11 @@ export class SprintsController {
   @MessagePattern(SPRINT_PATTERNS.FIND_ONE_BY_ID)
   findOneById(payload: { id: string; userId: string }) {
     return this.sprintsService.findOneById(payload.id);
+  }
+
+  @MessagePattern(SPRINT_PATTERNS.FIND_ALL)
+  findAll(payload: { projectId: string; status?: SprintStatus[]; userId: string, teamId: string }) {
+    return this.sprintsService.findAll(payload.projectId, payload.userId, payload.teamId, payload.status);
   }
 
   @MessagePattern(SPRINT_PATTERNS.UPDATE)

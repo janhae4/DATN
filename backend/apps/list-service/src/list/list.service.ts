@@ -9,7 +9,7 @@ export class ListService {
   constructor(
     @InjectRepository(List)
     private readonly listRepository: Repository<List>,
-  ) {}
+  ) { }
 
   async create(createListDto: CreateListDto): Promise<List> {
     const newList = this.listRepository.create(createListDto);
@@ -23,8 +23,17 @@ export class ListService {
     });
   }
 
+  async findAllByTeam(teamId: string): Promise<List[]> {
+    return this.listRepository.find({
+      where: { teamId },
+      order: { position: 'ASC' },
+    });
+  }
+
   async findOne(id: string): Promise<List> {
+    console.log('Finding list with ID:', id);
     const list = await this.listRepository.findOne({ where: { id } });
+    console.log('Found list:', list);
     if (!list) {
       throw new NotFoundException(`List with ID ${id} not found`);
     }

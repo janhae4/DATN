@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, In } from 'typeorm';
-import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, GetTasksFilterDto, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS } from '@app/contracts';
+import { Repository, IsNull, In, SelectQueryBuilder, Not } from 'typeorm';
+import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS, GetTasksByProjectDto, BaseTaskFilterDto, GetTasksByTeamDto, CHATBOT_PATTERN } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
 import { RabbitSubscribe, Nack, AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { AUTH_EXCHANGE, CHATBOT_EXCHANGE, EVENTS_EXCHANGE, LABEL_EXCHANGE, LIST_CLIENT, LIST_EXCHANGE, PROJECT_CLIENT, RPC_TIMEOUT, TASK_EXCHANGE, TEAM_EXCHANGE, USER_EXCHANGE } from '@app/contracts/constants';
@@ -39,13 +39,13 @@ export class TasksService {
   }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    const { listId, position, labelIds, ...rest } = createTaskDto; //
+    const { listId, position, labelIds, ...rest } = createTaskDto;
 
     let newPosition = position;
     if (!newPosition) {
       const lastTask = await this.taskRepository.findOne({
         where: { listId },
-        order: { position: 'DESC' }, // Lấy cái cao nhất
+        order: { position: 'DESC' },
         select: ['position'],
       });
       newPosition = lastTask ? lastTask.position + 65535 : 65535;
@@ -77,7 +77,6 @@ export class TasksService {
 
     const tasksToCreate = createTaskDtos.map((dto) => {
       const { labelIds, ...rest } = dto;
-      console.log(rest)
       currentPosition += 65535;
       return this.taskRepository.create({
         ...rest,
@@ -107,37 +106,27 @@ export class TasksService {
     }
 
     try {
-      // Get first task to verify project access
       const firstTask = await this.taskRepository.findOne({
         where: { id: In(taskIds) }
       });
 
       if (!firstTask) {
-        console.log('No tasks found for IDs:', taskIds);
         throw new NotFoundException('No tasks found to delete');
       }
 
-      console.log('Verifying project for task:', firstTask.id, 'projectId:', firstTask.projectId);
-
-      // Verify user has access to the project
       let project: Project;
       try {
         project = await firstValueFrom(
           this.projectClient.send<Project>(PROJECT_PATTERNS.GET_BY_ID, { id: firstTask.projectId })
         );
       } catch (err) {
-        console.error('Failed to fetch project from project-service:', err);
         throw new BadRequestException('Could not verify project access');
       }
 
       if (!project) {
-        console.log('Project not found:', firstTask.projectId);
         throw new NotFoundException('Project not found');
       }
 
-      console.log('Verifying permission for user:', userId, 'teamId:', project.teamId);
-
-      // Verify team permission
       try {
         const permissionResult = await this.amqpConnection.request({
           exchange: TEAM_EXCHANGE,
@@ -150,7 +139,6 @@ export class TasksService {
         throw new BadRequestException('You do not have permission to delete tasks in this project');
       }
 
-      // Delete all tasks in the list
       console.log('Executing delete for tasks:', taskIds);
       const result = await this.taskRepository
         .createQueryBuilder()
@@ -234,22 +222,75 @@ export class TasksService {
     }
   }
 
-  async findAllByProject(userId: string, filters: GetTasksFilterDto) {
-    console.log(filters)
+  async suggestTask(userId: string, objective: string, projectId: string, sprintId: string, teamId: string) {
+    console.log("Sending AI request for user:", userId, "with objective:", objective, "team Id:", teamId);
+    unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
+      timeout: RPC_TIMEOUT,
+    }))
+
+    let members = [];
+
+    if (sprintId) {
+      const response = await this.amqpConnection.request({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
+        payload: teamId,
+        timeout: RPC_TIMEOUT,
+      });
+      const memberIds = unwrapRpcResult(response);
+
+      members = unwrapRpcResult(await this.amqpConnection.request({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+        payload: memberIds
+      }))
+    }
+
+    await this.amqpConnection.publish(CHATBOT_EXCHANGE, 'suggest_task', {
+      userId,
+      objective,
+      members
+    });
+  }
+
+
+  async findAllByProject(userId: string, filters: GetTasksByProjectDto) {
     const project = await firstValueFrom(
       this.projectClient.send<Project>(PROJECT_PATTERNS.GET_BY_ID, { id: filters.projectId })
     );
     if (!project) throw new NotFoundException('Project not found');
+
+    await this.verifyPermission(userId, project.teamId);
+
+    const query = this.taskRepository.createQueryBuilder('task');
+    query.where('task.projectId = :projectId', { projectId: filters.projectId });
+    return this._getTasksCommon(query, filters, filters.projectId, undefined);
+  }
+
+  async findAllByTeam(userId: string, filters: GetTasksByTeamDto) {
+    await this.verifyPermission(userId, filters.teamId);
+
+    const query = this.taskRepository.createQueryBuilder('task');
+    query.where('task.teamId = :teamId', { teamId: filters.teamId });
+
+    return this._getTasksCommon(query, filters, undefined, filters.teamId);
+  }
+
+  private async verifyPermission(userId: string, teamId: string) {
     unwrapRpcResult(
       await this.amqpConnection.request({
         exchange: TEAM_EXCHANGE,
         routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-        payload: { userId, teamId: project.teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+        payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
       })
     )
-    console.log("Filters received in getAllByProject: ", filters);
+  }
+
+  private async _getTasksCommon(query: SelectQueryBuilder<Task>, filters: BaseTaskFilterDto, projectId?: string, teamId?: string) {
     const {
-      projectId,
       search,
       assigneeIds,
       priority,
@@ -258,18 +299,64 @@ export class TasksService {
       labelIds,
       sprintId,
       parentId,
+      isCompleted,
+      sortBy,
+      sortOrder,
       page = 1,
       limit = 10,
     } = filters;
 
-    const query = this.taskRepository.createQueryBuilder('task');
     query.leftJoinAndSelect('task.taskLabels', 'taskLabels');
+
+    if (isCompleted !== undefined) {
+      let lists: List[] = [];
+
+      if (projectId) {
+        lists = await firstValueFrom(
+          this.listClient.send(LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId })
+        );
+      } else if (teamId) {
+        lists = await firstValueFrom(
+          this.listClient.send(LIST_PATTERNS.FIND_ALL_BY_TEAM, { teamId })
+        );
+      }
+
+      let targetListIds: string[] = [];
+
+      if (isCompleted) {
+        targetListIds = lists
+          .filter(l => l.category === ListCategoryEnum.DONE)
+          .map(l => l.id);
+      } else {
+        targetListIds = lists
+          .filter(l => l.category !== ListCategoryEnum.DONE)
+          .map(l => l.id);
+      }
+
+      if (targetListIds.length > 0) {
+        if (filters.statusId && filters.statusId.length > 0) {
+          const intersectedIds = filters.statusId.filter(id => targetListIds.includes(id));
+          if (intersectedIds.length > 0) {
+            query.andWhere('task.listId IN (:...completedListIds)', { completedListIds: intersectedIds });
+          } else {
+            query.andWhere('1=0');
+          }
+        } else {
+          query.andWhere('task.listId IN (:...completedListIds)', { completedListIds: targetListIds });
+        }
+      } else {
+        query.andWhere('1=0');
+      }
+    } else {
+      if (filters.statusId && filters.statusId.length > 0) {
+        query.andWhere('task.listId IN (:...statusId) ', { statusId: filters.statusId });
+      }
+    }
 
     const shouldFetchSubtasks =
       (!search && (!assigneeIds || assigneeIds.length === 0) && parentId === undefined && sprintId === undefined) // shouldFetchSubtasks cũ
       || (parentId === null || parentId === 'null');
 
-    query.where('task.projectId = :projectId', { projectId });
 
     if (shouldFetchSubtasks) {
       query.leftJoinAndSelect('task.children', 'children');
@@ -302,14 +389,45 @@ export class TasksService {
       query.setParameter('labelIds', labelIds);
     }
 
-    query.orderBy('task.position', 'ASC');
-    query.addOrderBy('task.createdAt', 'DESC');
+    if (sortBy && sortBy.length > 0) {
+      const sortMap = {
+        'createdAt': 'task.createdAt',
+        'updatedAt': 'task.updatedAt',
+        'dueDate': 'task.dueDate',
+        'startDate': 'task.startDate',
+        'priority': 'task.priority',
+        'title': 'task.title',
+        'position': 'task.position'
+      };
+
+      console.log(sortBy)
+
+      sortBy.forEach((sortItem, index) => {
+        const [field, orderRaw] = sortItem.split(':');
+        const order = (orderRaw || 'ASC').toUpperCase() as 'ASC' | 'DESC';
+        const dbColumn = sortMap[field];
+
+        if (dbColumn) {
+          if (index === 0) {
+            query.orderBy(dbColumn, order);
+          } else {
+            query.addOrderBy(dbColumn, order);
+          }
+        }
+      });
+    } else {
+      query.orderBy('task.position', 'ASC');
+      query.addOrderBy('task.createdAt', 'DESC');
+    }
 
     const skip = (page - 1) * limit;
     query.skip(skip).take(limit);
 
     const [results, total] = await query.getManyAndCount();
+    return this._formatTaskResponse(results, total, page, limit, shouldFetchSubtasks);
+  }
 
+  private _formatTaskResponse(results: Task[], total: number, page: number, limit: number, shouldFetchSubtasks: boolean) {
     let flatData: Task[] = [];
 
     if (shouldFetchSubtasks) {
@@ -341,6 +459,8 @@ export class TasksService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+
 
   async findAllBySprint(sprintId: string): Promise<Task[]> {
     return this.taskRepository.find({
@@ -377,10 +497,6 @@ export class TasksService {
     }
     return task;
   }
-
-
-
-  // task-service/src/tasks/tasks.service.ts
 
   async update(id: string, updateTaskDto: UpdateTaskDto): Promise<any> {
     const { labelIds, ...updates } = updateTaskDto;
@@ -447,23 +563,75 @@ export class TasksService {
     });
   }
 
-  async moveIncompleteTasksToBacklog(
+  async completeSprint(
     sprintId: string,
-    backlogStatusId: string,
+    projectId: string,
   ) {
-    // This method would be called when a sprint is completed.
-    // It finds all tasks in the sprint that are not 'done' and moves them.
-    // This requires knowing which status categories are considered "incomplete".
-    // For simplicity, we assume anything not in the 'done' category is incomplete.
-    // This logic would likely live in the sprint-service and call the task-service.
-    // This is a placeholder for that interaction.
-    return this.taskRepository.update(
-      { sprintId /*, status: { category: Not('done') } */ },
-      { sprintId: null, listId: backlogStatusId },
-    );
+    console.log("completeSprint", sprintId)
+    const lists = unwrapRpcResult(
+      await firstValueFrom(
+        this.listClient.send(LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId })
+      )
+    ) as List[];
+
+    console.log("lists", lists)
+
+    const completeList = lists.filter(l => l.category === ListCategoryEnum.DONE).map(l => l.id);
+    const incompleteList = lists.filter(l => l.category === ListCategoryEnum.TODO).map(l => l.id);
+    const completedTasks = await this.taskRepository.find({
+      where: { sprintId, listId: In(completeList) },
+    });
+
+    const userSkillMap = new Map<string, { skillName: string; exp: number }[]>();
+    for (const task of completedTasks) {
+      if (!task.assigneeIds?.length) continue;
+
+      for (const userId of task.assigneeIds) {
+        console.log(userId)
+        if (!task.skillName || !task.exp) continue;
+        const currentSkills = userSkillMap.get(userId) || [];
+        userSkillMap.set(userId, [...currentSkills, { skillName: task.skillName, exp: task.exp }]);
+      }
+    }
+
+    console.log("userSkillMap", userSkillMap)
+
+    const bulkPayload = Array.from(userSkillMap.entries()).map(([userId, skills]) => ({
+      userId,
+      skills
+    }));
+
+    console.log("bulkPayload", bulkPayload)
+
+    if (bulkPayload.length > 0) {
+      unwrapRpcResult(
+        await this.amqpConnection.request({
+          exchange: USER_EXCHANGE,
+          routingKey: USER_PATTERNS.INCREMENT_BULK_SKILLS,
+          payload: bulkPayload,
+        })
+      )
+    }
+
+    return await this.moveIncompleteTasksToBacklog(sprintId, completeList, incompleteList[0]);
   }
 
-
+  async moveIncompleteTasksToBacklog(
+    sprintId: string,
+    completeListIds: string[],
+    targetListId: string,
+  ) {
+    return await this.taskRepository.update(
+      {
+        sprintId,
+        listId: Not(In(completeListIds))
+      },
+      {
+        sprintId: null,
+        listId: targetListId
+      },
+    );
+  }
 
   async unassignTasksFromSprint(sprintId: string) {
     return this.taskRepository.update({ sprintId }, { sprintId: null });
@@ -541,26 +709,26 @@ export class TasksService {
   }
 
   async getProjectStats(projectId: string, userId: string) {
-    // Get all lists for this project
     const lists = await firstValueFrom(
       this.listClient.send<List[]>(LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId })
     );
 
-    // Find the "Done" category list
+    console.log("lists ", lists)
+
     const doneList = lists.find(l => l.category === ListCategoryEnum.DONE);
+    console.log("doneList ", doneList);
     const doneListId = doneList?.id;
 
-    // Count completed tasks (tasks in Done list)
     const completed = doneListId
       ? await this.taskRepository.count({ where: { projectId, listId: doneListId } })
       : 0;
 
-    // Count pending tasks (tasks not in Done list)
+    console.log("doneListId ", doneListId)
+
     const pending = await this.taskRepository.count({
       where: { projectId, listId: doneListId ? In(lists.filter(l => l.id !== doneListId).map(l => l.id)) : In(lists.map(l => l.id)) }
     });
 
-    // Count overdue tasks (dueDate < now and not in Done)
     const now = new Date();
     const overdue = await this.taskRepository
       .createQueryBuilder('task')
@@ -569,7 +737,6 @@ export class TasksService {
       .andWhere(doneListId ? 'task.listId != :doneListId' : '1=1', { doneListId })
       .getCount();
 
-    // Count due soon (next 7 days)
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
     const dueSoon = await this.taskRepository
@@ -579,7 +746,6 @@ export class TasksService {
       .andWhere(doneListId ? 'task.listId != :doneListId' : '1=1', { doneListId })
       .getCount();
 
-    // Get distribution (count per list)
     const distribution = await this.taskRepository
       .createQueryBuilder('task')
       .select('task.listId', 'listId')
@@ -588,7 +754,6 @@ export class TasksService {
       .groupBy('task.listId')
       .getRawMany();
 
-    // Get activity (tasks created/completed per day for last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -624,4 +789,6 @@ export class TasksService {
       })),
     };
   }
+
+
 }

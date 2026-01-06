@@ -26,6 +26,7 @@ import { Sprint } from "@/types";
 import { SprintStatus } from "@/types/common/enums";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
+import { useParams } from "next/navigation";
 
 interface StartSprintDialogProps {
   children: React.ReactNode;
@@ -38,7 +39,9 @@ export function StartSprintDialog({
 }: StartSprintDialogProps) {
   const [open, setOpen] = React.useState(false);
   const { projectId } = useTaskManagementContext();
-  const { updateSprint, isUpdating } = useSprints(projectId);
+  const params = useParams();
+  const teamId = params?.teamId as string;
+  const { updateSprint, isUpdating } = useSprints(projectId, teamId);
 
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
     undefined
@@ -52,7 +55,6 @@ export function StartSprintDialog({
         : new Date();
       const endDate = sprint.endDate ? new Date(sprint.endDate) : new Date();
 
-      // Default to 2 weeks if dates are invalid
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         const start = new Date();
         const end = new Date();

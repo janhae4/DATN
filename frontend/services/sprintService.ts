@@ -1,31 +1,37 @@
 import apiClient from "./apiClient";
 import { Sprint } from "@/types";
-// Import Enum SprintStatus nếu bạn đã định nghĩa trong frontend (thường là từ @/types/common/enums)
-// Nếu chưa có, bạn có thể dùng string hoặc định nghĩa tạm thời.
-import { SprintStatus } from "@/types/common/enums"; 
+import { SprintStatus } from "@/types/common/enums";
 
-// --- DTOs Matching Backend ---
 
 export interface CreateSprintDto {
   title: string;
   goal?: string;
-  start_date: string; // ISO Date string
-  end_date: string;   // ISO Date string
+  start_date: string;
+  end_date: string;
   projectId: string;
   status?: SprintStatus;
   userId?: string;
+  teamId: string;
 }
 
-export interface UpdateSprintDto extends Partial<CreateSprintDto> {}
-
+export interface UpdateSprintDto extends Partial<CreateSprintDto> { }
 
 export const sprintService = {
   /**
    * Lấy danh sách Sprint theo Project
    * GET /sprints/project/{projectId}
    */
-  getSprints: async (projectId: string): Promise<Sprint[]> => {
-    const response = await apiClient.get<Sprint[]>(`/sprints/project/${projectId}`);
+  getSprints: async (projectId: string, teamId: string, status?: SprintStatus[]): Promise<Sprint[]> => {
+    const params = new URLSearchParams();
+    console.log("status in service:", status);
+    if (projectId) params.append('projectId', projectId);
+    if (teamId) params.append('teamId', teamId);
+
+    if (status && status.length > 0) {
+      status.forEach(s => params.append('status', s));
+    }
+
+    const response = await apiClient.get<Sprint[]>(`/sprints?${params.toString()}`);
     return response.data;
   },
 
@@ -53,7 +59,6 @@ export const sprintService = {
    * PUT /sprints/{id}
    */
   updateSprint: async (id: string, updates: UpdateSprintDto): Promise<Sprint> => {
-    // Dựa trên endpoint list bạn cung cấp trước đó là PUT
     const response = await apiClient.put<Sprint>(`/sprints/${id}`, updates);
     return response.data;
   },

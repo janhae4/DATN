@@ -53,7 +53,13 @@ import { CreateTaskDto, taskService } from "@/services/taskService";
 import { useTask, useTasks } from "@/hooks/useTasks";
 import { useParams } from "next/navigation";
 import { useTeamMembers } from "@/hooks/useTeam";
-import { ListCategoryEnum, MemberRole, Priority, UserSkill } from "@/types";
+import {
+  ListCategoryEnum,
+  MemberRole,
+  Priority,
+  SprintStatus,
+  UserSkill,
+} from "@/types";
 import { useLists } from "@/hooks/useList";
 import { useSprints } from "@/hooks/useSprints";
 
@@ -108,10 +114,13 @@ export function SuggestTaskByAi({
   const param = useParams();
   const teamId = param?.teamId as string;
   const projectId = param?.projectId as string;
-  const { data: members = [], isLoading: isMembersLoading } =
-    useTeamMembers(teamId);
+  const { data: members = [] } = useTeamMembers(teamId);
   const { lists } = useLists(projectId);
-  const { sprints = [] } = useSprints(projectId);
+  const { sprints = [] } = useSprints(projectId, teamId, [
+    SprintStatus.ACTIVE,
+    SprintStatus.PLANNED,
+    SprintStatus.ARCHIVED,
+  ]);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -208,6 +217,8 @@ export function SuggestTaskByAi({
         projectId: projectId,
         listId: targetList.id,
         priority: Priority.MEDIUM,
+        skillName: t.skillName,
+        exp: t.experience,
         reporterId: null,
         assigneeIds: t.memberIds,
         startDate: t.startDate ? new Date(t.startDate).toISOString() : null,

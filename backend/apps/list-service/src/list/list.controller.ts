@@ -20,6 +20,11 @@ export class ListController {
     return this.listService.findAllByProject(payload.projectId);
   }
 
+  @MessagePattern(LIST_PATTERNS.FIND_ALL_BY_TEAM)
+  findAllByTeam(payload: { teamId: string }) {
+    return this.listService.findAllByTeam(payload.teamId);
+  }
+
   @MessagePattern(LIST_PATTERNS.FIND_ONE_BY_ID)
   findOneById(payload: { id: string }) {
     return this.listService.findOne(payload.id);

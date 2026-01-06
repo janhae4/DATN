@@ -24,10 +24,9 @@ import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { Role } from '@app/contracts';
 import { TaskService } from './task.service';
-import { finalize, map, Observable } from 'rxjs';
-import type { Request } from 'express';
+import { map, Observable } from 'rxjs';
 import Redis from 'ioredis';
-import { GetTasksFilterDto } from './dto/get-task-filter.dto';
+import { GetTasksByProjectDto, GetTasksByTeamDto } from './dto/get-task-filter.dto';
 import { FileService } from '../file/file.service';
 
 @Controller('tasks')
@@ -77,7 +76,7 @@ export class TaskController {
   @Get()
   findAllByProjectId(
     @CurrentUser('id') userId: string,
-    @Query() filters: GetTasksFilterDto
+    @Query() filters: GetTasksByProjectDto
   ) {
     return this.taskService.findAllByProjectId(userId, filters);
   }
@@ -88,6 +87,14 @@ export class TaskController {
     @CurrentUser('id') userId: string,
   ) {
     return this.taskService.getStatByProjectId(userId, projectId);
+  }
+
+  @Get('by-team')
+  findAllByTeamId(
+    @Query() filters: GetTasksByTeamDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.findAllByTeamId(userId, filters);
   }
 
   @Get(':id')
@@ -215,8 +222,6 @@ export class TaskController {
         if (isNoSprint || !data.memberId || data.memberId === 'self') {
           assignedMemberId = userId;
         }
-
-        console.log("assignedMemberId", assignedMemberId)
 
         return {
           data: {

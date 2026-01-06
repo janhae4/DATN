@@ -148,9 +148,7 @@ function TimelineView() {
 
   return (
     <>
-      <div className={`sx-react-calendar-wrapper sx-theme-shadcn`}>
-        <ScheduleXCalendar calendarApp={calendar} />
-      </div>
+
 
       <CreateEventModal
         open={formData !== null}

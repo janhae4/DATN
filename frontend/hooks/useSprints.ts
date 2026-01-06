@@ -1,14 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sprint } from "@/types";
+import { Sprint, SprintStatus } from "@/types";
 import {
   sprintService,
   CreateSprintDto,
   UpdateSprintDto,
 } from "@/services/sprintService";
+import { toast } from "sonner";
 
-export function useSprints(projectId?: string) {
+export function useSprints(projectId: string, teamId: string, status?: SprintStatus[]) {
   const queryClient = useQueryClient();
-  const queryKey = ["sprints", projectId];
+  const queryKey = ['sprints', projectId, teamId, status];
 
   const {
     data: sprints = [],
@@ -16,37 +17,64 @@ export function useSprints(projectId?: string) {
     error,
   } = useQuery({
     queryKey,
-    queryFn: () => sprintService.getSprints(projectId!),
-    // Chỉ fetch khi có projectId
-    enabled: !!projectId, 
+    queryFn: () => sprintService.getSprints(projectId!, teamId!, status),
+    enabled: !!projectId && !!teamId,
+    placeholderData: (prev) => prev,
   });
 
-  // 2. Create Sprint Mutation
   const createSprintMutation = useMutation({
     mutationFn: (newSprint: CreateSprintDto) => sprintService.createSprint(newSprint),
     onSuccess: () => {
-      // Invalidate để load lại danh sách mới
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+      toast.success("Sprint created successfully");
     },
   });
 
-  // 3. Update Sprint Mutation
   const updateSprintMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: UpdateSprintDto }) =>
       sprintService.updateSprint(id, updates),
-    onSuccess: (updatedSprint) => {
-      queryClient.invalidateQueries({ queryKey });
+
+    onMutate: async ({ id, updates }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousSprints = queryClient.getQueryData<Sprint[]>(queryKey);
+      queryClient.setQueryData<Sprint[]>(queryKey, (old) => {
+        return old?.map((s) => (s.id === id ? { ...s, ...updates } : s));
+      });
+      return { previousSprints };
+    },
+
+    onError: (err, variables, context) => {
+      if (context?.previousSprints) {
+        queryClient.setQueryData(queryKey, context.previousSprints);
+      }
+      toast.error("Failed to update sprint");
+    },
+    onSettled: (updatedSprint) => {
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
       if (updatedSprint?.id) {
-         queryClient.invalidateQueries({ queryKey: ["sprint", updatedSprint.id] });
+        queryClient.invalidateQueries({ queryKey: ["sprint", updatedSprint.id] });
       }
     },
   });
-
-  // 4. Delete Sprint Mutation
   const deleteSprintMutation = useMutation({
     mutationFn: (id: string) => sprintService.deleteSprint(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousSprints = queryClient.getQueryData<Sprint[]>(queryKey);
+
+      queryClient.setQueryData<Sprint[]>(queryKey, (old) => {
+        return old?.filter((s) => s.id !== id);
+      });
+
+      return { previousSprints };
+    },
+    onError: (err, id, context) => {
+      if (context?.previousSprints) {
+        queryClient.setQueryData(queryKey, context.previousSprints);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
     },
   });
 
@@ -55,20 +83,17 @@ export function useSprints(projectId?: string) {
     isLoading,
     error: error as Error | null,
 
-    // Actions
     createSprint: createSprintMutation.mutateAsync,
     updateSprint: (id: string, updates: UpdateSprintDto) =>
       updateSprintMutation.mutateAsync({ id, updates }),
     deleteSprint: deleteSprintMutation.mutateAsync,
 
-    // Loading states (Hữu ích để hiện spinner khi đang submit)
     isCreating: createSprintMutation.isPending,
     isUpdating: updateSprintMutation.isPending,
     isDeleting: deleteSprintMutation.isPending,
   };
 }
 
-// Hook lấy chi tiết 1 Sprint (Optional - Nếu cần dùng)
 export function useSprint(sprintId: string | null) {
   const {
     data: sprint,

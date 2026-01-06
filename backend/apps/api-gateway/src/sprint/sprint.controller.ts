@@ -1,18 +1,19 @@
-import { Controller, Post, Body, UseGuards, Get, Param, Delete, Put } from '@nestjs/common';
-import { CreateSprintDto, UpdateSprintDto } from '@app/contracts';
+import { Controller, Post, Body, UseGuards, Get, Param, Delete, Put, Query } from '@nestjs/common';
+import { CreateSprintDto, SprintStatus, UpdateSprintDto } from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { Role } from '@app/contracts';
 import { SprintService } from './sprint.service';
+import { FindAllSprintsDto } from './dto/get-sprint.dto';
 
 @Controller('sprints')
+@UseGuards(RoleGuard)
+@Roles(Role.USER, Role.ADMIN)
 export class SprintController {
-  constructor(private readonly sprintService: SprintService) {}
+  constructor(private readonly sprintService: SprintService) { }
 
   @Post()
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   create(@Body() createSprintDto: CreateSprintDto, @CurrentUser('id') userId: string) {
     if (!createSprintDto.userId) {
       createSprintDto.userId = userId;
@@ -20,19 +21,17 @@ export class SprintController {
     return this.sprintService.create(createSprintDto);
   }
 
-  @Get('project/:projectId')
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
-  findAllByProjectId(
-    @Param('projectId') projectId: string,
-    @CurrentUser('id') userId: string
+  @Get()
+  async findAll(
+    @Query() query: FindAllSprintsDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.sprintService.findAllByProjectId(projectId, userId);
+    const { projectId, teamId, status } = query;
+    return await this.sprintService.findAll(projectId, teamId, userId, status);
   }
 
+
   @Get(':id')
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   findOne(
     @Param('id') id: string,
     @CurrentUser('id') userId: string
@@ -41,8 +40,6 @@ export class SprintController {
   }
 
   @Put(':id')
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   update(
     @Param('id') id: string,
     @Body() updateSprintDto: UpdateSprintDto,
@@ -52,8 +49,6 @@ export class SprintController {
   }
 
   @Delete(':id')
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: string

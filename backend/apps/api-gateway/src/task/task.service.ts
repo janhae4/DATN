@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, TASK_EXCHANGE, EPIC_EXCHANGE, EPIC_PATTERNS, EpicStatus } from '@app/contracts';
+import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, TASK_EXCHANGE, EPIC_EXCHANGE, EPIC_PATTERNS, EpicStatus, GetTasksByTeamDto } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
 import { Priority } from '@app/contracts/enums/priority.enum';
-import { GetTasksFilterDto } from './dto/get-task-filter.dto';
+import { GetTasksByProjectDto } from './dto/get-task-filter.dto';
 
 @Injectable()
 export class TaskService {
@@ -84,7 +84,7 @@ export class TaskService {
     }));
   }
 
-  async findAllByProjectId(userId: string, filters: GetTasksFilterDto) {
+  async findAllByProjectId(userId: string, filters: GetTasksByProjectDto) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.FIND_ALL,
@@ -162,6 +162,14 @@ export class TaskService {
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.SUGGEST_TASK,
       payload: { userId, query, projectId, sprintId, teamId },
+    }));
+  }
+
+  async findAllByTeamId(userId: string, filters: GetTasksByTeamDto) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.FIND_ALL_BY_TEAM_ID,
+      payload: { userId, filters },
     }));
   }
 }

@@ -18,6 +18,7 @@ import { useSprints } from "@/hooks/useSprints";
 import { toast } from "sonner";
 import { SprintStatus } from "@/types/common/enums";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
+import { useParams } from "next/navigation";
 
 interface SprintCreateDialogProps {
   children: React.ReactNode;
@@ -30,7 +31,9 @@ export function SprintCreateDialog({
 }: SprintCreateDialogProps) {
   const [open, setOpen] = React.useState(false);
   const { projectId } = useTaskManagementContext();
-  const { createSprint, isCreating } = useSprints(projectId);
+  const param = useParams();
+  const teamId = param?.teamId as string;
+  const { createSprint, isCreating } = useSprints(projectId, teamId);
 
   const [title, setTitle] = React.useState("");
   const [goal, setGoal] = React.useState("");
@@ -59,6 +62,7 @@ export function SprintCreateDialog({
         status: SprintStatus.PLANNED,
         start_date: new Date().toISOString(),
         end_date: new Date().toISOString(),
+        teamId: teamId,
       });
 
       toast.success(`Sprint "${title}" created!`);
