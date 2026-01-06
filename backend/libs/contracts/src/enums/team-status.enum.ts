@@ -1,0 +1,6 @@
+export enum TeamStatus {
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  DISBANDED = 'DISBANDED',
+  DELETED = 'DELETED',
+}

@@ -1,0 +1,50 @@
+# =============================================
+# Dockerfile for apps/user
+# NestJS + Prisma + Node 18-slim
+# Multi-stage build
+# =============================================
+
+# ---------- Stage 1: Dependencies & Build ----------
+    FROM node:18-slim AS deps
+    WORKDIR /app
+    
+    # Cài openssl để Prisma build binary đúng
+    RUN apt-get update -y && apt-get install -y openssl libssl-dev
+    
+    # Copy package.json & package-lock.json
+    COPY package*.json ./
+    
+    # Cài dependencies
+    RUN npm install --legacy-peer-deps
+    
+    # Copy toàn bộ source code
+    COPY . .
+    
+    # Generate Prisma Client tại đúng thư mục
+    RUN npx prisma generate --schema apps/user/src/prisma/schema.prisma
+    
+    # Build NestJS user app
+    RUN npx nest build user
+    
+    # ---------- Stage 2: Runtime ----------
+    FROM node:18-slim AS runner
+    WORKDIR /app
+    
+    # Cài openssl runtime cho Prisma
+    RUN apt-get update -y && apt-get install -y openssl libssl-dev
+    
+    # Copy dist và node_modules từ stage deps
+    COPY --from=deps /app/dist ./dist
+    COPY --from=deps /app/node_modules ./node_modules
+    COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
+    
+    # Set environment variables
+    ENV NODE_ENV=production
+    ENV USER_CLIENT_PORT=3001
+    
+    # Expose port
+    EXPOSE 3001
+    
+    # Start the application
+    CMD ["node", "dist/apps/user/main.js"]
+    

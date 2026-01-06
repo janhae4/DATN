@@ -10,6 +10,15 @@
   "monorepo": true,
   "root": "apps/api-gateway",
   "projects": {
+    "ai-discussion": {
+      "type": "application",
+      "root": "apps/discussion-ai",
+      "entryFile": "main",
+      "sourceRoot": "apps/discussion-ai/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/discussion-ai/tsconfig.app.json"
+      }
+    },
     "api-gateway": {
       "type": "application",
       "root": "apps/api-gateway",
@@ -28,6 +37,24 @@
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
+    "calendar-service": {
+      "type": "application",
+      "root": "apps/calendar-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/calendar-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/calendar-service/tsconfig.app.json"
+      }
+    },
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common/tsconfig.lib.json"
+      }
+    },
     "contracts": {
       "type": "library",
       "root": "libs/contracts",
@@ -35,6 +62,67 @@
       "sourceRoot": "libs/contracts/src",
       "compilerOptions": {
         "tsConfigPath": "libs/contracts/tsconfig.lib.json"
+      }
+    },
+    "discussion": {
+      "type": "application",
+      "root": "apps/discussion",
+      "entryFile": "main",
+      "sourceRoot": "apps/discussion/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/discussion/tsconfig.app.json"
+      }
+    },
+    "epic-service": {
+      "type": "application",
+      "root": "apps/epic-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/epic-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/epic-service/tsconfig.app.json"
+      }
+    },
+    "file": {
+      "type": "application",
+      "root": "apps/file",
+      "entryFile": "main",
+      "sourceRoot": "apps/file/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/file/tsconfig.app.json"
+      }
+    },
+    "gmail": {
+      "type": "application",
+      "root": "apps/gmail",
+      "entryFile": "main",
+      "sourceRoot": "apps/gmail/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/gmail/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "templates/**/*",
+            "outDir": "dist/apps/gmail/templates",
+            "watchAssets": true
+          }
+        ]
+      }
+    },
+    "label-service": {
+      "type": "application",
+      "root": "apps/label-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/label-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/label-service/tsconfig.app.json"
+      }
+    },
+    "list-service": {
+      "type": "application",
+      "root": "apps/list-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/list-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/list-service/tsconfig.app.json"
       }
     },
     "notification": {
@@ -46,6 +134,33 @@
         "tsConfigPath": "apps/notification/tsconfig.app.json"
       }
     },
+    "order-service": {
+      "type": "application",
+      "root": "apps/order-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/order-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/order-service/tsconfig.app.json"
+      }
+    },
+    "ping-pong": {
+      "type": "application",
+      "root": "apps/ping-pong",
+      "entryFile": "main",
+      "sourceRoot": "apps/ping-pong/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/ping-pong/tsconfig.app.json"
+      }
+    },
+    "project-service": {
+      "type": "application",
+      "root": "apps/project-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/project-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/project-service/tsconfig.app.json"
+      }
+    },
     "redis": {
       "type": "application",
       "root": "apps/redis",
@@ -53,6 +168,60 @@
       "sourceRoot": "apps/redis/src",
       "compilerOptions": {
         "tsConfigPath": "apps/redis/tsconfig.app.json"
+      }
+    },
+    "search": {
+      "type": "application",
+      "root": "apps/search",
+      "entryFile": "main",
+      "sourceRoot": "apps/search/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/search/tsconfig.app.json"
+      }
+    },
+    "socket": {
+      "type": "application",
+      "root": "apps/socket",
+      "entryFile": "main",
+      "sourceRoot": "apps/socket/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/socket/tsconfig.app.json"
+      }
+    },
+    "sprint-service": {
+      "type": "application",
+      "root": "apps/sprint-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/sprint-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/sprint-service/tsconfig.app.json"
+      }
+    },
+    "task-service": {
+      "type": "application",
+      "root": "apps/task-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/task-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/task-service/tsconfig.app.json"
+      }
+    },
+    "team": {
+      "type": "application",
+      "root": "apps/team",
+      "entryFile": "main",
+      "sourceRoot": "apps/team/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/team/tsconfig.app.json"
+      }
+    },
+    "testing-service": {
+      "type": "application",
+      "root": "apps/testing-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/testing-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/testing-service/tsconfig.app.json"
       }
     },
     "user": {
@@ -64,14 +233,14 @@
         "tsConfigPath": "apps/user/tsconfig.app.json"
       }
     },
-    "task-service": {
-        "type": "application",
-        "root": "apps/task-service",
-        "entryFile": "main",
-        "sourceRoot": "apps/task-service/src",
-        "compilerOptions": {
-          "tsConfigPath": "apps/task-service/tsconfig.app.json"
-        }
+    "video-chat": {
+      "type": "application",
+      "root": "apps/video-chat",
+      "entryFile": "main",
+      "sourceRoot": "apps/video-chat/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/video-chat/tsconfig.app.json"
       }
     }
   }
+}

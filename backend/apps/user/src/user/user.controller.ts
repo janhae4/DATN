@@ -1,45 +1,306 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { RabbitPayload, RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { UserService } from './user.service';
-import { CreateUserDto } from '@app/contracts/user/create-user.dto';
-import { LoginDto } from '@app/contracts/auth/login-request.dto';
-import { UpdateUserDto } from '@app/contracts/user/update-user.dto';
-import { USER_PATTERNS } from '@app/contracts/user/user.patterns';
+import {
+  Account,
+  ChangePasswordDto,
+  CreateAuthLocalDto,
+  CreateAuthOAuthDto,
+  EVENTS,
+  EVENTS_EXCHANGE,
+  EVENTS_USER_QUEUE,
+  FindUserDto,
+  LoginDto,
+  Provider,
+  User,
+  USER_EXCHANGE,
+  USER_PATTERNS,
+  UserOnboardingDto,
+} from '@app/contracts';
+import { Payload } from '@nestjs/microservices';
+import { customErrorHandler } from '@app/common';
 
 @Controller()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
-  @MessagePattern(USER_PATTERNS.CREATE)
-  create(@Payload() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.LOGIN,
+    queue: EVENTS_USER_QUEUE,
+    queueOptions: {
+      durable: true,
+    },
+    errorHandler: customErrorHandler
+  })
+  handleLogin(@Payload() payload: Partial<User>) {
+    this.userService.update(payload.id ?? '', {
+      lastLogin: new Date(),
+      isActive: true,
+    });
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_ALL)
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.CREATE_LOCAL,
+    queue: USER_PATTERNS.CREATE_LOCAL,
+    errorHandler: customErrorHandler
+  })
+  create(createUserDto: CreateAuthLocalDto) {
+    return this.userService.createLocal(createUserDto);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.CREATE_OAUTH,
+    queue: USER_PATTERNS.CREATE_OAUTH,
+    errorHandler: customErrorHandler
+  })
+  createOAuth(data: CreateAuthOAuthDto) {
+    return this.userService.createOAuth(data);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.CREATE_ACCOUNT,
+    queue: USER_PATTERNS.CREATE_ACCOUNT,
+    errorHandler: customErrorHandler
+  })
+  createAccount(partial: Partial<Account>) {
+    return this.userService.createAccount(partial);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.VERIFY_LOCAL,
+    queue: USER_PATTERNS.VERIFY_LOCAL,
+    errorHandler: customErrorHandler
+  })
+  verifyLocal(data: { userId: string; code: string }) {
+    return this.userService.verifyLocal(data.userId, data.code);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
+    queue: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
+    errorHandler: customErrorHandler
+  })
+  verifyForgotPassword(data: { userId: string; code: string; password: string }) {
+    return this.userService.verifyForgotPassword(
+      data.userId,
+      data.code,
+      data.password,
+    );
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.RESET_CODE,
+    queue: USER_PATTERNS.RESET_CODE,
+    errorHandler: customErrorHandler
+  })
+  resetCode(data: { userId: string; typeCode: 'verify' | 'reset' }) {
+    const { userId, typeCode } = data;
+    console.log(data);
+    return this.userService.resetCode(userId, typeCode);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.RESET_PASSWORD,
+    queue: USER_PATTERNS.RESET_PASSWORD,
+    errorHandler: customErrorHandler
+  })
+  resetPassword(email: string) {
+    console.log(email);
+    return this.userService.resetPassword(email);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ALL,
+    queue: USER_PATTERNS.FIND_ALL,
+    errorHandler: customErrorHandler
+  })
   findAll() {
     return this.userService.findAll({});
   }
 
-  @MessagePattern(USER_PATTERNS.FIND_ONE)
-  findOne(@Payload() id: string) {
-    return this.userService.findOne({ id });
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE,
+    queue: USER_PATTERNS.FIND_ONE,
+    errorHandler: customErrorHandler
+  })
+  findOne(id: string) {
+    return this.userService.findOne(id);
   }
 
-  @MessagePattern(USER_PATTERNS.VALIDATE)
-  validate(@Payload() loginDto: LoginDto) {
-    console.log(loginDto);
-    const user = this.userService.validate(loginDto);
-    console.log(user);
-    return user;
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE_WITH_PASSWORD,
+    queue: USER_PATTERNS.FIND_ONE_WITH_PASSWORD,
+    errorHandler: customErrorHandler
+  })
+  async findOneWithPassword(@RabbitPayload('id') id: string) {
+    return await this.userService.findOneWithPassword(id);
   }
 
-  @MessagePattern(USER_PATTERNS.UPDATE)
-  update(@Payload() id: string, @Payload() updateUserDto: UpdateUserDto) {
-    return this.userService.update({ id }, updateUserDto);
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL,
+    queue: USER_PATTERNS.FIND_ONE_GOOGLE_BY_EMAIL,
+    errorHandler: customErrorHandler
+  })
+  async findOneGoogle(email: string) {
+    return await this.userService.findOneGoogle(email);
   }
 
-  @MessagePattern(USER_PATTERNS.REMOVE)
-  remove(@Payload() id: string) {
-    return this.userService.remove({ id });
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE_BY_EMAIL,
+    queue: USER_PATTERNS.FIND_ONE_BY_EMAIL,
+    errorHandler: customErrorHandler
+  })
+  async findOneByEmail(email: string) {
+    return await this.userService.findOneByEmail(email);
   }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_ONE_OAUTH,
+    queue: USER_PATTERNS.FIND_ONE_OAUTH,
+    errorHandler: customErrorHandler
+  })
+  async findOneOAuth(data: { provider: Provider; providerId: string }) {
+    return await this.userService.findOneOAuth(data.provider, data.providerId);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+    queue: USER_PATTERNS.FIND_MANY_BY_IDs,
+    errorHandler: customErrorHandler
+  })
+  async findManyByIds(payload: { userIds: string[], forDiscussion?: boolean }) {
+    return await this.userService.findManyByIds(payload.userIds, payload.forDiscussion);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.VALIDATE,
+    queue: USER_PATTERNS.VALIDATE,
+    errorHandler: customErrorHandler
+  })
+  async validate(loginDto: LoginDto) {
+    return await this.userService.validate(loginDto);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.UPDATE_PASSWORD,
+    queue: USER_PATTERNS.UPDATE_PASSWORD,
+    errorHandler: customErrorHandler
+  })
+  async updatePassword(updatePasswordDto: ChangePasswordDto) {
+    return await this.userService.updatePassword(
+      updatePasswordDto.id ?? '',
+      updatePasswordDto.oldPassword,
+      updatePasswordDto.newPassword,
+    );
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.UPDATE,
+    queue: USER_PATTERNS.UPDATE,
+    errorHandler: customErrorHandler
+  })
+  update(data: { id: string; updateUser: Partial<User> }) {
+    return this.userService.update(data.id, data.updateUser);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.REMOVE,
+    queue: USER_PATTERNS.REMOVE,
+    errorHandler: customErrorHandler
+  })
+  remove(@RabbitPayload('id') id: string) {
+    return this.userService.remove(id);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FIND_MANY_BY_NAME,
+    queue: USER_PATTERNS.FIND_MANY_BY_NAME,
+    errorHandler: customErrorHandler
+  })
+  findByName(payload: FindUserDto) {
+    return this.userService.findByName(payload.key, payload.options, payload.requesterId, payload.teamId);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.FOLLOW,
+    queue: USER_PATTERNS.FOLLOW,
+    errorHandler: customErrorHandler
+  })
+  follow(requesterId: string, followingId: string) {
+    return this.userService.follow(requesterId, followingId);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.UNFOLLOW,
+    queue: USER_PATTERNS.UNFOLLOW,
+    errorHandler: customErrorHandler
+  })
+  unfollow(requesterId: string, followingId: string) {
+    return this.userService.unfollow(requesterId, followingId);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.ADD_SKILLS,
+    queue: USER_PATTERNS.ADD_SKILLS,
+    errorHandler: customErrorHandler
+  })
+  addSkills(data: UserOnboardingDto) {
+    console.log("RPC addSkills called with data:", data);
+    return this.userService.onboarding(data);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.UPDATE_SKILLS,
+    queue: USER_PATTERNS.UPDATE_SKILLS,
+    errorHandler: customErrorHandler
+  })
+  updateSkills(data: { userId: string, skills: string[] }) {
+    console.log("RPC updateSkills called with data:", data);
+    return this.userService.updateSkills(data.userId, data.skills);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.INCREMENT_BULK_SKILLS,
+    queue: USER_PATTERNS.INCREMENT_BULK_SKILLS,
+    errorHandler: customErrorHandler
+  })
+  incrementBulkSkills(data: Array<{ userId: string, skills: { skillName: string, exp: number }[] }>) {
+    return this.userService.handleBulkSkillIncrement(data);
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+    queue: USER_PATTERNS.GET_BULK_SKILLS,
+    errorHandler: customErrorHandler
+  })
+  getBulkSkills(memberIds: string[]) {
+    return this.userService.getBulkUserSkill(memberIds)
+  }
+
 }

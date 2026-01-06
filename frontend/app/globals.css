@@ -1,26 +1,400 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "./tokens.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* SIDE BAR COLORS */
+@layer base {
+  :root {
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+  }
+
+  .dark {
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.439 0 0);
+  }
+}
+
+.sx-theme-shadcn {
+  /* Biến cơ bản (lấy từ theme shadcn) */
+  --sx-color-primary: var(--primary);
+  --sx-color-background: var(--background);
+  --sx-color-surface: var(--card);
+  --sx-color-on-surface: var(--card-foreground);
+  --sx-color-border: var(--border);
+  --sx-color-text-primary: var(--foreground);
+  --sx-color-text-secondary: var(--muted-foreground);
+
+  /* --- ĐỊNH NGHĨA MÀU TƯƠNG ỨNG VỚI initialCalendars --- */
+
+  /* 'personal' (Màu đỏ từ code của bạn) */
+  --sx-color-personal-main: lightgreen;
+  --sx-color-personal-container: lightgreen;
+  --sx-color-personal-on-container: #FFFFFF;
+  /* Tự thêm: Chữ trắng */
+
+  /* 'work' (Màu đỏ từ code của bạn) */
+  --sx-color-work-main: lightblue;
+  --sx-color-work-container: lightblue;
+  --sx-color-work-on-container: #FFFFFF;
+  /* Tự thêm: Chữ trắng */
+
+  /* 'leisure' (Màu xanh lá từ code của bạn) */
+  --sx-color-leisure-main: #1cf9b0;
+  --sx-color-leisure-container: #1cf9b0;
+  --sx-color-leisure-on-container: #004d3d;
+  /* Lấy từ ví dụ: Chữ đen */
+
+  /* 'school' (Màu xanh dương từ code của bạn) */
+  --sx-color-school-main: #1c7df9;
+  --sx-color-school-container: #d2e7ff;
+  --sx-color-school-on-container: #002859;
+  /* Lấy từ ví dụ: Chữ đen */
+}
+
+/* Định nghĩa màu dark mode (lấy từ code của bạn) */
+.dark .sx-theme-shadcn {
+  --sx-color-personal-main: #FF0000;
+  --sx-color-personal-container: #FF0000;
+  --sx-color-personal-on-container: #FFFFFF;
+
+  --sx-color-work-main: #FF0000;
+  --sx-color-work-container: #FF0000;
+  --sx-color-work-on-container: #FFFFFF;
+
+  --sx-color-leisure-main: #c0fff5;
+  --sx-color-leisure-container: #42a297;
+  --sx-color-leisure-on-container: #e6fff5;
+
+  --sx-color-school-main: #c0dfff;
+  --sx-color-school-container: #426aa2;
+  --sx-color-school-on-container: #dee6ff;
+}
+
+
+
+
+/* --- GOOGLE CALENDAR THEME FOR REACT-BIG-CALENDAR --- */
+
+.my-custom-calendar {
+  font-family: "Google Sans", Roboto, Arial, sans-serif;
+  /* Font giống Google */
+  color: #3c4043;
+  --grid-color: #dadce0;
+  /* Màu đường kẻ chuẩn của Google */
+  --primary-color: #1a73e8;
+  /* Màu xanh Google */
+  --today-bg: rgba(26, 115, 232, 0.04);
+}
+
+/* 1. Tổng thể khung lịch */
+.rbc-calendar {
+  border: none !important;
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view {
+  border: 1px solid var(--grid-color) !important;
+  border-top: none !important;
+  /* Bỏ viền trên để thoáng header */
+}
+
+/* 2. Header (Thứ - Ngày) */
+.rbc-header {
+  border-bottom: 1px solid var(--grid-color) !important;
+  border-left: none !important;
+  /* Bỏ vách ngăn dọc giữa các header */
+  padding: 8px 0 !important;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #70757a;
+  /* Màu chữ xám của Google */
+  text-align: center;
+}
+
+.rbc-header+.rbc-header {
+  border-left: 1px solid var(--grid-color) !important;
+  /* Chỉ kẻ dọc ngăn cách mờ */
+}
+
+/* --- QUAN TRỌNG: Style cho ngày HÔM NAY (Circle Blue) --- */
+.rbc-header.rbc-today {
+  color: var(--primary-color) !important;
+  border-bottom: 1px solid var(--grid-color) !important;
+  /* Giữ nguyên border dưới */
+}
+
+/* Hack để tạo vòng tròn xanh quanh số ngày hôm nay (nếu cấu trúc HTML cho phép) */
+/* Lưu ý: RBC mặc định render text "Tue 30". Để làm tròn số "30", cần Custom Header Component. 
+   Nhưng CSS này sẽ highlight cả cụm text cho giống style text Google */
+.rbc-header.rbc-today span {
+  display: inline-block;
+}
+
+/* 3. Lưới thời gian (Time Grid) */
+.rbc-time-view .rbc-allday-cell {
+  border-bottom: 1px solid var(--grid-color) !important;
+}
+
+.rbc-time-content {
+  border-top: 1px solid var(--grid-color) !important;
+}
+
+/* Cột giờ bên trái */
+.rbc-time-gutter .rbc-timeslot-group {
+  border-bottom: none !important;
+}
+
+.rbc-time-gutter .rbc-time-slot {
+  font-size: 10px;
+  color: #70757a;
+  transform: translateY(-8px);
+  /* Đẩy giờ lên khớp vạch kẻ giống Google */
+  padding-right: 8px;
+}
+
+/* Đường kẻ ngang */
+.rbc-timeslot-group {
+  border-bottom: 1px solid var(--grid-color) !important;
+  /* Kẻ liền, không đứt */
+  min-height: 48px !important;
+  /* Chiều cao mỗi giờ chuẩn Google (compact hơn) */
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: none !important;
+}
+
+/* Đường kẻ dọc phân ngày */
+.rbc-day-slot {
+  border-left: 1px solid var(--grid-color) !important;
+}
+
+/* Nền của ngày hôm nay */
+.rbc-day-slot.rbc-today {
+  background-color: transparent !important;
+  /* Google Calendar nền trắng, không tô màu */
+}
+
+/* 4. Sự kiện (Event) */
+.rbc-event {
+  border: none !important;
+  border-radius: 4px !important;
+  /* Bo góc 4px chuẩn Google */
+  padding: 2px 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  /* Google Calendar phẳng, không shadow */
+  margin: 1px 2px !important;
+  /* Cách lề một chút */
+  line-height: 1.4;
+}
+
+.rbc-event:hover {
+  filter: brightness(0.95);
+  /* Tối đi chút khi hover */
+}
+
+.rbc-event-label {
+  display: none !important;
+  /* Ẩn giờ trong event cho gọn giống Google */
+}
+
+/* Sự kiện All Day / Month View */
+.rbc-month-row {
+  min-height: 100px;
+  /* Cho ô tháng cao hơn */
+}
+
+/* 5. Vạch chỉ giờ hiện tại (Current Time Indicator) */
+.rbc-current-time-indicator {
+  background-color: #ea4335 !important;
+  /* Màu đỏ Google */
+  height: 2px !important;
+}
+
+.rbc-current-time-indicator::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #ea4335;
+}
+
+/* 6. Thanh cuộn (Scrollbar) tinh tế */
+.rbc-time-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.rbc-time-content::-webkit-scrollbar-thumb {
+  background-color: #dadce0;
+  border-radius: 4px;
+}
+
+.rbc-time-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3);
+  border-radius: 20px;
+  border: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.5);
 }

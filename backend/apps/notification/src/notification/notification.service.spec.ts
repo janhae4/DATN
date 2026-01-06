@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
-import { NotificationGateway } from './notification.gateway';
-import { PrismaService } from './prisma.service';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Notification } from './entity/notification.entity';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 describe('NotificationService', () => {
   let service: NotificationService;
@@ -10,7 +11,25 @@ describe('NotificationService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ClientConfigModule],
-      providers: [NotificationGateway, NotificationService, PrismaService],
+      providers: [
+        NotificationService,
+        {
+          provide: getRepositoryToken(Notification),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
+            update: jest.fn(),
+            delete: jest.fn(),
+          },
+        },
+        {
+          provide: AmqpConnection,
+          useValue: {
+            request: jest.fn(),
+          }
+        }
+      ],
     }).compile();
 
     service = module.get<NotificationService>(NotificationService);

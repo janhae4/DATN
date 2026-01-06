@@ -1,58 +1,103 @@
 import { Controller } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { EventPattern, Payload } from '@nestjs/microservices';
-import { NotificationEvent } from './dto/notification.event';
-import { NotificationUpdateDto } from './dto/notification-update.dto';
-import { NOTIFICATION_PATTERN } from '@app/contracts/notification/notification.pattern';
+import {
+  NotificationEventDto,
+  NotificationUpdateDto,
+  NOTIFICATION_PATTERN,
+  NOTIFICATION_EXCHANGE,
+  EVENTS,
+  EVENTS_EXCHANGE,
+  EVENTS_NOTIFICATION_QUEUE,
+
+} from '@app/contracts';
+import type { AddMemberEventPayload } from '@app/contracts';
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 
 @Controller('notification')
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(private readonly notificationService: NotificationService) { }
 
-  @EventPattern(NOTIFICATION_PATTERN.SEND)
-  handleSendNotification(@Payload() event: NotificationEvent) {
-    this.notificationService.sendNotification(event);
+  @RabbitRPC({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.ADD_MEMBER,
+    queue: EVENTS_NOTIFICATION_QUEUE,
+  })
+  handleTeamAddMember(payload: AddMemberEventPayload) {
+    this.notificationService.handleTeamAddMember(payload);
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.CREATE)
-  handleNotification(@Payload() event: NotificationEvent) {
+
+  @RabbitRPC({
+    exchange: NOTIFICATION_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.CREATE,
+    queue: NOTIFICATION_PATTERN.CREATE
+  })
+  handleNotification(event: NotificationEventDto) {
     this.notificationService.addNotification(event);
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.UPDATE)
+  @RabbitRPC({
+    exchange: NOTIFICATION_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.UPDATE,
+    queue: NOTIFICATION_PATTERN.UPDATE
+  })
   handleUpdateNotification(
-    @Payload() id: string,
-    @Payload() data: NotificationUpdateDto,
+    id: string,
+    data: NotificationUpdateDto,
   ) {
     this.notificationService.updateNotification({ id }, data);
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.DELETE)
-  handleDeleteNotification(@Payload() id: string) {
+  @RabbitRPC({
+    exchange: NOTIFICATION_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.DELETE,
+    queue: NOTIFICATION_PATTERN.DELETE
+  })
+  handleDeleteNotification(id: string) {
     this.notificationService.deleteNotification({ id });
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.MARK_AS_READ)
-  handleMarkNotificationAsRead(@Payload() id: string) {
+  @RabbitRPC({
+    exchange: NOTIFICATION_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.MARK_AS_READ,
+    queue: NOTIFICATION_PATTERN.MARK_AS_READ
+  })
+  handleMarkNotificationAsRead(id: string) {
     this.notificationService.markNotificationAsRead({ id });
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.MARK_AS_UNREAD)
-  handleMarkNotificationAsUnread(@Payload() id: string) {
+  @RabbitRPC({
+    exchange: NOTIFICATION_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.MARK_AS_UNREAD,
+    queue: NOTIFICATION_PATTERN.MARK_AS_UNREAD
+  })
+  handleMarkNotificationAsUnread(id: string) {
     this.notificationService.markNotificationAsUnread({ id });
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.MARK_ALL_AS_READ)
+  @RabbitRPC({
+    exchange: NOTIFICATION_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.MARK_ALL_AS_READ,
+    queue: NOTIFICATION_PATTERN.MARK_ALL_AS_READ
+  })
   handleMarkAllNotificationsAsRead(userId: string) {
     this.notificationService.markAllNotificationsAsRead(userId);
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.MARK_ALL_AS_UNREAD)
+  @RabbitRPC({
+    exchange: NOTIFICATION_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.MARK_ALL_AS_UNREAD,
+    queue: NOTIFICATION_PATTERN.MARK_ALL_AS_UNREAD
+  })
   handleMarkAllNotificationsAsUnread(userId: string) {
     this.notificationService.markAllNotificationsAsUnread(userId);
   }
 
-  @EventPattern(NOTIFICATION_PATTERN.FIND)
+  @RabbitRPC({
+    exchange: NOTIFICATION_EXCHANGE,
+    routingKey: NOTIFICATION_PATTERN.FIND,
+    queue: NOTIFICATION_PATTERN.FIND
+  })
   handleGetNotifications(userId: string) {
     return this.notificationService.getNotifications(userId);
   }

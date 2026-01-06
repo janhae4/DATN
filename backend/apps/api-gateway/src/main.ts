@@ -1,15 +1,25 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ApiGatewayModule } from './api-gateway.module';
+import { ApiGatewayModule } from './api-gateway/api-gateway.module';
 import cookieParser from 'cookie-parser';
-
+import { RoleGuard } from './common/role/role.guard';
+import { RpcErrorToHttpFilter } from './common/filter/rpc-to-http.filter';
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
+
+  app.enableCors({
+    origin: true, // Allow all origins in development
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   const config = new DocumentBuilder()
     .setTitle('DATN Project')
     .setDescription('The DATN API description')
     .setVersion('0.1')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -23,7 +33,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
+  app.useGlobalGuards(app.get(RoleGuard));
+  app.useGlobalFilters(app.get(RpcErrorToHttpFilter));
   await app.listen(process.env.port ?? 3000);
 }
 bootstrap();

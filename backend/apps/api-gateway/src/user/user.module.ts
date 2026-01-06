@@ -1,13 +1,29 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { ClientConfigModule } from '../../../../libs/contracts/src/client-config/client-config.module';
-import { CLIENT_PROXY_PROVIDER } from '@app/contracts/client-config/client-config.provider';
+import { ClientConfigModule, ClientConfigService, USER_EXCHANGE } from '@app/contracts';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [ClientConfigModule],
+  imports: [
+    ClientConfigModule,
+    AuthModule,
+    forwardRef(() => AuthModule),
+    RabbitMQModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (clientConfigService: ClientConfigService) => ({
+        exchanges: [
+          { name: USER_EXCHANGE, type: 'direct' },
+        ],
+        uri: clientConfigService.getRMQUrl(),
+        connectionInitOptions: { wait: false },
+      })
+    })
+  ],
   controllers: [UserController],
-  providers: [UserService, CLIENT_PROXY_PROVIDER.USER_CLIENT],
+  providers: [UserService],
   exports: [UserService],
 })
-export class UserModule {}
+export class UserModule { }
