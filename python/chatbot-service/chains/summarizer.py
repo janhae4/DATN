@@ -1,6 +1,6 @@
 import asyncio
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from utils.stream_helper import stream_blocking_generator
 
 class Summarizer:
@@ -77,7 +77,6 @@ class Summarizer:
         try:
             response = await chain.ainvoke({"objective": objective})
             
-            # Trả về nội dung văn bản
             if hasattr(response, "content"):
                 return response.content.strip()
             return str(response).strip()

@@ -1,7 +1,7 @@
 from sentence_transformers.cross_encoder import CrossEncoder
 from typing import Sequence, List, Tuple
 from langchain_core.documents import Document
-from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
+from langchain_classic.retrievers.document_compressors.base import BaseDocumentCompressor
 from langchain_core.callbacks import Callbacks
 import numpy as np 
 class SentenceTransformerRerank(BaseDocumentCompressor):

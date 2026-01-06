@@ -1,5 +1,5 @@
 from sentence_transformers.cross_encoder import CrossEncoder
-from langchain.retrievers import ContextualCompressionRetriever
+from langchain_classic.retrievers import ContextualCompressionRetriever
 from models.reranker import SentenceTransformerRerank
 class RetrieverService:
     def __init__(self, embeddings, reranker_model: CrossEncoder = None, use_reranker: bool = False, threadpool=None):
