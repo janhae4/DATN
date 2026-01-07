@@ -4,11 +4,13 @@ import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TimelineView from "./features/timeline/TimelineView";
 import dynamic from "next/dynamic";
-import { Loader2 } from "lucide-react";
+import { Loader2, HelpCircle } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { BacklogSkeleton } from "./skeletons/BackLogSkeleton";
 import { KanbanSkeleton } from "./skeletons/KanbanSkeleton";
 import { SummarySkeleton } from "./skeletons/SummarySkeleton";
+import { Button } from "@/components/ui/button";
+import { useDashboardTour } from "@/hooks/useDashboardTour";
 
 const Summary = dynamic(() => import("./features/summary/summary"), {
   loading: () => <SummarySkeleton />,
@@ -53,6 +55,7 @@ const GenericTabSkeleton = () => (
 
 export function TabsNav() {
   const [activeTab, setActiveTab] = React.useState<string>("backlogs");
+  const { startTour } = useDashboardTour();
 
   React.useEffect(() => {
     // Set initial tab from hash on mount
@@ -82,12 +85,23 @@ export function TabsNav() {
         onValueChange={handleTabChange}
         className="h-full flex flex-col w-full"
       >
-        <TabsList>
-          <TabsTrigger value="backlogs">Backlogs</TabsTrigger>
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="boards">Boards</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between gap-4">
+          <TabsList id="dashboard-tabs-list">
+            <TabsTrigger id="tab-backlogs" value="backlogs">Backlogs</TabsTrigger>
+            <TabsTrigger id="tab-summary" value="summary">Summary</TabsTrigger>
+            <TabsTrigger id="tab-boards" value="boards">Boards</TabsTrigger>
+            <TabsTrigger id="tab-timeline" value="timeline">Timeline</TabsTrigger>
+          </TabsList>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={startTour}
+            className="hidden md:flex items-center gap-2"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span>Tour</span>
+          </Button>
+        </div>
         <TabsContent
           value="backlogs"
           className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent"

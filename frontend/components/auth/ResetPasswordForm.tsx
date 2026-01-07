@@ -58,7 +58,7 @@ export function ResetPasswordForm() {
       
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        router.push('/auth/login');
+        router.push('/auth#login');
       }, 3000);
       
     } catch (err) {

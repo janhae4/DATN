@@ -93,11 +93,10 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
 
   return (
     <div
-      className={`${styles.form_inner_container} ${
-        isActive ? styles.active_form : styles.inactive_form
-      } flex flex-col justify-center px-4 sm:px-0`} // Thêm padding cho mobile
+      className={`${styles.form_inner_container} ${isActive ? styles.active_form : styles.inactive_form
+        } flex flex-col justify-center items-center w-full px-4 sm:px-6`}
     >
-      <div className="w-full max-w-[400px] mx-auto space-y-6">
+      <div className="w-full max-w-sm sm:max-w-md mx-auto space-y-6">
         {/* Header Section */}
         <div className="flex flex-col space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -119,24 +118,7 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
               className="w-5 h-auto"
             />
           </button>
-          <button className={styles.social_button}>
-            <Image
-              src={FacebookIcon}
-              alt="Facebook Icon"
-              width={24}
-              height={24}
-              className="w-5 h-auto"
-            />
-          </button>
-          <button className={styles.social_button}>
-            <Image
-              src={XIcon}
-              alt="X Icon"
-              width={24}
-              height={24}
-              className="w-5 h-auto"
-            />
-          </button>
+
         </div>
 
         <div className="relative">
@@ -199,17 +181,6 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
                 />
               </button>
             </div>
-          </div>
-
-          {/* Remember Me Checkbox */}
-          <div className="flex items-center space-x-2">
-            <Checkbox id="remember" />
-            <Label
-              htmlFor="remember"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Remember me
-            </Label>
           </div>
 
           {/* Error Message Box */}

@@ -402,19 +402,7 @@ export function EmailBox() {
                         <Separator />
 
                         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="default" className="w-full sm:w-auto">
-                                  <PlusCircle className="h-4 w-4 mr-2" />
-                                  Convert to Task
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Create a task from this email</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+
                           <div className="flex gap-2">
                             <TooltipProvider>
                               <Tooltip>

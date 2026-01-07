@@ -12,7 +12,6 @@ import { Archive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BacklogTaskList } from "./task/backlogTaskList";
 import { List, Task } from "@/types";
-import { PaginationControl } from "@/components/shared/PaginationControl";
 
 interface BacklogAccordionItemProps {
   lists: List[];

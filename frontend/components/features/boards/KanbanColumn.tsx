@@ -144,7 +144,7 @@ export function KanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "group flex flex-col w-80 flex-shrink-0 bg-secondary rounded-xl border border-transparent h-full max-h-full transition-all duration-500 overflow-hidden",
+        "group flex flex-col w-80 flex-shrink-0 bg-secondary rounded-xl border border-transparent h-full max-h-full transition-colors duration-200 overflow-hidden",
         isOver
           ? isDoneColumn
             ? "bg-green-500/10 border-green-500/30 ring-2 ring-green-500/20"

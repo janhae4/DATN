@@ -50,7 +50,7 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
     }));
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
@@ -78,7 +78,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
     } catch (error: any) {
       setIsLoading(false);
-      
+
       // Xử lý lỗi hiển thị (như code bạn gửi)
       if (axios.isAxiosError(error) && error.response) {
         const serverMessage =
@@ -90,10 +90,10 @@ const handleSubmit = async (e: React.FormEvent) => {
     } finally {
       // Lưu ý: Nếu thành công và redirect, component sẽ unmount nên setIsLoading(false) có thể không chạy,
       // nhưng nếu lỗi thì nó sẽ chạy để tắt loading.
-      if (!error) { 
-         // Giữ loading true nếu đang redirect để tránh user bấm lung tung
+      if (!error) {
+        // Giữ loading true nếu đang redirect để tránh user bấm lung tung
       } else {
-         setIsLoading(false);
+        setIsLoading(false);
       }
     }
   };
@@ -104,13 +104,12 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <div
-      className={`${styles.form_inner_container} ${
-        isActive ? styles.active_form : styles.inactive_form
-      } flex flex-col justify-center h-full`}
-      // h-full để container tận dụng chiều cao cha
+      className={`${styles.form_inner_container} ${isActive ? styles.active_form : styles.inactive_form
+        } flex flex-col  z-500 justify-center h-full`}
+    // h-full để container tận dụng chiều cao cha
     >
       {/* Scrollable Area: Quan trọng cho Mobile khi bàn phím bật lên */}
-      <div className="w-full max-w-[400px] mx-auto px-4 sm:px-0 overflow-y-auto max-h-full py-4 scrollbar-hide">
+      <div className="w-full max-w-sm sm:max-w-md mx-auto px-4 sm:px-0 overflow-y-auto max-h-full py-4 scrollbar-hide">
         <div className="space-y-6">
           {/* Header Section */}
           <div className="flex flex-col space-y-2 text-center">
@@ -131,20 +130,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               title="Sign up with Google"
             >
               <Image src={GoogleIcon} alt="Google" width={20} height={20} />
-            </Button>
-            <Button
-              variant="outline"
-                className={styles.social_button}
-              title="Sign up with Facebook"
-            >
-              <Image src={FacebookIcon} alt="Facebook" width={20} height={20} />
-            </Button>
-            <Button
-              variant="outline"
-              className={styles.social_button}
-              title="Sign up with X"
-            >
-              <Image src={XIcon} alt="X" width={20} height={20} />
             </Button>
           </div>
 

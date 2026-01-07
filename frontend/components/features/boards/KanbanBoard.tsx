@@ -18,13 +18,11 @@ import {
   CollisionDetection,
 } from "@dnd-kit/core";
 import { Task } from "@/types";
-import { List } from "@/types";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
 import { useLists } from "@/hooks/useList";
 import { useTasks } from "@/hooks/useTasks";
 import { KanbanColumn } from "./KanbanColumn";
 import { motion } from "framer-motion";
-import confetti from "canvas-confetti";
 import { ListCategoryEnum } from "@/types/common/enums";
 import {
   calculateNewPositionForTask,
@@ -50,15 +48,7 @@ import { ResolveSubtasksDialog } from "./ResolveSubtasksDialog";
 import { GetTasksParams } from "@/services/taskService";
 import { useDebounce } from "@/hooks/useDebounce";
 
-const dropAnimation: DropAnimation = {
-  sideEffects: defaultDropAnimationSideEffects({
-    styles: {
-      active: {
-        opacity: "0.5",
-      },
-    },
-  }),
-};
+
 
 const collisionDetectionStrategy: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
@@ -219,6 +209,11 @@ export function KanbanBoard() {
         grouped[lists[0].id].push(task);
       }
     });
+
+    Object.keys(grouped).forEach((key) => {
+      grouped[key].sort((a, b) => (a.position || 0) - (b.position || 0));
+    });
+
     return grouped;
   }, [items, lists]);
 
@@ -247,7 +242,6 @@ export function KanbanBoard() {
 
     if (!active.data.current?.task || !overContainerId) return;
 
-    // Optimistic update removed - will update when API call completes
   };
 
   const executeMoveTask = (
@@ -256,17 +250,10 @@ export function KanbanBoard() {
     newPosition: number,
     isMovedColumn: boolean
   ) => {
-    // Optimistic update removed - will update when API call completes
-
     updateTask(task.id, {
       listId: targetListId,
       position: newPosition,
     });
-
-    const targetList = lists.find((l) => l.id === targetListId);
-    if (targetList?.category === ListCategoryEnum.DONE && isMovedColumn) {
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    }
   };
 
   const checkAndHandleSubtasks = (
@@ -280,7 +267,6 @@ export function KanbanBoard() {
 
     if (!isTargetDone) return false;
 
-    // Logic: Kiểm tra subtask trong allData (Context) vì API GetTasks có thể bị filter ẩn mất subtask
     const subtasks = allData.filter((t) => t.parentId === activeTask.id);
     const doneListIds = lists
       .filter((l) => l.category === ListCategoryEnum.DONE)
@@ -307,11 +293,10 @@ export function KanbanBoard() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveTask(null);
-    setOverColumnId(null);
 
-    // No need to revert - items is derived from tasks
     if (!over) {
+      setActiveTask(null);
+      setOverColumnId(null);
       return;
     }
 
@@ -348,6 +333,9 @@ export function KanbanBoard() {
         );
       }
     }
+
+    setActiveTask(null);
+    setOverColumnId(null);
   };
 
   const handleConfirmResolve = async () => {
@@ -381,7 +369,6 @@ export function KanbanBoard() {
     setIsResolveDialogOpen(false);
     setPendingMove(null);
     setPendingSubtasks([]);
-    // No need to revert - items is derived from tasks
   };
 
   const handleIgnoreResolve = () => {
@@ -408,7 +395,6 @@ export function KanbanBoard() {
       onDragCancel={() => {
         setActiveTask(null);
         setOverColumnId(null);
-        // No need to revert - items is derived from tasks
       }}
     >
       <div className="h-full w-full min-w-0 relative group/board flex flex-col">
@@ -536,7 +522,7 @@ export function KanbanBoard() {
         />
       </div>
 
-      <DragOverlay dropAnimation={dropAnimation}>
+      <DragOverlay dropAnimation={null}>
         {activeTask ? (
           <motion.div
             initial={{

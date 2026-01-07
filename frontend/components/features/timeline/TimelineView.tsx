@@ -13,7 +13,6 @@ import 'temporal-polyfill/global'
 import { useState } from 'react'
 import { createDragAndDropPlugin } from '@schedule-x/drag-and-drop'
 import { CreateEventModal } from './CreateEventModal'
-// 1. Import types và config từ file mới
 import {
   EventFormData,
   initialCalendars,
@@ -22,15 +21,12 @@ import {
 function TimelineView() {
   const eventsService = useState(() => createEventsServicePlugin())[0]
 
-  // 2. Quản lý state của calendars và timeZone
   const [calendars, setCalendars] = useState(initialCalendars)
   const [timeZone] = useState(() => Temporal.Now.timeZoneId())
   const [formData, setFormData] = useState<EventFormData | null>(null)
   const defaultCalendarId = Object.keys(calendars)[0] || 'personal'
 
-  // --- HÀM XỬ LÝ LOGIC (Tập trung tại đây) ---
 
-  // Chuyển đổi từ event của Schedule-X sang data cho form
   const convertEventToFormData = (calendarEvent: any): EventFormData => {
     const startDateTime = calendarEvent.start
     const endDateTime = calendarEvent.end
@@ -50,7 +46,6 @@ function TimelineView() {
     }
   }
 
-  // Khi submit form (cho cả Create và Edit)
   const handleSubmit = (data: EventFormData) => {
     const startDateTime = Temporal.ZonedDateTime.from(
       `${data.startDate}T${data.startTime}[${timeZone}]`

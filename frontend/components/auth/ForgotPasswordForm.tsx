@@ -55,7 +55,7 @@ export function ForgotPasswordForm() {
         <CardContent className="mt-4">
           <Button 
             className="w-full" 
-            onClick={() => router.push('/auth/login')}
+            onClick={() => router.push('/auth#login')}
           >
             Back to Login
           </Button>
@@ -111,14 +111,6 @@ export function ForgotPasswordForm() {
             </Button>
           </form>
         </Form>
-        <div className="mt-4 text-center text-sm">
-          <button 
-            onClick={() => router.push('/auth/login')}
-            className="text-primary hover:underline"
-          >
-            Back to Login
-          </button>
-        </div>
       </CardContent>
     </Card>
   );

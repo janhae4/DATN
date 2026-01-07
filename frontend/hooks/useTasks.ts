@@ -89,7 +89,7 @@ export function useTasks(filters?: GetTasksParams) {
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
 
-      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
+      const previousData = queryClient.getQueryData(tasksQueryKey);
 
       let optimisticLabels: TaskLabel[] | undefined = undefined;
       if (updates.labelIds && projectLabels.length > 0) {
@@ -98,70 +98,91 @@ export function useTasks(filters?: GetTasksParams) {
         );
       }
 
-      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
-        if (!old || !old.data) return old;
+      queryClient.setQueryData(tasksQueryKey, (old: any) => {
+        if (!old || !old.pages) return old;
 
         return {
           ...old,
-          data: old.data.map((task) =>
-            task.id === id
-              ? {
-                ...task,
-                ...updates,
-                ...(optimisticLabels ? { labels: optimisticLabels } : {}),
-              }
-              : task
-          ),
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((task: Task) =>
+              task.id === id
+                ? {
+                  ...task,
+                  ...updates,
+                  ...(optimisticLabels ? { labels: optimisticLabels } : {}),
+                }
+                : task
+            ),
+          })),
         };
       });
 
       return { previousData };
     },
 
+    onSuccess: (updatedTask, variables) => {
+      // Direct cache update with server response to prevent stale read flicker
+      queryClient.setQueryData(tasksQueryKey, (old: any) => {
+        if (!old || !old.pages) return old;
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((task: Task) =>
+              task.id === updatedTask.id ? updatedTask : task
+            ),
+          })),
+        };
+      });
+
+      // Still invalidate related queries, but maybe specific ones or with longer delay if really needed
+      // But for main list, the setQueryData above handles authoritativeness.
+      queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["task-labels", variables.id],
+      });
+      // Do NOT invalidate tasksQueryKey immediately to avoid A->B->A->B flicker
+    },
     onError: (_err, _newTodo, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(tasksQueryKey, context.previousData);
       }
+      toast.error("Failed to update task");
     },
-
-    onSettled: (data, error, variables) => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: tasksQueryKey });
-        queryClient.invalidateQueries({ queryKey: labelsQueryKey });
-        queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
-        queryClient.invalidateQueries({
-          queryKey: ["task-labels", variables.id],
-        });
-      }, 50);
-    },
+    // Remove onSettled to avoid invalidating the list cache with stale data
   });
 
   const updateTasksMutation = useMutation({
     mutationFn: ({ ids, updates }: { ids: string[], updates: UpdateTaskDto }) => taskService.updateTasks(ids, updates),
     onMutate: async ({ ids, updates }) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
-      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
+      const previousData = queryClient.getQueryData(tasksQueryKey);
 
-      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
-        if (!old || !old.data) return old!;
+      queryClient.setQueryData(tasksQueryKey, (old: any) => {
+        if (!old || !old.pages) return old;
 
         const isMovingSprint = updates.sprintId !== undefined;
         const isMovingEpic = updates.epicId !== undefined;
-        if (isMovingSprint || isMovingEpic) {
-          return {
-            ...old,
-            data: old.data.filter((task) => !ids.includes(task.id)),
-            total: Math.max(0, old.total - ids.length),
-          };
-        }
 
         return {
           ...old,
-          data: old.data.map((task) =>
-            ids.includes(task.id)
-              ? { ...task, ...updates }
-              : task
-          ),
+          pages: old.pages.map((page: any) => {
+            if (isMovingSprint || isMovingEpic) {
+              return {
+                ...page,
+                data: page.data.filter((task: Task) => !ids.includes(task.id)),
+                total: Math.max(0, (page.total || 0) - ids.length),
+              };
+            }
+            return {
+              ...page,
+              data: page.data.map((task: Task) =>
+                ids.includes(task.id) ? { ...task, ...updates } : task
+              ),
+            };
+          }),
         };
       });
 
@@ -194,14 +215,17 @@ export function useTasks(filters?: GetTasksParams) {
     mutationFn: (ids: string[]) => taskService.deleteTasks(ids),
     onMutate: async (ids) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
-      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
-      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
-        if (!old || !old.data) return old!;
+      const previousData = queryClient.getQueryData(tasksQueryKey);
+      queryClient.setQueryData(tasksQueryKey, (old: any) => {
+        if (!old || !old.pages) return old!;
 
         return {
           ...old,
-          data: old.data.filter((task) => !ids.includes(task.id)),
-          total: old.total - ids.length
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.filter((task: Task) => !ids.includes(task.id)),
+            total: (page.total || 0) - ids.length,
+          })),
         };
       });
 

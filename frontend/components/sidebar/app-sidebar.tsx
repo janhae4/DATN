@@ -43,38 +43,42 @@ const data = {
         {
           title: "Dashboard",
           url: "dashboard#summary",
+          forceReload: true,
         },
         {
           title: "Boards",
           url: "dashboard#boards",
+          forceReload: true,
         },
         {
           title: "Backlogs",
           url: "dashboard#backlogs",
+          forceReload: true,
         },
         {
           title: "Timeline",
           url: "dashboard#timeline",
+          forceReload: true,
         },
       ],
 
     },
-    {
-      title: "Meeting",
-      url: "meeting",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "Join a meeting",
-          url: "meeting",
-        },
-        {
-          title: "Meeting history",
-          url: "meeting/summary",
-        },
-      ],
-    },
+    // {
+    //   title: "Meeting",
+    //   url: "meeting",
+    //   icon: SquareTerminal,
+    //   isActive: true,
+    //   items: [
+    //     {
+    //       title: "Join a meeting",
+    //       url: "meeting",
+    //     },
+    //     {
+    //       title: "Meeting history",
+    //       url: "meeting/summary",
+    //     },
+    //   ],
+    // },
     {
       title: "Documentation",
       url: "documentation",
@@ -93,12 +97,12 @@ const data = {
       icon: CalendarDays,
       isActive: true,
     },
-    {
-      title: "Messages",
-      url: "chat",
-      icon: MessageCircle,
-      isActive: true
-    },
+    // {
+    //   title: "Messages",
+    //   url: "chat",
+    //   icon: MessageCircle,
+    //   isActive: true
+    // },
     {
       title: "AI Assistant",
       url: "ai-assistant",
@@ -151,7 +155,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       } else if (item.url === "documentation") {
         resolvedUrl = `/${teamId}/documentation`
       } else {
-        resolvedUrl = `${basePath}/${item.url}` 
+        resolvedUrl = `${basePath}/${item.url}`
       }
 
       return {
@@ -160,8 +164,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         items: item.items
           ? item.items.map((subItem) => ({
             ...subItem,
-            url: item.url === "meeting" 
-              ? `/${teamId}/${subItem.url}` 
+            forceReload: (subItem as any).forceReload,
+            url: item.url === "meeting"
+              ? `/${teamId}/${subItem.url}`
               : `${basePath}/${subItem.url}`,
           }))
           : item.items,

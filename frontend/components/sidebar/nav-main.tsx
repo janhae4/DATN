@@ -63,7 +63,16 @@ export function NavMain({
                     {item.items?.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                          <Link href={subItem.url}>
+                          <Link
+                            href={subItem.url}
+                            onClick={(e) => {
+                              if ((subItem as any).forceReload) {
+                                e.preventDefault();
+                                window.location.href = subItem.url;
+                                window.location.reload();
+                              }
+                            }}
+                          >
                             <span>{subItem.title}</span>
                           </Link>
                         </SidebarMenuSubButton>

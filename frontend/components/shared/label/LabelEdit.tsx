@@ -8,11 +8,10 @@ import { cn } from "@/lib/utils"
 import { MoreHorizontal as MoreHorizontalIcon, Trash2, PencilLine } from "lucide-react"
 import { ColorPicker } from "../color-picker/ColorPicker"
 import { Separator } from "@/components/ui/separator"
-// --- THÊM 2 IMPORT NÀY VÀO ---
-import { db } from "@/public/mock-data/mock-data"
 import { toast } from "sonner"
 import { Label } from "@/types"
-// --- KẾT THÚC THÊM IMPORT ---
+import { useParams } from "next/navigation"
+import { useLabels } from "@/hooks/useLabels"
 
 
 const PRESET_COLORS = [
@@ -28,6 +27,11 @@ export function LabelEdit({ data }: { data: Label }) {
     const [isParentOpen, setIsParentOpen] = React.useState(false)
     const [isPickerOpen, setIsPickerOpen] = React.useState(false)
 
+    // Hook
+    const params = useParams()
+    const projectId = params.projectId as string
+    const { updateLabel, deleteLabel } = useLabels(projectId)
+
     // Sync state (không đổi)
     React.useEffect(() => {
         setName(data.name)
@@ -40,54 +44,39 @@ export function LabelEdit({ data }: { data: Label }) {
         e.stopPropagation()
     }
 
-    // --- HÀM DELETE (ĐÃ SỬA) ---
-    const handleDelete = () => {
-        console.log("Xóa label:", data.id)
-        
-        // Giả lập API: Xóa khỏi db
-        const labelIndex = db.labels.findIndex(l => l.id === data.id)
-        if (labelIndex !== -1) {
-            const deletedName = db.labels[labelIndex].name;
-            db.labels.splice(labelIndex, 1) // Xóa khỏi "database"
-            toast.success(`Đã xóa label "${deletedName}"`)
-        } else {
-            toast.error("Không tìm thấy label để xóa")
+    const handleDelete = async () => {
+        try {
+            await deleteLabel(data.id)
+            toast.success(`Đã xóa label "${data.name}"`)
+            setIsPickerOpen(false)
+            setIsParentOpen(false)
+        } catch (error) {
+            console.error(error);
+            toast.error("Không thể xóa label")
         }
-
-        setIsPickerOpen(false)
-        setIsParentOpen(false)
     }
 
-    // --- HÀM UPDATE TÊN (ĐÃ SỬA) ---
-    const handleUpdateName = () => {
+    const handleUpdateName = async () => {
         if (name !== data.name) {
-            console.log("Update tên:", name)
-            
-            // Giả lập API: Update "database"
-            const labelIndex = db.labels.findIndex(l => l.id === data.id)
-            if (labelIndex !== -1) {
-                db.labels[labelIndex].name = name;
+            try {
+                await updateLabel(data.id, { name })
                 toast.success(`Đổi tên label thành "${name}"`)
-            } else {
-                toast.error("Không tìm thấy label để đổi tên")
+            } catch (error) {
+                console.error(error);
+                toast.error("Không thể đổi tên label")
+                setName(data.name)
             }
         }
     }
 
-    // --- HÀM UPDATE MÀU (ĐÃ SỬA - ĐÚNG Ý MÀY) ---
-    const handleUpdateColor = (newColor: string) => {
+    const handleUpdateColor = async (newColor: string) => {
         setColor(newColor) // Update state local
-        console.log("Update màu:", newColor)
-
-        // Giả lập API: Update "database"
-        const labelIndex = db.labels.findIndex(l => l.id === data.id)
-        if (labelIndex !== -1) {
-            db.labels[labelIndex].color = newColor;
-            // Tạm thời không toast ở đây, vì click bubble liên tục sẽ
-            // spam toast. Chỉ cần nó save là được.
-            console.log(`[FAKE API]: Đã update màu cho "${data.name}"`)
-        } else {
-            toast.error("Không tìm thấy label để đổi màu")
+        try {
+            await updateLabel(data.id, { color: newColor })
+        } catch (error) {
+            console.error(error);
+            toast.error("Không thể đổi màu label")
+            setColor(data.color || "#000000") // Revert
         }
     }
 
@@ -176,7 +165,7 @@ export function LabelEdit({ data }: { data: Label }) {
                                             e.stopPropagation();
                                             setTempColor(presetColor);
                                             // Chỗ này gọi hàm đã sửa
-                                            handleUpdateColor(presetColor); 
+                                            handleUpdateColor(presetColor);
                                         }}
                                         aria-label={`Set color to ${presetColor}`}
                                     />
@@ -215,7 +204,7 @@ export function LabelEdit({ data }: { data: Label }) {
                                         className="w-full mt-3"
                                         onClick={() => {
                                             // Chỗ này cũng gọi hàm đã sửa
-                                            handleUpdateColor(tempColor); 
+                                            handleUpdateColor(tempColor);
                                             setIsPickerOpen(false);
                                             setIsParentOpen(false);
                                         }}>Save</Button>

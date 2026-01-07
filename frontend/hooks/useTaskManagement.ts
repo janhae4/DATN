@@ -49,8 +49,6 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
   const stableServerEpics = React.useMemo(() => serverEpics, [JSON.stringify(serverEpics)])
   const stableServerLabels = React.useMemo(() => serverLabels, [JSON.stringify(serverLabels)])
 
-  // Sync data from server
-  // Bây giờ chúng ta dùng các biến "stable" làm dependency
   React.useEffect(() => {
     setData(stableServerTasks || [])
   }, [stableServerTasks])
@@ -66,7 +64,6 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
   React.useEffect(() => {
     setLabels(stableServerLabels || [])
   }, [stableServerLabels])
-  // --- END FIX ---
 
   const activeSprint = React.useMemo(() => {
     return sprints.find(s => s.status === SprintStatus.ACTIVE) || null
@@ -75,7 +72,6 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
   const startSprint = React.useCallback(async (sprintId: string) => {
     const sprint = sprints.find(s => s.id === sprintId)
     if (sprint) {
-      // Optimistic update
       setSprints(prev => prev.map(s => s.id === sprintId ? { ...s, status: SprintStatus.ACTIVE } : s))
       await serverUpdateSprint(sprintId, { status: SprintStatus.ACTIVE })
     }
@@ -99,7 +95,6 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
     setSelectedTask(prevTask =>
       prevTask && prevTask.id === taskId ? { ...prevTask, ...updates } : prevTask
     )
-    // Server update
     serverUpdateTask(taskId, updates)
   }, [serverUpdateTask])
 
@@ -176,16 +171,10 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1") => {
       epicId: parentId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      labelIds: [], // Added missing required field init
+      labelIds: [],
     }
 
-    // Optimistic update
     setData((prev) => [...prev, newTask])
-
-    // Server update
-    // serverCreateTask(newTask)
-
-    // Reset fields
     setNewRowTitle("")
     setNewTaskPriority(null)
     setNewTaskDueDate(null)

@@ -116,15 +116,28 @@ export function getStartEndDateForProject(tasks: Task[], projectId: string) {
 }
 
 export function mapProjectTaskToGanttTask(task: ProjectTask): GanttTask {
-  const start = task.startDate
-    ? new Date(task.startDate)
-    : task.createdAt
-      ? new Date(task.createdAt)
-      : new Date();
+  let start = task.startDate ? new Date(task.startDate) : new Date();
 
-  const end = task.dueDate
-    ? new Date(task.dueDate)
-    : new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  // Fallback to createdAt if startDate is missing or invalid
+  if (isNaN(start.getTime()) && task.createdAt) {
+    start = new Date(task.createdAt);
+  }
+  // Ultimate fallback to now
+  if (isNaN(start.getTime())) {
+    start = new Date();
+  }
+
+  let end = task.dueDate ? new Date(task.dueDate) : new Date(start.getTime() + 24 * 60 * 60 * 1000);
+
+  // Fallback if end is invalid
+  if (isNaN(end.getTime())) {
+    end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  // Ensure start <= end
+  if (start.getTime() > end.getTime()) {
+    end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  }
 
   return {
     id: task.id,
