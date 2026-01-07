@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Sprint } from "@/types";
-import { Task } from "@/types";
 import {
   Accordion,
   AccordionContent,
@@ -13,7 +12,7 @@ import { Table, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Rocket, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDate, statusesForProject1 } from "@/lib/backlog-utils";
+import { formatDate } from "@/lib/backlog-utils";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
@@ -25,7 +24,7 @@ import { useParams } from "next/navigation";
 import { useTasks } from "@/hooks/useTasks";
 
 export function SprintList() {
-  const { data, handleRowClick, sprints } = useTaskManagementContext();
+  const { handleRowClick, sprints } = useTaskManagementContext();
 
   const params = useParams();
   const projectId = params.projectId as string;

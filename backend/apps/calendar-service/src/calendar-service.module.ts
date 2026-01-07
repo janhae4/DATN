@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AUTH_EXCHANGE } from '@app/contracts'; // Import constant exchange của mom
+import { ConfigModule } from '@nestjs/config';
+import { AUTH_EXCHANGE, ClientConfigModule, ClientConfigService } from '@app/contracts'; // Import constant exchange của mom
 import { CalendarController } from './calendar-service.controller';
 import { CalendarService } from './calendar-service.service';
 
@@ -10,16 +10,16 @@ import { CalendarService } from './calendar-service.service';
     ConfigModule.forRoot({ isGlobal: true }),
     // Kết nối RabbitMQ dùng để gọi Auth Service (golevelup style)
     RabbitMQModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (config: ClientConfigService) => ({
         exchanges: [
           {
             name: AUTH_EXCHANGE,
             type: 'direct',
           }
         ],
-        uri: config.get('RABBITMQ_URI') || 'amqp://guest:guest@localhost:5672',
+        uri: config.getRMQUrl() || 'amqp://guest:guest@localhost:5672',
         connectionInitOptions: { wait: true },
       }),
     }),
@@ -27,4 +27,4 @@ import { CalendarService } from './calendar-service.service';
   controllers: [CalendarController],
   providers: [CalendarService],
 })
-export class CalendarModule {}
+export class CalendarModule { }

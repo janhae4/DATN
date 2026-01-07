@@ -1,14 +1,10 @@
-// contexts/TaskManagementContext.tsx
 "use client";
 
 import * as React from "react";
 import { Task, Sprint, Epic, Label } from "@/types";
-import { db } from "@/public/mock-data/mock-data";
 import { DragEndEvent } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
 import { TaskFilters, useTaskManagement } from "@/hooks/useTaskManagement";
 
-// Context type definition
 interface TaskManagementContextType {
   data: Task[];
   allData: Task[];
@@ -30,7 +26,6 @@ interface TaskManagementContextType {
   activeSprint: Sprint | null;
   startSprint: (sprintId: string) => Promise<void>;
 
-  // Handlers
   handleUpdateCell: (taskId: string, columnId: "title", value: string) => void;
   handleDescriptionChange: (taskId: string, description: string) => void;
   handleDateChange: (taskId: string, newDate: Date | undefined) => void;

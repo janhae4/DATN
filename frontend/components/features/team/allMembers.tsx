@@ -83,12 +83,12 @@ export default function AllMembers() {
                 <div className="w-full h-full overflow-hidden">
                   <Avatar className="h-full w-full rounded-none">
                     <AvatarImage
-                      src={member.user?.avatar}
-                      alt={member.user?.name ?? "Member"}
+                      src={member.avatar}
+                      alt={member.name ?? "Member"}
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                     <AvatarFallback className="rounded-none text-2xl bg-muted">
-                      {(member.user?.name ?? "?")
+                      {(member.name ?? "?")
                         .split(" ")
                         .map((n) => n[0])
                         .join("")
@@ -101,10 +101,10 @@ export default function AllMembers() {
 
               <CardContent className="p-4 text-center">
                 <h3 className="font-semibold truncate">
-                  {member.user?.name ?? "Unknown"}
+                  {member.name ?? "Unknown"}
                 </h3>
                 <p className="text-sm text-muted-foreground truncate">
-                  {member.user?.email ?? "No email"}
+                  {member.email ?? "No email"}
                 </p>
               </CardContent>
             </Card>

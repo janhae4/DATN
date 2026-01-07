@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Check, ChevronsUpDown, X, Plus } from "lucide-react";
+import { ChevronsUpDown, X, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label";
 import {
   Command,
   CommandEmpty,
-  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
@@ -33,50 +32,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useTeamMembers } from "@/hooks/useTeam";
+import { useParams } from "next/navigation";
 
 const formSchema = z.object({
   name: z
     .string()
     .min(1, "Team name is required")
     .max(50, "Team name is too long"),
-  members: z.array(z.string()).optional(), // IDs or Emails
+  members: z.array(z.string()).optional(),
 });
-
-// Mock users for demonstration
-const MOCK_USERS = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john@example.com",
-    avatar: "/mock-data/avatar1.jpg",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane@example.com",
-    avatar: "/mock-data/avatar2.jpg",
-  },
-  {
-    id: "3",
-    name: "Bob Johnson",
-    email: "bob@example.com",
-    avatar: "/mock-data/avatar3.jpg",
-  },
-  {
-    id: "4",
-    name: "Alice Williams",
-    email: "alice@example.com",
-    avatar: "/mock-data/avatar4.jpg",
-  },
-  {
-    id: "5",
-    name: "Charlie Brown",
-    email: "charlie@example.com",
-    avatar: "/mock-data/avatar5.jpg",
-  },
-];
 
 interface CreateTeamModalProps {
   children: React.ReactNode;
@@ -95,6 +61,9 @@ export function CreateTeamModal({ children }: CreateTeamModalProps) {
   const [openCombobox, setOpenCombobox] = React.useState(false);
   const [selectedMembers, setSelectedMembers] = React.useState<Member[]>([]);
   const [searchValue, setSearchValue] = React.useState("");
+  const params = useParams();
+  const teamId = params.teamId;
+  const { data: members = [] } = useTeamMembers(teamId as string);
 
   const {
     register,
@@ -152,7 +121,7 @@ export function CreateTeamModal({ children }: CreateTeamModalProps) {
 
   const addEmailMember = (email: string) => {
     const newMember: Member = {
-      id: email, // Use email as ID for new members
+      id: email,
       name: email,
       email: email,
       isNew: true,
@@ -233,7 +202,11 @@ export function CreateTeamModal({ children }: CreateTeamModalProps) {
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start" side="right">
+                  <PopoverContent
+                    className="w-[300px] p-0"
+                    align="start"
+                    side="right"
+                  >
                     <Command shouldFilter={false}>
                       <CommandInput
                         placeholder="Search members or enter email..."
@@ -242,48 +215,50 @@ export function CreateTeamModal({ children }: CreateTeamModalProps) {
                       />
                       <CommandList>
                         {/* Filtered Users */}
-                        {MOCK_USERS.filter(
-                          (u) =>
-                            u.name
-                              .toLowerCase()
-                              .includes(searchValue.toLowerCase()) ||
-                            u.email
-                              .toLowerCase()
-                              .includes(searchValue.toLowerCase())
-                        ).map((user) => (
-                          <CommandItem
-                            key={user.id}
-                            value={user.name}
-                            onSelect={() => toggleMember(user)}
-                            className="cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2 w-full">
-                              <Checkbox
-                                checked={selectedMembers.some(
-                                  (m) => m.id === user.id
-                                )}
-                                className="mr-2 pointer-events-none"
-                              />
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={user.avatar} />
-                                <AvatarFallback>
-                                  {user.name.substring(0, 2)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex flex-col">
-                                <span>{user.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {user.email}
-                                </span>
+                        {members
+                          .filter(
+                            (u) =>
+                              u.name
+                                .toLowerCase()
+                                .includes(searchValue.toLowerCase()) ||
+                              u.email
+                                .toLowerCase()
+                                .includes(searchValue.toLowerCase())
+                          )
+                          .map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={user.name}
+                              onSelect={() => toggleMember(user)}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <Checkbox
+                                  checked={selectedMembers.some(
+                                    (m) => m.id === user.id
+                                  )}
+                                  className="mr-2 pointer-events-none"
+                                />
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={user.avatar} />
+                                  <AvatarFallback>
+                                    {user.name.substring(0, 2)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span>{user.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {user.email}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                          </CommandItem>
-                        ))}
+                            </CommandItem>
+                          ))}
 
                         {/* Add Email Option */}
                         {searchValue &&
                           isValidEmail(searchValue) &&
-                          !MOCK_USERS.some((u) => u.email === searchValue) && (
+                          !members.some((u) => u.email === searchValue) && (
                             <CommandItem
                               value={searchValue}
                               onSelect={() => addEmailMember(searchValue)}
@@ -300,7 +275,7 @@ export function CreateTeamModal({ children }: CreateTeamModalProps) {
                           )}
 
                         {/* Empty State */}
-                        {!MOCK_USERS.some(
+                        {!members.some(
                           (u) =>
                             u.name
                               .toLowerCase()

@@ -1,3 +1,4 @@
+#!/bin/sh
 set -e
 
 create_database() {
@@ -32,5 +33,11 @@ psql -U "$POSTGRES_USER" -d "team" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
 psql -U "$POSTGRES_USER" -d "task" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
 psql -U "$POSTGRES_USER" -d "user" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
 psql -U "$POSTGRES_USER" -d "notification" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
+psql -U "$POSTGRES_USER" -d "call" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
+psql -U "$POSTGRES_USER" -d "project_db" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
+psql -U "$POSTGRES_USER" -d "label_db" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
+psql -U "$POSTGRES_USER" -d "list_db" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
+psql -U "$POSTGRES_USER" -d "epic_db" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
+psql -U "$POSTGRES_USER" -d "sprint_db" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
 
 echo "Hoàn tất script khởi tạo Postgres."

@@ -3,7 +3,7 @@ import json
 import os
 import chromadb
 from config import CHROMA_HOST, CHROMA_PORT
-from langchain_chroma import Chroma
+from langchain_chroma.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from services.minio_service import MinioService
 from aio_pika import Channel, Message, Exchange
