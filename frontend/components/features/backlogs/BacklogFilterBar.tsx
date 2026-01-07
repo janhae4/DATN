@@ -18,7 +18,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getAssigneeInitial, priorityMap } from "@/lib/backlog-utils";
+import { priorityMap } from "@/lib/backlog-utils";
 import {
   Check,
   ChevronDown,
@@ -286,7 +286,7 @@ export function BacklogFilterBar({
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={u.avatar} />
                       <AvatarFallback className="text-[10px]">
-                        {getAssigneeInitial(u.name)}
+                        {u.name.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   ),

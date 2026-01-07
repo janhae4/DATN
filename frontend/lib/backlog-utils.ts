@@ -1,6 +1,4 @@
 // lib/utils/backlog-utils.ts
-import { db } from "@/public/mock-data/mock-data"
-import { List } from "@/types";
 import { Task } from "@/types"
 import { Flag } from "lucide-react"
 
@@ -12,18 +10,6 @@ export const priorityMap = {
   'none': { label: 'None', icon: Flag, color: 'text-gray-500' }
 } as const;
 
-// Lọc status cho Project 1
-export const statusesForProject1: List[] = db.lists
-    .filter(s => s.projectId === "project-phoenix-1")
-  .sort((a, b) => a.position - b.position);
-
-export const getListsForProject1 = (): List[] => {
-  return db.lists
-    .filter(s => s.projectId === "project-phoenix-1")
-    .sort((a, b) => a.position - b.position);
-}
-
-// Helper format ngày
 export const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "N/A"
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -32,11 +18,6 @@ export const formatDate = (dateString: string | null | undefined): string => {
   })
 }
 
-// Lấy chữ cái đầu của tên user từ ID
-export const getAssigneeInitial = (assigneeId: string): string => {
-  const user = db.users.find(u => u.id === assigneeId);
-  return user ? user.name.charAt(0).toUpperCase() : "U";
-}
 
 // Build a map of tasks by id
 export const buildTaskMap = (tasks: Task[]) => new Map(tasks.map(t => [t.id, t]))

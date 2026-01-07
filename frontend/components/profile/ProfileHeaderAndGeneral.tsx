@@ -25,8 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Provider } from "@/types/common/enums";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMe, linkGoogleAccount, updateSkills } from "@/services/authService";
-import { useRouter } from "next/navigation";
+import { linkGoogleAccount, updateSkills } from "@/services/authService";
 import {
   Dialog,
   DialogContent,
@@ -54,7 +53,6 @@ export function ProfileHeaderAndGeneral() {
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
-  const router = useRouter();
 
   const [editingSkills, setEditingSkills] = React.useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
