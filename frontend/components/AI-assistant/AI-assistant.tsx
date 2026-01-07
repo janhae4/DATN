@@ -274,43 +274,44 @@ export default function AIAssistantUI() {
   };
 
   return (
-    <div className="flex w-full h-[85vh] md:h-[90vh] border border-zinc-200/60 dark:border-zinc-800 rounded-2xl bg-zinc-50/50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 overflow-hidden shadow-2xl relative backdrop-blur-sm">
+    <div className="flex w-full h-[85vh] md:h-[90vh] border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 overflow-hidden relative font-sans">
       {/* --- SIDEBAR --- */}
       <AnimatePresence mode="wait">
         {isSidebarOpen && (
           <motion.aside
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 300, opacity: 1 }}
+            animate={{ width: 280, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="flex flex-col h-full bg-white/80 dark:bg-[#0c0c0e]/90 border-r border-zinc-200/60 dark:border-zinc-800 truncate backdrop-blur-md z-20"
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="flex flex-col h-full bg-zinc-50/50 dark:bg-zinc-900/20 border-r border-zinc-100 dark:border-zinc-800"
           >
             {/* Sidebar Header */}
             <div className="p-4 shrink-0">
               <Button
                 onClick={createNewChat}
-                className="w-full justify-start gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all border-none h-11"
+                variant="outline"
+                className="w-full justify-start gap-3 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 h-10 shadow-sm"
               >
-                <Plus className="h-5 w-5" />
-                <span className="font-semibold">New Chat</span>
+                <Plus className="h-4 w-4" />
+                <span className="font-medium">New Chat</span>
               </Button>
             </div>
 
             <ScrollArea className="flex-1 px-3">
               <div className="pb-4 space-y-1">
-                <p className="px-3 py-2 text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                  Recent Conversations
+                <p className="px-3 py-2 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                  History
                 </p>
                 {isLoadingList ? (
                   <div className="p-4 text-center">
-                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-indigo-500" />
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto text-zinc-400" />
                   </div>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {discussions.map((chat) => (
                       <motion.div
                         layout
-                        initial={{ opacity: 0, x: -20 }}
+                        initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         key={chat._id}
                         className="group relative"
@@ -321,15 +322,14 @@ export default function AIAssistantUI() {
                             setActiveId(chat._id);
                           }}
                           className={cn(
-                            "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200 border",
+                            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm",
                             activeId === chat._id
-                              ? "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900/50 text-indigo-900 dark:text-indigo-100 shadow-sm"
-                              : "border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                              ? "bg-zinc-200/60 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium"
+                              : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200"
                           )}
                         >
-                          <MessageSquare className={cn("h-4 w-4 shrink-0", activeId === chat._id ? "text-indigo-500" : "opacity-50")} />
-                          <span className="text-sm truncate font-medium flex-1">
-                            {chat.name || "Untitled Conversation"}
+                          <span className="truncate flex-1">
+                            {chat.name || "Untitled Chat"}
                           </span>
                         </button>
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -340,9 +340,9 @@ export default function AIAssistantUI() {
                               e.stopPropagation();
                               deleteDiscussion(chat._id);
                             }}
-                            className="h-7 w-7 rounded-lg hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition-colors"
+                            className="h-6 w-6 rounded-md hover:bg-zinc-200/80 dark:hover:bg-zinc-700/50 text-zinc-400 hover:text-red-500 transition-colors"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </motion.div>
@@ -355,7 +355,7 @@ export default function AIAssistantUI() {
                   className="h-4 w-full flex justify-center items-center mt-2"
                 >
                   {isFetchingNextPageDiscussions && (
-                    <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                    <Loader2 className="h-3 w-3 animate-spin text-zinc-400" />
                   )}
                 </div>
               </div>
@@ -364,45 +364,40 @@ export default function AIAssistantUI() {
         )}
       </AnimatePresence>
 
-      <main className="flex-1 flex flex-col h-full min-w-0 bg-white/50 dark:bg-[#09090b]/50 backdrop-blur-sm relative z-10 w-full">
-        <header className="flex items-center justify-between px-6 h-16 border-b border-zinc-200/60 dark:border-zinc-800/60 shrink-0 bg-white/70 dark:bg-[#09090b]/70 backdrop-blur-md sticky top-0 z-30">
-          <div className="flex items-center gap-4">
+      <main className="flex-1 flex flex-col h-full min-w-0 bg-white dark:bg-[#09090b] relative w-full">
+        <header className="flex items-center justify-between px-4 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 sticky top-0 z-30 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
             >
               {isSidebarOpen ? (
-                <PanelLeftClose className="h-5 w-5" />
+                <PanelLeftClose className="h-4 w-4" />
               ) : (
-                <PanelLeftOpen className="h-5 w-5" />
+                <PanelLeftOpen className="h-4 w-4" />
               )}
             </Button>
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-sm">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold tracking-tight text-zinc-800 dark:text-zinc-100 leading-none">Taskora AI AI</h2>
-                <span className="text-[10px] text-zinc-400 font-medium">Personal Assistant</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">Taskora AI</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500">BETA</span>
             </div>
           </div>
         </header>
 
         <div
           ref={messageViewportRef}
-          className="flex-1 overflow-y-auto custom-scrollbar md:px-4"
+          className="flex-1 overflow-y-auto px-4"
         >
-          <div className="max-w-3xl mx-auto py-8 px-4">
+          <div className="max-w-3xl mx-auto py-8">
             {activeId && (
               <div
                 ref={messageTopRef}
-                className="h-8 w-full flex justify-center items-center"
+                className="h-6 w-full flex justify-center items-center mb-4"
               >
                 {isFetchingNextPageMessages && (
-                  <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+                  <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
                 )}
               </div>
             )}
@@ -410,77 +405,51 @@ export default function AIAssistantUI() {
             <AnimatePresence mode="popLayout">
               {messages.length === 0 && !streamingContent ? (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="flex flex-col items-center justify-center min-h-[50vh] text-center"
+                  className="flex flex-col items-center justify-center min-h-[40vh] text-center px-4"
                 >
-                  <div className="relative mb-8 group cursor-default">
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
-                    <div className="relative p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl ring-1 ring-zinc-200 dark:ring-zinc-800">
-                      <Sparkles className="h-10 w-10 text-indigo-500" />
-                    </div>
+                  <div className="h-12 w-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center mb-6">
+                    <Sparkles className="h-6 w-6 text-zinc-900 dark:text-zinc-100" />
                   </div>
-                  <h1 className="text-3xl font-bold tracking-tight mb-3 bg-clip-text text-transparent bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-400">
-                    Welcome to Taskora AI
+                  <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                    How can I help you today?
                   </h1>
-                  <p className="text-zinc-500 dark:text-zinc-400 text-base max-w-[400px]">
-                    Your intelligent copilot for brainstorming, coding, and creativity.
-                  </p>
                 </motion.div>
               ) : (
-
-                <div className="space-y-8 pb-4">
-                  {messages.map((msg: AiMessage, index) => {
+                <div className="space-y-6 pb-4">
+                  {messages.map((msg: AiMessage) => {
                     const isAi = msg.sender._id === "AI_ID";
                     return (
                       <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        transition={{ duration: 0.2 }}
                         key={msg._id}
                         className={cn(
-                          "flex w-full gap-4 md:gap-5",
-                          !isAi ? "flex-row-reverse" : "flex-row"
+                          "flex w-full gap-4",
+                          !isAi ? "justify-end" : "justify-start"
                         )}
                       >
-                        <Avatar
-                          className={cn(
-                            "h-9 w-9 shrink-0 shadow-sm ring-1 ring-zinc-100 dark:ring-zinc-800",
-                            !isAi && "hidden md:flex"
-                          )}
-                        >
-                          {isAi ? (
-                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                              <Bot className="h-5 w-5" />
+                        {isAi && (
+                          <Avatar className="h-8 w-8 shrink-0 border border-zinc-200 dark:border-zinc-700">
+                            <AvatarFallback className="bg-zinc-50 dark:bg-zinc-800">
+                              <Bot className="h-4 w-4 text-zinc-900 dark:text-zinc-100" />
                             </AvatarFallback>
-                          ) : (
-                            <AvatarFallback className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                              <User className="h-5 w-5" />
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
+                          </Avatar>
+                        )}
 
                         <div
                           className={cn(
-                            "relative max-w-[85%] md:max-w-[75%] px-6 py-4 rounded-2xl shadow-sm text-sm md:text-[15px] leading-7",
+                            "relative max-w-[85%] md:max-w-[75%] px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed",
                             !isAi
-                              ? "bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-tr-none shadow-indigo-500/10"
-                              : "bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-tl-none shadow-sm"
+                              ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tr-sm"
+                              : "bg-transparent -ml-2 text-zinc-900 dark:text-zinc-100 px-0 md:px-0 lg:px-0"
                           )}
                         >
-                          <div className={cn("prose dark:prose-invert max-w-none break-words", !isAi ? "prose-invert" : "")}>
+                          <div className={cn("prose dark:prose-invert max-w-none break-words prose-p:leading-7 prose-pre:bg-zinc-900 prose-pre:rounded-lg prose-pre:p-4", isAi && "prose-zinc")}>
                             <MarkdownRenderer text={msg.content} />
                           </div>
-                          <span className={cn(
-                            "text-[10px] block mt-2 text-right opacity-60 font-medium tabular-nums",
-                            !isAi ? "text-indigo-100" : "text-zinc-400"
-                          )}>
-                            {new Intl.DateTimeFormat("vi-VN", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }).format(new Date(msg.timestamp))}
-                          </span>
                         </div>
                       </motion.div>
                     );
@@ -491,45 +460,26 @@ export default function AIAssistantUI() {
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex w-full gap-4 md:gap-5 flex-row"
+                      className="flex w-full gap-4 justify-start"
                     >
-                      <Avatar className="h-9 w-9 shrink-0 shadow-sm">
-                        <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                          <Bot className="h-5 w-5" />
+                      <Avatar className="h-8 w-8 shrink-0 border border-zinc-200 dark:border-zinc-700">
+                        <AvatarFallback className="bg-zinc-50 dark:bg-zinc-800">
+                          <Bot className="h-4 w-4 text-zinc-900 dark:text-zinc-100" />
                         </AvatarFallback>
                       </Avatar>
-                      <div className="relative max-w-[85%] md:max-w-[75%] px-6 py-4 rounded-2xl rounded-tl-none shadow-sm bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-[15px] leading-7">
+                      <div className="relative max-w-[85%] md:max-w-[75%] text-[15px] leading-relaxed -ml-2 text-zinc-900 dark:text-zinc-100">
                         <MarkdownRenderer text={streamingContent} />
-                        <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse align-middle rounded-sm" />
+                        <span className="inline-block w-2 h-4 ml-1 bg-zinc-900 dark:bg-zinc-100 animate-pulse align-middle rounded-sm" />
                       </div>
                     </motion.div>
                   )}
 
                   {isStreaming && !streamingContent && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex gap-3 items-center ml-14"
-                    >
-                      <div className="flex gap-1">
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ repeat: Infinity, duration: 1 }}
-                          className="w-2 h-2 bg-zinc-400 rounded-full"
-                        />
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                          className="w-2 h-2 bg-zinc-400 rounded-full"
-                        />
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                          className="w-2 h-2 bg-zinc-400 rounded-full"
-                        />
-                      </div>
-                      <span className="text-xs text-zinc-400 font-medium">Thinking...</span>
-                    </motion.div>
+                    <div className="flex gap-2 items-center ml-12">
+                      <span className="h-2 w-2 bg-zinc-300 dark:bg-zinc-700 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                      <span className="h-2 w-2 bg-zinc-300 dark:bg-zinc-700 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <span className="h-2 w-2 bg-zinc-300 dark:bg-zinc-700 rounded-full animate-bounce" />
+                    </div>
                   )}
                   <div ref={messageBottomRef} className="h-4" />
                 </div>
@@ -539,12 +489,9 @@ export default function AIAssistantUI() {
         </div>
 
         {/* Input Area */}
-        <div className="shrink-0 p-4 md:p-6 bg-transparent sticky bottom-0 z-20 pointer-events-none">
-          <div className="max-w-3xl mx-auto pointer-events-auto">
-            <motion.div
-              layoutId="input-area"
-              className="relative flex items-end w-full border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-2 shadow-xl ring-1 ring-zinc-900/5 dark:ring-zinc-100/5 transition-all hover:shadow-2xl focus-within:ring-2 focus-within:ring-indigo-500/30 focus-within:border-indigo-500/50"
-            >
+        <div className="shrink-0 p-4 bg-white dark:bg-[#09090b]">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative flex items-end w-full border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 focus-within:ring-1 focus-within:ring-zinc-300 dark:focus-within:ring-zinc-700 focus-within:bg-white dark:focus-within:bg-zinc-900 transition-all">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -553,41 +500,32 @@ export default function AIAssistantUI() {
                   !e.shiftKey &&
                   (e.preventDefault(), handleSend())
                 }
-                placeholder="Ask Taskora AI anything..."
-                className="flex-1 min-h-[50px] max-h-40 py-3.5 px-4 border-none focus-visible:ring-0 text-zinc-900 dark:text-zinc-100 text-[15px] resize-none placeholder:text-zinc-400"
+                placeholder="Message Taskora AI..."
+                className="flex-1 min-h-[48px] max-h-40 py-3.5 px-4 border-none focus-visible:ring-0 text-zinc-900 dark:text-zinc-100 text-[15px] resize-none placeholder:text-zinc-400 bg-transparent"
                 rows={1}
               />
-              <div className="pb-1.5 pr-1.5">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        onClick={handleSend}
-                        disabled={!input.trim() || isStreaming}
-                        className={cn(
-                          "h-10 w-10 rounded-full shadow-lg transition-all duration-200 active:scale-95",
-                          input.trim()
-                            ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white hover:scale-105"
-                            : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
-                        )}
-                      >
-                        {isStreaming ? (
-                          <Loader2 className="animate-spin h-5 w-5" />
-                        ) : (
-                          <Send className="h-5 w-5 ml-0.5" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="bg-zinc-900 text-white text-xs">
-                      Send message
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              <div className="pb-2 pr-2">
+                <Button
+                  size="icon"
+                  onClick={handleSend}
+                  disabled={!input.trim() || isStreaming}
+                  className={cn(
+                    "h-8 w-8 rounded-lg transition-all duration-200",
+                    input.trim()
+                      ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200"
+                      : "bg-transparent text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
+                  )}
+                >
+                  {isStreaming ? (
+                    <Loader2 className="animate-spin h-4 w-4" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
-            </motion.div>
-            <p className="text-[10px] text-center text-zinc-400/80 mt-3 font-medium tracking-wide">
-              Taskora AI AI can make mistakes. Please verify important information.
+            </div>
+            <p className="text-[10px] text-center text-zinc-400 mt-3">
+              AI can make mistakes. Verify important info.
             </p>
           </div>
         </div>

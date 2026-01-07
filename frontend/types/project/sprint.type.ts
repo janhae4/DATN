@@ -11,4 +11,5 @@ export type Sprint = {
   status: SprintStatus;
   createdAt: string;
   updatedAt: string;
+  teamId: string;
 };

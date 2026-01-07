@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronRight, LayoutGrid } from "lucide-react";
 
-import { 
-  useTeam, 
-  useTeamMembers, 
-  useDeleteTeam, 
-  useLeaveTeam 
+import {
+  useTeam,
+  useTeamMembers,
+  useDeleteTeam,
+  useLeaveTeam
 } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 import { MemberRole } from "@/types/common/enums";
@@ -17,11 +17,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TeamHeader } from "@/components/features/team/team-header";
 import { TeamOverviewTab } from "@/components/features/team/team-overview-tab";
 
+import { useTeamTour } from "@/hooks/useTeamTour";
+
 export default function TeamDetailsPage() {
+  useTeamTour();
   const params = useParams();
   const teamId = params.teamId as string;
   const router = useRouter();
-  
+
   // Data Fetching
   const { data: user } = useUserProfile();
   const { data: team, isLoading: isTeamLoading } = useTeam(teamId);

@@ -45,7 +45,7 @@ export default function Backlogs() {
   // 1. Get Project ID from URL
   const params = useParams();
   const projectId = params.projectId as string;
-
+  const teamId = params.teamId as string;
   const [filters, setFilters] = React.useState<TaskFilters>({
     searchText: "",
     assigneeIds: [],
@@ -60,7 +60,7 @@ export default function Backlogs() {
   const [backLogPage, setBackLogPage] = React.useState(1);
   const [sprintPage, setSprintPage] = React.useState(1);
 
-  const { sprints } = useSprints(projectId);
+  const { sprints } = useSprints(projectId, teamId);
   const { lists } = useLists(projectId);
 
   console.log("Sprints loaded in Backlogs:", sprints.length);
@@ -122,7 +122,12 @@ export default function Backlogs() {
   console.log("🏷️ Sprints Rendered with filters:", sprintTasks.length);
 
   const allVisibleTasks = React.useMemo(() => {
-    return [...sprintTasks, ...backlogTasks];
+    const combined = [...sprintTasks, ...backlogTasks];
+    const uniqueMap = new Map();
+    for (const t of combined) {
+      uniqueMap.set(t.id, t);
+    }
+    return Array.from(uniqueMap.values());
   }, [sprintTasks, backlogTasks]);
 
   const tasksInSprints = sprintTasks;

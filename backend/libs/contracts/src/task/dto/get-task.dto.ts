@@ -1,15 +1,26 @@
 import { Priority } from '@app/contracts/enums/priority.enum';
 
-export class GetTasksFilterDto {
-    projectId: string;
-    search?: string;         
+export class BaseTaskFilterDto {
+    search?: string;
     assigneeIds?: string[];
-    priority?: Priority[]; 
-    statusId?: string[];     
+    priority?: Priority[];
+    statusId?: string[];
     epicId?: string[];
-    labelIds?: string[];    
+    labelIds?: string[];
     sprintId?: string[] | null;
     parentId?: string | null;
+    isCompleted?: boolean;
+    sortBy?: string[];
+    sortOrder: 'ASC' | 'DESC';
     page?: number;
     limit?: number;
+}
+
+export class GetTasksByProjectDto extends BaseTaskFilterDto {
+    projectId: string;
+}
+
+export class GetTasksByTeamDto extends BaseTaskFilterDto {
+
+    teamId: string;
 }

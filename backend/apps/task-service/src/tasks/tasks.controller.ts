@@ -1,7 +1,7 @@
 import { Body, Controller, Inject, Query, Req, Sse } from '@nestjs/common';
 import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, TEAM_EXCHANGE, CHATBOT_EXCHANGE, GetTasksFilterDto } from '@app/contracts';
+import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, TEAM_EXCHANGE, GetTasksByProjectDto, GetTasksByTeamDto } from '@app/contracts';
 import { customErrorHandler } from '@app/common';
 import { LabelEvent } from '@app/contracts/events/label.event';
 import { finalize, map, Observable } from 'rxjs';
@@ -51,8 +51,18 @@ export class TasksController {
     queue: TASK_PATTERNS.FIND_ALL,
     errorHandler: customErrorHandler,
   })
-  findAllByProject(payload: { userId: string, filters: GetTasksFilterDto }) {
+  findAllByProject(payload: { userId: string, filters: GetTasksByProjectDto }) {
     return this.tasksService.findAllByProject(payload.userId, payload.filters);
+  }
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.FIND_ALL_BY_TEAM_ID,
+    queue: TASK_PATTERNS.FIND_ALL_BY_TEAM_ID,
+    errorHandler: customErrorHandler,
+  })
+  findAllByTeam(payload: { userId: string, filters: GetTasksByTeamDto }) {
+    return this.tasksService.findAllByTeam(payload.userId, payload.filters);
   }
 
   @RabbitRPC({
@@ -115,17 +125,27 @@ export class TasksController {
     return this.tasksService.findLabelsByTaskId(payload.taskId);
   }
 
+  // @RabbitRPC({
+  //   exchange: TASK_EXCHANGE,
+  //   routingKey: TASK_PATTERNS.MOVE_INCOMPLETE_TASKS_TO_BACKLOG,
+  //   queue: TASK_PATTERNS.MOVE_INCOMPLETE_TASKS_TO_BACKLOG,
+  //   errorHandler: customErrorHandler,
+  // })
+  // moveIncompleteTasksToBacklog(payload: { sprintId: string; backlogStatusId: string }) {
+  //   return this.tasksService.moveIncompleteTasksToBacklog(
+  //     payload.sprintId,
+  //     payload.backlogStatusId,
+  //   );
+  // }
+
   @RabbitRPC({
     exchange: TASK_EXCHANGE,
-    routingKey: TASK_PATTERNS.MOVE_INCOMPLETE_TASKS_TO_BACKLOG,
-    queue: TASK_PATTERNS.MOVE_INCOMPLETE_TASKS_TO_BACKLOG,
+    routingKey: TASK_PATTERNS.COMPLETE_SPRINT,
+    queue: TASK_PATTERNS.COMPLETE_SPRINT,
     errorHandler: customErrorHandler,
   })
-  moveIncompleteTasksToBacklog(payload: { sprintId: string; backlogStatusId: string }) {
-    return this.tasksService.moveIncompleteTasksToBacklog(
-      payload.sprintId,
-      payload.backlogStatusId,
-    );
+  completeSprint(payload: { sprintId: string, projectId: string }) {
+    return this.tasksService.completeSprint(payload.sprintId, payload.projectId);
   }
 
   @RabbitRPC({
@@ -193,6 +213,16 @@ export class TasksController {
   })
   addFiles(payload: { taskId: string; fileIds: string[] }) {
     return this.tasksService.addFiles(payload.taskId, payload.fileIds);
+  }
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.SUGGEST_TASK,
+    queue: TASK_PATTERNS.SUGGEST_TASK,
+    errorHandler: customErrorHandler,
+  })
+  suggestTask(payload: { userId: string, query: string; projectId: string; teamId: string, sprintId: string }) {
+    return this.tasksService.suggestTask(payload.userId, payload.query, payload.projectId, payload.sprintId, payload.teamId);
   }
 
 }

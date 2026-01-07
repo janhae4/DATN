@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DATN Frontend - Modern Project Management UI
 
-## Getting Started
+The frontend application for the DATN system, built with **Next.js 15+**, focused on high performance, rich aesthetics, and a premium user experience.
 
-First, run the development server:
+## ✨ Features
+- **Interactive Dashboards**: Dynamic overview of projects, tasks, and team activities.
+- **Advanced Task Management**: Drag-and-drop Kanban boards, nested backlogs, and agile sprint planning.
+- **Collaborative Workspace**: Real-time chat, shared calendars, and team directory.
+- **AI Assistant**: Built-in AI interface for task generation, content suggestions, and smart search.
+- **Rich Visualizations**: Gantt charts, productivity analytics, and project timelines.
+- **Responsive Design**: fully responsive UI optimized for desktops and tablets.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Tech Stack
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Styling**: 
+  - [Tailwind CSS 4](https://tailwindcss.com/)
+  - [Framer Motion](https://www.framer.com/motion/) (Animations)
+- **UI Components**:
+  - [Shadcn UI](https://ui.shadcn.com/)
+  - [Radix UI](https://www.radix-ui.com/)
+  - [Lucide React](https://lucide.dev/) (Icons)
+- **Data Fetching & State**:
+  - [TanStack Query v5](https://tanstack.com/query/latest)
+  - [Axios](https://axios-http.com/)
+- **Forms**: 
+  - [React Hook Form](https://react-hook-form.com/)
+  - [Zod](https://zod.dev/) (Validation)
+- **Real-time**: [Socket.io-client](https://socket.io/)
+- **Charts & Calendars**:
+  - [Recharts](https://recharts.org/)
+  - [Schedule-X](https://schedule-x.dev/)
+  - [gantt-task-react](https://github.com/MaTeMaTuK/gantt-task-react)
+
+## 📁 Project Structure
+```text
+frontend/
+├── app/                # Next.js App Router (Pages & Layouts)
+├── components/         # Reusable UI components
+│   ├── ui/             # Shadcn UI primitives
+│   ├── shared/         # Shared business components
+│   └── features/       # Feature-specific components (team, task, project)
+├── hooks/              # Custom React hooks (Data fetching & logic)
+├── services/           # API service layer (Axios instances)
+├── store/              # Global state management
+├── types/              # TypeScript definitions
+├── lib/                # Utility functions
+└── public/             # Static assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Installation
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Environment Setup
+Create a `.env.local` file in the root of the `frontend` directory:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_SOCKET_URL=http://localhost:3000
+```
 
-## Learn More
+### Running the App
+Start the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+The app will be available at `http://localhost:5000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🎨 Design Principles
+- **Minimalist Aesthetic**: Clean lines, subtle shadows, and a focused color palette.
+- **Micro-interactions**: Smooth transitions and hover effects to enhance user engagement.
+- **Performance First**: Optimized images, code splitting, and efficient data caching with TanStack Query.

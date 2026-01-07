@@ -7,15 +7,15 @@ import { MemberRole, TeamStatus } from "@/types/common/enums";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Settings, 
-  LogOut, 
-  Trash2, 
-  Users, 
-  ShieldCheck, 
-  CalendarDays, 
-  MoreVertical, 
-  Plus
+import {
+  LogOut,
+  Trash2,
+  Users,
+  ShieldCheck,
+  CalendarDays,
+  MoreVertical,
+  Plus,
+  Loader2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -46,8 +46,8 @@ interface TeamHeaderProps {
   isLoading: boolean;
   isOwner: boolean;
   canManage: boolean;
-  onDelete: () => void;
-  onLeave: () => void;
+  onDelete: () => Promise<void> | void;
+  onLeave: () => Promise<void> | void;
   onSettingsClick: () => void;
 }
 
@@ -62,6 +62,22 @@ export function TeamHeader({
   onSettingsClick,
 }: TeamHeaderProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const handleConfirm = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsActionLoading(true);
+    try {
+      if (isOwner) {
+        await onDelete();
+      } else {
+        await onLeave();
+      }
+      setIsAlertOpen(false);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
   const params = useParams();
   const teamId = params?.teamId as string;
 
@@ -70,11 +86,11 @@ export function TeamHeader({
       <div className="space-y-4">
         <Skeleton className="h-40 w-full rounded-xl" />
         <div className="flex gap-4 px-4">
-           <Skeleton className="h-24 w-24 rounded-full -mt-12 border-4 border-background" />
-           <div className="space-y-2 pt-2">
-             <Skeleton className="h-6 w-40" />
-             <Skeleton className="h-4 w-24" />
-           </div>
+          <Skeleton className="h-24 w-24 rounded-full -mt-12 border-4 border-background" />
+          <div className="space-y-2 pt-2">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-24" />
+          </div>
         </div>
       </div>
     );
@@ -88,7 +104,7 @@ export function TeamHeader({
         {/* Cover Background */}
         <div className="relative h-40 w-full bg-gradient-to-r from-blue-600/10 via-purple-500/10 to-pink-500/10">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
-          
+
           {/* Action Menu (Top Right) */}
           <div className="absolute top-4 right-4 z-10">
             <DropdownMenu>
@@ -100,17 +116,10 @@ export function TeamHeader({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Team Options</DropdownMenuLabel>
-                
-                {canManage && (
-                  <DropdownMenuItem onClick={onSettingsClick} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                )}
-                
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem 
+
+
+
+                <DropdownMenuItem
                   onClick={() => setIsAlertOpen(true)}
                   className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
                 >
@@ -134,7 +143,7 @@ export function TeamHeader({
         <div className="px-6 pb-6">
           {/* Main Layout: Stack on Mobile, Row on Desktop */}
           <div className="flex flex-col md:flex-row gap-6">
-            
+
             {/* 1. Avatar Section */}
             <div className="relative -mt-12 shrink-0 self-start">
               <Avatar className="h-28 w-28 rounded-2xl border-[6px] border-background shadow-md bg-background">
@@ -184,14 +193,14 @@ export function TeamHeader({
                   <Users className="mr-2 h-4 w-4" /> Invite Member
                 </Button>
               </AddMemberDialog>
-              
+
               <CreateProjectModal>
                 <Button className="w-full sm:w-auto shadow-sm">
                   <Plus className="mr-2 h-4 w-4" /> New Project
                 </Button>
               </CreateProjectModal>
             </div>
-            
+
           </div>
         </div>
       </div>
@@ -201,21 +210,26 @@ export function TeamHeader({
           <AlertDialogHeader>
             <AlertDialogTitle>{isOwner ? "Delete Team?" : "Leave Team?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              {isOwner 
-                ? "This action is irreversible. All messages, tasks, and data will be permanently deleted." 
+              {isOwner
+                ? "This action is irreversible. All messages, tasks, and data will be permanently deleted."
                 : "You will lose access to all private channels and projects in this team."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => {
-                isOwner ? onDelete() : onLeave();
-                setIsAlertOpen(false);
-              }} 
+            <AlertDialogCancel disabled={isActionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirm}
+              disabled={isActionLoading}
               className={isOwner ? "bg-red-600 hover:bg-red-700" : ""}
             >
-              Confirm
+              {isActionLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Confirm"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -47,6 +47,7 @@ import { toast } from "sonner";
 import { ResolveSubtasksDialog } from "./ResolveSubtasksDialog";
 import { GetTasksParams } from "@/services/taskService";
 import { useDebounce } from "@/hooks/useDebounce";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 
@@ -397,7 +398,7 @@ export function KanbanBoard() {
         setOverColumnId(null);
       }}
     >
-      <div className="h-full w-full min-w-0 relative group/board flex flex-col">
+      <div id="kanban-board" className="h-full w-full min-w-0 relative group/board flex flex-col">
         <div className="py-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
           <BacklogFilterBar
             showCreateSprint={false}
@@ -414,10 +415,12 @@ export function KanbanBoard() {
         >
           <div className="flex h-full gap-4 py-4 pr-4">
             {!activeSprint && (
-              <KanbanSprintSelection
-                sprints={sprints}
-                onStartSprint={startSprint}
-              />
+              <div id="kanban-sprint-selection">
+                <KanbanSprintSelection
+                  sprints={sprints}
+                  onStartSprint={startSprint}
+                />
+              </div>
             )}
             {lists.map((list) => {
               const handleMoveLeftForList = () => handleMoveList(list.id, "left");
@@ -504,14 +507,23 @@ export function KanbanBoard() {
                   </div>
                 </div>
               ) : (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="cursor-pointer"
-                  onClick={() => setIsAddingList(true)}
-                >
-                  <Plus />
-                </Button>
+                <div id="kanban-add-list-btn">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="cursor-pointer"
+                        onClick={() => setIsAddingList(true)}
+                      >
+                        <Plus />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Create new list</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               )}
             </div>
           </div>

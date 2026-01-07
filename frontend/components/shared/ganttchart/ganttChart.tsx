@@ -172,7 +172,7 @@ const GanttPage = () => {
   }
 
   return (
-    <div className="Wrapper h-full flex flex-col">
+    <div id="gantt-chart-view" className="Wrapper h-full flex flex-col">
       <style
         dangerouslySetInnerHTML={{
           __html: `

@@ -52,10 +52,8 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
     setError(null);
 
     try {
-      // 1. Đăng nhập
       await login({ username, password });
 
-      // 2. Lấy danh sách team để biết đường redirect
       try {
         const teams = await teamService.getTeams();
         const projects = await projectService.getProjects(teams[0].id);
@@ -72,13 +70,15 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
     } catch (error: any) {
       setIsLoading(false);
       if (axios.isAxiosError(error) && error.response) {
+        console.log(error.response.data.message)
         const serverMessage =
-          error.response.data?.error || error.response.data?.message;
+          error.response.data?.message || error.response.data?.error;
+          console.log(error)
         if (serverMessage === "Unauthorized" || error.response.status === 401) {
           setError("Invalid username or password.");
         } else {
           setError(
-            serverMessage || error.response.statusText || "Login failed."
+            serverMessage || "Login failed."
           );
         }
       } else {

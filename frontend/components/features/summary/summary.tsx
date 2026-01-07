@@ -35,8 +35,8 @@ const Summary = () => {
   const { stats, lists, distribution, activity } = data;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 pt-0">
-      <div className="grid auto-rows-min gap-4 md:grid-cols-4 sm:grid-cols-2">
+    <div id="summary-view" className="flex flex-1 flex-col gap-4 pt-0">
+      <div id="summary-stats-grid" className="grid auto-rows-min gap-4 md:grid-cols-4 sm:grid-cols-2">
         <StatsCard
           icon={<CheckCircleIcon className="text-green-600" />}
           value={stats.completed}
@@ -71,7 +71,7 @@ const Summary = () => {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div id="summary-charts-row" className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-background rounded-xl w-full h-full shadow-sm border">
           <TaskCompletionPieChart lists={lists} distribution={distribution} />
         </div>

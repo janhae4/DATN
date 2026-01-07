@@ -59,7 +59,13 @@ import {
 import { CreateTaskDto } from "@/services/taskService";
 import { useParams } from "next/navigation";
 import { useTeamMembers } from "@/hooks/useTeam";
-import { ListCategoryEnum, Priority } from "@/types";
+import {
+  ListCategoryEnum,
+  MemberRole,
+  Priority,
+  SprintStatus,
+  UserSkill,
+} from "@/types";
 import { useLists } from "@/hooks/useList";
 import { useSprints } from "@/hooks/useSprints";
 import { motion, AnimatePresence } from "framer-motion";
@@ -117,7 +123,11 @@ export function SuggestTaskByAi({
   const projectId = param?.projectId as string;
   const { data: members = [] } = useTeamMembers(teamId);
   const { lists } = useLists(projectId);
-  const { sprints = [] } = useSprints(projectId);
+  const { sprints = [] } = useSprints(projectId, teamId, [
+    SprintStatus.ACTIVE,
+    SprintStatus.PLANNED,
+    SprintStatus.ARCHIVED,
+  ]);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -218,6 +228,8 @@ export function SuggestTaskByAi({
         projectId: projectId,
         listId: targetList.id,
         priority: Priority.MEDIUM,
+        skillName: t.skillName,
+        exp: t.experience,
         reporterId: null,
         assigneeIds: t.memberIds,
         startDate: t.startDate ? new Date(t.startDate).toISOString() : null,

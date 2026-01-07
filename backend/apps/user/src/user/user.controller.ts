@@ -289,8 +289,8 @@ export class UserController {
     queue: USER_PATTERNS.INCREMENT_BULK_SKILLS,
     errorHandler: customErrorHandler
   })
-  incrementBulkSkills(data: { skills: string[], userIds: string[] }) {
-    return this.userService.handleBulkSkillIncrement(data.userIds, data.skills);
+  incrementBulkSkills(data: Array<{ userId: string, skills: { skillName: string, exp: number }[] }>) {
+    return this.userService.handleBulkSkillIncrement(data);
   }
 
   @RabbitRPC({
@@ -301,6 +301,16 @@ export class UserController {
   })
   getBulkSkills(memberIds: string[]) {
     return this.userService.getBulkUserSkill(memberIds)
+  }
+
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.CHECK_GOOGLE_CONNECTION_STATUS,
+    queue: USER_PATTERNS.CHECK_GOOGLE_CONNECTION_STATUS,
+    errorHandler: customErrorHandler
+  })
+  checkGoogleConnectionStatus(@RabbitPayload('id') id: string) {
+    return this.userService.verifyGoogleConnection(id);
   }
 
 }

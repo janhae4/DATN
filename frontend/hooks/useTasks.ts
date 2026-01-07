@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { Pagination, Task, TaskLabel } from "@/types";
 import {
@@ -5,15 +6,19 @@ import {
   CreateTaskDto,
   UpdateTaskDto,
   GetTasksParams,
+  GetTasksByTeamParams,
 } from "@/services/taskService";
 import { streamHelper } from "@/services/apiClient";
 import { toast } from "sonner";
 
-export function useTasks(filters?: GetTasksParams) {
+type UseTasksFilters = GetTasksParams | GetTasksByTeamParams;
+
+export function useTasks(filters?: UseTasksFilters) {
   const queryClient = useQueryClient();
   const tasksQueryKey = ["tasks", filters];
-  const labelsQueryKey = ["task-labels-project", filters?.projectId];
-
+  const projectId = filters && 'projectId' in filters ? filters.projectId : undefined;
+  const teamId = filters && 'teamId' in filters ? filters.teamId : undefined;
+  const labelsQueryKey = ["labels", projectId];
   const {
     data,
     fetchNextPage,
@@ -25,10 +30,24 @@ export function useTasks(filters?: GetTasksParams) {
   } = useInfiniteQuery({
     queryKey: tasksQueryKey,
     queryFn: async ({ pageParam }) => {
-      return taskService.getTasks({
-        ...filters!,
-        page: pageParam as number
-      });
+      const page = pageParam as number;
+      console.log("Fetching tasks for page", page, "with filters", filters);
+      if (!filters) throw new Error("No filters provided");
+      if ('projectId' in filters && filters.projectId) {
+        return taskService.getTasks({
+          ...filters,
+          page,
+        });
+      }
+
+      if ('teamId' in filters && filters.teamId) {
+        return taskService.getTasksByTeam({
+          ...filters,
+          page,
+        });
+      }
+
+      throw new Error("Missing projectId or teamId");
     },
     initialPageParam: filters?.page || 1,
     getNextPageParam: (lastPage, allPages) => {
@@ -37,18 +56,26 @@ export function useTasks(filters?: GetTasksParams) {
       }
       return undefined;
     },
-    enabled: !!filters?.projectId,
+    enabled: !!projectId || !!teamId,
   });
 
-  const tasks = data?.pages.flatMap((page) => page.data) || [];
+
+  const tasks = useMemo(() => {
+    const all = data?.pages.flatMap((page) => page.data) || [];
+    const uniqueMap = new Map();
+    for (const t of all) {
+      uniqueMap.set(t.id, t); // Last one wins (or first? Map preserves insertion order of keys, but set overwrites value)
+    }
+    return Array.from(uniqueMap.values());
+  }, [data]);
 
   const {
     data: projectLabels = [],
     isLoading: isLoadingLabels,
   } = useQuery<TaskLabel[]>({
     queryKey: labelsQueryKey,
-    queryFn: () => taskService.getAllTaskLabelByProjectId(filters?.projectId!),
-    enabled: !!filters?.projectId,
+    queryFn: () => taskService.getAllTaskLabelByProjectId(projectId!),
+    enabled: !!projectId,
   });
 
   // --- MUTATIONS ---
@@ -149,9 +176,12 @@ export function useTasks(filters?: GetTasksParams) {
       if (context?.previousData) {
         queryClient.setQueryData(tasksQueryKey, context.previousData);
       }
-      toast.error("Failed to update task");
     },
-    // Remove onSettled to avoid invalidating the list cache with stale data
+
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["task", variables.id] });
+    },
   });
 
   const updateTasksMutation = useMutation({
@@ -253,7 +283,7 @@ export function useTasks(filters?: GetTasksParams) {
 
     isFetching,
     projectLabels,
-    isLoading: isLoadingTasks || isLoadingLabels,
+    isLoading: isLoadingTasks || (!!projectId && isLoadingLabels),
     error: error as Error | null,
 
     createTask: createTaskMutation.mutateAsync,
@@ -265,6 +295,32 @@ export function useTasks(filters?: GetTasksParams) {
     deleteTask: deleteTaskMutation.mutateAsync,
     deleteTasks: deleteTasksMutation.mutateAsync,
   };
+}
+
+export interface UseUserTasksProps {
+  userId?: string;
+  teamId: string;
+  page?: number;
+  limit?: number;
+}
+
+export function useUserTasks({ userId, teamId, page = 1, limit = 10 }: UseUserTasksProps) {
+  return useQuery({
+    queryKey: ["user-tasks", teamId, userId, page, limit],
+    queryFn: async () => {
+      if (!userId || !teamId) return { data: [], total: 0, totalPages: 0, page: 1, limit };
+      return taskService.getTasksByTeam({
+        teamId,
+        assigneeIds: [userId],
+        page,
+        limit,
+        sortBy: ["dueDate"],
+        sortOrder: "ASC"
+      });
+    },
+    enabled: !!userId && !!teamId,
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useTask(taskId: string | null) {

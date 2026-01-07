@@ -1,13 +1,28 @@
-# Ignore node_modules for both frontend and backend
+# Ignore node_modules
 node_modules/
+
 # Logs
 *.log
 
+# Environment variables
+.env
+.env.dev
+.env.local
+.env.*
+backend/.env*
+frontend/.env*
+
+# Python
 .venv/
 __pycache__
 output_model/
 output/
-chroma_db
 
-# MeiliSearch Data
+# Databases
+chroma_db
 meili-data/
+postgres-init/
+mongo-data/
+redis-data/
+rabbitmq-data/
+minio-data/

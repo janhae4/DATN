@@ -235,6 +235,8 @@ export class AuthService {
       exp: REFRESH_TTL,
     });
 
+    if (!accessToken || !refreshToken) throw new NotFoundException('Failed to generate tokens');
+
     return { accessToken, refreshToken };
   }
 

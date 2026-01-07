@@ -36,31 +36,10 @@ const data = {
   navMain: [
     {
       title: "Project management",
-      url: "dashboard",
+      url: "/dashboard",
       icon: Bot,
       isActive: true,
-      items: [
-        {
-          title: "Dashboard",
-          url: "dashboard#summary",
-          forceReload: true,
-        },
-        {
-          title: "Boards",
-          url: "dashboard#boards",
-          forceReload: true,
-        },
-        {
-          title: "Backlogs",
-          url: "dashboard#backlogs",
-          forceReload: true,
-        },
-        {
-          title: "Timeline",
-          url: "dashboard#timeline",
-          forceReload: true,
-        },
-      ],
+
 
     },
     // {
@@ -83,7 +62,6 @@ const data = {
       title: "Documentation",
       url: "documentation",
       icon: BookOpen,
-      isActive: true
     },
     {
       title: "Team",
@@ -130,12 +108,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }))
   }, [projects, teamId])
 
+  const [storedProjectId, setStoredProjectId] = React.useState<string | undefined>(undefined)
+
+  // Load from local storage on mount or when teamId changes
+  React.useEffect(() => {
+    if (teamId) {
+      const saved = localStorage.getItem(`lastProjectId:${teamId}`)
+      if (saved) setStoredProjectId(saved)
+    }
+  }, [teamId])
+
+  // Sync state with URL projectId when it exists
+  React.useEffect(() => {
+    if (projectId && teamId) {
+      setStoredProjectId(projectId)
+      localStorage.setItem(`lastProjectId:${teamId}`, projectId)
+    }
+  }, [projectId, teamId])
+
   const effectiveProjectId = React.useMemo(() => {
     if (projectId) return projectId
+    if (storedProjectId) return storedProjectId
     if (projects && projects.length > 0) return projects[0].id
     return undefined
-  }, [projectId, projects])
+  }, [projectId, projects, storedProjectId])
 
+  console.log("effectiveProjectId", effectiveProjectId)
   const navMainWithParams = React.useMemo(() => {
     if (!teamId || !effectiveProjectId) {
       return data.navMain
@@ -160,16 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       return {
         ...item,
-        url: resolvedUrl,
-        items: item.items
-          ? item.items.map((subItem) => ({
-            ...subItem,
-            forceReload: (subItem as any).forceReload,
-            url: item.url === "meeting"
-              ? `/${teamId}/${subItem.url}`
-              : `${basePath}/${subItem.url}`,
-          }))
-          : item.items,
+        url: resolvedUrl
       }
     })
   }, [teamId, effectiveProjectId])

@@ -115,6 +115,7 @@ export class CreateTaskDto {
   @IsOptional()
   position?: number;
 
-  // The following fields are for relations and are handled separately
-  // task_assignees, task_labels, attachments
+  @IsOptional()
+  @IsString()
+  skill?: string | null;
 }

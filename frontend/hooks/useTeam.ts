@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  teamService, 
-  CreateTeamDto, 
-  UpdateTeamDto, 
+import {
+  teamService,
+  CreateTeamDto,
+  UpdateTeamDto,
   LeaveMemberDto,
   RemoveMemberDto,
   TransferOwnershipDto,
@@ -15,20 +15,37 @@ import { useUserProfile } from "./useAuth";
 
 export const useTeams = () => {
   const { data: user } = useUserProfile();
-  
+
   return useQuery({
     queryKey: ["teams", user?.id],
-    queryFn: () => teamService.getTeams(), 
+    queryFn: () => teamService.getTeams(),
     enabled: !!user?.id,
   });
 };
 
 export const useTeam = (teamId: string | null) => {
-  return useQuery({
+  const transferOwnershipMutation = useTransferOwnership();
+  const { data: user } = useUserProfile();
+
+  const query = useQuery({
     queryKey: ["team", teamId],
     queryFn: () => teamService.getTeam(teamId as string),
     enabled: !!teamId,
   });
+
+  const transferOwnership = async (newOwnerId: string) => {
+    if (!teamId || !user?.id) throw new Error("Team ID or User ID missing");
+    return transferOwnershipMutation.mutateAsync({
+      teamId,
+      requesterId: user.id,
+      newOwnerId
+    });
+  };
+
+  return {
+    ...query,
+    transferOwnership
+  };
 };
 
 export const useTeamMembers = (teamId: string | null) => {
@@ -104,7 +121,7 @@ export const useRemoveMember = () => {
 export const useTransferOwnership = () => {
   const queryClient = useQueryClient();
   const { data: user } = useUserProfile();
-  
+
   return useMutation({
     mutationFn: (payload: TransferOwnershipDto) => teamService.transferOwnership(payload),
     onSuccess: (_, variables) => {
@@ -169,7 +186,7 @@ export const useCreateDiscussion = () => {
   return useMutation({
     mutationFn: ({ teamId, name, ownerId, memberIds }: { teamId: string; name: string; ownerId: string; memberIds?: string[] }) =>
       // Lưu ý: createDiscussion trong service vẫn yêu cầu các tham số này
-      teamService.createDiscussion(teamId, name, memberIds), 
+      teamService.createDiscussion(teamId, name, memberIds),
     onSuccess: (newDiscussion, variables) => {
       // Sửa: Dùng biến từ closure hoặc response nếu cần, ở đây variables.teamId là ok
       // Lưu ý: createDiscussion trong service của bạn hiện tại không nhận ownerId làm tham số thứ 3,

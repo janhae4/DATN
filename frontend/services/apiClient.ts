@@ -41,7 +41,7 @@ const refreshAccessToken = async () => {
 // --- Cấu hình apiClient CHÍNH ---
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -122,7 +122,7 @@ export const streamHelper = async (
   onChunk: (chunk: string) => void,
 ): Promise<void> => {
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
 
   const response = await fetch(` ${baseUrl}${url}`, {
     method: 'POST',

@@ -25,8 +25,7 @@ export interface UpdateTaskDto extends Partial<Omit<CreateTaskDto, "projectId">>
   labelIds?: string[];
 }
 
-export interface GetTasksParams {
-  projectId: string;
+export interface BaseTaskFilterDto {
   search?: string;
   assigneeIds?: string[];
   priority?: Task['priority'][];
@@ -34,8 +33,19 @@ export interface GetTasksParams {
   epicId?: string[];
   labelIds?: string[];
   sprintId?: string[] | "null";
+  isCompleted?: boolean;
+  sortBy?: string[];
+  sortOrder?: 'ASC' | 'DESC';
   page?: number;
   limit?: number;
+}
+
+export interface GetTasksParams extends BaseTaskFilterDto {
+  projectId: string;
+}
+
+export interface GetTasksByTeamParams extends BaseTaskFilterDto {
+  teamId: string;
 }
 
 // --- Service ---
@@ -47,6 +57,11 @@ export const taskService = {
    */
   getTasks: async (params: GetTasksParams): Promise<Pagination<Task>> => {
     const response = await apiClient.get("/tasks", { params });
+    return response.data;
+  },
+
+  getTasksByTeam: async (params: GetTasksByTeamParams): Promise<Pagination<Task>> => {
+    const response = await apiClient.get(`/tasks/by-team`, { params });
     return response.data;
   },
 

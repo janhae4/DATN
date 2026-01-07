@@ -54,6 +54,10 @@ import {
 import { Member, TeamMember } from "@/types/social";
 import { MemberRole } from "@/types/common/enums";
 import { AddMemberDialog } from "./AddMemberDialog";
+import { TransferOwnershipDialog } from "./TransferOwnershipDialog";
+import { RemoveMemberDialog } from "./RemoveMemberDialog";
+
+import { useUserProfile } from "@/hooks/useAuth";
 
 interface TeamMembersListProps {
   members: Member[];
@@ -66,7 +70,12 @@ export function TeamMembersList({
   isLoading,
   teamId,
 }: TeamMembersListProps) {
+    console.log("team members", members);
+
+  const { data: user } = useUserProfile();
   const [searchTerm, setSearchTerm] = useState("");
+
+  const currentUserRole = members?.find((m) => m.id === user?.id)?.role;
 
   const filteredMembers = useMemo(() => {
     if (!members) return [];
@@ -77,6 +86,7 @@ export function TeamMembersList({
       return name.includes(search) || email.includes(search);
     });
   }, [members, searchTerm]);
+
 
   const getRoleBadge = (role: MemberRole) => {
     switch (role) {
@@ -227,10 +237,6 @@ export function TeamMembersList({
                           <span className="text-sm font-medium text-foreground">
                             {member?.name || "Unknown User"}
                           </span>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Mail className="h-3 w-3 opacity-70" />{" "}
-                            {member?.email || "No email"}
-                          </span>
                         </div>
                       </div>
                     </TableCell>
@@ -241,33 +247,59 @@ export function TeamMembersList({
                         : "-"}
                     </TableCell>
                     <TableCell className="text-right pr-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer">
-                            <User className="mr-2 h-4 w-4" /> View Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
-                            <Mail className="mr-2 h-4 w-4" /> Send Message
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
-                            <ShieldAlert className="mr-2 h-4 w-4" /> Remove from
-                            Team
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {(currentUserRole === MemberRole.OWNER ||
+                        (currentUserRole === MemberRole.ADMIN &&
+                          member.role !== MemberRole.OWNER &&
+                          member.role !== MemberRole.ADMIN)) &&
+                        member.id !== user?.id && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Open menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+
+                              {currentUserRole === MemberRole.OWNER && (
+                                <>
+                                  <TransferOwnershipDialog
+                                    teamId={teamId}
+                                    member={member}
+                                  >
+                                    <DropdownMenuItem
+                                      className="cursor-pointer"
+                                      onSelect={(e) => e.preventDefault()}
+                                    >
+                                      <User className="mr-2 h-4 w-4" /> Transfer
+                                      Ownership
+                                    </DropdownMenuItem>
+                                  </TransferOwnershipDialog>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+
+                              <RemoveMemberDialog
+                                teamId={teamId}
+                                member={member}
+                              >
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                  onSelect={(e) => e.preventDefault()}
+                                >
+                                  <ShieldAlert className="mr-2 h-4 w-4" /> Remove
+                                  from Team
+                                </DropdownMenuItem>
+                              </RemoveMemberDialog>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                     </TableCell>
                   </TableRow>
                 );

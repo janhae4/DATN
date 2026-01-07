@@ -13,10 +13,8 @@ async function bootstrap() {
   });
   app.use(cookieParser())
   await app.init();
-  await app.listen(3002);
 
   console.log('Task Service is running:');
-  console.log('- HTTP (SSE): http://localhost:3002');
   console.log('- Microservice: Listening to RabbitMQ');
 }
 bootstrap();

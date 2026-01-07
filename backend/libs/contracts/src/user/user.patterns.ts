@@ -28,5 +28,6 @@ export const USER_PATTERNS = {
   ADD_SKILLS: 'user.addSkills',
   UPDATE_SKILLS: 'user.updateSkills',
   INCREMENT_BULK_SKILLS: 'user.incrementBulkSkills',
-  GET_BULK_SKILLS: 'user.getBulkSkills'
+  GET_BULK_SKILLS: 'user.getBulkSkills',
+  CHECK_GOOGLE_CONNECTION_STATUS: 'user.checkGoogleConnectionStatus',
 };

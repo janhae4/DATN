@@ -13,7 +13,7 @@ import { toast } from "sonner";
 
 export default function CreateTeamPage() {
   const [name, setName] = useState("");
-  
+
   // State quản lý danh sách email muốn mời
   const [members, setMembers] = useState<string[]>([]);
   const [memberInput, setMemberInput] = useState("");
@@ -26,19 +26,19 @@ export default function CreateTeamPage() {
   const handleAddMember = (e?: React.FormEvent) => {
     e?.preventDefault(); // Chặn submit form cha
     const email = memberInput.trim();
-    
+
     if (!email) return;
-    
+
     // Validate email cơ bản
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-        toast.error("Invalid email address");
-        return;
+      toast.error("Invalid email address");
+      return;
     }
 
     if (members.includes(email)) {
-        toast.error("Email already added");
-        return;
+      toast.error("Email already added");
+      return;
     }
 
     setMembers([...members, email]);
@@ -62,8 +62,8 @@ export default function CreateTeamPage() {
     e.preventDefault();
     if (!name.trim()) return;
     if (!user) {
-        toast.error("User not found. Please login again.");
-        return;
+      toast.error("User not found. Please login again.");
+      return;
     }
 
     setIsLoading(true);
@@ -71,14 +71,14 @@ export default function CreateTeamPage() {
       // Lưu ý: Nếu Backend yêu cầu ID (UUID) thay vì Email trong `memberIds`, 
       // bạn cần logic để tìm User ID từ Email trước hoặc Backend phải hỗ trợ invite qua email.
       // Ở đây tôi gửi danh sách email, giả định Backend hoặc Service sẽ xử lý việc mời.
-      
+
       const newTeam = await teamService.createTeam({
         name: name,
         memberIds: [],
       });
 
       toast.success("Team created successfully!");
-      router.replace(`/${newTeam.id}`);
+      router.replace(`/${newTeam.id}/team`);
     } catch (error: any) {
       console.error(error);
       toast.error(error.response?.data?.message || "Failed to create team");
@@ -101,7 +101,7 @@ export default function CreateTeamPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreateTeam} className="space-y-6">
-            
+
             {/* Team Name Input */}
             <div className="space-y-2">
               <Label htmlFor="teamName">Team Name</Label>
@@ -118,50 +118,50 @@ export default function CreateTeamPage() {
 
             {/* Invite Members Section */}
             <div className="space-y-3">
-                <Label>Invite Members (Optional)</Label>
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input 
-                            placeholder="colleague@example.com" 
-                            className="pl-9 h-11"
-                            value={memberInput}
-                            onChange={(e) => setMemberInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            disabled={isLoading}
-                        />
-                    </div>
-                    <Button 
-                        type="button" 
-                        variant="secondary" 
-                        onClick={() => handleAddMember()}
-                        disabled={isLoading || !memberInput.trim()}
-                        className="h-11"
-                    >
-                        Add
-                    </Button>
+              <Label>Invite Members (Optional)</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="colleague@example.com"
+                    className="pl-9 h-11"
+                    value={memberInput}
+                    onChange={(e) => setMemberInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isLoading}
+                  />
                 </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => handleAddMember()}
+                  disabled={isLoading || !memberInput.trim()}
+                  className="h-11"
+                >
+                  Add
+                </Button>
+              </div>
 
-                {/* Danh sách thành viên đã thêm (Chips) */}
-                {members.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3 p-3 bg-muted/30 rounded-lg border border-dashed">
-                        {members.map((email) => (
-                            <div key={email} className="flex items-center gap-1 bg-background border px-3 py-1 rounded-full text-sm shadow-sm animate-in fade-in zoom-in-95">
-                                <span className="text-muted-foreground text-xs">Member:</span>
-                                <span className="font-medium">{email}</span>
-                                <button 
-                                    type="button"
-                                    onClick={() => handleRemoveMember(email)}
-                                    className="ml-1 hover:bg-muted rounded-full p-0.5 transition-colors text-muted-foreground hover:text-foreground"
-                                >
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </div>
-                        ))}
+              {/* Danh sách thành viên đã thêm (Chips) */}
+              {members.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3 p-3 bg-muted/30 rounded-lg border border-dashed">
+                  {members.map((email) => (
+                    <div key={email} className="flex items-center gap-1 bg-background border px-3 py-1 rounded-full text-sm shadow-sm animate-in fade-in zoom-in-95">
+                      <span className="text-muted-foreground text-xs">Member:</span>
+                      <span className="font-medium">{email}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(email)}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5 transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
-                )}
+                  ))}
+                </div>
+              )}
             </div>
-            
+
             <Button type="submit" className="w-full h-11 font-medium text-base mt-2" disabled={isLoading || !name.trim()}>
               {isLoading ? (
                 <>

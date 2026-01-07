@@ -15,7 +15,7 @@ export function DashboardWrapper() {
   const router = useRouter();
 
   const projectId = params.projectId as string | undefined;
-  const teamId = params.teamId;
+  const teamId = params.teamId as string | undefined;
   React.useEffect(() => {
     if (!isLoading && projects.length > 0 && !projectId) {
       router.replace(`/${teamId}/${projects[0].id}/dashboard`);
@@ -31,7 +31,7 @@ export function DashboardWrapper() {
   }
 
   return (
-    <TaskManagementProvider projectId={projectId}>
+    <TaskManagementProvider projectId={projectId} teamId={teamId}>
       <TabsNav />
     </TaskManagementProvider>
   );

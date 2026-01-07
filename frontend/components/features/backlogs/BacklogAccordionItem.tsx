@@ -12,6 +12,7 @@ import { Archive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BacklogTaskList } from "./task/backlogTaskList";
 import { List, Task } from "@/types";
+import { HelpTooltip } from "@/components/shared/HelpTooltip";
 
 interface BacklogAccordionItemProps {
   lists: List[];
@@ -78,6 +79,7 @@ function BacklogAccordionItemComponent({
             <div className="flex items-center gap-2">
               <Archive className="h-5 w-5 text-muted-foreground" />
               <span>Backlog</span>
+              <HelpTooltip text="A prioritized list of work for the development team that is derived from the roadmap and its requirements." />
             </div>
             <Badge variant="secondary">{taskCount} tasks</Badge>
           </div>

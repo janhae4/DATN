@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Sprint, Task } from "@/types";
+import { HelpTooltip } from "@/components/shared/HelpTooltip";
 import { AccordionContent, AccordionItem } from "@/components/ui/accordion";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Table, TableRow, TableCell } from "@/components/ui/table";
@@ -91,6 +92,7 @@ export function SprintItem({
               >
                 {sprint.title}
               </span>
+              <HelpTooltip text="A fixed time period for the team to complete committed work (usually 1-4 weeks)." />
               <p className="text-sm text-muted-foreground">
                 {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
               </p>

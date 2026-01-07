@@ -93,7 +93,9 @@ export const teamService = {
   // Remove member from team
   removeMember: async (payload: RemoveMemberDto): Promise<void> => {
     // Dùng HTTP DELETE với body (axios hỗ trợ qua config 'data')
-    await apiClient.delete(`/teams/${payload.teamId}/member`, { data: payload });
+    await apiClient.delete(`/teams/${payload.teamId}/member`, {
+      data: { memberIds: payload.memberIds }
+    });
   },
 
   // Leave team
@@ -103,7 +105,10 @@ export const teamService = {
 
   // Transfer ownership
   transferOwnership: async (payload: TransferOwnershipDto): Promise<void> => {
-    await apiClient.post(`/teams/${payload.teamId}/member/transfer-ownership`, payload);
+    // Only send newOwnerId in the body as per backend DTO
+    await apiClient.post(`/teams/${payload.teamId}/member/transfer-ownership`, {
+      newOwnerId: payload.newOwnerId
+    });
   },
 
   // Change member role

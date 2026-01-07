@@ -150,30 +150,6 @@ export function CreateProjectModal({ children }: CreateProjectModalProps) {
             )}
           </div>
 
-          {/* Visibility Field */}
-          <div className="space-y-2">
-            <Label htmlFor="visibility">Visibility</Label>
-            <Select
-              onValueChange={(value) => setValue("visibility", value as ProjectVisibility)}
-              defaultValue={ProjectVisibility.TEAM}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select visibility" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ProjectVisibility.PRIVATE}>
-                    🔒 Private (Only you)
-                </SelectItem>
-                <SelectItem value={ProjectVisibility.TEAM}>
-                    👥 Team (Visible to team members)
-                </SelectItem>
-                <SelectItem value={ProjectVisibility.PUBLIC}>
-                    🌐 Public (Visible to everyone)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel

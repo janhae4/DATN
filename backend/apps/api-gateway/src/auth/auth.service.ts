@@ -133,12 +133,12 @@ export class AuthService {
 
   async login(payload: LoginDto, response: Response) {
     try {
-      const token = await this.amqp.request<LoginResponseDto>({
+      const token = unwrapRpcResult(await this.amqp.request<LoginResponseDto>({
         exchange: AUTH_EXCHANGE,
         routingKey: AUTH_PATTERN.LOGIN,
         payload: payload,
         timeout: RPC_TIMEOUT
-      })
+      }))
 
       this.setCookies(token.accessToken, token.refreshToken, response);
       return { message: "Login successfully" };
@@ -160,12 +160,12 @@ export class AuthService {
     const refreshToken = request.cookies?.refreshToken as string | undefined;
     if (!refreshToken) throw new UnauthorizedException('Invalid refresh token');
     try {
-      const token: LoginResponseDto = await this.amqp.request({
+      const token: LoginResponseDto = unwrapRpcResult(await this.amqp.request({
         exchange: AUTH_EXCHANGE,
         routingKey: AUTH_PATTERN.REFRESH,
         payload: refreshToken,
         timeout: RPC_TIMEOUT
-      });
+      }))
       this.setCookies(token.accessToken, token.refreshToken, response);
       return token;
     } catch (error) {
@@ -239,20 +239,13 @@ export class AuthService {
 
   async getGoogleConnectionStatus(userId: string): Promise<boolean> {
     try {
-      const user = await this.amqp.request<User>({
+      const isLinked = await this.amqp.request<boolean>({
         exchange: USER_EXCHANGE,
-        routingKey: USER_PATTERNS.FIND_ONE,
-        payload: userId,
+        routingKey: USER_PATTERNS.CHECK_GOOGLE_CONNECTION_STATUS,
+        payload: { id: userId },
       });
 
-      if (user && user.accounts) {
-        const isLinked = user.accounts.some(
-          (account) => account.provider === Provider.GOOGLE
-        );
-        return isLinked;
-      }
-
-      return false;
+      return isLinked;
     } catch (error) {
       console.error(`Error checking google status for user ${userId}:`, error);
       return false;

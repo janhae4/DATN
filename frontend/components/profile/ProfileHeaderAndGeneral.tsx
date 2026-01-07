@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Provider } from "@/types/common/enums";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMe, linkGoogleAccount, updateSkills } from "@/services/authService";
+import {  linkGoogleAccount, updateSkills, isGoogleLinked } from "@/services/authService";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -54,6 +54,7 @@ export function ProfileHeaderAndGeneral() {
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isLinked, setIsLinked] = React.useState(false);
   const router = useRouter();
 
   const [editingSkills, setEditingSkills] = React.useState<string[]>([]);
@@ -63,6 +64,21 @@ export function ProfileHeaderAndGeneral() {
     if (user) {
       setName(user.name || "");
       setPhone(user.phone || "");
+
+      const checkGoogleStatus = async () => {
+        try {
+          const linked = await isGoogleLinked();
+          setIsLinked(linked);
+        } catch (error) {
+          console.error("Failed to check google status", error);
+        }
+      };
+
+      if (user.provider === Provider.GOOGLE) {
+        setIsLinked(true);
+      } else {
+        checkGoogleStatus();
+      }
     }
   }, [user]);
 
@@ -121,16 +137,20 @@ export function ProfileHeaderAndGeneral() {
               <p className="text-sm text-zinc-500">{user?.email}</p>
             </div>
             <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-              <Button
-                onClick={linkGoogleAccount}
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs font-semibold rounded-full"
-              >
-                {user?.provider === Provider.GOOGLE
-                  ? "Google Linked"
-                  : "Link Google Account"}
-              </Button>
+              {isLinked ? (
+                <div className="flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-full text-[10px] font-semibold uppercase tracking-tighter cursor-default border border-green-200 dark:border-green-800">
+                  <Zap className="h-3 w-3 fill-current" /> Google Linked
+                </div>
+              ) : (
+                <Button
+                  onClick={linkGoogleAccount}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  Link Google Account
+                </Button>
+              )}
               <div className="flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-[10px] font-semibold uppercase tracking-tighter">
                 <Briefcase className="h-3 w-3" /> {user?.jobTitle || "No Role"}
               </div>
@@ -154,7 +174,7 @@ export function ProfileHeaderAndGeneral() {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              value={user?.email}
+              value={user?.email || ""}
               disabled
               className="bg-muted/50"
             />

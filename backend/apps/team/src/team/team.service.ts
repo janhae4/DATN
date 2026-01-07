@@ -738,7 +738,7 @@ export class TeamService {
       }
 
       if (oldOwner) {
-        oldOwner.role = MemberRole.ADMIN;
+        oldOwner.role = MemberRole.MEMBER;
         await memberRepo.save(oldOwner);
       }
       newOwner.role = MemberRole.OWNER;

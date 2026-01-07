@@ -326,6 +326,27 @@ export class UserService {
     return await this.userRepo.findOne({
       where: { id },
       relations: ['accounts', 'skills'],
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        email: true,
+        bio: true,
+        accounts: {
+          email: true,
+          provider: true,
+          providerId: true,
+          updatedAt: true,
+        },
+        skills: true,
+        isBan: true,
+        createdAt: true,
+        isActive: true,
+        role: true,
+        phone: true,
+        jobTitle: true,
+        lastLogin: true,
+      }
     });
   }
 
@@ -379,12 +400,23 @@ export class UserService {
     });
   }
 
+  async verifyGoogleConnection(userId: string): Promise<boolean> {
+    const account = await this.accountRepo.findOne({
+      where: {
+        provider: Provider.GOOGLE,
+        user: { id: userId }
+      }
+    });
+
+    return !!account;
+  }
+
   async findManyByIds(ids: string[], forDiscussion?: boolean) {
     const cachedUsers: Partial<User>[] = unwrapRpcResult(await this.amqp.request({
       exchange: REDIS_EXCHANGE,
       routingKey: REDIS_PATTERN.GET_USER_INFO,
       payload: ids,
-    })) 
+    }))
 
     const cachedIds = new Set(cachedUsers.map(u => u.id));
     const missingIds = ids.filter(id => !cachedIds.has(id));
@@ -853,37 +885,51 @@ export class UserService {
     })
   }
 
-  async handleBulkSkillIncrement(userIds: string[], skills: string[]) {
+  async handleBulkSkillIncrement(data: Array<{ userId: string, skills: { skillName: string, exp: number }[] }>) {
     return await this.dataSource.transaction(async (manager) => {
-      for (const userId of userIds) {
-        for (const skillName of skills) {
-          await this.increaseSkillExperience(manager, userId, skillName, 10);
+      for (const { userId, skills } of data) {
+        for (const { skillName, exp } of skills) {
+          await this.increaseSkillExperience(manager, userId, skillName, exp);
         }
       }
-      this.logger.log(`Updated skills for users: ${userIds.join(', ')}`);
+      this.logger.log(`Updated skills for users: ${data.map(d => d.userId).join(', ')}`);
     });
   }
 
   async increaseSkillExperience(manager: EntityManager, userId: string, skillName: string, amount: number) {
     const normalizedName = skillName.trim().toLowerCase();
+    console.log(`Processing: ${normalizedName} for User: ${userId}`);
 
     let userSkill = await manager.findOne(UserSkill, {
-      where: { user: { id: userId }, skillName: normalizedName },
+      where: {
+        userId: userId,
+        skillName: normalizedName
+      },
     });
 
     if (!userSkill) {
+      console.log('--> Creating New Skill');
       userSkill = manager.create(UserSkill, {
-        userId,
+        userId: userId,
         skillName: normalizedName,
         experience: amount,
         level: 1,
+        isInterest: true
       });
     } else {
+      console.log('--> Updating Existing Skill');
       userSkill.experience += amount;
       userSkill.level = 1 + Math.floor(userSkill.experience / 100);
       userSkill.isInterest = false;
     }
 
     await manager.save(UserSkill, userSkill);
+
+    const checkUser = await manager.findOne(User, {
+      where: { id: userId },
+      relations: ['skills']
+    });
+
+    console.log('Current Skills in Transaction:', checkUser?.skills);
   }
 }

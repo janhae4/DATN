@@ -11,6 +11,7 @@ import { KanbanSkeleton } from "./skeletons/KanbanSkeleton";
 import { SummarySkeleton } from "./skeletons/SummarySkeleton";
 import { Button } from "@/components/ui/button";
 import { useDashboardTour } from "@/hooks/useDashboardTour";
+import { HelpTooltip } from "@/components/shared/HelpTooltip";
 
 const Summary = dynamic(() => import("./features/summary/summary"), {
   loading: () => <SummarySkeleton />,
@@ -86,16 +87,25 @@ export function TabsNav() {
         className="h-full flex flex-col w-full"
       >
         <div className="flex items-center justify-between gap-4">
+
           <TabsList id="dashboard-tabs-list">
-            <TabsTrigger id="tab-backlogs" value="backlogs">Backlogs</TabsTrigger>
-            <TabsTrigger id="tab-summary" value="summary">Summary</TabsTrigger>
-            <TabsTrigger id="tab-boards" value="boards">Boards</TabsTrigger>
-            <TabsTrigger id="tab-timeline" value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger id="tab-backlogs" value="backlogs" className="flex items-center gap-2">
+              Backlogs
+            </TabsTrigger>
+            <TabsTrigger id="tab-summary" value="summary" className="flex items-center gap-2">
+              Summary
+            </TabsTrigger>
+            <TabsTrigger id="tab-boards" value="boards" className="flex items-center gap-2">
+              Boards
+            </TabsTrigger>
+            <TabsTrigger id="tab-timeline" value="timeline" className="flex items-center gap-2">
+              Timeline
+            </TabsTrigger>
           </TabsList>
           <Button
             variant="outline"
             size="sm"
-            onClick={startTour}
+            onClick={() => startTour(activeTab)}
             className="hidden md:flex items-center gap-2"
           >
             <HelpCircle className="h-4 w-4" />

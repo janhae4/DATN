@@ -1,6 +1,7 @@
-import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateIf } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateIf } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { Priority } from '@app/contracts/enums/priority.enum';
+
 const toArray = ({ value }: any) => {
     if (value === 'null') return null;
     if (typeof value === 'string') {
@@ -8,11 +9,8 @@ const toArray = ({ value }: any) => {
     }
     return value;
 };
-export class GetTasksFilterDto {
-    @IsUUID()
-    @IsNotEmpty()
-    projectId: string;
 
+export class BaseTaskFilterDto {
     @IsOptional()
     @IsString()
     search?: string;
@@ -26,9 +24,7 @@ export class GetTasksFilterDto {
     assigneeIds?: string[];
 
     @IsOptional()
-    @IsEnum(Priority, {
-        each: true
-    })
+    @IsEnum(Priority, { each: true })
     @Transform(toArray)
     priority?: Priority[];
 
@@ -51,13 +47,30 @@ export class GetTasksFilterDto {
     @IsUUID('4', { each: true })
     @Transform(toArray)
     @ValidateIf(o => o.sprintId !== 'null')
-    sprintId?: string[];
+    sprintId?: string[] | null;
 
     @IsOptional()
     @Transform(({ value }) => value === 'null' ? null : value)
     @ValidateIf(o => o.parentId !== 'null')
     @IsUUID()
     parentId?: string | null;
+
+    @IsOptional()
+    @Transform(({ value }) => value === 'true')
+    @IsBoolean()
+    isCompleted?: boolean;
+
+    @IsOptional()
+    @IsIn(['ASC', 'DESC'])
+    sortOrder: 'ASC' | 'DESC' = 'ASC';
+
+    @IsOptional()
+    @IsString({each: true})
+    @Transform(({ value }) => {
+        if (typeof value === 'string') return [value];
+        return value;
+    })
+    sortBy?: string[];
 
     @IsOptional()
     @Type(() => Number)
@@ -70,4 +83,16 @@ export class GetTasksFilterDto {
     @IsNumber()
     @Min(1)
     limit?: number = 10;
+}
+
+export class GetTasksByProjectDto extends BaseTaskFilterDto {
+    @IsUUID()
+    @IsNotEmpty()
+    projectId: string;
+}
+
+export class GetTasksByTeamDto extends BaseTaskFilterDto {
+    @IsUUID()
+    @IsNotEmpty()
+    teamId: string;
 }
