@@ -87,15 +87,19 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   handleAddMember(payload: AddMemberEventPayload) {
-    const { members, requesterName, teamName, teamId } = payload;
-    members.map((m) =>
-      this.socketGateway.sendNotificationToUser({
-        userId: m.id,
-        title: `You have been added to team ${teamName}`,
-        message: `User ${requesterName} added you to team ${teamName}`,
-        type: NotificationType.SUCCESS,
-      }),
-    );
+    const { members, requesterName, teamName, requesterId, metadata } = payload;
+    console.log("Metadata: ", metadata);
+    members
+      .filter((m) => m.id !== requesterId)
+      .forEach((m) => {
+        this.socketGateway.sendNotificationToUser({
+          userId: m.id,
+          title: `You have been added to team ${teamName}`,
+          message: `User ${requesterName} invited you to join team ${teamName}`,
+          type: NotificationType.PENDING,
+          metadata: metadata
+        });
+      });
   }
 
   @RabbitSubscribe({
@@ -121,13 +125,15 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   handleRemoveMember(payload: RemoveMemberEventPayload) {
-    const { requesterName, teamName, memberIdsToNotify: memberIds = [], teamId } = payload;
+    console.log('RemoveMember payload:', payload);
+    const { requesterName, teamName, memberIdsToNotify: memberIds = [], metadata } = payload;
     memberIds.map((m) =>
       this.socketGateway.sendNotificationToUser({
         userId: m,
-        title: `You have been removed from team ${teamName}`,
+        title: `${m === requesterName ? 'You' : requesterName} have been removed from team ${teamName}`,
         message: `${requesterName} removed you from team ${teamName}`,
-        type: NotificationType.SUCCESS,
+        type: NotificationType.WARNING,
+        metadata
       }),
     );
   }

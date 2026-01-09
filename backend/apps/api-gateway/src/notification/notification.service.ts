@@ -21,11 +21,14 @@ export class NotificationService {
   }
 
   async getNotifications(userId: string) {
-      return await this.amqp.request<Notification[]>({
+    console.log(userId);
+    const notifications = await this.amqp.request({
       exchange: NOTIFICATION_EXCHANGE,
       routingKey: NOTIFICATION_PATTERN.FIND,
       payload: userId
     })
+    console.log(notifications);
+    return notifications
   }
 
   async updateNotification(id: string, updateDto: NotificationUpdateDto) {

@@ -1,6 +1,5 @@
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Injectable } from '@nestjs/common';
-import { MinioWebhookEvent } from './dto/hook-upload.dto';
 import { FILE_EXCHANGE, FILE_PATTERN } from '@app/contracts';
 
 @Injectable()

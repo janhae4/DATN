@@ -1,23 +1,18 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import {
-  FolderKanban,
-  MessageSquare,
-  Users,
   Plus,
-  ArrowRight,
-  TrendingUp,
-  Activity,
-  Zap,
   Search,
   MoreHorizontal,
   Shield,
   ShieldAlert,
   Mail,
   User,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from "lucide-react";
 
 import {
@@ -31,8 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -51,9 +44,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Member, TeamMember } from "@/types/social";
+import { Member, MemberStatus, TeamMember } from "@/types/social";
 import { MemberRole } from "@/types/common/enums";
 import { AddMemberDialog } from "./AddMemberDialog";
+import { useRemoveMember, useTeam, useTeamMembers } from "@/hooks/useTeam";
+import { toast } from "sonner";
 
 interface TeamMembersListProps {
   members: Member[];
@@ -67,6 +62,7 @@ export function TeamMembersList({
   teamId,
 }: TeamMembersListProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const { mutate: removeMember, isPending, error } = useRemoveMember();
 
   const filteredMembers = useMemo(() => {
     if (!members) return [];
@@ -77,6 +73,29 @@ export function TeamMembersList({
       return name.includes(search) || email.includes(search);
     });
   }, [members, searchTerm]);
+
+  console.log("filteredMembers", filteredMembers);
+
+  const memberName = (id: string) => members.find((m) => m.id === id)?.name;
+
+  const handleRemove = (memberId: string) => {
+    removeMember(
+      {
+        teamId: teamId,
+        memberIds: [memberId],
+      },
+      {
+        onSuccess: () => {
+          toast.success(`${memberName(memberId)} has been removed`);
+        },
+        onError: (err: any) => {
+          toast.error(
+            err?.response?.data?.message || "Failed to remove member"
+          );
+        },
+      }
+    );
+  };
 
   const getRoleBadge = (role: MemberRole) => {
     switch (role) {
@@ -107,6 +126,67 @@ export function TeamMembersList({
             <User className="w-3 h-3 mr-1" /> Member
           </Badge>
         );
+    }
+  };
+
+  const getStatusBadge = (status: MemberStatus) => {
+    switch (status) {
+      case MemberStatus.ACCEPTED:
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200 gap-1"
+          >
+            <CheckCircle2 className="w-3 h-3" /> Active
+          </Badge>
+        );
+      case MemberStatus.PENDING:
+        return (
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200 gap-1"
+          >
+            <Clock className="w-3 h-3" /> Pending
+          </Badge>
+        );
+      case MemberStatus.DECLINED:
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200 gap-1"
+          >
+            <XCircle className="w-3 h-3" /> Declined
+          </Badge>
+        );
+      case MemberStatus.REMOVED:
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200 gap-1"
+          >
+            <XCircle className="w-3 h-3" /> Removed
+          </Badge>
+        );
+      case MemberStatus.BANNED:
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200 gap-1"
+          >
+            <XCircle className="w-3 h-3" /> Banned
+          </Badge>
+        );
+      case MemberStatus.LEAVED:
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200 gap-1"
+          >
+            <XCircle className="w-3 h-3" /> Left
+          </Badge>
+        );
+      default:
+        return null;
     }
   };
 
@@ -152,6 +232,7 @@ export function TeamMembersList({
               <TableHead className="w-[20%] hidden md:table-cell">
                 Joined Date
               </TableHead>
+              <TableHead className="w-[10%]">Status</TableHead>
               <TableHead className="w-[10%] text-right pr-6">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -234,7 +315,20 @@ export function TeamMembersList({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{getRoleBadge(member.role)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col items-start gap-1.5">
+                        {getRoleBadge(member.role)}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="hidden md:table-cell text-muted-foreground text-sm font-mono">
+                      {member.joinedAt
+                        ? format(new Date(member.joinedAt), "MMM d, yyyy")
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {member.status && getStatusBadge(member.status)}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground text-sm font-mono">
                       {member.joinedAt
                         ? format(new Date(member.joinedAt), "MMM d, yyyy")
@@ -262,7 +356,10 @@ export function TeamMembersList({
                             <Mail className="mr-2 h-4 w-4" /> Send Message
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                            onClick={() => handleRemove(member.id)}
+                          >
                             <ShieldAlert className="mr-2 h-4 w-4" /> Remove from
                             Team
                           </DropdownMenuItem>

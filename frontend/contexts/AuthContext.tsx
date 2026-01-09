@@ -9,12 +9,12 @@ import {
   useRef,
 } from "react";
 import authService from "@/services/authService";
-import { UserProfile, LoginCredentials, RegisterData } from "@/types/auth";
+import { UserProfile, LoginCredentials, RegisterData, LoginResponse } from "@/types/auth";
 
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<any>;
+  login: (credentials: LoginCredentials) => Promise<LoginResponse>;
   register: (data: RegisterData) => Promise<any>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -40,7 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    
     if (isChecked.current) return;
     isChecked.current = true;
     let isMounted = true;

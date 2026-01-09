@@ -24,4 +24,6 @@ export const TEAM_PATTERN = {
   KICK_MEMBER: 'team.kickMember',
   SEND_NOTIFICATION: 'team.sendNotification',
   VERIFY_PERMISSION: 'team.verifyPermission',
+  ACCEPT_INVITATION: 'team.acceptInvitation',
+  DECLINE_INVITATION: 'team.declineInvitation',
 };

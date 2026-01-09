@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import QueryProvider from "@/providers/QueryProvider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SocketProvider } from "@/contexts/SocketContext";
 
 const roboto = Roboto({
   subsets: ["latin", "vietnamese"],
@@ -29,17 +30,19 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <TooltipProvider delayDuration={0}>
-                {children}
-                <Toaster />
-              </TooltipProvider>
-            </ThemeProvider>
+            <SocketProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <TooltipProvider delayDuration={0}>
+                  {children}
+                  <Toaster />
+                </TooltipProvider>
+              </ThemeProvider>
+            </SocketProvider>
           </AuthProvider>
         </QueryProvider>
       </body>

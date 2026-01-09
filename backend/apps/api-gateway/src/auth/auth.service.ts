@@ -2,22 +2,18 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { Response, Request } from 'express';
 import {
-  ACCESS_TTL,
   AUTH_EXCHANGE,
   AUTH_PATTERN,
-  AUTH_QUEUE,
   ChangePasswordDto,
   ConfirmResetPasswordDto,
   CreateAuthDto,
+  Error,
   ForgotPasswordDto,
   GoogleAccountDto,
   JwtDto,
   LoginDto,
   LoginResponseDto,
   Provider,
-  REDIS_EXCHANGE,
-  REDIS_PATTERN,
-  REFRESH_TTL,
   RPC_TIMEOUT,
   User,
   USER_EXCHANGE,
@@ -141,7 +137,7 @@ export class AuthService {
       }))
 
       this.setCookies(token.accessToken, token.refreshToken, response);
-      return { message: "Login successfully" };
+      return { message: "Login successfully", isFirstLogin: token.isFirstLogin };
     } catch (error) {
       this.clearCookies(response);
       throw error;
@@ -159,19 +155,20 @@ export class AuthService {
   async refresh(request: Request, response: Response) {
     const refreshToken = request.cookies?.refreshToken as string | undefined;
     if (!refreshToken) throw new UnauthorizedException('Invalid refresh token');
-    try {
-      const token: LoginResponseDto = unwrapRpcResult(await this.amqp.request({
-        exchange: AUTH_EXCHANGE,
-        routingKey: AUTH_PATTERN.REFRESH,
-        payload: refreshToken,
-        timeout: RPC_TIMEOUT
-      }))
-      this.setCookies(token.accessToken, token.refreshToken, response);
-      return token;
-    } catch (error) {
+
+    const token: LoginResponseDto = await this.amqp.request({
+      exchange: AUTH_EXCHANGE,
+      routingKey: AUTH_PATTERN.REFRESH,
+      payload: refreshToken,
+      timeout: RPC_TIMEOUT
+    })
+
+    if (!token.accessToken || !token.refreshToken) {
       this.clearCookies(response);
-      throw error;
+      throw new UnauthorizedException('Invalid refresh token');
     }
+    this.setCookies(token.accessToken, token.refreshToken, response);
+    return { message: "Refresh token successfully" };
   }
 
   logout(request: Request, response: Response) {

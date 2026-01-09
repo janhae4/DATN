@@ -108,14 +108,14 @@ export default function TeamCard({ team, currentUserId, onDelete, onLeave }: Tea
                                 <TooltipTrigger asChild>
                                     <div 
                                         className={`px-2 py-0.5 rounded-md text-xs font-medium ${
-                                            members.find(m => m?.userId === currentUserId)?.role === 'OWNER'
+                                            members.find(m => m?.id === currentUserId)?.role === 'OWNER'
                                                 ? 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50'
-                                                : members.find(m => m?.userId === currentUserId)?.role === 'ADMIN'
+                                                : members.find(m => m?.id === currentUserId)?.role === 'ADMIN'
                                                 ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50'
                                                 : 'bg-gray-500/10 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-800/50'
                                         }`}
                                     >
-                                        {members.find(m => m?.userId === currentUserId)?.role || 'MEMBER'}
+                                        {members.find(m => m?.id === currentUserId)?.role || 'MEMBER'}
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent>

@@ -21,7 +21,6 @@ import { TaskModule } from '../task/task.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { VideoChatModule } from '../video-chat/video-chat.module';
 import { GmailModule } from '../gmail/gmail.module';
-import { AiDiscussionModule } from '../discussion-ai/ai-discussion.module';
 
 @Module({
   imports: [

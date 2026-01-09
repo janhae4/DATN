@@ -14,7 +14,6 @@ import { toast } from "sonner";
 export default function CreateTeamPage() {
   const [name, setName] = useState("");
   
-  // State quản lý danh sách email muốn mời
   const [members, setMembers] = useState<string[]>([]);
   const [memberInput, setMemberInput] = useState("");
 
@@ -22,14 +21,12 @@ export default function CreateTeamPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // Xử lý thêm thành viên vào danh sách tạm
   const handleAddMember = (e?: React.FormEvent) => {
-    e?.preventDefault(); // Chặn submit form cha
+    e?.preventDefault();
     const email = memberInput.trim();
     
     if (!email) return;
     
-    // Validate email cơ bản
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         toast.error("Invalid email address");
@@ -42,15 +39,13 @@ export default function CreateTeamPage() {
     }
 
     setMembers([...members, email]);
-    setMemberInput(""); // Reset ô input
+    setMemberInput("");
   };
 
-  // Xử lý xóa thành viên khỏi danh sách tạm
   const handleRemoveMember = (emailToRemove: string) => {
     setMembers(members.filter((email) => email !== emailToRemove));
   };
 
-  // Xử lý Enter ở ô input member (tránh submit form chính)
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -68,17 +63,14 @@ export default function CreateTeamPage() {
 
     setIsLoading(true);
     try {
-      // Lưu ý: Nếu Backend yêu cầu ID (UUID) thay vì Email trong `memberIds`, 
-      // bạn cần logic để tìm User ID từ Email trước hoặc Backend phải hỗ trợ invite qua email.
-      // Ở đây tôi gửi danh sách email, giả định Backend hoặc Service sẽ xử lý việc mời.
-      
       const newTeam = await teamService.createTeam({
         name: name,
         memberIds: [],
       });
 
       toast.success("Team created successfully!");
-      router.replace(`/${newTeam.id}`);
+      router.push(`/${newTeam.id}`);
+      console.log("Created team:", newTeam);
     } catch (error: any) {
       console.error(error);
       toast.error(error.response?.data?.message || "Failed to create team");
@@ -89,7 +81,7 @@ export default function CreateTeamPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50/50 p-4">
-      <Card className="w-full max-w-lg shadow-lg"> {/* Tăng max-w để rộng rãi hơn */}
+      <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="text-center space-y-1">
           <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-2">
             <Users className="w-8 h-8 text-primary" />

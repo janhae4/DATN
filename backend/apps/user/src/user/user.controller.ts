@@ -35,7 +35,7 @@ export class UserController {
   })
   handleLogin(@Payload() payload: Partial<User>) {
     this.userService.update(payload.id ?? '', {
-      lastLogin: new Date(),
+      // lastLogin: new Date(),
       isActive: true,
     });
   }
@@ -227,7 +227,7 @@ export class UserController {
     queue: USER_PATTERNS.REMOVE,
     errorHandler: customErrorHandler
   })
-  remove(@RabbitPayload('id') id: string) {
+  remove(id: string) {
     return this.userService.remove(id);
   }
 

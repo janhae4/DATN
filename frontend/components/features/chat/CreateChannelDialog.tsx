@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCreateDiscussion, useTeamMembers } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
+import { Member } from "@/types";
 
 const formSchema = z.object({
   name: z
@@ -50,7 +51,10 @@ interface CreateChannelDialogProps {
   children?: React.ReactNode;
 }
 
-export function CreateChannelDialog({ teamId, children }: CreateChannelDialogProps) {
+export function CreateChannelDialog({
+  teamId,
+  children,
+}: CreateChannelDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [openCombobox, setOpenCombobox] = React.useState(false);
   const [selectedMembers, setSelectedMembers] = React.useState<any[]>([]);
@@ -82,7 +86,7 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
         teamId,
         name: values.name,
         ownerId: userProfile.id,
-        memberIds: selectedMembers.map((m) => m.userId),
+        memberIds: selectedMembers.map((m) => m.id),
       });
 
       toast.success("Channel created successfully!");
@@ -96,7 +100,7 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
     }
   };
 
-  const toggleMember = (member: any) => {
+  const toggleMember = (member: Member) => {
     const isSelected = selectedMembers.some((m) => m.id === member.id);
     let newSelectedMembers;
 
@@ -109,7 +113,7 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
     setSelectedMembers(newSelectedMembers);
     setValue(
       "members",
-      newSelectedMembers.map((m) => m.userId)
+      newSelectedMembers.map((m) => m.id)
     );
   };
 
@@ -118,20 +122,22 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
     setSelectedMembers(newSelectedMembers);
     setValue(
       "members",
-      newSelectedMembers.map((m) => m.userId)
+      newSelectedMembers.map((m) => m.Id)
     );
   };
 
-  // FIX: Lọc bỏ user hiện tại VÀ những member bị thiếu thông tin user (undefined)
-  const availableMembers = teamMembers?.filter(
-    (m) => m.userId !== userProfile?.id && !!m.user
-  ) || [];
+  const availableMembers =
+    teamMembers?.filter((m) => m.id !== userProfile?.id && !!m.id) || [];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button variant="ghost" size="icon" className="h-4 w-4 p-0 hover:bg-transparent">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-4 w-4 p-0 hover:bg-transparent"
+          >
             <Plus className="h-3 w-3" />
           </Button>
         )}
@@ -183,7 +189,11 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start" side="right">
+                  <PopoverContent
+                    className="w-[300px] p-0"
+                    align="start"
+                    side="right"
+                  >
                     <Command shouldFilter={false}>
                       <CommandInput
                         placeholder="Search members..."
@@ -191,44 +201,47 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
                         onValueChange={setSearchValue}
                       />
                       <CommandList>
-                        {availableMembers.filter(
-                          (m) =>
-                            // Vì đã lọc availableMembers ở trên nên m.user chắc chắn tồn tại
-                            m.user.name
-                              .toLowerCase()
-                              .includes(searchValue.toLowerCase()) ||
-                            m.user.email
-                              .toLowerCase()
-                              .includes(searchValue.toLowerCase())
-                        ).map((member) => (
-                          <CommandItem
-                            key={member.id}
-                            value={member.user.name}
-                            onSelect={() => toggleMember(member)}
-                            className="cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2 w-full">
-                              <Checkbox
-                                checked={selectedMembers.some(
-                                  (m) => m.id === member.id
-                                )}
-                                className="mr-2 pointer-events-none"
-                              />
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={member.user.avatar || undefined} />
-                                <AvatarFallback>
-                                  {member.user.name.substring(0, 2)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex flex-col">
-                                <span>{member.user.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {member.user.email}
-                                </span>
+                        {availableMembers
+                          .filter(
+                            (m) =>
+                              m.name
+                                .toLowerCase()
+                                .includes(searchValue.toLowerCase()) ||
+                              m.email
+                                .toLowerCase()
+                                .includes(searchValue.toLowerCase())
+                          )
+                          .map((member) => (
+                            <CommandItem
+                              key={member.id}
+                              value={member.name}
+                              onSelect={() => toggleMember(member)}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <Checkbox
+                                  checked={selectedMembers.some(
+                                    (m) => m.id === member.id
+                                  )}
+                                  className="mr-2 pointer-events-none"
+                                />
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage
+                                    src={member.avatar || undefined}
+                                  />
+                                  <AvatarFallback>
+                                    {member.name.substring(0, 2)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span>{member.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {member.email}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                          </CommandItem>
-                        ))}
+                            </CommandItem>
+                          ))}
 
                         {availableMembers.length === 0 && (
                           <CommandEmpty>No members found.</CommandEmpty>
@@ -247,13 +260,13 @@ export function CreateChannelDialog({ teamId, children }: CreateChannelDialogPro
                         className="pl-1 pr-1 py-1 flex items-center gap-1"
                       >
                         <Avatar className="h-5 w-5">
-                          <AvatarImage src={member.user.avatar || undefined} />
+                          <AvatarImage src={member.avatar || undefined} />
                           <AvatarFallback className="text-[10px]">
-                            {member.user.name.substring(0, 2).toUpperCase()}
+                            {member.name.substring(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-xs font-normal">
-                          {member.user.name}
+                          {member.name}
                         </span>
                         <button
                           type="button"

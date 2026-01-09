@@ -168,7 +168,6 @@ async getGoogleTokens(@RabbitPayload() userId: string) {
     errorHandler: customErrorHandler
   })
   async getRefreshToken(token: string) {
-    console.log(token);
     return await this.authService.refresh(token);
   }
 

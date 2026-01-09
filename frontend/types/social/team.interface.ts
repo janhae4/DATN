@@ -5,24 +5,34 @@ import { TeamStatus, MemberRole } from "../common/enums";
 export interface Team {
   description: string;
   members: any;
-  id: string; 
+  id: string;
   name: string;
   avatar?: string;
-  ownerId: string; 
+  ownerId: string;
   status: TeamStatus;
-  createdAt: string; 
-  updatedAt: string; 
+  createdAt: string;
+  updatedAt: string;
+}
+
+export enum MemberStatus {
+  ACCEPTED = 'ACCEPTED',
+  DECLINED = 'DECLINED',
+  PENDING = 'PENDING',
+  BANNED = 'BANNED',
+  UNBANNED = 'UNBANNED',
+  LEAVED = 'LEAVED',
+  REMOVED = 'REMOVED'
 }
 
 export interface TeamMember {
-  id: string; 
+  id: string;
   teamId: string;
-  userId: string; 
+  userId: string;
   role: MemberRole;
   isActive: boolean;
-  joinedAt: string; 
+  joinedAt: string;
   cachedUser: User;
-}   
+}
 
 export interface Member {
   id: string;
@@ -35,4 +45,5 @@ export interface Member {
   joinedAt: string;
   teamId: string;
   isActive: boolean;
+  status: MemberStatus;
 }
