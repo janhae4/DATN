@@ -16,6 +16,7 @@ import { Roles } from '../common/role/role.decorator';
 
 @Controller('notifications')
 @UseGuards(RoleGuard)
+@Roles(Role.USER, Role.ADMIN)
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
@@ -24,9 +25,9 @@ export class NotificationController {
    * GET /notifications
    */
   @Get()
-  @Roles(Role.USER, Role.ADMIN)
-  findAll(@CurrentUser('id') userId: string) {
-    return this.notificationService.getNotifications(userId);
+  async findAll(@CurrentUser('id') userId: string) {
+    const notifications = await this.notificationService.getNotifications(userId)
+    return notifications;
   }
 
   /**

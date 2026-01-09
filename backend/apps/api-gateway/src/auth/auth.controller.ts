@@ -24,7 +24,6 @@ import {
   CreateAuthDto,
   ForgotPasswordDto,
   GoogleAccountDto,
-  JwtDto,
   LoginDto,
   Role,
   VerifyAccountDto,

@@ -7,9 +7,10 @@ export interface Notification {
     title: string;
     isRead: boolean;
     link: string | null;
-    type: 'SUCCESS' | 'FAILED' | 'INFO' | 'WARNING';
+    type: 'SUCCESS' | 'FAILED' | 'INFO' | 'WARNING' | 'PENDING';
     createdAt: string;
     readAt: string | null;
+    metadata: Record<string, any> | null;
 }
 
 export const notificationService = {

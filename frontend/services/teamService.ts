@@ -15,41 +15,31 @@ export interface CreateTeamDto {
 export interface UpdateTeamDto extends Partial<CreateTeamDto> { }
 
 export interface AddMemberDto {
-  requesterId: string; // ID của người đang thực hiện hành động (Admin/Owner)
   teamId: string;
   memberIds: string[]; // Backend nhận mảng ID, không phải email
 }
 
 export interface RemoveMemberDto {
-  requesterId: string;
   teamId: string;
   memberIds: string[];
 }
 
 export interface LeaveMemberDto {
-  requesterId: string;
   teamId: string;
 }
 
 export interface TransferOwnershipDto {
   teamId: string;
   newOwnerId: string;
-  requesterId: string;
 }
 
 export interface ChangeRoleMemberDto {
-  requesterId: string;
   teamId: string;
   targetId: string;
   newRole: MemberRole;
 }
 
-// --- Service Implementation ---
-
 export const teamService = {
-
-
-  // Get teams for the current user
   getTeams: async (): Promise<(Team & { role: string })[]> => {
     const response = await apiClient.get<Team[]>('/teams/me');
     return response.data as (Team & { role: string })[];
@@ -93,7 +83,7 @@ export const teamService = {
   // Remove member from team
   removeMember: async (payload: RemoveMemberDto): Promise<void> => {
     // Dùng HTTP DELETE với body (axios hỗ trợ qua config 'data')
-    await apiClient.delete(`/teams/${payload.teamId}/member`, { data: payload });
+    await apiClient.delete(`/teams/${payload.teamId}/member`, { data: { memberIds: payload.memberIds } });
   },
 
   // Leave team

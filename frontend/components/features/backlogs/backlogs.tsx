@@ -1,4 +1,3 @@
-// components/features/backlogs/backlogs.tsx
 "use client";
 
 import * as React from "react";
@@ -16,21 +15,15 @@ import {
   MeasuringStrategy,
 } from "@dnd-kit/core";
 
-// Components
 import { Accordion } from "@/components/ui/accordion";
 import { TaskDetailModal } from "./taskmodal";
 import { BacklogAccordionItem } from "./BacklogAccordionItem";
 import { BacklogFilterBar, TaskFilters } from "./BacklogFilterBar";
 import { SprintList } from "./sprint/sprintLists";
 import { TaskDragOverlay } from "./task/TaskDragOverlay";
-
-// Types
-import { Task, Epic, Sprint } from "@/types";
-
-// Hooks (Replaced Context)
+import { Task, Epic, Sprint, SprintStatus } from "@/types";
 import { useTasks } from "@/hooks/useTasks";
 import { useSprints } from "@/hooks/useSprints";
-import { useEpics } from "@/hooks/useEpics";
 import { useLists } from "@/hooks/useList";
 import { calculateNewPositionForTask } from "@/lib/position-utils";
 import { Button } from "@/components/ui/button";
@@ -38,13 +31,13 @@ import { Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
 import { GetTasksParams } from "@/services/taskService";
-import { PaginationControl } from "@/components/shared/PaginationControl";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 export default function Backlogs() {
   // 1. Get Project ID from URL
   const params = useParams();
   const projectId = params.projectId as string;
+  const teamId = params.teamId as string;
 
   const [filters, setFilters] = React.useState<TaskFilters>({
     searchText: "",
@@ -60,7 +53,11 @@ export default function Backlogs() {
   const [backLogPage, setBackLogPage] = React.useState(1);
   const [sprintPage, setSprintPage] = React.useState(1);
 
-  const { sprints } = useSprints(projectId);
+  const { sprints } = useSprints(projectId, teamId, [
+    SprintStatus.PLANNED,
+    SprintStatus.ACTIVE,
+    SprintStatus.ARCHIVED,
+  ]);
   const { lists } = useLists(projectId);
 
   console.log("Sprints loaded in Backlogs:", sprints.length);
@@ -342,8 +339,8 @@ export default function Backlogs() {
       sensors={sensors}
       measuring={{
         droppable: {
-          strategy: MeasuringStrategy.Always
-        }
+          strategy: MeasuringStrategy.Always,
+        },
       }}
       onDragEnd={handleDragEnd}
       onDragStart={handleDragStart}

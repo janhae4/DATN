@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useMemo } from "react";
 import { useParams } from "next/navigation";
 import StatsCard from "./statsCard";
 import {
@@ -11,14 +10,8 @@ import {
 } from "lucide-react";
 import { TaskCompletionPieChart } from "../../charts/TaskCompletionPieChart";
 import { TaskActivityLineChart } from "../../charts/TaskActivityLineChart";
-// import { AISummaryBox } from "./AISummaryBox";
 import { EmailBox } from "./EmailBox";
 import { EpicList } from "@/components/shared/epic/EpicList";
-
-// Hooks & Types
-import { useTasks } from "@/hooks/useTasks";
-import { useLists } from "@/hooks/useList";
-import { ListCategoryEnum } from "@/types/common/enums";
 import { SummarySkeleton } from "@/components/skeletons/SummarySkeleton";
 import { useProjectStats } from "@/hooks/useProjectStat";
 
@@ -43,7 +36,6 @@ const Summary = () => {
           title="Completed"
           period="All time"
           unit="tasks"
-        // Hiện tại chưa có API lịch sử để tính % change, để trống hoặc mock
         />
         <StatsCard
           icon={<ClockIcon className="text-blue-600" />}
@@ -58,7 +50,6 @@ const Summary = () => {
           title="Overdue Tasks"
           period="Action required"
           unit="tasks"
-          // Ví dụ: Nếu có overdue thì hiện số âm (màu đỏ) để cảnh báo
           change={stats.overdue > 0 ? -stats.overdue : undefined}
         />
         <StatsCard

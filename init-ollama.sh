@@ -1,13 +1,14 @@
+#!/bin/sh
 set -e
 echo "Dang khoi dong Ollama server..."
 ollama serve &
 pid=$!
 sleep 5
-if ! ollama list | grep -q "gemma3:4b"; then
-  echo "Model 'gemma3:4b' chua ton tai. Dang tai ve..."
-  ollama pull gemma3:4b
+if ! ollama list | grep -q "gemma2:2b"; then
+  echo "Model 'gemma2:2b' chua ton tai. Dang tai ve..."
+  ollama pull gemma2:2b
 else
-  echo "Model 'gemma3:4b' da ton tai."
+  echo "Model 'gemma2:2b' da ton tai."
 fi
 if ! ollama list | grep -q "nomic-embed-text"; then
   echo "Model 'nomic-embed-text' chua ton tai. Dang tai ve..."

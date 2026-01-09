@@ -52,34 +52,37 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
     setError(null);
 
     try {
-      await login({ username, password });
+      const response = await login({ username, password });
+      console.log(response);
+      if (response.isFirstLogin) {
+        console.log("First login");
+        router.push("/auth/onboarding");
+      } else {
+        try {
+          const teams = await teamService.getTeams();
+          const projects = await projectService.getProjects(teams[0].id);
 
-      try {
-        const teams = await teamService.getTeams();
-        const projects = await projectService.getProjects(teams[0].id);
-
-        if (teams && teams.length > 0) {
-          console.log("teams", teams);
-          router.push(`/${teams[0].id}/${projects[0].id}/dashboard`);
-        } else {
-          router.push("/team-create");
+          if (teams && teams.length > 0) {
+            console.log("teams", teams);
+            router.push(`/${teams[0].id}/${projects[0].id}/dashboard`);
+          } else {
+            router.push("/team-create");
+          }
+        } catch (teamError) {
+          router.push("/dashboard");
         }
-      } catch (teamError) {
-        router.push("/dashboard");
       }
     } catch (error: any) {
       setIsLoading(false);
       if (axios.isAxiosError(error) && error.response) {
-        console.log(error.response.data.message)
+        console.log(error.response.data.message);
         const serverMessage =
           error.response.data?.message || error.response.data?.error;
-          console.log(error)
+        console.log(error);
         if (serverMessage === "Unauthorized" || error.response.status === 401) {
           setError("Invalid username or password.");
         } else {
-          setError(
-            serverMessage || "Login failed."
-          );
+          setError(serverMessage || "Login failed.");
         }
       } else {
         setError(error.message || "An error occurred.");

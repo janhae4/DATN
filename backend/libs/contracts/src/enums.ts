@@ -46,7 +46,10 @@ export enum NotificationType {
   FAILED = 'FAILED',
   INFO = 'INFO',
   WARNING = 'WARNING',
+  PENDING = 'PENDING',
 }
+
+
 
 export enum CallType {
   TEAM_CALL = 'TEAM_CALL',
@@ -63,6 +66,7 @@ export enum TeamAction {
   TASK_CREATED = 'TASK_CREATED',
   TASK_MOVED = 'TASK_MOVED',
   TASK_COMPLETED = 'TASK_COMPLETED',
+  MEMBER_INVITED = 'MEMBER_INVITED'
 }
 
 // --- Enums cho hệ thống Hybrid (Jira) ---

@@ -5,4 +5,5 @@ export class NotificationEventDto {
   message: string;
   type: NotificationType;
   userId: string;
+  metadata  ?: Record<string, any>;
 }

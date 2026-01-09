@@ -14,8 +14,9 @@ function DefaultTeamPage() {
   const { projects, isLoading } = useProjects(teamId);
 
   useEffect(() => {
+    console.log("TEAM ID", teamId);
     if (!isLoading && projects.length > 0) {
-      router.replace(`/${teamId}/${projects[0].id}/dashboard`);
+      router.push(`/${teamId}/${projects[0].id}/dashboard`);
     }
   }, [isLoading, projects, teamId, router]);
 

@@ -9,12 +9,14 @@ import {
   TEAM_PATTERN,
   TransferOwnership,
 } from '@app/contracts';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { unwrapRpcResult } from '../common/helper/rpc';
+import { not } from 'joi';
 
 @Injectable()
 export class TeamService {
+  private logger = new Logger(TeamService.name);
   constructor(private readonly amqpConnection: AmqpConnection) { }
 
   async findAll() {
@@ -41,11 +43,12 @@ export class TeamService {
     }));
   }
 
-  async findParticipants(teamId: string) {
+  async findParticipants(userId: string, teamId: string) {
+    this.logger.log('Finding participants for team:', teamId, 'by user:', userId);
     return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
-      payload: teamId ,
+      payload: { userId, teamId },
     }));
   }
 
@@ -66,7 +69,24 @@ export class TeamService {
     }));
   }
 
+  async acceptInvitation(userId: string, teamId: string, notificationId: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.ACCEPT_INVITATION,
+      payload: { userId, teamId, notificationId },
+    }))
+  }
+
+  async declineInvitation(userId: string, teamId: string, notificationId: string) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.DECLINE_INVITATION,
+      payload: { userId, teamId, notificationId },
+    }))
+  }
+
   async removeMember(payload: RemoveMember) {
+    console.log("RemoveMember payload:", payload);
     return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.REMOVE_MEMBER,

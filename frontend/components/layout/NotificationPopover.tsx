@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { BellIcon, CheckIcon, TrashIcon } from "lucide-react";
+// Thêm icon X cho nút Decline
+import { BellIcon, CheckIcon, TrashIcon, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -16,10 +17,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useNotifications } from "@/hooks/useNotifications"; // Hook của bạn
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { useTeams } from "@/hooks/useTeam";
+
+// Import hoặc define Type nếu cần thiết để TS không báo lỗi
+// import { NotificationType } from "@/types";
 
 export function NotificationPopover() {
   const {
@@ -27,8 +33,11 @@ export function NotificationPopover() {
     unreadCount,
     markAllAsRead,
     markAsRead,
-    deleteNotification
+    deleteNotification,
+    refetch,
   } = useNotifications();
+
+  const { acceptInvite, declineInvite } = useTeams();
 
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 5;
@@ -47,6 +56,44 @@ export function NotificationPopover() {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
+  const handleAction = async (
+    notification: any,
+    actionType: "ACCEPT" | "DECLINE"
+  ) => {
+    const { metadata, id } = notification;
+    console.log("Metadata:", metadata);
+    if (!metadata || !metadata.action) {
+      toast.error("Invalid notification data");
+      return;
+    }
+
+    try {
+      switch (metadata.action) {
+        case "MEMBER_INVITED":
+          if (actionType === "ACCEPT") {
+            await acceptInvite({
+              teamId: metadata.teamId,
+              notificationId: id,
+            });
+            await toast.success("Joined team successfully");
+          } else {
+            await declineInvite({
+              teamId: metadata.teamId,
+              notificationId: id,
+            });
+            toast.info("Declined invitation");
+          }
+          break;
+        default:
+          console.warn("Unknown action:", metadata.action);
+          return;
+      }
+      refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Action failed");
+    }
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -57,7 +104,7 @@ export function NotificationPopover() {
               variant="destructive"
               className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px]"
             >
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
           )}
         </Button>
@@ -85,15 +132,22 @@ export function NotificationPopover() {
           <Separator />
 
           <ScrollArea className="h-[300px]">
-            <div className="grid gap-1 p-1">
+            <div className="grid gap-2 p-1">
               {currentNotifications.length > 0 ? (
                 currentNotifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`flex flex-col gap-1 p-3 rounded-lg transition-colors hover:bg-muted/50 ${!notification.isRead ? 'bg-muted/20 border-l-2 border-primary' : ''}`}
+                    className={`flex flex-col gap-1 p-3 rounded-xl transition-colors hover:bg-muted/50 ${
+                      !notification.isRead ? "bg-muted/100" : ""
+                    }`}
                   >
+                    {/* Header: Title + Actions (Read/Delete) */}
                     <div className="flex items-start justify-between gap-2">
-                      <h5 className={`text-sm leading-none ${!notification.isRead ? 'font-semibold' : 'font-medium'}`}>
+                      <h5
+                        className={`text-sm leading-none ${
+                          !notification.isRead ? "font-semibold" : "font-medium"
+                        }`}
+                      >
                         {notification.title}
                       </h5>
                       <div className="flex items-center gap-1">
@@ -121,11 +175,41 @@ export function NotificationPopover() {
                       </div>
                     </div>
 
+                    {/* Content */}
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {notification.message}
                     </p>
+
+                    {notification.type === "PENDING" && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          className="h-7 px-3 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAction(notification, "ACCEPT");
+                          }}
+                        >
+                          <CheckIcon className="mr-1 h-3 w-3" /> Accept
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-3 text-xs hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAction(notification, "DECLINE");
+                          }}
+                        >
+                          <X className="mr-1 h-3 w-3" /> Decline
+                        </Button>
+                      </div>
+                    )}
+
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(notification.createdAt), {
+                        addSuffix: true,
+                      })}
                     </p>
                   </div>
                 ))
@@ -140,6 +224,7 @@ export function NotificationPopover() {
 
           <Separator />
 
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="p-2 border-t bg-muted/30">
               <Pagination className="justify-center">
@@ -152,7 +237,11 @@ export function NotificationPopover() {
                         e.preventDefault();
                         handlePreviousPage();
                       }}
-                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
                     />
                   </PaginationItem>
                   <PaginationItem>
@@ -168,7 +257,11 @@ export function NotificationPopover() {
                         e.preventDefault();
                         handleNextPage();
                       }}
-                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
                     />
                   </PaginationItem>
                 </PaginationContent>
