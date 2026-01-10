@@ -907,7 +907,12 @@ export class TeamService {
   }
 
   async verifyPermission(userId: string, teamId: string, roles: MemberRole[]) {
-    const team = await this.findById(teamId, userId);
+    console.log("UserId", userId, "TeamId", teamId, "Roles", roles);
+    const team = await this.teamRepo.findOne({
+      where: { id: teamId, members: { userId } },
+      relations: ['members'],
+    })
+    console.log(team)
     if (!team) {
       throw new NotFoundException(`You are not a member of this team.`);
     }
