@@ -38,6 +38,7 @@ export class SprintsService {
       endDate: createSprintDto.end_date
         ? new Date(createSprintDto.end_date)
         : undefined,
+      teamId: createSprintDto.teamId,
     };
     const sprint = this.sprintRepository.create(sprintData);
     return this.sprintRepository.save(sprint);
@@ -143,7 +144,8 @@ export class SprintsService {
     )
 
     const query = this.sprintRepository.createQueryBuilder('sprint')
-      .where('sprint.projectId = :projectId', { projectId });
+      .where('sprint.projectId = :projectId', { projectId })
+      .andWhere('sprint.teamId = :teamId', { teamId });
 
     if (status && status.length > 0) {
       const statusArray = Array.isArray(status) ? status : [status];
@@ -153,6 +155,10 @@ export class SprintsService {
     const sprints = await query
       .orderBy('sprint.startDate', 'DESC')
       .getMany();
+
+    if (sprints.length === 0) {
+      throw new NotFoundException(`No sprints found for project ID ${projectId}`);
+    }
 
     return sprints;
   }

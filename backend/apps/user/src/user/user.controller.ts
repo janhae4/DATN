@@ -35,7 +35,7 @@ export class UserController {
   })
   handleLogin(@Payload() payload: Partial<User>) {
     this.userService.update(payload.id ?? '', {
-      // lastLogin: new Date(),
+      lastLogin: new Date(),
       isActive: true,
     });
   }
@@ -184,6 +184,7 @@ export class UserController {
     errorHandler: customErrorHandler
   })
   async findManyByIds(payload: { userIds: string[], forDiscussion?: boolean }) {
+    console.log(payload);
     return await this.userService.findManyByIds(payload.userIds, payload.forDiscussion);
   }
 

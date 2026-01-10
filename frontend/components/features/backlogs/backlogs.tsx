@@ -32,6 +32,8 @@ import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
 import { GetTasksParams } from "@/services/taskService";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import AccessDeniedState from "../team/AccessDenied";
+import { AxiosError } from "axios";
 
 export default function Backlogs() {
   // 1. Get Project ID from URL
@@ -53,12 +55,12 @@ export default function Backlogs() {
   const [backLogPage, setBackLogPage] = React.useState(1);
   const [sprintPage, setSprintPage] = React.useState(1);
 
-  const { sprints } = useSprints(projectId, teamId, [
+  const { sprints, error: sprintError } = useSprints(projectId, teamId, [
     SprintStatus.PLANNED,
     SprintStatus.ACTIVE,
     SprintStatus.ARCHIVED,
   ]);
-  const { lists } = useLists(projectId);
+  const { lists, error: listError } = useLists(projectId);
 
   console.log("Sprints loaded in Backlogs:", sprints.length);
 
@@ -75,6 +77,7 @@ export default function Backlogs() {
       epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
       sprintId: sprints.length > 0 ? sprints.map((s) => s.id) : undefined,
+      teamId,
       limit: 50,
       page: sprintPage,
     };
@@ -97,7 +100,6 @@ export default function Backlogs() {
     };
   }, [projectId, debouncedSearch, filters, backLogPage]);
 
-  // const { epics } = useEpics(projectId);
   const {
     tasks: backlogTasks,
     updateTask,
@@ -111,12 +113,8 @@ export default function Backlogs() {
     total: backlogTotal,
   } = useTasks(backlogQueryFilters);
 
-  console.log("🏷️ Backlogs Rendered with filters:", backlogTasks.length);
-
   const { tasks: sprintTasks, isLoading: isLoadingSprint } =
     useTasks(sprintQueryFilters);
-
-  console.log("🏷️ Sprints Rendered with filters:", sprintTasks.length);
 
   const allVisibleTasks = React.useMemo(() => {
     return [...sprintTasks, ...backlogTasks];
@@ -134,10 +132,6 @@ export default function Backlogs() {
     "sprints",
     "epics",
   ]);
-  const [isSelectingMode, setIsSelectingMode] = React.useState<boolean | null>(
-    null
-  );
-  const backlogTaskCount = tasksInBacklog.length;
 
   const handleUpdateCell = (
     taskId: string,

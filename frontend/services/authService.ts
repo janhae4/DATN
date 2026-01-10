@@ -17,9 +17,10 @@ import {
 export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
   try {
     const response = await apiClient.post<LoginResponse>('/auth/session', credentials);
+    console.log(response.data);
     return response.data;
   } catch (error) {
-    console.error('Login failed', error);
+    console.log('Login failed', error);
     throw error;
   }
 };

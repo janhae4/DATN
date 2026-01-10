@@ -69,16 +69,16 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
             router.push("/team-create");
           }
         } catch (teamError) {
+          console.error("Failed to fetch teams after login:", teamError);
           router.push("/dashboard");
         }
       }
     } catch (error: any) {
+      console.log(error);
       setIsLoading(false);
       if (axios.isAxiosError(error) && error.response) {
-        console.log(error.response.data.message);
         const serverMessage =
           error.response.data?.message || error.response.data?.error;
-        console.log(error);
         if (serverMessage === "Unauthorized" || error.response.status === 401) {
           setError("Invalid username or password.");
         } else {

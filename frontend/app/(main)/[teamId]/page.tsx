@@ -1,31 +1,42 @@
 "use client";
 
-import { EmptyProjectState } from '@/components/features/project/EmptyProjectState';
-import { useProjects } from '@/hooks/useProjects';
-import { Loader2 } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect } from 'react';
+import { useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useProjects } from "@/hooks/useProjects";
+import { EmptyProjectState } from "@/components/features/project/EmptyProjectState";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function DefaultTeamPage() {
-  const params = useParams();
   const router = useRouter();
+  const params = useParams();
   const teamId = params.teamId as string;
-  
+
   const { projects, isLoading } = useProjects(teamId);
 
   useEffect(() => {
-    console.log("TEAM ID", teamId);
-    if (!isLoading && projects.length > 0) {
-      router.push(`/${teamId}/${projects[0].id}/dashboard`);
+    if (!isLoading && projects && projects.length > 0) {
+      const firstProjectId = projects[0].id;
+      router.replace(`/${teamId}/${firstProjectId}/dashboard`);
     }
   }, [isLoading, projects, teamId, router]);
 
-  if (projects.length > 0) {
-    return null; 
+  if (isLoading) {
+    return (
+      <div className="p-8 space-y-4">
+        <Skeleton className="h-8 w-1/3" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div><EmptyProjectState /></div>
+    <div className="flex flex-col h-[calc(100vh-4rem)] items-center justify-center">
+      <EmptyProjectState />
+    </div>
   );
 }
 

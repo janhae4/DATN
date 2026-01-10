@@ -21,18 +21,6 @@ import { MinioService } from './minio.service';
             options: {
               durable: true,
             },
-          },
-          {
-            name: TEAM_EXCHANGE,
-            type: 'direct',
-          },
-          {
-            name: SEARCH_EXCHANGE,
-            type: 'direct',
-          },
-          {
-            name: EVENTS_EXCHANGE,
-            type: 'topic',
           }
         ],
         uri: config.getRMQUrl(),

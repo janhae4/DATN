@@ -27,14 +27,6 @@ import { NotificationGateway } from './notification.gateway';
           {
             name: NOTIFICATION_EXCHANGE,
             type: 'direct',
-          },
-          {
-            name: EVENTS_EXCHANGE,
-            type: 'topic',
-          },
-          {
-            name: GMAIL_EXCHANGE,
-            type: 'topic',
           }
         ],
         uri: cfg.getRMQUrl(),

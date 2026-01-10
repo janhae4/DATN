@@ -3,7 +3,7 @@ import { LabelsController } from './labels.controller';
 import { LabelsService } from './labels.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Label } from '@app/contracts/label/entity/label.entity';
-import { ClientConfigModule, ClientConfigService } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, LABEL_EXCHANGE } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
@@ -15,12 +15,8 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       useFactory: (configService: ClientConfigService) => ({
         exchanges: [
           {
-            name: 'label_exchange',
-            type: 'topic',
-          },
-          {
-            name: 'events_exchange',
-            type: 'topic',
+            name: LABEL_EXCHANGE,
+            type: 'direct',
           },
         ],
         uri: configService.getRMQUrl(),

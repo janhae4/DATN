@@ -36,14 +36,6 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
           {
             name: TEAM_EXCHANGE,
             type: 'direct',
-          },
-          {
-            name: EVENTS_EXCHANGE,
-            type: 'topic',
-          },
-          {
-            name: REDIS_EXCHANGE,
-            type: 'direct',
           }
         ],
         uri: configService.getRMQUrl(),

@@ -425,7 +425,7 @@ export class AuthService {
       `Handling Google login for existing user ${account.user.id} (Email: ${data.email}).`,
     );
     const { accessToken, refreshToken } = data;
-    console.log("data from handleLoginGoogle: ",)
+    console.log("data from handleLoginGoogle: ", data)
 
     this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
       userId: account.user.id,
@@ -433,7 +433,6 @@ export class AuthService {
       refreshToken,
     });
 
-    await this._generateTokensAndSession(account.user);
     return await this._generateTokensAndSession(account.user);
   }
 

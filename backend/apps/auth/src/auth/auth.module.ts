@@ -25,26 +25,6 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
           {
             name: AUTH_EXCHANGE,
             type: 'direct'
-          },
-          {
-            name: EVENTS_EXCHANGE,
-            type: 'topic',
-          },
-          {
-            name: USER_EXCHANGE,
-            type: 'direct',
-          },
-          {
-            name: REDIS_EXCHANGE,
-            type: 'direct',
-          },
-          {
-            name: GMAIL_EXCHANGE,
-            type: 'topic',
-          },
-          {
-            name: NOTIFICATION_EXCHANGE,
-            type: 'direct',
           }
         ],
         uri: cfg.getRMQUrl(),

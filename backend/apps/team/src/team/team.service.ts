@@ -679,7 +679,6 @@ export class TeamService {
   }
 
   async getTeamMembers(requesterId: string, teamId: string) {
-    console.log(`Getting team members for team [${teamId}] requested by [${requesterId}].`);
     const requester = await this.memberRepo.findOne({
       where: { userId: requesterId, teamId }
     });
@@ -702,8 +701,6 @@ export class TeamService {
       whereCondition.status = MemberStatus.ACCEPTED;
     }
 
-    console.log(whereCondition)
-
     const members = await this.memberRepo.find({
       where: whereCondition,
       order: {
@@ -711,11 +708,9 @@ export class TeamService {
         joinedAt: 'ASC'
       }
     });
-
-    console.log(members.length)
-
+    console.log("Members length", members.length);
     const userIds = members.map(m => m.userId);
-    console.log("UserIds length", userIds.length);
+    console.log("UserIds", userIds.length);
     const users: User[] = unwrapRpcResult(await this.amqp.request({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
@@ -732,9 +727,6 @@ export class TeamService {
         avatar: u.avatar,
       } as TeamMember | Partial<User>
     });
-
-    console.log("Result length", result.length);
-
     return result;
   }
 
@@ -870,10 +862,12 @@ export class TeamService {
   }
 
   async findByUserId(userId: string) {
-    return await this.teamRepo.createQueryBuilder("team")
-      .innerJoin("team.members", "member")
-      .where("member.userId = :userId", { userId })
-      .getMany();
+    console.log('Finding teams for user in service:', userId);
+    return await this.teamRepo.find({
+      where: {
+        members: { userId, status: MemberStatus.ACCEPTED },
+      }
+    });
   }
 
   async findRoomsByUserId(userId: string) {
@@ -909,12 +903,12 @@ export class TeamService {
   async verifyPermission(userId: string, teamId: string, roles: MemberRole[]) {
     console.log("UserId", userId, "TeamId", teamId, "Roles", roles);
     const team = await this.teamRepo.findOne({
-      where: { id: teamId, members: { userId } },
+      where: { id: teamId, members: { userId, status: MemberStatus.ACCEPTED } },
       relations: ['members'],
     })
     console.log(team)
     if (!team) {
-      throw new NotFoundException(`You are not a member of this team.`);
+      throw new ForbiddenException(`You are not a member of this team.`);
     }
     const requester = team.members.find((m) => m.userId === userId);
     console.log('Role', requester?.role)

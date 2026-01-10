@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, In, SelectQueryBuilder, Not } from 'typeorm';
-import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS, GetTasksByProjectDto, BaseTaskFilterDto, GetTasksByTeamDto, CHATBOT_PATTERN } from '@app/contracts';
+import { Repository, IsNull, In, SelectQueryBuilder, Not, Brackets } from 'typeorm';
+import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS, GetTasksByProjectDto, BaseTaskFilterDto, GetTasksByTeamDto, CHATBOT_PATTERN, MemberDto } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
 import { RabbitSubscribe, Nack, AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { AUTH_EXCHANGE, CHATBOT_EXCHANGE, EVENTS_EXCHANGE, LABEL_EXCHANGE, LIST_CLIENT, LIST_EXCHANGE, PROJECT_CLIENT, RPC_TIMEOUT, TASK_EXCHANGE, TEAM_EXCHANGE, USER_EXCHANGE } from '@app/contracts/constants';
@@ -267,7 +267,7 @@ export class TasksService {
 
     const query = this.taskRepository.createQueryBuilder('task');
     query.where('task.projectId = :projectId', { projectId: filters.projectId });
-    return this._getTasksCommon(query, filters, filters.projectId, undefined);
+    return this._getTasksCommon(query, filters, userId, filters.projectId, undefined);
   }
 
   async findAllByTeam(userId: string, filters: GetTasksByTeamDto) {
@@ -276,7 +276,7 @@ export class TasksService {
     const query = this.taskRepository.createQueryBuilder('task');
     query.where('task.teamId = :teamId', { teamId: filters.teamId });
 
-    return this._getTasksCommon(query, filters, undefined, filters.teamId);
+    return this._getTasksCommon(query, filters, userId, undefined, filters.teamId);
   }
 
   private async verifyPermission(userId: string, teamId: string) {
@@ -289,7 +289,7 @@ export class TasksService {
     )
   }
 
-  private async _getTasksCommon(query: SelectQueryBuilder<Task>, filters: BaseTaskFilterDto, projectId?: string, teamId?: string) {
+  private async _getTasksCommon(query: SelectQueryBuilder<Task>, filters: BaseTaskFilterDto, userId: string, projectId?: string, teamId?: string) {
     const {
       search,
       assigneeIds,
@@ -308,85 +308,95 @@ export class TasksService {
 
     query.leftJoinAndSelect('task.taskLabels', 'taskLabels');
 
+    let member: MemberDto | null = null;
+    if (teamId) {
+      member = unwrapRpcResult(
+        await this.amqpConnection.request({
+          exchange: TEAM_EXCHANGE,
+          routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
+          payload: { teamId, userId },
+        })
+      )
+      if (!member) throw new NotFoundException('Member not found');
+    }
+
+    console.log("UserId", userId, "TeamId", teamId, "Roles", member?.role);
+
+    if (userId && member && member.role) {
+      const isBacklogQuery = sprintId === null;
+      const isSprintQuery = Array.isArray(sprintId) && sprintId.length > 0;
+      if (isBacklogQuery) query.andWhere('task.reporterId = :userId', { userId });
+      else if (isSprintQuery) {
+        if (member.role === MemberRole.MEMBER)
+          query.andWhere('task.assigneeIds @> ARRAY[:userId]::uuid[]', { userId });
+      }
+      else {
+        if (member.role === MemberRole.MEMBER) {
+          query.andWhere(
+            new Brackets(qb => {
+              qb.where('(task.sprintId IS NULL AND task.reporterId = :userId)', { userId })
+                .orWhere('(task.sprintId IS NOT NULL AND task.assigneeIds @> ARRAY[:userId]::uuid[])', { userId });
+            })
+          );
+        }
+      }
+    }
+
+    let finalAllowedListIds: string[] = [];
+    if (statusId && statusId.length > 0) {
+      finalAllowedListIds = [...statusId];
+    }
+
     if (isCompleted !== undefined) {
       let lists: List[] = [];
+      const payload = projectId ? { projectId } : { teamId };
+      const pattern = projectId ? LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID : LIST_PATTERNS.FIND_ALL_BY_TEAM;
+      lists = unwrapRpcResult(await firstValueFrom(this.listClient.send(pattern, payload)));
 
-      if (projectId) {
-        lists = await firstValueFrom(
-          this.listClient.send(LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId })
-        );
-      } else if (teamId) {
-        lists = await firstValueFrom(
-          this.listClient.send(LIST_PATTERNS.FIND_ALL_BY_TEAM, { teamId })
-        );
-      }
+      const targetCategoryListIds = lists
+        .filter(l => isCompleted ? l.category === ListCategoryEnum.DONE : l.category !== ListCategoryEnum.DONE)
+        .map(l => l.id);
 
-      let targetListIds: string[] = [];
-
-      if (isCompleted) {
-        targetListIds = lists
-          .filter(l => l.category === ListCategoryEnum.DONE)
-          .map(l => l.id);
-      } else {
-        targetListIds = lists
-          .filter(l => l.category !== ListCategoryEnum.DONE)
-          .map(l => l.id);
-      }
-
-      if (targetListIds.length > 0) {
-        if (filters.statusId && filters.statusId.length > 0) {
-          const intersectedIds = filters.statusId.filter(id => targetListIds.includes(id));
-          if (intersectedIds.length > 0) {
-            query.andWhere('task.listId IN (:...completedListIds)', { completedListIds: intersectedIds });
-          } else {
-            query.andWhere('1=0');
-          }
-        } else {
-          query.andWhere('task.listId IN (:...completedListIds)', { completedListIds: targetListIds });
-        }
-      } else {
-        query.andWhere('1=0');
-      }
+      if (finalAllowedListIds.length > 0) finalAllowedListIds = finalAllowedListIds.filter(id => targetCategoryListIds.includes(id));
+      else finalAllowedListIds = targetCategoryListIds;
+      if (finalAllowedListIds.length === 0) query.andWhere('1=0');
     } else {
       if (filters.statusId && filters.statusId.length > 0) {
         query.andWhere('task.listId IN (:...statusId) ', { statusId: filters.statusId });
       }
     }
 
-    const shouldFetchSubtasks =
-      (!search && (!assigneeIds || assigneeIds.length === 0) && parentId === undefined && sprintId === undefined) // shouldFetchSubtasks cũ
-      || (parentId === null || parentId === 'null');
-
+    const isSearching = !!search || (assigneeIds && assigneeIds.length > 0);
+    const isFetchingSpecificParent = parentId && parentId !== 'null';
+    const isRootOnly = parentId === null;
+    const shouldFetchSubtasks = !isSearching && !isFetchingSpecificParent && !sprintId && isRootOnly;
 
     if (shouldFetchSubtasks) {
       query.leftJoinAndSelect('task.children', 'children');
       query.leftJoinAndSelect('children.taskLabels', 'childLabels');
+      query.andWhere('task.parentId IS NULL');
     } else {
       if (search) query.andWhere('task.title ILIKE :search', { search: `%${search}%` });
       if (assigneeIds && assigneeIds.length > 0) query.andWhere('task.assigneeIds && :assigneeIds', { assigneeIds });
+      if (isRootOnly) query.andWhere('task.parentId IS NULL')
+      else if (parentId) query.andWhere('task.parentId = :parentId', { parentId });
     }
 
-    console.log("Parents filter:", parentId, shouldFetchSubtasks);
-    if (parentId === null || parentId === 'null' || (shouldFetchSubtasks && parentId === undefined)) query.andWhere('task.parentId IS NULL');
-    else if (parentId) query.andWhere('task.parentId = :parentId', { parentId });
     if (priority && priority.length > 0) query.andWhere('task.priority IN (:...priorities)', { priorities: priority });
-    if (statusId) query.andWhere('task.listId IN (:...statusId) ', { statusId });
     if (epicId) query.andWhere('task.epicId IN (:...epicId)', { epicId });
     else if (epicId === null) query.andWhere('task.epicId IS NULL');
     if (Array.isArray(sprintId) && sprintId.length > 0) query.andWhere('task.sprintId IN (:...sprintId)', { sprintId });
     else if (sprintId === null) query.andWhere('task.sprintId IS NULL');
 
     if (labelIds && labelIds.length > 0) {
-      query.andWhere((qb) => {
-        const subQuery = qb
-          .subQuery()
+      query.andWhere(qb => {
+        const subQuery = qb.subQuery()
           .select('tl.taskId')
           .from('task_labels', 'tl')
           .where('tl.labelId IN (:...labelIds)')
           .getQuery();
         return 'task.id IN ' + subQuery;
-      });
-      query.setParameter('labelIds', labelIds);
+      }).setParameter('labelIds', labelIds);
     }
 
     if (sortBy && sortBy.length > 0) {
@@ -406,14 +416,7 @@ export class TasksService {
         const [field, orderRaw] = sortItem.split(':');
         const order = (orderRaw || 'ASC').toUpperCase() as 'ASC' | 'DESC';
         const dbColumn = sortMap[field];
-
-        if (dbColumn) {
-          if (index === 0) {
-            query.orderBy(dbColumn, order);
-          } else {
-            query.addOrderBy(dbColumn, order);
-          }
-        }
+        if (dbColumn) index === 0 ? query.orderBy(dbColumn, order) : query.addOrderBy(dbColumn, order);
       });
     } else {
       query.orderBy('task.position', 'ASC');

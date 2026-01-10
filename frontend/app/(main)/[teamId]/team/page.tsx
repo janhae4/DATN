@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronRight, LayoutGrid } from "lucide-react";
 
-import { 
-  useTeam, 
-  useTeamMembers, 
-  useDeleteTeam, 
-  useLeaveTeam 
+import {
+  useTeam,
+  useTeamMembers,
+  useDeleteTeam,
+  useLeaveTeam,
 } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 import { MemberRole } from "@/types/common/enums";
@@ -21,29 +21,29 @@ export default function TeamDetailsPage() {
   const params = useParams();
   const teamId = params.teamId as string;
   const router = useRouter();
-  
-  // Data Fetching
-  const { data: user } = useUserProfile();
-  const { data: team, isLoading: isTeamLoading } = useTeam(teamId);
-  const { data: members = [], isLoading: isMembersLoading } = useTeamMembers(teamId);
 
-  // Mutations
+  const { data: user } = useUserProfile();
+  const {
+    data: team,
+    isLoading: isTeamLoading,
+  } = useTeam(teamId);
+  const { data: members = [], isLoading: isMembersLoading } =
+    useTeamMembers(teamId);
+
   const deleteTeamMutation = useDeleteTeam();
   const leaveTeamMutation = useLeaveTeam();
 
-  // Permissions
-  const currentMember = members.find(m => m.id === user?.id);
+  const currentMember = members.find((m) => m.id === user?.id);
   const userRole = currentMember?.role;
   const isOwner = userRole === MemberRole.OWNER;
   const isAdmin = userRole === MemberRole.ADMIN;
   const canManage = isOwner || isAdmin;
 
-  // Handlers
   const handleDelete = async () => {
     try {
       await deleteTeamMutation.mutateAsync(teamId);
       toast.success("Team deleted");
-      router.push("/team-create");
+      router.push("/dashboard");
     } catch (error) {
       toast.error("Failed to delete team");
     }
@@ -54,16 +54,14 @@ export default function TeamDetailsPage() {
     try {
       await leaveTeamMutation.mutateAsync({
         teamId,
-        requesterId: user.id,
       });
       toast.success("Left team successfully");
-      router.push("/team-create");
+      router.push("/dashboard");
     } catch (error) {
       toast.error("Failed to leave team");
     }
   };
 
-  // Loading State
   if (isTeamLoading || isMembersLoading) {
     return (
       <div className="flex-1 p-6 space-y-6 bg-background/50">
@@ -74,14 +72,6 @@ export default function TeamDetailsPage() {
             <Skeleton key={i} className="h-32 rounded-xl" />
           ))}
         </div>
-      </div>
-    );
-  }
-
-  if (!team) {
-    return (
-      <div className="p-10 text-center text-muted-foreground">
-        Team not found
       </div>
     );
   }
@@ -106,5 +96,4 @@ export default function TeamDetailsPage() {
       </div>
     </div>
   );
-};
-
+}
