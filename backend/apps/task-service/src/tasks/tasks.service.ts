@@ -273,8 +273,24 @@ export class TasksService {
   async findAllByTeam(userId: string, filters: GetTasksByTeamDto) {
     await this.verifyPermission(userId, filters.teamId);
 
+    // Fetch projects of the team to link teamId through projectId
+    const projects = await firstValueFrom(
+      this.projectClient.send<Project[]>(PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID, { teamId: filters.teamId })
+    );
+    const projectIds = projects.map(p => p.id);
+
+    if (projectIds.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page: filters.page || 1,
+        limit: filters.limit || 10,
+        totalPages: 0,
+      };
+    }
+
     const query = this.taskRepository.createQueryBuilder('task');
-    query.where('task.teamId = :teamId', { teamId: filters.teamId });
+    query.where('task.projectId IN (:...projectIds)', { projectIds });
 
     return this._getTasksCommon(query, filters, undefined, filters.teamId);
   }

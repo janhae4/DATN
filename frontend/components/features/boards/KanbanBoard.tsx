@@ -11,20 +11,16 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  defaultDropAnimationSideEffects,
-  DropAnimation,
   pointerWithin,
   rectIntersection,
   CollisionDetection,
 } from "@dnd-kit/core";
 import { Task } from "@/types";
-import { List } from "@/types";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
 import { useLists } from "@/hooks/useList";
 import { useTasks } from "@/hooks/useTasks";
 import { KanbanColumn } from "./KanbanColumn";
 import { motion } from "framer-motion";
-import confetti from "canvas-confetti";
 import { ListCategoryEnum } from "@/types/common/enums";
 import {
   calculateNewPositionForTask,
@@ -49,16 +45,11 @@ import { toast } from "sonner";
 import { ResolveSubtasksDialog } from "./ResolveSubtasksDialog";
 import { GetTasksParams } from "@/services/taskService";
 import { useDebounce } from "@/hooks/useDebounce";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
+import { useBoardTour } from "@/hooks/touring/useBoardTour";
 
-const dropAnimation: DropAnimation = {
-  sideEffects: defaultDropAnimationSideEffects({
-    styles: {
-      active: {
-        opacity: "0.5",
-      },
-    },
-  }),
-};
+
 
 const collisionDetectionStrategy: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
@@ -69,6 +60,7 @@ const collisionDetectionStrategy: CollisionDetection = (args) => {
 };
 
 export function KanbanBoard() {
+  const { startTour } = useBoardTour();
   const {
     allData,
     projectId,
@@ -108,7 +100,6 @@ export function KanbanBoard() {
       statusId: filters.listIds.length > 0 ? filters.listIds : undefined,
       epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
-      // Automatically filter by active sprint, or use manual filter if set
       sprintId: filters.sprintIds.length > 0
         ? filters.sprintIds
         : activeSprint
@@ -133,8 +124,6 @@ export function KanbanBoard() {
     return tasks.filter((t) => !t.parentId);
   }, [tasks]);
 
-
-  // --- Subtask Resolution State ---
   const [isResolveDialogOpen, setIsResolveDialogOpen] = React.useState(false);
   const [pendingSubtasks, setPendingSubtasks] = React.useState<Task[]>([]);
   const [pendingMove, setPendingMove] = React.useState<{
@@ -219,6 +208,11 @@ export function KanbanBoard() {
         grouped[lists[0].id].push(task);
       }
     });
+
+    Object.keys(grouped).forEach((key) => {
+      grouped[key].sort((a, b) => (a.position || 0) - (b.position || 0));
+    });
+
     return grouped;
   }, [items, lists]);
 
@@ -247,7 +241,6 @@ export function KanbanBoard() {
 
     if (!active.data.current?.task || !overContainerId) return;
 
-    // Optimistic update removed - will update when API call completes
   };
 
   const executeMoveTask = (
@@ -256,17 +249,10 @@ export function KanbanBoard() {
     newPosition: number,
     isMovedColumn: boolean
   ) => {
-    // Optimistic update removed - will update when API call completes
-
     updateTask(task.id, {
       listId: targetListId,
       position: newPosition,
     });
-
-    const targetList = lists.find((l) => l.id === targetListId);
-    if (targetList?.category === ListCategoryEnum.DONE && isMovedColumn) {
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    }
   };
 
   const checkAndHandleSubtasks = (
@@ -280,7 +266,6 @@ export function KanbanBoard() {
 
     if (!isTargetDone) return false;
 
-    // Logic: Kiểm tra subtask trong allData (Context) vì API GetTasks có thể bị filter ẩn mất subtask
     const subtasks = allData.filter((t) => t.parentId === activeTask.id);
     const doneListIds = lists
       .filter((l) => l.category === ListCategoryEnum.DONE)
@@ -307,11 +292,10 @@ export function KanbanBoard() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveTask(null);
-    setOverColumnId(null);
 
-    // No need to revert - items is derived from tasks
     if (!over) {
+      setActiveTask(null);
+      setOverColumnId(null);
       return;
     }
 
@@ -348,6 +332,9 @@ export function KanbanBoard() {
         );
       }
     }
+
+    setActiveTask(null);
+    setOverColumnId(null);
   };
 
   const handleConfirmResolve = async () => {
@@ -381,7 +368,6 @@ export function KanbanBoard() {
     setIsResolveDialogOpen(false);
     setPendingMove(null);
     setPendingSubtasks([]);
-    // No need to revert - items is derived from tasks
   };
 
   const handleIgnoreResolve = () => {
@@ -408,11 +394,10 @@ export function KanbanBoard() {
       onDragCancel={() => {
         setActiveTask(null);
         setOverColumnId(null);
-        // No need to revert - items is derived from tasks
       }}
     >
-      <div className="h-full w-full min-w-0 relative group/board flex flex-col">
-        <div className="py-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+      <div id="kanban-board" className="h-full w-full min-w-0 relative group/board flex flex-col">
+        <div id="backlog-filter-bar" className="py-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 flex items-center justify-between pr-4">
           <BacklogFilterBar
             showCreateSprint={false}
             showStatusFilter={false}
@@ -420,18 +405,21 @@ export function KanbanBoard() {
             createTasks={createTasks}
             suggestTaskByAi={suggestTaskByAi}
             onFilterChange={setFilters}
+            onStartTour={startTour}
           />
         </div>
         <div
           ref={scrollContainerRef}
           className="flex-1 w-full overflow-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent pb-2"
         >
-          <div className="flex h-full gap-4 py-4 pr-4">
+          <div id="kanban-columns-container" className="flex h-full gap-4 py-4 pr-4">
             {!activeSprint && (
-              <KanbanSprintSelection
-                sprints={sprints}
-                onStartSprint={startSprint}
-              />
+              <div id="kanban-sprint-selection">
+                <KanbanSprintSelection
+                  sprints={sprints}
+                  onStartSprint={startSprint}
+                />
+              </div>
             )}
             {lists.map((list) => {
               const handleMoveLeftForList = () => handleMoveList(list.id, "left");
@@ -518,14 +506,23 @@ export function KanbanBoard() {
                   </div>
                 </div>
               ) : (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="cursor-pointer"
-                  onClick={() => setIsAddingList(true)}
-                >
-                  <Plus />
-                </Button>
+                <div id="kanban-add-list-btn">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="cursor-pointer"
+                        onClick={() => setIsAddingList(true)}
+                      >
+                        <Plus />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Create new list</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               )}
             </div>
           </div>
@@ -536,7 +533,7 @@ export function KanbanBoard() {
         />
       </div>
 
-      <DragOverlay dropAnimation={dropAnimation}>
+      <DragOverlay dropAnimation={null}>
         {activeTask ? (
           <motion.div
             initial={{

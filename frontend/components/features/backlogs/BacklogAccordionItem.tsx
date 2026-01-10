@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { BacklogTaskList } from "./task/backlogTaskList";
 import { List, Task } from "@/types";
 import { PaginationControl } from "@/components/shared/PaginationControl";
+import { HelpTooltip } from "@/components/shared/HelpTooltip";
 
 interface BacklogAccordionItemProps {
   lists: List[];
@@ -27,9 +28,9 @@ interface BacklogAccordionItemProps {
   selectedIds?: string[];
   onMultiSelectChange: (ids: string[]) => void;
   onSelect?: (taskId: string, checked: boolean) => void;
-  page: number;
-  setPage: (page: number) => void;
-  totalPages: number;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
 }
 
 export const BacklogAccordionItem = React.memo(BacklogAccordionItemComponent);
@@ -47,9 +48,9 @@ function BacklogAccordionItemComponent({
   selectedIds,
   onMultiSelectChange,
   onSelect,
-  page,
-  setPage,
-  totalPages,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
 }: BacklogAccordionItemProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: "backlog-drop-area",
@@ -78,7 +79,7 @@ function BacklogAccordionItemComponent({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               <Archive className="h-5 w-5 text-muted-foreground" />
-              <span>Backlog</span>
+              <span className="flex items-center gap-2">Backlog <HelpTooltip text="Backlog is a list of tasks that need to be completed." /></span>
             </div>
             <Badge variant="secondary">{taskCount} tasks</Badge>
           </div>
@@ -97,9 +98,9 @@ function BacklogAccordionItemComponent({
             selectedIds={selectedIds}
             onSelect={onSelect}
             onMultiSelectChange={onMultiSelectChange}
-            page={page}
-            setPage={setPage}
-            totalPages={totalPages}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
           />
         </AccordionContent>
       </AccordionItem>

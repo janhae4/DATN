@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   const isAuthRoute = path.startsWith("/auth");
@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("accessToken")?.value;
   const refreshToken = request.cookies.get("refreshToken")?.value;
   const hasToken = accessToken || refreshToken;
-  console.log("Has Token:", hasToken);
+  // console.log("Has Token:", hasToken);
 
   if (!hasToken) {
     if (isPrivateRoute) {

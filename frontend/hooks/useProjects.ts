@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Project } from "@/types";
 // Import các DTO từ service đã refactor
-import { 
-  projectService, 
-  CreateProjectDto, 
-  UpdateProjectDto 
+import {
+  projectService,
+  CreateProjectDto,
+  UpdateProjectDto
 } from "@/services/projectService";
 
 export function useProjects(teamId?: string) {
@@ -19,7 +19,7 @@ export function useProjects(teamId?: string) {
   } = useQuery({
     queryKey,
     queryFn: () => projectService.getProjects(teamId!),
-    enabled: !!teamId, 
+    enabled: !!teamId,
   });
 
   // 2. Create Project
@@ -36,7 +36,7 @@ export function useProjects(teamId?: string) {
       projectService.updateProject(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ["project"] }); 
+      queryClient.invalidateQueries({ queryKey: ["project"] });
     },
   });
 
@@ -44,8 +44,12 @@ export function useProjects(teamId?: string) {
   const deleteProjectMutation = useMutation({
     mutationFn: (id: string) => projectService.deleteProject(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      console.log("Delete mutation success, invalidating projects for team:", teamId);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
+    onError: (error) => {
+      console.error("Mutation deleteProject failed:", error);
+    }
   });
 
   return {

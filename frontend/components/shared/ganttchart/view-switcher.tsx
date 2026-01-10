@@ -9,15 +9,19 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input"; 
+import { Input } from "@/components/ui/input";
+
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
 type ViewSwitcherProps = {
   isChecked: boolean;
   onViewListChange: (isChecked: boolean) => void;
   onViewModeChange: (viewMode: ViewMode) => void;
   currentViewMode: ViewMode;
-  searchQuery: string; 
-  onSearchQueryChange: (query: string) => void; 
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+  onStartTour?: () => void;
 };
 
 export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -26,18 +30,18 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   isChecked,
   currentViewMode,
   searchQuery,
-  onSearchQueryChange, 
+  onSearchQueryChange,
+  onStartTour,
 }) => {
   return (
-    <div className="flex items-center justify-start gap-6 py-4 flex-wrap"> 
-      
-      {/* 1. Phần chọn View Mode */}
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-start gap-6 py-4 flex-wrap">
+
+      <div id="gantt-view-switcher" className="flex items-center gap-2">
         <Label className="text-sm font-medium text-muted-foreground hidden sm:block">
           View Mode:
         </Label>
         <Select
-          value={currentViewMode} 
+          value={currentViewMode}
           onValueChange={(value) => onViewModeChange(value as ViewMode)}
         >
           <SelectTrigger className="w-[180px]">
@@ -57,16 +61,17 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
       <div className="flex items-center gap-2">
         <Input
+          id="gantt-filter-input"
           type="text"
           placeholder="Filter tasks..."
           className="w-[200px]"
-          value={searchQuery} 
-          onChange={(e) => onSearchQueryChange(e.target.value)} 
+          value={searchQuery}
+          onChange={(e) => onSearchQueryChange(e.target.value)}
         />
       </div>
 
 
-      <div className="flex items-center space-x-2 ml-auto"> 
+      <div id="gantt-list-toggle" className="flex items-center space-x-2 ml-auto">
         <Switch
           id="show-task-list"
           checked={isChecked}
@@ -76,6 +81,18 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
           Show Task List
         </Label>
       </div>
+
+      {onStartTour && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9"
+          onClick={onStartTour}
+          title="Take a tour"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 };

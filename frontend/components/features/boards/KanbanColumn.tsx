@@ -27,6 +27,7 @@ import {
   Settings2,
   AlertCircle,
   Loader2,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanAddNewCard } from "./KanbanAddNewCard";
@@ -100,7 +101,6 @@ export function KanbanColumn({
       console.log("Load more triggered for list:", list.name);
       fetchNextPage();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inView, hasNextPage, isFetchingNextPage]);
 
   const [isAdding, setIsAdding] = React.useState(false);
@@ -144,7 +144,7 @@ export function KanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "group flex flex-col w-80 flex-shrink-0 bg-secondary rounded-xl border border-transparent h-full max-h-full transition-all duration-500 overflow-hidden",
+        "group flex flex-col w-80 flex-shrink-0 bg-secondary rounded-xl border border-transparent h-full max-h-full transition-colors duration-200 overflow-hidden",
         isOver
           ? isDoneColumn
             ? "bg-green-500/10 border-green-500/30 ring-2 ring-green-500/20"
@@ -184,29 +184,54 @@ export function KanbanColumn({
 
           {/* Chỉ hiện icon cảnh báo nếu quá limit */}
           {isLimitExceeded && (
-            <AlertCircle className="h-4 w-4 text-destructive" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-help">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-destructive-foreground bg-destructive border-destructive">
+                <p>WIP Limit Exceeded! This column has too many tasks.</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            onClick={() => setIsAdding(true)}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                onClick={() => setIsAdding(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Add new task</p>
+            </TooltipContent>
+          </Tooltip>
 
           {!isDoneColumn && (
             <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>actions</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem disabled={isFirst} onClick={onMoveLeft}>
@@ -229,9 +254,17 @@ export function KanbanColumn({
                         <div className="space-y-1">
                           <Label
                             htmlFor="limit"
-                            className="text-xs font-medium"
+                            className="text-xs font-medium flex items-center gap-2"
                           >
-                            Max tasks
+                            WIP Limit
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[200px]" side="right">
+                                <p>Work In Progress (WIP) limits restrict the maximum number of tasks allowed in this column to prevent bottlenecks.</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </Label>
                           <div className="flex gap-2">
                             <Input
@@ -351,13 +384,20 @@ export function KanbanColumn({
 
         {/* Global Create Button at bottom (only show when not adding at top) */}
         {!isAdding && (
-          <button
-            onClick={() => setIsAdding(true)}
-            className="flex hover:bg-background/20 transition-all cursor-pointer duration-200 items-center gap-2 p-2 rounded-lg border-2 border-dashed border-muted-foreground/10 hover:border-primary/30 text-xs font-medium text-muted-foreground/60 hover:text-primary w-full text-left mt-auto shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            Create task
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setIsAdding(true)}
+                className="flex hover:bg-background/20 transition-all cursor-pointer duration-200 items-center gap-2 p-2 rounded-lg border-2 border-dashed border-muted-foreground/10 hover:border-primary/30 text-xs font-medium text-muted-foreground/60 hover:text-primary w-full text-left mt-auto shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                Create task
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Click to add a new task to this list</p>
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
     </div>

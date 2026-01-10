@@ -17,7 +17,7 @@ export class Team {
   @Column()
   name: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   avatar?: string;
 
   @Column()
@@ -29,7 +29,7 @@ export class Team {
   @Column({
     type: 'enum',
     enum: TeamStatus,
-    default: TeamStatus.ARCHIVED,
+    default: TeamStatus.ACTIVE,
   })
   status: TeamStatus;
 

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRef, useState, useCallback, useMemo } from "react"
-import { FilePreviewDialog } from "./file-preview-dialog"
+import { FilePreviewDialog } from "@/components/features/documentation/file-preview-dialog"
 import {
   LayoutGrid,
   Table2,
@@ -11,7 +11,8 @@ import {
   FileUp,
   Search,
   FileText,
-  Loader2
+  Loader2,
+  HelpCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,11 +27,11 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
 
 // Components & Hooks
-import { getColumns } from "./attachment-columns"
-import { DataGrid } from "./data-grid"
-import { FileCard } from "./file-card"
+import { getColumns } from "@/components/features/documentation/attachment-columns"
+import { DataGrid } from "@/components/features/documentation/data-grid"
+import { FileCard } from "@/components/features/documentation/file-card"
 import { useFiles } from "@/hooks/useFiles"
-import { DataTable } from "./data-table"
+import { DataTable } from "@/components/features/documentation/data-table"
 import { Attachment } from "@/types"
 import {
   Tooltip,
@@ -41,12 +42,14 @@ import {
 
 import { useParams } from "next/navigation"
 import { useProjects } from "@/hooks/useProjects"
+import { useDocumentationTour } from "@/hooks/touring/useDocumentationTour"
 
 export default function AttachmentPage() {
   const params = useParams()
   const teamId = params.teamId as string
   const { projects } = useProjects(teamId)
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
+  const { startTour } = useDocumentationTour()
 
   const [paginationState, setPaginationState] = useState({
     pageIndex: 0,
@@ -193,32 +196,45 @@ export default function AttachmentPage() {
 
 
       {/* 1. TIÊU ĐỀ & NÚT TOGGLE */}
-      <div className="flex justify-between items-center mb-6">
+      <div id="doc-header" className="flex justify-between items-center mb-6">
         <div className="space-y-0.5">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Document Management</h1>
           <p className="text-xs text-zinc-500 font-medium">Upload and organize your project assets</p>
         </div>
 
-        <Button
-          variant={isUploadVisible ? "outline" : "default"}
-          onClick={() => {
-            setIsUploadVisible(!isUploadVisible);
-            if (isUploadVisible) setStagedFiles([]);
-          }}
-          className="rounded-md h-9 px-4 transition-all"
-        >
-          {isUploadVisible ? (
-            <>
-              <X className="mr-2 h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-tight">Cancel</span>
-            </>
-          ) : (
-            <>
-              <FileUp className="mr-2 h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-tight">Upload File</span>
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={startTour}
+            title="Take a tour"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </Button>
+
+          <Button
+            id="upload-toggle-btn"
+            variant={isUploadVisible ? "outline" : "default"}
+            onClick={() => {
+              setIsUploadVisible(!isUploadVisible);
+              if (isUploadVisible) setStagedFiles([]);
+            }}
+            className="rounded-md h-9 px-4 transition-all"
+          >
+            {isUploadVisible ? (
+              <>
+                <X className="mr-2 h-4 w-4" />
+                <span className="text-xs font-bold uppercase tracking-tight">Cancel</span>
+              </>
+            ) : (
+              <>
+                <FileUp className="mr-2 h-4 w-4" />
+                <span className="text-xs font-bold uppercase tracking-tight">Upload File</span>
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* 2. KHUNG UPLOAD (CHỈ HIỆN KHI TOGGLE) */}
@@ -297,10 +313,11 @@ export default function AttachmentPage() {
             </div>
           )}
         </div>
-      )}
+      )
+      }
 
       {/* FILTER BAR */}
-      <div className="flex flex-col md:flex-row items-end gap-4 mb-6">
+      <div id="filter-bar" className="flex flex-col md:flex-row items-end gap-4 mb-6">
         <div className="flex-1 w-full space-y-2">
           <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Search</label>
           <div className="relative">
@@ -342,7 +359,7 @@ export default function AttachmentPage() {
           </Select>
         </div>
 
-        <div className="flex items-center p-1 bg-muted rounded-md h-10 border">
+        <div id="view-toggle" className="flex items-center p-1 bg-muted rounded-md h-10 border">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -380,63 +397,64 @@ export default function AttachmentPage() {
       </div>
 
       {/* DATA DISPLAY AREA */}
-      {/* DATA DISPLAY AREA */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Syncing file data...</p>
-        </div>
-      ) : viewMode === "table" ? (
-        <DataTable
-          columns={getColumns({
-            onPreview: handlePreview,
-            onDownload: (file) => downloadFile(file.id),
-            onDelete: (file) => deleteFile(file.id),
-          })}
-          data={files}
+      <div id="doc-content">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Syncing file data...</p>
+          </div>
+        ) : viewMode === "table" ? (
+          <DataTable
+            columns={getColumns({
+              onPreview: handlePreview,
+              onDownload: (file) => downloadFile(file.id),
+              onDelete: (file) => deleteFile(file.id),
+            })}
+            data={files}
 
-          // DataTable nhận index 0-based
-          pageCount={pagination?.totalPages || 1}
-          pageIndex={paginationState.pageIndex}
-          onPageChange={(page) => {
-            // Scroll lên đầu
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            setPaginationState(prev => ({ ...prev, pageIndex: page }));
-          }}
-          isLoading={isLoading || isPlaceholderData}
-        />
-      ) : (
-        <DataGrid
-          data={files}
-          renderItem={(file) => (
-            <FileCard
-              file={file}
-              onPreview={handlePreview}
-              onDownload={(f) => downloadFile(f.id)}
-              onDelete={(f) => deleteFile(f.id)}
-            />
-          )}
-          // THÊM LOGIC PHÂN TRANG CHO DATAGRID TẠI ĐÂY
-          pagination={{
-            // Convert 0-based -> 1-based để hiển thị "Page 1"
-            currentPage: paginationState.pageIndex + 1,
-            totalPages: pagination?.totalPages || 1,
-            // Khi DataGrid trả về trang mới (ví dụ trang 2), ta trừ 1 để lưu vào state (thành 1)
-            onPageChange: (newPage) => {
+            // DataTable nhận index 0-based
+            pageCount={pagination?.totalPages || 1}
+            pageIndex={paginationState.pageIndex}
+            onPageChange={(page) => {
+              // Scroll lên đầu
               window.scrollTo({ top: 0, behavior: 'smooth' });
-              setPaginationState(prev => ({ ...prev, pageIndex: newPage - 1 }));
-            }
-          }}
-          isLoading={isLoading || isPlaceholderData}
-        />
-      )}
+              setPaginationState(prev => ({ ...prev, pageIndex: page }));
+            }}
+            isLoading={isLoading || isPlaceholderData}
+          />
+        ) : (
+          <DataGrid
+            data={files}
+            renderItem={(file) => (
+              <FileCard
+                file={file}
+                onPreview={handlePreview}
+                onDownload={(f) => downloadFile(f.id)}
+                onDelete={(f) => deleteFile(f.id)}
+              />
+            )}
+            // THÊM LOGIC PHÂN TRANG CHO DATAGRID TẠI ĐÂY
+            pagination={{
+              // Convert 0-based -> 1-based để hiển thị "Page 1"
+              currentPage: paginationState.pageIndex + 1,
+              totalPages: pagination?.totalPages || 1,
+              // Khi DataGrid trả về trang mới (ví dụ trang 2), ta trừ 1 để lưu vào state (thành 1)
+              onPageChange: (newPage) => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setPaginationState(prev => ({ ...prev, pageIndex: newPage - 1 }));
+              }
+            }}
+            isLoading={isLoading || isPlaceholderData}
+          />
+        )}
+      </div>
 
       <FilePreviewDialog
         isOpen={isPreviewOpen}
         onOpenChange={setIsPreviewOpen}
         file={previewData}
       />
-    </div>
+    </div >
   )
 
 }

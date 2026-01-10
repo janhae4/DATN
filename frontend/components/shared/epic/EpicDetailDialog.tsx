@@ -11,19 +11,17 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
     Flag, Circle, CircleEllipsis, CheckCircle2, XCircle,
-    LayoutList, Calendar, Users, ListTodo, AlertCircle,
+    LayoutList, ListTodo, AlertCircle,
     Plus, Loader2
 } from "lucide-react"
-import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { Epic, EpicStatus, Priority, ListCategoryEnum } from "@/types"
+import { Epic, EpicStatus, Priority, ListCategoryEnum, Task } from "@/types"
 import { useTasks } from "@/hooks/useTasks"
 import { useEpics } from "@/hooks/useEpics"
 import { ColorPicker } from "../color-picker/ColorPicker"
@@ -31,6 +29,7 @@ import { DateRangePicker } from "../DateRangePicker"
 import { DateRange } from "react-day-picker"
 import { toast } from "sonner"
 import { listService } from "@/services/listService"
+import { TaskDetailModal } from "../../features/backlogs/taskmodal"
 
 // Maps status/priority (Reused for consistency)
 const statusMap: Record<EpicStatus, { label: string; icon: React.ElementType; color: string }> = {
@@ -58,8 +57,11 @@ interface EpicDetailDialogProps {
 export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogProps) {
     const params = useParams();
     const projectId = params.projectId as string;
-    const { tasks, createTask } = useTasks({ projectId });
-    const { updateEpic, isUpdating } = useEpics(projectId);
+    const { tasks: epicTasks, createTask, isLoading: isTasksLoading, updateTask } = useTasks({
+        projectId,
+        epicId: epic?.id ? [epic.id] : undefined
+    });
+    const { updateEpic } = useEpics(projectId);
 
     // Fetch lists to identify which list is "TODO"
     const { data: lists } = useQuery({
@@ -67,11 +69,6 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
         queryFn: () => listService.getLists(projectId),
         enabled: !!projectId && open, // Only fetch when dialog is open
     });
-
-    // Filter tasks belonging to this epic
-    const epicTasks = React.useMemo(() =>
-        tasks ? tasks.filter(task => task.epicId === epic?.id) : [],
-        [tasks, epic?.id]);
 
     // Form States
     const [title, setTitle] = React.useState("");
@@ -84,6 +81,11 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
     // New Task State
     const [newTaskTitle, setNewTaskTitle] = React.useState("");
     const [isCreatingTask, setIsCreatingTask] = React.useState(false);
+    const [selectedTask, setSelectedTask] = React.useState<Task | null>(null);
+
+    const handleUpdateTask = (taskId: string, updates: any) => {
+        updateTask(taskId, updates);
+    };
 
     // Init form when epic changes
     React.useEffect(() => {
@@ -100,16 +102,15 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
         }
     }, [epic]);
 
-
-
     const handleCreateTask = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newTaskTitle.trim() || !epic) return;
 
         // Find Todo list
         const todoList = lists?.find(l => l.category === ListCategoryEnum.TODO) || lists?.[0];
+
         if (!todoList) {
-            toast.error("Unable to find a list to create task in.");
+            toast.error("Waiting for project lists to load...");
             return;
         }
 
@@ -119,7 +120,7 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                 projectId,
                 title: newTaskTitle.trim(),
                 epicId: epic.id,
-                priority: Priority.MEDIUM, // Default
+                priority: Priority.MEDIUM,
                 listId: todoList.id,
             });
             setNewTaskTitle("");
@@ -134,8 +135,6 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
 
     if (!epic) return null;
 
-
-
     // Helper to render select options
     const renderOption = (Icon: React.ElementType, label: string, colorClass: string) => (
         <div className="flex items-center gap-2">
@@ -147,9 +146,9 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[800px] h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-
+                <DialogTitle className="sr-only">Epic Details: {epic.title}</DialogTitle>
                 {/* Header Section */}
-                <DialogHeader className="p-6 pb-4 border-b bg-white shrink-0">
+                <DialogHeader className="p-6 pb-4 border-b bg-background shrink-0">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-5 flex-1 w-full">
                             <Popover>
@@ -185,7 +184,7 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                                                 .catch(() => toast.error("Failed to update title"));
                                         }
                                     }}
-                                    className="text-2xl font-bold h-auto px-2 -ml-2 py-1 border-transparent bg-transparent hover:bg-slate-100/50 focus:bg-white focus:border-input focus:ring-1 focus:ring-primary/20 transition-all rounded-md w-full"
+                                    className="text-2xl font-bold h-auto px-2 -ml-2 py-1 border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-1 focus:ring-primary/20 transition-all rounded-md w-full"
                                     placeholder="Epic Title"
                                 />
 
@@ -199,7 +198,7 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                                         }).then(() => toast.success("Status updated"))
                                             .catch(() => toast.error("Failed to update status"));
                                     }}>
-                                        <SelectTrigger className="h-8 w-auto min-w-[120px] text-xs border-0 bg-slate-100 hover:bg-slate-200 focus:ring-0 rounded-full px-3 transition-colors">
+                                        <SelectTrigger className="h-8 w-auto min-w-[120px] text-xs border-0 bg-muted hover:bg-muted/80 focus:ring-0 rounded-full px-3 transition-colors">
                                             <div className="flex items-center gap-2">
                                                 {statusMap[status]?.icon && React.createElement(statusMap[status].icon, { className: cn("h-3.5 w-3.5", statusMap[status].color) })}
                                                 <span className="font-medium">{statusMap[status]?.label}</span>
@@ -223,7 +222,7 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                                         }).then(() => toast.success("Priority updated"))
                                             .catch(() => toast.error("Failed to update priority"));
                                     }}>
-                                        <SelectTrigger className="h-8 w-auto min-w-[110px] text-xs border-0 bg-slate-100 hover:bg-slate-200 focus:ring-0 rounded-full px-3 transition-colors">
+                                        <SelectTrigger className="h-8 w-auto min-w-[110px] text-xs border-0 bg-muted hover:bg-muted/80 focus:ring-0 rounded-full px-3 transition-colors">
                                             <div className="flex items-center gap-2">
                                                 {priorityMap[priority]?.icon && React.createElement(priorityMap[priority].icon, { className: cn("h-3.5 w-3.5", priorityMap[priority].color) })}
                                                 <span className="font-medium">{priorityMap[priority]?.label}</span>
@@ -240,26 +239,21 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                                 </div>
                             </div>
                         </div>
-
-                        {/* Edit Actions: Removed */}
-
                     </div>
                 </DialogHeader>
 
                 <div className="flex flex-1 overflow-hidden">
-
                     {/* Left Column: Description & Tasks */}
-                    <div className="flex-1 border-r flex flex-col bg-slate-50/50 min-w-0">
+                    <div className="flex-1 border-r flex flex-col bg-muted/30 min-w-0">
                         <div className="flex-1 p-6 overflow-y-auto" >
                             <div className="space-y-8 ">
-
                                 {/* Description */}
                                 <div className="space-y-3">
-                                    <div className="flex items-center gap-2 font-semibold text-sm text-slate-800">
-                                        <LayoutList className="w-4 h-4 text-slate-500" />
+                                    <div className="flex items-center gap-2 font-semibold text-sm text-foreground">
+                                        <LayoutList className="w-4 h-4 text-muted-foreground" />
                                         Description
                                     </div>
-                                    <div className="bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors focus-within:bg-white focus-within:border-primary/20 focus-within:shadow-sm group/desc">
+                                    <div className="bg-background rounded-lg border border-transparent hover:border-muted transition-colors focus-within:bg-background focus-within:border-primary/20 focus-within:shadow-sm group/desc">
                                         <Textarea
                                             value={description}
                                             onChange={(e) => setDescription(e.target.value)}
@@ -282,8 +276,8 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                                 {/* Linked Tasks */}
                                 <div className="space-y-3">
                                     <div className="flex  items-center justify-between">
-                                        <div className="flex items-center gap-2 font-semibold text-sm text-slate-800">
-                                            <ListTodo className="w-4 h-4 text-slate-500" />
+                                        <div className="flex items-center gap-2 font-semibold text-sm text-foreground">
+                                            <ListTodo className="w-4 h-4 text-muted-foreground" />
                                             Linked Tasks
                                             <Badge variant="secondary" className="h-5 px-1.5 min-w-[20px] justify-center">{epicTasks.length}</Badge>
                                         </div>
@@ -291,12 +285,12 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
 
                                     {/* Create Task Input */}
                                     <form onSubmit={handleCreateTask} className="relative group">
-                                        <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+                                        <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                         <Input
                                             value={newTaskTitle}
                                             onChange={(e) => setNewTaskTitle(e.target.value)}
                                             placeholder="Add a new task to this epic..."
-                                            className="pl-9 bg-white shadow-sm border-dashed border-slate-300 focus:border-solid focus:border-primary transition-all"
+                                            className="pl-9 bg-background shadow-sm border-dashed border-input focus:border-solid focus:border-primary transition-all"
                                             disabled={isCreatingTask}
                                         />
                                         {newTaskTitle && (
@@ -314,19 +308,22 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                                     {epicTasks.length > 0 ? (
                                         <div className="grid gap-2">
                                             {epicTasks.map(task => (
-                                                <div key={task.id} className="group flex items-center gap-3 p-3 text-sm bg-white border rounded-lg shadow-sm hover:border-primary/50 transition-colors">
+                                                <div
+                                                    key={task.id}
+                                                    onClick={() => setSelectedTask(task)}
+                                                    className="group flex items-center gap-3 p-3 text-sm bg-card border rounded-lg shadow-sm hover:border-primary/50 transition-colors cursor-pointer"
+                                                >
                                                     <div className={cn("w-2 h-2 rounded-full shrink-0",
                                                         task.priority === 'urgent' ? 'bg-red-500' :
                                                             task.priority === 'high' ? 'bg-orange-500' :
                                                                 task.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-400'
                                                     )} />
-                                                    <span className="font-medium text-slate-700 leading-snug flex-1 truncate">{task.title}</span>
-
+                                                    <span className="font-medium text-foreground leading-snug flex-1 truncate">{task.title}</span>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg bg-white/50 text-slate-400">
+                                        <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg bg-muted/20 text-muted-foreground">
                                             <AlertCircle className="w-8 h-8 mb-2 opacity-30" />
                                             <p className="text-sm font-medium">No tasks linked</p>
                                         </div>
@@ -337,12 +334,11 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                     </div>
 
                     {/* Right Column: Meta Info */}
-                    <div className="w-[280px] shrink-0 bg-white flex flex-col border-l">
+                    <div className="w-[280px] shrink-0 bg-card flex flex-col border-l">
                         <div className="p-5 space-y-8">
-
                             {/* Date Section */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 font-semibold text-xs text-slate-500 uppercase tracking-wider">
+                                <div className="flex items-center gap-2 font-semibold text-xs text-muted-foreground uppercase tracking-wider">
                                     Date Range
                                 </div>
                                 <div className="space-y-2">
@@ -365,17 +361,31 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
                             {/* Additional Info / Stats */}
                             <div className="pt-4 border-t space-y-4">
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-500">Tasks Count</span>
+                                    <span className="text-muted-foreground">Tasks Count</span>
                                     <span className="font-medium">{epicTasks.length}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-500">Completed</span>
+                                    <span className="text-muted-foreground">Completed</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </DialogContent>
+            <TaskDetailModal
+                task={selectedTask}
+                open={!!selectedTask}
+                onOpenChange={(open) => !open && setSelectedTask(null)}
+                lists={lists || []}
+                onListChange={(id, listId) => handleUpdateTask(id, { listId })}
+                onDateChange={(id, date) => handleUpdateTask(id, { dueDate: date?.toISOString() })}
+                onPriorityChange={(id, p) => handleUpdateTask(id, { priority: p })}
+                onAssigneeChange={(id, assigneeIds) => handleUpdateTask(id, { assigneeIds })}
+                onTitleChange={(id, _, value) => handleUpdateTask(id, { title: value })}
+                onDescriptionChange={(id, desc) => handleUpdateTask(id, { description: desc })}
+                onLabelsChange={(id, labels) => handleUpdateTask(id, { labelIds: labels })}
+                updateTask={handleUpdateTask}
+            />
         </Dialog >
     )
 }

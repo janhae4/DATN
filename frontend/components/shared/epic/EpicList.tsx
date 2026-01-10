@@ -15,6 +15,7 @@ import { EpicDetailDialog } from "./EpicDetailDialog"
 import { Epic, EpicStatus } from "@/types"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { HelpTooltip } from "../HelpTooltip"
 
 export function EpicList() {
     const params = useParams()
@@ -53,11 +54,11 @@ export function EpicList() {
 
     return (
         <>
-            <Card className="py-2! border-none shadow-none h-[300px] bg-transparent flex flex-col">
+            <Card className="py-2! border-none shadow-none h-full bg-transparent flex flex-col">
                 <CardHeader className="px-0 pt-0 pb-4 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <Target className="h-5 w-5 text-primary" />
-                        Epics
+                        Epics <HelpTooltip text="Epics are high-level project goals or deliverables. They group related tasks and provide a clear overview of project scope." />
                         <Badge variant="secondary" className="ml-2">
                             {epics?.length || 0}
                         </Badge>
@@ -72,10 +73,10 @@ export function EpicList() {
                     </div>
                 </CardHeader>
 
-                <div className="flex-1 -mr-4 pr-4 overflow-y-auto ">
-                    <div className="space-y-3 pb-2">
+                <div className="flex-1 h-full overflow-y-auto ">
+                    <div className="space-y-3 h-full pb-2">
                         {sortedEpics.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center p-8 text-center border-2 border-dashed rounded-xl border-muted-foreground/20">
+                            <div className="flex h-full flex-col items-center justify-center p-8 text-center border-2 border-dashed rounded-xl border-muted-foreground/20">
                                 <Target className="h-10 w-10 text-muted-foreground/30 mb-2" />
                                 <p className="text-sm font-medium text-muted-foreground">No epics yet</p>
                                 <p className="text-xs text-muted-foreground/70 mb-4">Create an epic to group your tasks</p>

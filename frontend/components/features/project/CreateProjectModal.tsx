@@ -30,8 +30,8 @@ import {
 import { toast } from "sonner";
 import { useProjects } from "@/hooks/useProjects";
 import { useTeamContext } from "@/contexts/TeamContext";
-import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
-import { ProjectVisibility } from "@/types/common/enums"; // Đảm bảo đường dẫn import đúng
+import { useAuth } from "@/contexts/AuthContext"; 
+import { ProjectVisibility } from "@/types/common/enums"; 
 import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
@@ -167,9 +167,7 @@ export function CreateProjectModal({ children }: CreateProjectModalProps) {
                 <SelectItem value={ProjectVisibility.TEAM}>
                     👥 Team (Visible to team members)
                 </SelectItem>
-                <SelectItem value={ProjectVisibility.PUBLIC}>
-                    🌐 Public (Visible to everyone)
-                </SelectItem>
+               
               </SelectContent>
             </Select>
           </div>

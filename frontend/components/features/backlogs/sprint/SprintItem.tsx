@@ -6,7 +6,7 @@ import { AccordionContent, AccordionItem } from "@/components/ui/accordion";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Table, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Rocket, PlusIcon, ChevronDown } from "lucide-react";
+import { Rocket, PlusIcon, ChevronDown, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/backlog-utils";
 import { useDroppable, useDndContext } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
@@ -15,8 +15,11 @@ import { Button } from "@/components/ui/button";
 import { AddNewTaskRow } from "../task/AddNewTaskRow";
 import { StartSprintDialog } from "./StartSprintDialog";
 import { CompleteSprintDialog } from "./CompleteSprintDialog";
+import { DeleteSprintDialog } from "./DeleteSprintDialog";
 import { SprintStatus } from "@/types/common/enums";
-import { on } from "events";
+import { useParams } from "next/navigation";
+import { useSprints } from "@/hooks/useSprints";
+import { toast } from "sonner";
 
 interface SprintItemProps {
   sprint: Sprint;
@@ -41,6 +44,11 @@ export function SprintItem({
   onSelect,
   onMultiSelectChange,
 }: SprintItemProps) {
+  const params = useParams();
+  const projectId = params.projectId as string;
+  const teamId = params.teamId as string;
+  const { deleteSprint } = useSprints(projectId, teamId);
+
   const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id);
   const totalTasks = sprintTasks.length;
 
@@ -112,6 +120,16 @@ export function SprintItem({
                 </Button>
               </CompleteSprintDialog>
             )}
+
+            <DeleteSprintDialog sprint={sprint}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </DeleteSprintDialog>
 
             <span className="text-sm font-normal text-muted-foreground">
               {totalTasks} {totalTasks === 1 ? "task" : "tasks"}

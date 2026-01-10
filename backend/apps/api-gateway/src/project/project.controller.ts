@@ -50,13 +50,8 @@ export class ProjectController {
   update(
     @Param('id') id: string,
     @Body() updateProjectDto: UpdateProjectDto,
-    @CurrentUser() user: JwtDto,
   ) {
-    const dtoWithUser = {
-      ...updateProjectDto,
-      ownerId: user.id,
-    };
-    return this.projectService.update(id, dtoWithUser);
+    return this.projectService.update(id, updateProjectDto);
   }
 
   @Delete(':id')

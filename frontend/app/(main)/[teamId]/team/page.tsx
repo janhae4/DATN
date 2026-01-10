@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronRight, LayoutGrid } from "lucide-react";
 
-import { 
-  useTeam, 
-  useTeamMembers, 
-  useDeleteTeam, 
-  useLeaveTeam 
+import {
+  useTeam,
+  useTeamMembers,
+  useDeleteTeam,
+  useLeaveTeam
 } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 import { MemberRole } from "@/types/common/enums";
@@ -17,11 +17,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TeamHeader } from "@/components/features/team/team-header";
 import { TeamOverviewTab } from "@/components/features/team/team-overview-tab";
 
+import { useTeamTour } from "@/hooks/touring/useTeamTour";
+
 export default function TeamDetailsPage() {
   const params = useParams();
   const teamId = params.teamId as string;
   const router = useRouter();
-  
+  const { startTour } = useTeamTour();
+
   // Data Fetching
   const { data: user } = useUserProfile();
   const { data: team, isLoading: isTeamLoading } = useTeam(teamId);
@@ -98,6 +101,7 @@ export default function TeamDetailsPage() {
           onDelete={handleDelete}
           onLeave={handleLeave}
           onSettingsClick={() => router.push(`/team/${teamId}/settings`)}
+          onStartTour={startTour}
         />
 
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
