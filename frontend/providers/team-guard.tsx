@@ -38,8 +38,8 @@ export function TeamGuard({ children }: { children: React.ReactNode }) {
 
   const { data: teams, isLoading, isRefetching } = useTeams();
   const { setActiveTeam } = useTeamContext();
-  console.log("teams", teams);
-  const currentTeam = teamId ? teams?.find((t) => t.id === teamId) : undefined;
+  const currentTeam = teams?.find((t) => t.id === teamId)
+
   const shouldRedirect =
     !!teamId &&
     !isLoading &&
@@ -47,14 +47,8 @@ export function TeamGuard({ children }: { children: React.ReactNode }) {
     teams.length > 0 &&
     !currentTeam;
 
-  console.log("currentTeam", currentTeam);
-  console.log("shouldRedirect", shouldRedirect);
   useEffect(() => {
     if (isLoading || teams === undefined) return;
-
-    if (isRefetching && teams?.length === 0) {
-      return;
-    }
 
     if (Array.isArray(teams) && teams.length === 0) {
       router.push("/team-create");
@@ -64,7 +58,7 @@ export function TeamGuard({ children }: { children: React.ReactNode }) {
     if (currentTeam) {
       setActiveTeam(currentTeam);
     }
-  }, [teams, isLoading, router, currentTeam, setActiveTeam]);
+  }, [teams, isLoading, currentTeam, setActiveTeam]);
 
   if (!teamId) {
     return <>{children}</>;
