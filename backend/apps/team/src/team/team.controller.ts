@@ -38,7 +38,6 @@ export class TeamController {
     errorHandler: customErrorHandler,
   })
   async findByUserId(userId: string) {
-    console.log('Finding teams for user in service:', userId);
     return await this.teamService.findByUserId(userId);
   }
 
@@ -191,7 +190,6 @@ export class TeamController {
     errorHandler: customErrorHandler,
   })
   async findParticipants(payload: { userId: string; teamId: string }) {
-    console.log('Finding participants in service:', payload);
     return await this.teamService.getTeamMembers(payload.userId, payload.teamId);
   }
 

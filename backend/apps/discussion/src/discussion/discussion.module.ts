@@ -38,15 +38,7 @@ import { Discussion, DiscussionSchema } from './schema/discussion.schema';
       useFactory: (cfg: ClientConfigService) => ({
         exchanges: [
           {
-            name: EVENTS_EXCHANGE,
-            type: 'topic',
-          },
-          {
             name: DISCUSSION_EXCHANGE,
-            type: 'direct'
-          },
-          {
-            name: USER_EXCHANGE,
             type: 'direct'
           }
         ],

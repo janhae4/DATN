@@ -45,18 +45,6 @@ import Redis from 'ioredis';
           {
             name: CHATBOT_EXCHANGE,
             type: 'direct',
-          },
-          {
-            name: USER_EXCHANGE,
-            type: 'direct'
-          },
-          {
-            name: TEAM_EXCHANGE,
-            type: 'direct'
-          },
-          {
-            name: EVENTS_EXCHANGE,
-            type: 'topic'
           }
         ],
         uri: config.getRMQUrl(),

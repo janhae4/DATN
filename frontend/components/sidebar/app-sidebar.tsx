@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   AudioWaveform,
   BookOpen,
@@ -17,22 +17,19 @@ import {
   Users,
   MessageCircle,
   CalendarDays,
-} from "lucide-react"
+} from "lucide-react";
 
-import { NavMain } from "@/components/sidebar/nav-main"
-import { NavProjects } from "@/components/sidebar/nav-projects"
-import { TeamSwitcher } from "@/components/sidebar/team-switcher"
+import { NavMain } from "@/components/sidebar/nav-main";
+import { NavProjects } from "@/components/sidebar/nav-projects";
+import { TeamSwitcher } from "@/components/sidebar/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const data = {
-
-
-
   navMain: [
     {
       title: "Project management",
@@ -57,7 +54,6 @@ const data = {
           url: "dashboard#timeline",
         },
       ],
-
     },
     {
       title: "Meeting",
@@ -79,13 +75,13 @@ const data = {
       title: "Documentation",
       url: "documentation",
       icon: BookOpen,
-      isActive: true
+      isActive: true,
     },
     {
       title: "Team",
       url: "team",
       icon: Users,
-      isActive: true
+      isActive: true,
     },
     {
       title: "Calendar",
@@ -97,77 +93,95 @@ const data = {
       title: "Messages",
       url: "chat",
       icon: MessageCircle,
-      isActive: true
+      isActive: true,
     },
     {
       title: "AI Assistant",
       url: "ai-assistant",
       icon: Sparkles,
-      isActive: true
+      isActive: true,
     },
   ],
+};
 
-}
-
-import { useProjects } from "@/hooks/useProjects"
-import { useParams } from "next/navigation"
+import { useProjects } from "@/hooks/useProjects";
+import { useParams } from "next/navigation";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const params = useParams()
-  const teamId = params.teamId as string
-  const projectId = params.projectId as string | undefined
-  const { projects } = useProjects(teamId)
+  const params = useParams();
+  const teamId = params.teamId as string;
+  const projectId = params.projectId as string | undefined;
+  const { projects } = useProjects(teamId);
 
   const formattedProjects = React.useMemo(() => {
     return projects.map((project) => ({
       name: project.name,
       url: `/${teamId}/${project.id}/dashboard`,
       icon: Frame,
-    }))
-  }, [projects, teamId])
+    }));
+  }, [projects, teamId]);
 
   const effectiveProjectId = React.useMemo(() => {
-    if (projectId) return projectId
-    if (projects && projects.length > 0) return projects[0].id
-    return undefined
-  }, [projectId, projects])
+    if (projectId) return projectId;
+    if (projects && projects.length > 0) return projects[0].id;
+    return undefined;
+  }, [projectId, projects]);
 
   const navMainWithParams = React.useMemo(() => {
-    if (!teamId || !effectiveProjectId) {
-      return data.navMain
+    if (!teamId) {
+      return data.navMain.map((item) => ({
+        ...item,
+        url: "#",
+        items: item.items?.map((sub) => ({ ...sub, url: "#" })),
+      }));
     }
 
-    const basePath = `/${teamId}/${effectiveProjectId}`
+    const projectBasePath = effectiveProjectId
+      ? `/${teamId}/${effectiveProjectId}`
+      : `/${teamId}`;
 
     return data.navMain.map((item) => {
-      // Xử lý đặc biệt cho Team, Calendar và Meeting
-      let resolvedUrl: string
-      if (item.url === "team") {
-        resolvedUrl = `/${teamId}/team`
-      } else if (item.url === "calendar") {
-        resolvedUrl = `/${teamId}/calendar`
-      } else if (item.url === "meeting") {
-        resolvedUrl = `/${teamId}/meeting`
-      } else if (item.url === "documentation") {
-        resolvedUrl = `/${teamId}/documentation`
+      let resolvedUrl: string;
+
+      if (
+        ["team", "calendar", "meeting", "documentation", "chat"].includes(
+          item.url
+        )
+      ) {
+        resolvedUrl = `/${teamId}/${item.url}`;
+      } else if (item.url === "dashboard") {
+        resolvedUrl = effectiveProjectId
+          ? `${projectBasePath}/dashboard`
+          : `/${teamId}/create-project`;
+      } else if (item.url === "ai-assistant") {
+        resolvedUrl = `/ai-assistant`;
       } else {
-        resolvedUrl = `${basePath}/${item.url}` 
+        resolvedUrl = `${projectBasePath}/${item.url}`;
       }
 
       return {
         ...item,
         url: resolvedUrl,
         items: item.items
-          ? item.items.map((subItem) => ({
-            ...subItem,
-            url: item.url === "meeting" 
-              ? `/${teamId}/${subItem.url}` 
-              : `${basePath}/${subItem.url}`,
-          }))
+          ? item.items.map((subItem) => {
+              if (item.url === "meeting") {
+                return { ...subItem, url: `/${teamId}/${subItem.url}` };
+              }
+              return {
+                ...subItem,
+                url: effectiveProjectId
+                  ? `${projectBasePath}/${
+                      subItem.url.split("#")[1]
+                        ? "dashboard#" + subItem.url.split("#")[1]
+                        : subItem.url
+                    }`
+                  : "#",
+              };
+            })
           : item.items,
-      }
-    })
-  }, [teamId, effectiveProjectId])
+      };
+    });
+  }, [teamId, effectiveProjectId]);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -180,5 +194,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

@@ -13,10 +13,6 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       useFactory: (config: ClientConfigService) => ({
         exchanges: [
           {
-            name: EVENTS_EXCHANGE,
-            type: 'topic',
-          },
-          {
             name: SEARCH_EXCHANGE,
             type: 'direct',
           }

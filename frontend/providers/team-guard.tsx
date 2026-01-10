@@ -39,7 +39,7 @@ export function TeamGuard({ children }: { children: React.ReactNode }) {
   const { data: teams, isLoading, isRefetching } = useTeams();
   const { setActiveTeam } = useTeamContext();
   const currentTeam = teams?.find((t) => t.id === teamId)
-
+  
   const shouldRedirect =
     !!teamId &&
     !isLoading &&

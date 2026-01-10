@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  ArrowUpCircle,
+  Crown,
 } from "lucide-react";
 
 import {
@@ -40,15 +42,27 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 import { Member, MemberStatus, TeamMember } from "@/types/social";
 import { MemberRole } from "@/types/common/enums";
 import { AddMemberDialog } from "./AddMemberDialog";
-import { useRemoveMember, useTeam, useTeamMembers } from "@/hooks/useTeam";
+import {
+  useChangeMemberRole,
+  useRemoveMember,
+  useTeam,
+  useTeamMembers,
+  useTransferOwnership,
+} from "@/hooks/useTeam";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TeamMembersListProps {
   members: Member[];
@@ -62,7 +76,18 @@ export function TeamMembersList({
   teamId,
 }: TeamMembersListProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const { mutate: removeMember, isPending, error } = useRemoveMember();
+  const { mutate: removeMember } = useRemoveMember();
+  const { mutate: changeMemberRole } = useChangeMemberRole();
+  const { mutate: transferOwnership } = useTransferOwnership();
+  const { user } = useAuth();
+  const currentUserId = user?.id;
+  const currentUserRole = useMemo(() => {
+    if (!members) return null;
+    const me = members.find(
+      (m) => m.id === currentUserId || m.id === currentUserId
+    );
+    return me?.role || null;
+  }, [members, currentUserId]);
 
   const filteredMembers = useMemo(() => {
     if (!members) return [];
@@ -74,28 +99,68 @@ export function TeamMembersList({
     });
   }, [members, searchTerm]);
 
-  console.log("filteredMembers", filteredMembers);
-
   const memberName = (id: string) => members.find((m) => m.id === id)?.name;
 
   const handleRemove = (memberId: string) => {
     removeMember(
+      { teamId: teamId, memberIds: [memberId] },
       {
-        teamId: teamId,
-        memberIds: [memberId],
-      },
-      {
-        onSuccess: () => {
-          toast.success(`${memberName(memberId)} has been removed`);
-        },
-        onError: (err: any) => {
-          toast.error(
-            err?.response?.data?.message || "Failed to remove member"
-          );
-        },
+        onSuccess: () =>
+          toast.success(`${memberName(memberId)} has been removed`),
+        onError: (err: any) =>
+          toast.error(err?.response?.data?.message || "Failed"),
       }
     );
   };
+
+  const handleRoleChange = (memberId: string, newRole: MemberRole) => {
+    console.log(`User selected: ${newRole} for member: ${memberId}`);
+
+    if (newRole === MemberRole.OWNER) {
+      transferOwnership(
+        { teamId, newOwnerId: memberId },
+        {
+          onSuccess: () =>
+            toast.success(`Transferring ownership to ${memberName(memberId)}`),
+          onError: (err: any) =>
+            toast.error(err?.response?.data?.message || "Failed"),
+        }
+      );
+    } else {
+      changeMemberRole(
+        { teamId, targetId: memberId, newRole },
+        {
+          onSuccess: () =>
+            toast.success(
+              `Changing role to ${newRole} for ${memberName(memberId)}`
+            ),
+          onError: (err: any) =>
+            toast.error(err?.response?.data?.message || "Failed"),
+        }
+      );
+    }
+
+    toast.success(`Changing role to ${newRole}`);
+  };
+
+  const canInvite =
+    currentUserRole === MemberRole.OWNER ||
+    currentUserRole === MemberRole.ADMIN;
+
+  const canRemoveMember = (targetRole: MemberRole, targetId: string) => {
+    const isSelf = members.find((m) => m.id === targetId)?.id === currentUserId;
+    if (isSelf) return false;
+
+    if (currentUserRole === MemberRole.OWNER) {
+      return true;
+    }
+    if (currentUserRole === MemberRole.ADMIN) {
+      return targetRole === MemberRole.MEMBER;
+    }
+    return false;
+  };
+
+  const canChangeRole = currentUserRole === MemberRole.OWNER;
 
   const getRoleBadge = (role: MemberRole) => {
     switch (role) {
@@ -215,11 +280,13 @@ export function TeamMembersList({
           </div>
 
           {/* Add Member Button */}
-          <AddMemberDialog teamId={teamId}>
-            <Button size="sm" className="h-9 shadow-sm w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" /> Invite Member
-            </Button>
-          </AddMemberDialog>
+          {canInvite && (
+            <AddMemberDialog teamId={teamId}>
+              <Button size="sm" className="h-9 shadow-sm w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" /> Invite Member
+              </Button>
+            </AddMemberDialog>
+          )}
         </div>
       </CardHeader>
 
@@ -290,6 +357,13 @@ export function TeamMembersList({
             ) : (
               // --- ACTUAL DATA ---
               filteredMembers.map((member) => {
+                const showRemove = canRemoveMember(member.role, member.id);
+                const showChangeRole =
+                  canChangeRole &&
+                  member.id !== currentUserId &&
+                  member.status === MemberStatus.ACCEPTED &&
+                  [MemberRole.ADMIN, MemberRole.OWNER].includes(member.role);
+
                 return (
                   <TableRow
                     key={member.id}
@@ -334,38 +408,98 @@ export function TeamMembersList({
                         ? format(new Date(member.joinedAt), "MMM d, yyyy")
                         : "-"}
                     </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer">
-                            <User className="mr-2 h-4 w-4" /> View Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
-                            <Mail className="mr-2 h-4 w-4" /> Send Message
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                            onClick={() => handleRemove(member.id)}
-                          >
-                            <ShieldAlert className="mr-2 h-4 w-4" /> Remove from
-                            Team
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+
+                    {member.id == currentUserId ? (
+                      <TableCell className="text-right pr-6 opacity-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 h-8 w-8"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    ) : (
+                      <TableCell className="text-right pr-6">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuLabel>
+                              Member Actions
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="cursor-pointer">
+                              <User className="mr-2 h-4 w-4" /> View Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Mail className="mr-2 h-4 w-4" /> Send Message
+                            </DropdownMenuItem>
+                            {showChangeRole && <DropdownMenuSeparator />}
+                            {showChangeRole && (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <ArrowUpCircle className="mr-2 h-4 w-4" />
+                                  Change Role
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                  <DropdownMenuRadioGroup
+                                    value={member.role}
+                                    onValueChange={(value) =>
+                                      handleRoleChange(
+                                        member.id,
+                                        value as MemberRole
+                                      )
+                                    }
+                                  >
+                                    <DropdownMenuRadioItem
+                                      value={MemberRole.OWNER}
+                                    >
+                                      <div className="flex justify-center items-center gap-2">
+                                        Owner
+                                        <Crown className="mr-2 h-4 w-4 text-amber-700" />
+                                      </div>
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem
+                                      value={MemberRole.ADMIN}
+                                    >
+                                      Admin
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem
+                                      value={MemberRole.MEMBER}
+                                    >
+                                      Member
+                                    </DropdownMenuRadioItem>
+                                  </DropdownMenuRadioGroup>
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                            )}
+
+                            {(showRemove || showChangeRole) && (
+                              <DropdownMenuSeparator />
+                            )}
+
+                            {showRemove && (
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                onClick={() => handleRemove(member.id)}
+                              >
+                                <ShieldAlert className="mr-2 h-4 w-4" /> Remove
+                                from Team
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })

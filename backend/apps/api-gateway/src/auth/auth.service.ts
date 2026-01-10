@@ -194,16 +194,14 @@ export class AuthService {
     }));
   }
 
-  // Trong file AuthService mà mom vừa gửi
-
   async handleGoogleCallback(user: GoogleAccountDto, response: Response) {
-    const tokens = await unwrapRpcResult(this.amqp.request<LoginResponseDto>({
+    const tokens: LoginResponseDto = await unwrapRpcResult(this.amqp.request<LoginResponseDto>({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.GOOGLE_CALLBACK,
       payload: user,
       timeout: RPC_TIMEOUT
     }));
-    // this.setCookies(tokens.accessToken, tokens.refreshToken, response);
+    this.setCookies(tokens.accessToken, tokens.refreshToken, response);
     return response.redirect(`${process.env.CLIENT_URL || 'http://localhost:5000'}/dashboard`);
   }
 
@@ -241,6 +239,8 @@ export class AuthService {
         routingKey: USER_PATTERNS.FIND_ONE,
         payload: userId,
       });
+
+      console.log(user)
 
       if (user && user.accounts) {
         const isLinked = user.accounts.some(

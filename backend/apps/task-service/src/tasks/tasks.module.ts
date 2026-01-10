@@ -62,14 +62,6 @@ import { AiStreamService } from './ai-stream.service';
         exchanges: [
           {
             name: TASK_EXCHANGE,
-            type: 'topic',
-          },
-          {
-            name: EVENTS_EXCHANGE,
-            type: 'topic',
-          },
-          {
-            name: REDIS_EXCHANGE,
             type: 'direct',
           }
         ],

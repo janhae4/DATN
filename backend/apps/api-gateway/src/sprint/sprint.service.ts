@@ -35,5 +35,6 @@ export class SprintService {
 
   async findAll(projectId: string, teamId: string, userId: string, status?: SprintStatus[]) {
     return unwrapRpcResult(await firstValueFrom(this.client.send(SPRINT_PATTERNS.FIND_ALL, { projectId, teamId, status, userId })));
+
   }
 }
