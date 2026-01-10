@@ -41,10 +41,12 @@ async def main():
 
     reranker = None
     try:
-        loop = asyncio.get_running_loop()
         print("Đang tải Reranker model...")
-        constructor_call = partial(CrossEncoder, "Qwen/Qwen3-Reranker-0.6B", max_length=512)
-        reranker = await loop.run_in_executor(threadpool, constructor_call)
+        reranker = CrossEncoder(
+        "Qwen/Qwen3-Reranker-0.6B", 
+        max_length=512, 
+        device='cpu'
+    )
         print("Tải Reranker thành công!")
     except Exception as e:
         print(f"Không load được reranker, sẽ dùng fallback: {e}")
