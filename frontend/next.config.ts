@@ -15,11 +15,11 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    // For development only - remove in production
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  output: "standalone"
 };
 
 export default nextConfig;

@@ -34,7 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useCreateDiscussion, useTeamMembers } from "@/hooks/useTeam";
+import { useTeamMembers } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 import { Member } from "@/types";
 
@@ -62,7 +62,7 @@ export function CreateChannelDialog({
 
   const { data: teamMembers } = useTeamMembers(teamId);
   const { data: userProfile } = useUserProfile();
-  const createDiscussion = useCreateDiscussion();
+  // const createDiscussion = useCreateDiscussion();
 
   const {
     register,
@@ -82,13 +82,6 @@ export function CreateChannelDialog({
     if (!teamId || !userProfile?.id) return;
 
     try {
-      await createDiscussion.mutateAsync({
-        teamId,
-        name: values.name,
-        ownerId: userProfile.id,
-        memberIds: selectedMembers.map((m) => m.id),
-      });
-
       toast.success("Channel created successfully!");
       setOpen(false);
       reset();

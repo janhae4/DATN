@@ -53,15 +53,9 @@ export default function AttachmentPage() {
     pageSize: 12,
   });
 
-  // Filter states
   const [fileNameFilter, setFileNameFilter] = useState("")
   const [fileTypeFilter, setFileTypeFilter] = useState("all")
 
-  // 1. Quản lý trạng thái dữ liệu qua Hook thực tế
-  // Pass selectedProjectId to useFiles. If empty string, it works as undefined in logic effectively if we process it
-  // But useFiles takes string | undefined. 
-  // If we pass "", backend might receive "" and try to match projectId=""?
-  // Let's ensure we pass undefined if empty string.
   const {
     files = [],
     isLoading,
@@ -75,12 +69,10 @@ export default function AttachmentPage() {
 
   console.log("data in page: ", files)
 
-
-  // Handle search and filter changes by resetting to first page
   React.useEffect(() => {
     setPaginationState(prev => ({
       ...prev,
-      pageIndex: 0, // Reset to first page when filters change
+      pageIndex: 0, 
     }));
   }, [fileNameFilter, fileTypeFilter]);
 

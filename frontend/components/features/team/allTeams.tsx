@@ -57,7 +57,6 @@ export default function AllTeams() {
     try {
       await leaveTeamMutation.mutateAsync({
         teamId: teamToLeave,
-        requesterId: user.id
       });
       toast.success("Left team successfully");
     } catch (error) {

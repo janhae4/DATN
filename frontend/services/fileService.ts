@@ -99,11 +99,14 @@ export const fileService = {
     onProgress?: (percentage: number) => void
   ): Promise<void> => {
     try {
-      // Dùng axios gốc (không qua apiClient) để tránh bị chèn Authorization header của App
       await axios.put(presignedUrl, file, {
         headers: {
-          'Content-Type': file.type, // Phải khớp với fileType lúc gọi initiateUpload
+          'Content-Type': file.type,
         },
+        transformRequest: [(data, headers) => {
+          delete headers['Authorization'];
+          return data;
+        }],
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
             const percentCompleted = Math.round(
