@@ -237,7 +237,9 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 
                 documents = await minio_service.load_documents(file_name)
                 async for chunk in summarizer.summarize(documents):
-                    await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
+                    await publish_to_redis(discussion_id, chunk, is_completed=False)
+                    
+                await publish_to_redis(discussion_id, "", is_completed=True)
             
             elif pattern_from_key == 'suggest_task':
                 raw_objective = payload_dto.get('objective')
