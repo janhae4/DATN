@@ -15,13 +15,24 @@ import { customErrorHandler } from '@app/common';
 export class RedisController {
   constructor(private readonly redisService: RedisService) { }
 
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.IS_TOKEN_USED,
+    queue: REDIS_PATTERN.IS_TOKEN_USED,
+    errorHandler: customErrorHandler
+  })
+  async isTokenUsed(payload: { userId: string; tokenHash: string }) {
+    const { userId, tokenHash } = payload;
+    return await this.redisService.isTokenUsed(userId, tokenHash);
+  }
+
   @RabbitRPC({
     exchange: REDIS_EXCHANGE,
     routingKey: REDIS_PATTERN.STORE_REFRESH_TOKEN,
     queue: REDIS_PATTERN.STORE_REFRESH_TOKEN,
     errorHandler: customErrorHandler
   })
-
   async storeRefreshToken(data: {
     userId: string;
     sessionId: string;
@@ -113,13 +124,24 @@ export class RedisController {
     return await this.redisService.setLockKey(userId, sessionId);
   }
 
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.DELETE_LOCK_KEY,
+    queue: REDIS_PATTERN.DELETE_LOCK_KEY,
+    errorHandler: customErrorHandler
+  })
+  async deleteLockKey(data: { userId: string; sessionId: string }) {
+    const { userId, sessionId } = data;
+    return await this.redisService.deleteLockKey(userId, sessionId);
+  }
+
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.LOGIN,
     queue: "event.login.redis",
     errorHandler: customErrorHandler
   })
-  async login(payload: { user: User,  memberRoles?: { teamId: string; role: string }[] }) {
+  async login(payload: { user: User, memberRoles?: { teamId: string; role: string }[] }) {
     return await this.redisService.handleUserLogin(payload.user, payload.memberRoles);
   }
 
@@ -218,7 +240,7 @@ export class RedisController {
     routingKey: REDIS_PATTERN.GET_USER_INFO,
     queue: REDIS_PATTERN.GET_USER_INFO,
     errorHandler: customErrorHandler
-  }) 
+  })
   async getUserInfo(userIds: string[]) {
     return await this.redisService.getUserInfo(userIds);
   }
@@ -228,7 +250,7 @@ export class RedisController {
     routingKey: REDIS_PATTERN.GET_USER_ROLE,
     queue: REDIS_PATTERN.GET_USER_ROLE,
     errorHandler: customErrorHandler
-  }) 
+  })
   async getUserRole(payload: { userId: string; teamId: string }) {
     const { userId, teamId } = payload;
     return await this.redisService.getUserRole(userId, teamId);
@@ -285,7 +307,7 @@ export class RedisController {
     return await this.redisService.setTeamMembers(teamId, members);
   }
 
-    @RabbitRPC({
+  @RabbitRPC({
     exchange: REDIS_EXCHANGE,
     routingKey: REDIS_PATTERN.PUSH_MEETING_BUFFER,
     queue: REDIS_PATTERN.PUSH_MEETING_BUFFER,

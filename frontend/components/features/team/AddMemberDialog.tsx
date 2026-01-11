@@ -14,7 +14,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
@@ -54,7 +53,6 @@ export function AddMemberDialog({
     try {
       await addMemberMutation.mutateAsync({
         teamId,
-        requesterId: userProfile.id,
         memberIds: [targetUserId]
       });
 

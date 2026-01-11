@@ -21,10 +21,8 @@ export interface LoginCredentials {
 export type UserProfile = User;
 
 export interface LoginResponse {
-  user?: UserProfile;
-  accessToken?: string;
-  refreshToken?: string;
-  message?: string;
+  message: string;
+  isFirstLogin: boolean;
 }
 
 export interface RegisterData {

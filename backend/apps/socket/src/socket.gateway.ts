@@ -48,6 +48,8 @@ interface AuthenticatedSocket extends Socket {
       'http://localhost:5000',
       'http://localhost:3000',
       'http://127.0.0.1:3000',
+      'http://api_gateway:3000',
+      'http://frontend:5000',
     ],
     credentials: true,
   },
@@ -480,6 +482,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       title: event.title,
       message: event.message,
       type: event.type,
+      metadata: event.metadata
     });
 
     this.amqpConnection.publish(

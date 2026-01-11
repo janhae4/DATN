@@ -326,26 +326,6 @@ export class UserService {
     return await this.userRepo.findOne({
       where: { id },
       relations: ['accounts', 'skills'],
-      select: {
-        id: true,
-        name: true,
-        avatar: true,
-        email: true,
-        bio: true,
-        accounts: {
-          email: true,
-          providerId: true,
-          updatedAt: true,
-        },
-        skills: true,
-        isBan: true,
-        createdAt: true,
-        isActive: true,
-        role: true,
-        phone: true,
-        jobTitle: true,
-        lastLogin: true,
-      }
     });
   }
 
@@ -400,6 +380,7 @@ export class UserService {
   }
 
   async findManyByIds(ids: string[], forDiscussion?: boolean) {
+    console.log(ids.length)
     const cachedUsers: Partial<User>[] = unwrapRpcResult(await this.amqp.request({
       exchange: REDIS_EXCHANGE,
       routingKey: REDIS_PATTERN.GET_USER_INFO,
@@ -408,22 +389,18 @@ export class UserService {
 
     const cachedIds = new Set(cachedUsers.map(u => u.id));
     const missingIds = ids.filter(id => !cachedIds.has(id));
-    console.log(missingIds)
     let missingUsers: Partial<User>[] = [];
 
     if (missingIds.length > 0) {
       this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from DB...`);
       missingUsers = await this.userRepo.find({
         where: {
-          id: In(missingIds)
+          id: In(ids)
         },
         relations: {
           skills: true
         }
       });
-
-      this.logger.log(missingUsers)
-
       if (missingUsers.length > 0) {
         await this.amqp.publish(
           REDIS_EXCHANGE,

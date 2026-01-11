@@ -7,11 +7,10 @@ import {
   isTomorrow,
   isValid,
   parseISO,
-} from "date-fns"; // Added format
+} from "date-fns";
 import { useTasks } from "@/hooks/useTasks";
 import {
   FolderKanban,
-  MessageSquare,
   Users,
   ArrowRight,
   Zap,
@@ -29,7 +28,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,7 +35,6 @@ import { Separator } from "@/components/ui/separator";
 
 // Hooks
 import { useProjects } from "@/hooks/useProjects";
-import { useDiscussions } from "@/hooks/useTeam";
 import { Member, TeamMember } from "@/types/social";
 import { useUserProfile } from "@/hooks/useAuth";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -72,11 +69,8 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
     setIsModalOpen(true);
   };
 
-  // Fetch Data
-  const { data: user } = useUserProfile();
   const { projects, isLoading: isLoadingProjects } = useProjects(teamId);
-  const { data: discussions, isLoading: isLoadingDiscussions } =
-    useDiscussions(teamId);
+  const { data: user } = useUserProfile();
 
   const {
     tasks: myTasks,

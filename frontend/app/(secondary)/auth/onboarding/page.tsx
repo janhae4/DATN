@@ -14,6 +14,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { SkillSelector } from "@/components/auth/SkillSelector";
 import { JobTitleSelector } from "@/components/auth/JobTitleSelector";
 import { onboarding } from "@/services/authService";
+import { teamService } from "@/services/teamService";
+import { projectService } from "@/services/projectService";
 
 const SUGGESTED_TITLES = [
   "Frontend Developer",
@@ -71,7 +73,6 @@ export default function OnboardingPage() {
   const selectedInterests = watch("interests");
   const currentJobTitle = watch("jobTitle");
 
-  // Hàm xử lý chuyển bước có validate
   const handleNext = async () => {
     const isStep1Valid = await trigger("jobTitle");
     if (isStep1Valid) setStep(2);
@@ -82,7 +83,20 @@ export default function OnboardingPage() {
     try {
       await onboarding(data);
       toast.success("Profile initialized!");
-      router.push("/dashboard");
+
+      try {
+        const teams = await teamService.getTeams();
+        const projects = await projectService.getProjects(teams[0].id);
+
+        if (teams && teams.length > 0) {
+          console.log("teams", teams);
+          router.push(`/${teams[0].id}/${projects[0].id}/dashboard`);
+        } else {
+          router.push("/team-create");
+        }
+      } catch (teamError) {
+        router.push("/dashboard");
+      }
     } catch (error) {
       toast.error("Submission failed");
     } finally {

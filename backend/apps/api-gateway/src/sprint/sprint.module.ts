@@ -20,11 +20,11 @@ import { ClientsModule } from '@nestjs/microservices';
         imports: [ClientConfigModule],
         inject: [ClientConfigService],
         useFactory: (config: ClientConfigService) => config.sprintClientOptions,
-      },
+      }, 
     ]),
   ],
 
   controllers: [SprintController],
   providers: [SprintService],
 })
-export class SprintModule {}
+export class SprintModule { }

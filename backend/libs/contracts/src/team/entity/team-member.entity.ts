@@ -1,8 +1,18 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from "typeorm";
 import { Team } from "./team.entity";
 import { MemberRole } from "@app/contracts";
 
+export enum MemberStatus {
+    PENDING = 'PENDING',
+    ACCEPTED = 'ACCEPTED',
+    DECLINED = 'DECLINED',
+    BANNED = 'BANNED',
+    UNBANNED = 'UNBANNED',
+    LEAVED = 'LEAVED'
+}
+
 @Entity()
+@Unique(['teamId', 'userId'])
 export class TeamMember {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -12,8 +22,11 @@ export class TeamMember {
     team: Team;
 
     @Column()
+    teamId: string;
+
+    @Column()
     userId: string;
-    
+
     @Column({
         type: 'enum',
         enum: MemberRole,
@@ -24,6 +37,16 @@ export class TeamMember {
     @Column({ default: true })
     isActive: boolean;
 
-    @CreateDateColumn()
-    joinedAt: Date;
+    @Column({
+        type: 'enum',
+        enum: MemberStatus,
+        default: MemberStatus.PENDING
+    })
+    status: MemberStatus
+
+    @CreateDateColumn({ nullable: true })
+    joinedAt?: Date;
+
+    @DeleteDateColumn()
+    deletedAt?: Date | null;
 }

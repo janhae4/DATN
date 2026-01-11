@@ -41,35 +41,29 @@ export class TeamController {
   @Get('me')
   @ApiOperation({ summary: 'Get all teams by user id' })
   @ApiBearerAuth()
-  @Roles(Role.ADMIN, Role.USER)
   find(@CurrentUser('id') id: string) {
     console.log('Finding teams for user:', id);
     return this.teamService.findByUserId(id);
 
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get team by id' })
-  @ApiBearerAuth()
-  @ApiParam({ name: 'id', description: 'Team id' })
-  findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return this.teamService.findById(id, userId);
-  }
+
 
   @Get(':teamId/members')
   @ApiBearerAuth()
   @ApiParam({ name: 'teamId', description: 'Team id' })
-  @Roles(Role.ADMIN, Role.USER)
   findParticipants(
-    @Param('teamId') teamId: string) {
-    return this.teamService.findParticipants(teamId);
+    @Param('teamId') teamId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    console.log('Controller hit! TeamId:', teamId, 'UserId:', userId);
+    return this.teamService.findParticipants(userId, teamId);
   }
 
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create team' })
   @ApiBody({ type: CreateTeamDto })
-  @Roles(Role.ADMIN, Role.USER)
   create(
     @Body() createTeamDto: CreateTeamDto,
     @CurrentUser('id') userId: string,
@@ -84,7 +78,6 @@ export class TeamController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete team' })
   @ApiParam({ name: 'id', description: 'Team id' })
-  @Roles(Role.ADMIN, Role.USER)
   async deleteTeam(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return await this.teamService.removeTeam(userId, id);
   }
@@ -94,7 +87,6 @@ export class TeamController {
   @ApiOperation({ summary: 'Add member to team' })
   @ApiParam({ name: 'teamId', description: 'Team id' })
   @ApiBody({ type: AddMember })
-  @Roles(Role.ADMIN, Role.USER)
   async addMember(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
@@ -113,17 +105,43 @@ export class TeamController {
     }
   }
 
+  @Post(':teamId/member/accepted')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Accept member to team' })
+  @ApiParam({ name: 'teamId', description: 'Team id' })
+  @ApiBody({ type: AddMember })
+  acceptMember(
+    @Param('teamId') teamId: string,
+    @CurrentUser('id') requesterId: string,
+    @Body() payload: { notificationId: string },
+  ) {
+
+    return this.teamService.acceptInvitation(requesterId, teamId, payload.notificationId);
+  }
+
+  @Delete(':teamId/member/declined')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove member from team' })
+  @ApiParam({ name: 'teamId', description: 'Team id' })
+  removeMemberById(
+    @Param('teamId') teamId: string,
+    @CurrentUser('id') id: string,
+    @Body() payload: { notificationId: string },
+  ) {
+    return this.teamService.declineInvitation(id, teamId, payload.notificationId);
+  }
+
   @Delete(':teamId/member/')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove member from team' })
   @ApiParam({ name: 'teamId', description: 'Team id' })
   @ApiBody({ type: RemoveMember })
-  @Roles(Role.ADMIN, Role.USER)
   removeMember(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
     @Body() body: RemoveMember,
   ) {
+    console.log('Removing member:', { teamId, requesterId, body });
     return this.teamService.removeMember({
       ...body,
       teamId,
@@ -135,7 +153,6 @@ export class TeamController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Leave team' })
   @ApiParam({ name: 'teamId', description: 'Team id' })
-  @Roles(Role.ADMIN, Role.USER)
   leaveTeam(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
@@ -202,5 +219,13 @@ export class TeamController {
       teamId,
       requesterId,
     });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get team by id' })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: 'Team id' })
+  findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.teamService.findById(id, userId);
   }
 }

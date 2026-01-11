@@ -79,8 +79,9 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const isLoginRequest = originalRequest.url?.includes('/auth');
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -102,7 +103,6 @@ apiClient.interceptors.response.use(
         await refreshAccessToken();
         processQueue(null);
         return apiClient(originalRequest);
-
       } catch (refreshError) {
         processQueue(refreshError as AxiosError);
         await logout();

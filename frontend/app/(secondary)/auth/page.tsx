@@ -24,19 +24,16 @@ export default function AuthPage() {
 
   return (
     <div className="flex h-screen">
-      {/* Form Section: Di chuyển dựa trên state */}
       <div
         className={`${styles.form_section} ${!isLoginView ? styles.form_section_signup : ""
           }`}
       >
         <div className={styles.form_wrapper}>
-          {/* Truyền hàm toggleView vào props */}
           <LoginForm isActive={isLoginView} onToggle={toggleView} />
           <SignupForm isActive={!isLoginView} onToggle={toggleView} />
         </div>
       </div>
 
-      {/* Image Section: Di chuyển ngược lại */}
       <div
         className={`${styles.image_section} ${!isLoginView ? styles.image_section_signup : ""
           }`}
@@ -47,7 +44,7 @@ export default function AuthPage() {
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           style={{ objectFit: "cover" }}
-          priority // Nên thêm priority cho ảnh LCP
+          priority
         />
       </div>
     </div>

@@ -26,7 +26,7 @@ import { List } from '@app/contracts/list/list/list.entity';
         exchanges: [
           {
             name: 'status_exchange',
-            type: 'topic',
+            type: 'direct',
           },
         ],
         uri: configService.getRMQUrl(),

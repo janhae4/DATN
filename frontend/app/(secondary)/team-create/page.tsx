@@ -14,6 +14,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function CreateTeamPage() {
   const [name, setName] = useState("");
+<<<<<<< HEAD
+=======
+  
+>>>>>>> 7ea7275f1e4a7bb324e346e7fc8f7906184ba38e
   const [members, setMembers] = useState<string[]>([]);
   const [memberInput, setMemberInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +28,11 @@ export default function CreateTeamPage() {
     e?.preventDefault();
     const email = memberInput.trim();
     if (!email) return;
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 7ea7275f1e4a7bb324e346e7fc8f7906184ba38e
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       toast.error("Invalid email address");
@@ -67,7 +75,8 @@ export default function CreateTeamPage() {
       });
 
       toast.success("Team created successfully!");
-      router.replace(`/${newTeam.id}`);
+      router.push(`/${newTeam.id}`);
+      console.log("Created team:", newTeam);
     } catch (error: any) {
       console.error(error);
       toast.error(error.response?.data?.message || "Failed to create team");
@@ -77,6 +86,7 @@ export default function CreateTeamPage() {
   };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Left Section: Minimalism Form */}
       <div className="flex flex-col justify-center px-8 sm:px-12 lg:px-20 py-12">
@@ -91,6 +101,13 @@ export default function CreateTeamPage() {
               Start collaborating with your teammates in one shared workspace.
               Efficiency begins with the right setup.
             </p>
+=======
+    <div className="flex min-h-screen items-center justify-center bg-gray-50/50 p-4">
+      <Card className="w-full max-w-lg shadow-lg">
+        <CardHeader className="text-center space-y-1">
+          <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-2">
+            <Users className="w-8 h-8 text-primary" />
+>>>>>>> 7ea7275f1e4a7bb324e346e7fc8f7906184ba38e
           </div>
 
           <form onSubmit={handleCreateTeam} className="space-y-8">

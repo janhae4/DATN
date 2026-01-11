@@ -6,7 +6,8 @@ import {
   NotificationUpdateDto,
   AddMemberEventPayload,
   GMAIL_EXCHANGE,
-  GMAIL_PATTERNS
+  GMAIL_PATTERNS,
+  NotificationType
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Notification } from './entity/notification.entity';
@@ -20,67 +21,43 @@ export class NotificationService {
     private readonly amqp: AmqpConnection
   ) { }
 
-  async handleTeamAddMember(payload: AddMemberEventPayload) {
-    const { members, teamName, requesterName } = payload;
-    for (const member of members) {
-      if (member.email) {
-        this.logger.log(`Sending team invitation email to ${member.email}`);
-        try {
-          await this.amqp.request({
-            exchange: GMAIL_EXCHANGE,
-            routingKey: GMAIL_PATTERNS.SEND_MAIL,
-            payload: {
-              to: member.email,
-              subject: `You have been added to team ${teamName}`,
-              content: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                  <h2>Team Invitation</h2>
-                  <p>Hello <strong>${member.name}</strong>,</p>
-                  <p><strong>${requesterName}</strong> has added you to the team <strong>${teamName}</strong>.</p>
-                  <p>Login to the application to check it out.</p>
-                </div>
-              `,
-            },
-            timeout: 10000
-          });
-        } catch (error) {
-          this.logger.error(`Failed to send email to ${member.email}`, error);
-        }
-      }
-
-      // Also create notification in DB
-      try {
-        await this.addNotification({
-          userId: member.id,
-          title: "New Team Invitation",
-          message: `${requesterName} added you to team ${teamName}`,
-          type: 'INFO'
-        } as any);
-      } catch (e) {
-        this.logger.error(`Failed to create notification for ${member.id}`, e);
-      }
-    }
-  }
+  // async handleTeamAddMember(payload: AddMemberEventPayload) {
+  //   const { members, teamName, requesterName } = payload;
+  //   return await this.notificationRepository.save(members.map((m) => ({
+  //     userId: m.id,
+  //     title: `You have been added to team ${teamName}`,
+  //     message: `${requesterName} added you to team ${teamName}`,
+  //     type: NotificationType.PENDING
+  //   })))
+  // }
 
   async addNotification(notification: NotificationEventDto) {
+    console.log("Notification: ", notification);
     const newNotification = this.notificationRepository.create({
       userId: notification.userId,
       title: notification.title,
       message: notification.message,
       type: notification.type as any,
+      metadata: notification.metadata
     });
     const notificationCreated = await this.notificationRepository.save(newNotification);
+    console.log("New notification: ", notificationCreated);
+    console.log(await this.notificationRepository.findOne({ where: { id: notificationCreated.id } }));
     this.logger.log(`Notification created: ${notificationCreated.id}`);
     return notificationCreated;
   }
 
-  async updateNotification(
-    where: { id: string },
-    data: NotificationUpdateDto,
-  ) {
-    const notificationUpdated = await this.notificationRepository.update(where.id, data as any);
-    this.logger.log(`Notification updated: ${where.id}`);
-    return notificationUpdated;
+  async updateNotification(where: { id: string }, data: NotificationUpdateDto) {
+    console.log("Incoming Data:", data);
+    const updatePayload: Partial<Notification> = {};
+    if (data && data.type) {
+      updatePayload.type = data.type;
+    }
+    if (Object.keys(updatePayload).length === 0) {
+      this.logger.warn(`Nothing to update for ID: ${where.id}`);
+      return;
+    }
+    return await this.notificationRepository.update(where.id, updatePayload);
   }
 
   async deleteNotification(where: { id: string }) {
@@ -118,7 +95,7 @@ export class NotificationService {
 
   async getNotifications(userId: string) {
     this.logger.log(`Fetching notifications for user: ${userId}`);
-    return await this.notificationRepository.find({
+    const not = await this.notificationRepository.find({
       where: {
         userId,
       },
@@ -126,5 +103,6 @@ export class NotificationService {
         createdAt: 'DESC',
       },
     });
+    return not;
   }
 }

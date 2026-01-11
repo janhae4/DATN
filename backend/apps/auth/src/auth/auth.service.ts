@@ -1,7 +1,7 @@
+import * as crypto from 'crypto';
 import {
   Injectable,
   Logger,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
@@ -29,6 +29,7 @@ import {
   EVENTS_EXCHANGE,
   GMAIL_EXCHANGE,
   REDIS_EXCHANGE,
+  UnauthorizedException,
 } from '@app/contracts';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -210,8 +211,103 @@ export class AuthService {
     };
   }
 
-  private async _generateTokensAndSession(user: User | JwtDto) {
-    const sessionId = randomUUID();
+
+
+  private _handlePostLoginTasks(user: User) {
+    this.logger.log(`Emitting post-login events for user ${user.id}.`);
+    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.LOGIN, user);
+  }
+
+  async login(loginDto: LoginDto) {
+    this.logger.log(`Login attempt for ${loginDto.username}...`);
+    const user: User = unwrapRpcResult(await this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.VALIDATE,
+      payload: loginDto,
+    }))
+
+    if (!user) {
+      this.logger.warn(`Invalid credentials for ${loginDto.username}.`);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    this.logger.log(
+      `User ${loginDto.username} validated. Generating session...`,
+    );
+    const token = await this._generateTokensAndSession(user);
+    this._handlePostLoginTasks(user);
+    return {
+      ...token,
+      isFirstLogin: user.lastLogin === null
+    };
+  }
+
+
+  async refresh(token: string) {
+    const payload = await this.verifyToken<RefreshTokenDto>(token);
+    if (!payload) throw new UnauthorizedException('Invalid refresh token');
+
+    try {
+      const stored = unwrapRpcResult(await this.amqp.request<StoredRefreshTokenDto>({
+        exchange: REDIS_EXCHANGE,
+        routingKey: REDIS_PATTERN.GET_STORED_REFRESH_TOKEN,
+        payload: { userId: payload.id, sessionId: payload.sessionId },
+      }));
+
+      if (!stored) {
+        this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
+          userId: payload.id,
+          sessionId: payload.sessionId
+        })
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const tokenDigest = this.hashToken(token);
+      const matches = await bcrypt.compare(tokenDigest, stored.token);
+
+      if (!matches) {
+        await this.amqp.request<void>({
+          exchange: REDIS_EXCHANGE,
+          routingKey: REDIS_PATTERN.DELETE_REFRESH_TOKEN,
+          payload: { userId: payload.id, sessionId: payload.sessionId }
+        });
+
+        throw new UnauthorizedException('Invalid refresh token (Reuse Detected)');
+      }
+
+      const lockKey = unwrapRpcResult(await this.amqp.request<string>({
+        exchange: REDIS_EXCHANGE,
+        routingKey: REDIS_PATTERN.SET_LOCK_KEY,
+        payload: { userId: payload.id, sessionId: payload.sessionId },
+      }));
+
+      if (!lockKey) {
+        throw new RpcException({ statusCode: 429, message: 'Refresh in progress' });
+      }
+
+
+      return await this._generateTokensAndSession(
+        { id: payload.id, role: payload.role } as JwtDto,
+        payload.sessionId
+      );
+
+    } catch (error) {
+      throw error;
+    } finally {
+      await this.amqp.request({
+        exchange: REDIS_EXCHANGE,
+        routingKey: REDIS_PATTERN.DELETE_LOCK_KEY,
+        payload: { userId: payload.id, sessionId: payload.sessionId },
+      });
+    }
+  }
+
+  private hashToken(token: string) {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  private async _generateTokensAndSession(user: User | JwtDto, existingSessionId?: string) {
+    const sessionId = existingSessionId || randomUUID();
     const payload = { id: user.id, role: user.role };
 
     this.logger.log(
@@ -226,43 +322,28 @@ export class AuthService {
       ),
     ]);
 
-    const hashedRefresh = await bcrypt.hash(refreshToken, 10);
+    console.log(this.jwtService.decode(refreshToken));
 
-    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_REFRESH_TOKEN, {
-      userId: user.id,
-      sessionId,
-      hashedRefresh,
-      exp: REFRESH_TTL,
-    });
+    console.log("==========================================");
+    console.log("NEW Refresh Token:", refreshToken.substring(refreshToken.length - 20));
+    console.log("==========================================");
+    const tokenDigest = this.hashToken(refreshToken);
+    const hashedRefresh = await bcrypt.hash(tokenDigest, 10);
+
+    unwrapRpcResult(await this.amqp.request({
+      exchange: REDIS_EXCHANGE,
+      routingKey: REDIS_PATTERN.STORE_REFRESH_TOKEN,
+      payload: {
+        userId: user.id,
+        sessionId,
+        hashedRefresh,
+        exp: REFRESH_TTL,
+      }
+    }))
 
     if (!accessToken || !refreshToken) throw new NotFoundException('Failed to generate tokens');
 
     return { accessToken, refreshToken };
-  }
-
-  private _handlePostLoginTasks(user: User) {
-    this.logger.log(`Emitting post-login events for user ${user.id}.`);
-    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.LOGIN, user);
-  }
-
-  async login(loginDto: LoginDto) {
-    this.logger.log(`Login attempt for ${loginDto.username}...`);
-    const user = await this.amqp.request<User>({
-      exchange: USER_EXCHANGE,
-      routingKey: USER_PATTERNS.VALIDATE,
-      payload: loginDto,
-    })
-
-    if (!user) {
-      this.logger.warn(`Invalid credentials for ${loginDto.username}.`);
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    this.logger.log(
-      `User ${loginDto.username} validated. Generating session...`,
-    );
-    const token = await this._generateTokensAndSession(user);
-    this._handlePostLoginTasks(user);
-    return token;
   }
 
   async getGoogleTokens(userId: string) {
@@ -344,7 +425,7 @@ export class AuthService {
       `Handling Google login for existing user ${account.user.id} (Email: ${data.email}).`,
     );
     const { accessToken, refreshToken } = data;
-    console.log("data from handleLoginGoogle: ",)
+    console.log("data from handleLoginGoogle: ", data)
 
     this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
       userId: account.user.id,
@@ -352,7 +433,6 @@ export class AuthService {
       refreshToken,
     });
 
-    await this._generateTokensAndSession(account.user);
     return await this._generateTokensAndSession(account.user);
   }
 
@@ -438,75 +518,7 @@ export class AuthService {
     });
   }
 
-  async refresh(token: string) {
-    this.logger.log('Attempting token refresh...');
-    const payload = await this.verifyToken<RefreshTokenDto>(token);
-    this.logger.log(
-      `Refresh payload validated for user ${payload.id}, session ${payload.sessionId}.`,
-    );
 
-    const stored = await this.amqp.request<StoredRefreshTokenDto>({
-      exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.GET_STORED_REFRESH_TOKEN,
-      payload: {
-        userId: payload.id,
-        sessionId: payload.sessionId,
-      },
-    })
-
-    console.log(stored)
-
-    if (!stored) {
-      this.logger.warn(
-        `No stored refresh token found for user ${payload.id}, session ${payload.sessionId}.`,
-      );
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    this.logger.log('Comparing token hashes...');
-    const matches = await bcrypt.compare(token, stored.token);
-    if (!matches) {
-      this.logger.warn(
-        `Refresh token hash mismatch for user ${payload.id}, session ${payload.sessionId}.`,
-      );
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    this.logger.log(
-      `Attempting to acquire refresh lock for user ${payload.id}, session ${payload.sessionId}...`,
-    );
-    const lockKey = await this.amqp.request<string>({
-      exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.SET_LOCK_KEY,
-      payload: {
-        userId: payload.id,
-        sessionId: payload.sessionId,
-      },
-    })
-    if (!lockKey) {
-      this.logger.warn(
-        `Refresh lock failed (already in progress) for user ${payload.id}, session ${payload.sessionId}.`,
-      );
-      throw new RpcException({
-        status: 429,
-        error: 'Too many requests',
-        message: 'Refresh in progress',
-      });
-    }
-    this.logger.log(
-      `Refresh lock acquired. Generating new tokens for user ${payload.id}.`,
-    );
-
-    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
-      userId: payload.id,
-      sessionId: payload.sessionId,
-    });
-
-    return this._generateTokensAndSession({
-      id: payload.id,
-      role: payload.role,
-    } as JwtDto);
-  }
 
   changePassword(changePasswordDto: ChangePasswordDto) {
     this.logger.log(

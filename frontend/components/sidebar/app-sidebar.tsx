@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   AudioWaveform,
   BookOpen,
@@ -17,17 +17,17 @@ import {
   Users,
   MessageCircle,
   CalendarDays,
-} from "lucide-react"
+} from "lucide-react";
 
-import { NavMain } from "@/components/sidebar/nav-main"
-import { NavProjects } from "@/components/sidebar/nav-projects"
-import { TeamSwitcher } from "@/components/sidebar/team-switcher"
+import { NavMain } from "@/components/sidebar/nav-main";
+import { NavProjects } from "@/components/sidebar/nav-projects";
+import { TeamSwitcher } from "@/components/sidebar/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const data: {
   navMain: {
@@ -68,13 +68,13 @@ const data: {
       title: "Documentation",
       url: "documentation",
       icon: BookOpen,
-      isActive: true
+      isActive: true,
     },
     {
       title: "Team",
       url: "team",
       icon: Users,
-      isActive: true
+      isActive: true,
     },
     {
       title: "Calendar",
@@ -92,19 +92,19 @@ const data: {
       title: "AI Assistant",
       url: "ai-assistant",
       icon: Sparkles,
-      isActive: true
+      isActive: true,
     },
   ],
 }
 
-import { useProjects } from "@/hooks/useProjects"
-import { useParams } from "next/navigation"
+import { useProjects } from "@/hooks/useProjects";
+import { useParams } from "next/navigation";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const params = useParams()
-  const teamId = params.teamId as string
-  const projectId = params.projectId as string | undefined
-  const { projects } = useProjects(teamId)
+  const params = useParams();
+  const teamId = params.teamId as string;
+  const projectId = params.projectId as string | undefined;
+  const { projects } = useProjects(teamId);
 
   const formattedProjects = React.useMemo(() => {
     return projects
@@ -118,10 +118,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [projects, teamId])
 
   const effectiveProjectId = React.useMemo(() => {
-    if (projectId) return projectId
-    if (projects && projects.length > 0) return projects[0].id
-    return undefined
-  }, [projectId, projects])
+    if (projectId) return projectId;
+    if (projects && projects.length > 0) return projects[0].id;
+    return undefined;
+  }, [projectId, projects]);
 
   const navMainWithParams = React.useMemo(() => {
     if (!teamId) {
@@ -162,9 +162,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 : `/${teamId}`,
           }))
           : item.items,
-      }
-    })
-  }, [teamId, effectiveProjectId])
+      };
+    });
+  }, [teamId, effectiveProjectId]);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -177,5 +177,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

@@ -16,4 +16,7 @@ export const REDIS_PATTERN = {
   SET_TEAM_MEMBERS: 'redis.setTeamMember',
   PUSH_MEETING_BUFFER: 'redis.pushToMeetingBuffer',
   POP_MEETING_BUFFER: 'redis.popMeetingBuffer',
+  MARK_TOKEN_AS_USED: 'redis.markTokenAsUsed',
+  IS_TOKEN_USED: 'redis.isTokenUsed',
+  DELETE_LOCK_KEY: 'redis.deleteLockKey',
 };

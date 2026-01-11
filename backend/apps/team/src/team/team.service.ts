@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, EntityManager } from 'typeorm';
+import { DataSource, Repository, EntityManager, Not, In, FindOptionsWhere } from 'typeorm';
 import {
   Team,
   MemberRole,
@@ -31,6 +31,11 @@ import {
   LeaveMemberEventPayload,
   REDIS_EXCHANGE,
   REDIS_PATTERN,
+  MemberStatus,
+  TeamAction,
+  NOTIFICATION_EXCHANGE,
+  NOTIFICATION_PATTERN,
+  NotificationType,
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { RemoveTeamEventPayload } from '@app/contracts/team/dto/remove-team.dto';
@@ -84,7 +89,7 @@ export class TeamService {
     }
 
     const members = await manager.find(TeamMember, {
-      where: { team: { id: teamId } }
+      where: { teamId },
     });
 
     team.members = members;
@@ -159,72 +164,19 @@ export class TeamService {
     const { name, memberIds = [], ownerId } = createTeamDto;
     this.logger.log(`Validating members for new team "${name}"...`);
 
-    // Validate ownerId
-    if (!ownerId) {
-      throw new BadRequestException('ownerId is required to create a team.');
+
+    const ownerProfile = unwrapRpcResult(await this.amqp.request<User>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_ONE,
+      payload: ownerId,
+      timeout: 2000,
+    }));
+
+    if (!ownerProfile) {
+      throw new BadRequestException('Owner not found.');
     }
 
-    // Ensure memberIds is an array
-    const safeMemberIds = Array.isArray(memberIds) ? memberIds : [];
-    const allUserIdsToValidate = Array.from(new Set([...safeMemberIds, ownerId]));
-
-    let usersFromCache: EventUserSnapshot[] = [];
-    try {
-      usersFromCache = await this.amqp.request<EventUserSnapshot[]>({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
-        payload: allUserIdsToValidate,
-        timeout: 1000
-      })
-    } catch (cacheError) {
-      this.logger.warn(
-        `Redis cache failed for user info: ${cacheError.message}. Proceeding to fetch from DB...`,
-      );
-    }
-
-    const foundInCacheIds = new Set(usersFromCache.map((u) => u.id));
-    const missingIds = allUserIdsToValidate.filter((id) => !foundInCacheIds.has(id));
-
-    let usersFromDb: User[] = [];
-    if (missingIds.length > 0) {
-      this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from DB...`);
-
-      const result = await this.amqp.request<User[]>({
-        exchange: USER_EXCHANGE,
-        routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-        payload: { userIds: missingIds },
-      });
-      usersFromDb = Array.isArray(result) ? result : (result ? [result] : []);
-
-
-      if (usersFromDb.length > 0) {
-        this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, usersFromDb);
-      }
-    }
-
-    const allFoundUsers: EventUserSnapshot[] = [
-      ...usersFromCache,
-      ...usersFromDb.map((u) => ({
-        id: u.id,
-        name: u.name,
-        avatar: u.avatar,
-        email: u.email,
-      })),
-    ];
-
-    if (allFoundUsers.length !== allUserIdsToValidate.length) {
-      const foundIds = new Set(allFoundUsers.map((u) => u.id));
-      const nonExistentIds = allUserIdsToValidate.filter((id) => !foundIds.has(id));
-      throw new BadRequestException(
-        `The following user IDs do not exist: ${nonExistentIds.join(', ')}`,
-      );
-    }
-
-    const userMap = new Map(allFoundUsers.map((u) => [u.id, u as User]));
-
-    this.logger.log(`Creating a new team named "${name}"...`);
-
-    return await this.dataSource.transaction(async (manager) => {
+    const savedTeam = await this.dataSource.transaction(async (manager) => {
       const teamRepo = manager.getRepository(Team);
       const memberRepo = manager.getRepository(TeamMember);
 
@@ -232,34 +184,52 @@ export class TeamService {
         name,
         ownerId,
       });
-      const savedTeam = await teamRepo.save(newTeam);
+      const saved = await teamRepo.save(newTeam);
 
-      const { savedMembers } = await this._addMembersToDb(
-        memberRepo,
-        savedTeam,
-        allUserIdsToValidate,
-        userMap,
-        ownerId
-      );
-
-      const teamSnapshot: TeamSnapshot = {
-        id: savedTeam.id,
-        name: savedTeam.name,
-        avatar: savedTeam.avatar,
-      }
-
-      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.CREATE_TEAM, {
-        teamSnapshot,
-        owner: allFoundUsers.find((u) => u.id === ownerId)!,
-        members: allFoundUsers.filter((u) => u.id !== ownerId),
-      } as CreateTeamEventPayload);
-
-      savedTeam.members = savedMembers;
-      return {
-        id: savedTeam.id,
-        name: savedTeam.name,
-      };
+      const ownerMember = memberRepo.create({
+        team: saved,
+        userId: ownerId,
+        role: MemberRole.OWNER,
+        status: MemberStatus.ACCEPTED,
+      });
+      await memberRepo.save(ownerMember);
+      saved.members = [ownerMember];
+      return saved;
     });
+
+    console.log(savedTeam.members.length)
+
+    const teamSnapshot: TeamSnapshot = {
+      id: savedTeam.id,
+      name: savedTeam.name,
+      avatar: savedTeam.avatar,
+    };
+
+    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.CREATE_TEAM, {
+      teamSnapshot,
+      owner: ownerProfile,
+      members: [ownerProfile],
+    } as CreateTeamEventPayload);
+
+    if (memberIds && memberIds.length > 0) {
+      console.log(memberIds);
+      const membersToInvite = memberIds.filter(id => id !== ownerId);
+      if (membersToInvite.length > 0) {
+        this.logger.log(`Inviting ${membersToInvite.length} members to new team...`);
+        await this.addMembers({
+          teamId: savedTeam.id,
+          requesterId: ownerId,
+          memberIds: membersToInvite
+        });
+      }
+    }
+
+    this.logger.log(`Team [${savedTeam.id}] created successfully.`);
+
+    return {
+      id: savedTeam.id,
+      name: savedTeam.name,
+    };
   }
 
 
@@ -270,9 +240,16 @@ export class TeamService {
       `User [${requesterId}] adding ${memberIds.length} members to team [${teamId}].`,
     );
 
-    return this.dataSource.transaction(async (manager) => {
-      const memberRepo = manager.getRepository(TeamMember);
+    const usersFromCache: User[] = unwrapRpcResult(await this.amqp.request<EventUserSnapshot[]>({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+      payload: { userIds: [...memberIds, requesterId] },
+      timeout: 2000,
+    }));
 
+
+    const updatedTeam = await this.dataSource.transaction(async (manager) => {
+      const memberRepo = manager.getRepository(TeamMember);
       const team = await this._getTeamForModification(teamId, manager);
       this._verifyPermission({
         team,
@@ -281,165 +258,103 @@ export class TeamService {
         action: 'add_member',
       });
 
-      const existingMemberIds = new Set(team.members.map((m) => m.userId));
-      const newMemberIds = memberIds.filter((id) => !existingMemberIds.has(id));
+      const existingMemberships = await memberRepo.find({
+        where: {
+          teamId: team.id,
+          userId: In(usersFromCache.map(u => u.id)),
+        },
+        withDeleted: true
+      });
 
-      if (newMemberIds.length === 0) {
-        this.logger.log(
-          `No new members to add to team ${teamId}. All provided member IDs are already member`,
-        );
-        return team;
-      }
+      const membersToInsert: TeamMember[] = [];
+      const membersToRestore: TeamMember[] = [];
+      for (const user of usersFromCache) {
+        const existing = existingMemberships.find(m => m.userId === user.id);
 
-      let usersFromCache: EventUserSnapshot[] = [];
-      try {
-        usersFromCache = await this.amqp.request<EventUserSnapshot[]>({
-          exchange: REDIS_EXCHANGE,
-          routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
-          payload: newMemberIds,
-          timeout: 2000,
-        });
-      } catch (cacheError) {
-        this.logger.warn(
-          `Cache request failed: ${cacheError.message}. Fetching all from DB.`,
-        );
-      }
-
-      const foundInCacheIds = new Set(usersFromCache.map((u) => u.id));
-      const missingIds = newMemberIds.filter((id) => !foundInCacheIds.has(id));
-      let usersFromDb: User[] = [];
-
-      if (missingIds.length > 0) {
-        usersFromDb = await this.amqp.request<User[]>({
-          exchange: USER_EXCHANGE,
-          routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-          payload: { userIds: missingIds },
-        });
-        // const result = await this.amqp.request<User[]>({
-        //   exchange: USER_EXCHANGE,
-        //   routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-        //   payload: { userIds: missingIds }, 
-        // });
-
-        // usersFromDb = Array.isArray(result) ? result : (result ? [result] : []);
-
-        if (usersFromDb.length > 0) {
-          this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, {
-            users: usersFromDb,
+        if (existing) {
+          if (existing.deletedAt) {
+            existing.deletedAt = null;
+            existing.status = MemberStatus.PENDING;
+            existing.role = MemberRole.MEMBER;
+            membersToRestore.push(existing);
+          } else {
+            this.logger.warn(`User ${user.id} is already in team.`);
+          }
+        } else {
+          const newMember = memberRepo.create({
+            userId: user.id,
+            role: MemberRole.MEMBER,
+            status: MemberStatus.PENDING,
+            teamId: team.id
           });
+          membersToInsert.push(newMember);
         }
       }
-
-      const allFoundUsers: EventUserSnapshot[] = [
-        ...usersFromCache,
-        ...usersFromDb.map((u) => ({
-          id: u.id,
-          name: u.name,
-          avatar: u.avatar,
-          email: u.email,
-        })),
-      ];
-
-      if (allFoundUsers.length !== newMemberIds.length) {
-        const foundIds = new Set(allFoundUsers.map((u) => u.id));
-        const nonExistentIds = newMemberIds.filter((id) => !foundIds.has(id));
-        throw new BadRequestException(
-          `The following user IDs do not exist: ${nonExistentIds.join(', ')}`,
-        );
-      }
-
-      const userMap = new Map(allFoundUsers.map((u) => [u.id, u as User]));
-      const { cachedUsers, savedMembers } = await this._addMembersToDb(
-        memberRepo,
-        team,
-        newMemberIds,
-        userMap,
-      );
-
-      const memberIdsToNotify = savedMembers
-        .filter((m) => m.userId !== requesterId)
-        .map((m) => m.userId);
-
-      let requesterName = 'Unknown';
-      try {
-        const requesterProfile = await this.amqp.request<EventUserSnapshot>({
-          exchange: USER_EXCHANGE,
-          routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-          payload: { userIds: [requesterId] },
-          timeout: 1000,
-        });
-        if (requesterProfile) {
-          requesterName = requesterProfile.name;
-        }
-      } catch (e) {
-        this.logger.warn(`Could not fetch requester name for event: ${e.message}`);
-      }
-
-      this.logger.log(`Members added to team [${teamId}]. Emitting event.`);
-      const eventPayload: AddMemberEventPayload = {
-        members: cachedUsers,
-        requesterId,
-        requesterName,
-        teamId,
-        memberIdsToNotify,
-        teamName: team.name,
-      };
-      this.amqp.publish(EVENTS_EXCHANGE, EVENTS.ADD_MEMBER, eventPayload);
-      team.members.push(...savedMembers);
+      if (membersToInsert.length > 0) await memberRepo.save(membersToInsert);
+      if (membersToRestore.length > 0) await memberRepo.save(membersToRestore);
+      const validNewMembers = [...membersToInsert, ...membersToRestore];
+      if (validNewMembers.length === 0) return team;
+      team.members.push(...validNewMembers);
       return team;
     });
-  }
 
-  async _addMembersToDb(
-    memberRepo: Repository<TeamMember>,
-    team: Team,
-    newMemberIds: string[],
-    userMap: Map<string, User | EventUserSnapshot>,
-    ownerId?: string
-  ): Promise<{ cachedUsers: EventUserSnapshot[]; savedMembers: TeamMember[] }> {
-    const cachedUsers: EventUserSnapshot[] = [];
-    const membersToCreate = newMemberIds.map((id) => {
-      const user = userMap.get(id);
-      if (!user) {
-        throw new BadRequestException(`User with ID ${id} not found in userMap.`);
+    const newMemberIds = usersFromCache.map(u => u.id);
+    const memberIdsToNotify = [
+      ...updatedTeam.members.map(m => m.userId),
+      ...newMemberIds
+    ].filter(id => id !== requesterId);
+
+    const uniqueNotifyIds = [...new Set(memberIdsToNotify)];
+
+    this.logger.log(`Members added to team [${teamId}]. Emitting event.`);
+
+    const eventPayload: AddMemberEventPayload = {
+      members: usersFromCache,
+      requesterId,
+      requesterName: usersFromCache.find(u => u.id === requesterId)!.name,
+      teamId,
+      teamName: updatedTeam.name,
+      memberIdsToNotify: uniqueNotifyIds,
+      metadata: {
+        teamId,
+        action: TeamAction.MEMBER_INVITED
       }
-      const cachedData = {
-        name: user.name,
-        avatar: user.avatar,
-        email: user.email,
-      };
-      cachedUsers.push({ ...cachedData, id });
-      return memberRepo.create({
-        team,
-        userId: id,
-        role: id === ownerId ? MemberRole.OWNER : MemberRole.MEMBER,
-      });
-    });
+    };
 
-    const savedMembers = await memberRepo.save(membersToCreate);
-    return { cachedUsers, savedMembers };
+    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.ADD_MEMBER, eventPayload);
+
+    return updatedTeam;
   }
 
-  async removeMember(payload: RemoveMember): Promise<Team> {
+  async acceptInvitation(userId: string, teamId: string, notificationId: string) {
+    return await this.dataSource.transaction(async (manager) => {
+      const memberRepo = manager.getRepository(TeamMember);
+      const member = await memberRepo.findOne({ where: { teamId, userId } })
+      if (!member) throw new NotFoundException(`You are not invited to this team.`)
+      member.status = MemberStatus.ACCEPTED;
+      this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.UPDATE, { notificationId, data: { type: NotificationType.SUCCESS } });
+      await memberRepo.save(member);
+      return { "success": true }
+    })
+  }
+
+  async declineInvitation(userId: string, teamId: string, notificationId: string) {
+    return await this.dataSource.transaction(async (manager) => {
+      const memberRepo = manager.getRepository(TeamMember);
+      const member = await memberRepo.findOne({ where: { teamId, userId } })
+      if (!member) throw new NotFoundException(`You are not invited to this team.`)
+      member.status = MemberStatus.DECLINED;
+      this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.UPDATE, { notificationId, data: { type: NotificationType.FAILED } });
+      await memberRepo.save(member);
+      return { "success": true }
+    })
+  }
+
+  async removeMember(payload: RemoveMember & { teamId: string; requesterId: string }): Promise<Team> {
     const { memberIds, teamId, requesterId } = payload;
+    this.logger.log(`Removing ${memberIds.length} members from team [${teamId}] by [${requesterId}]...`);
 
-    const allIdsToFetch = Array.from(new Set([...memberIds, requesterId]));
-
-    let profileMap: Map<string, EventUserSnapshot>;
-    try {
-      profileMap = await this._getUserProfiles(allIdsToFetch);
-    } catch (error) {
-      this.logger.error(`Failed to fetch profiles from Redis: ${error.message}`);
-      throw new BadRequestException('Failed to retrieve user data for event.');
-    }
-
-    const requesterName = profileMap.get(requesterId)?.name || 'Unknown';
-
-    let teamResult: Team;
-    let removedMembersSnapshot: EventUserSnapshot[];
-    let memberIdsToNotify: string[];
-
-    await this.dataSource.transaction(async (manager) => {
+    const updatedTeam = await this.dataSource.transaction(async (manager) => {
       const memberRepo = manager.getRepository(TeamMember);
       const team = await this._getTeamForModification(teamId, manager);
 
@@ -451,51 +366,45 @@ export class TeamService {
         action: 'remove_member',
       });
 
-      console.log(team.members.map(m => m.userId), memberIds)
 
       const membersToRemove = team.members.filter((m) =>
         memberIds.includes(m.userId),
       );
 
-      console.log(membersToRemove)
-
-      if (membersToRemove.length === 0) {
-        throw new NotFoundException(
-          `None of the provided member IDs were found in the team.`,
-        );
-      }
-
-      removedMembersSnapshot = membersToRemove.map((m) => ({
-        id: m.userId,
-        name: profileMap.get(m.userId)?.name || 'Unknown',
-        avatar: profileMap.get(m.userId)?.avatar,
-      }));
-
-      await memberRepo.remove(membersToRemove);
-
-      team.members = team.members.filter(
-        (m) => !memberIds.includes(m.userId),
-      );
-
-      memberIdsToNotify = team.members
-        .filter((m) => m.userId !== requesterId)
-        .map((m) => m.userId);
-
-      teamResult = team;
+      if (membersToRemove.length === 0) throw new NotFoundException(`None of the provided member IDs were found in the team.`);
+      await memberRepo.softRemove(membersToRemove);
+      team.members = team.members.filter((m) => !memberIds.includes(m.userId));
+      return team;
     });
 
-    this.logger.log(`Member removed from team [${teamId}]. Emitting event.`);
+    this.logger.log(`Members removed from team [${teamId}]. Emitting event.`);
+
+    const userIds = updatedTeam.members.map(m => m.userId);
+    const members: User[] = unwrapRpcResult(
+      await this.amqp.request({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+        payload: { userIds },
+        timeout: 1000,
+      })
+    )
+
     const eventPayload: RemoveMemberEventPayload = {
       teamId,
-      teamName: teamResult!.name,
+      teamName: updatedTeam.name,
       requesterId,
-      requesterName,
-      members: removedMembersSnapshot!,
-      memberIdsToNotify: memberIdsToNotify!,
+      requesterName: members.find(m => m.id === requesterId)!.name,
+      members,
+      memberIdsToNotify: members.filter(m => m.id !== requesterId).map(m => m.id),
+      metadata: {
+        teamId,
+        action: 'MEMBER_REMOVED',
+      }
     };
+
     this.amqp.publish(EVENTS_EXCHANGE, EVENTS.REMOVE_MEMBER, eventPayload);
 
-    return teamResult!;
+    return updatedTeam;
   }
 
   async removeTeam(userId: string, teamId: string) {
@@ -769,57 +678,56 @@ export class TeamService {
     return updatedTeam!;
   }
 
-  async getMembersFromTeam(teamId: string) {
-    let memberIds: string[] = [];
+  async getTeamMembers(requesterId: string, teamId: string) {
+    const requester = await this.memberRepo.findOne({
+      where: { userId: requesterId, teamId }
+    });
 
-    try {
-      memberIds = await this.amqp.request<string[]>({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.GET_TEAM_MEMBERS,
-        payload: { teamId },
-        timeout: 1000,
-      });
-    } catch (cacheError) {
-      this.logger.warn(
-        `Redis cache failed for team ${teamId}: ${cacheError.message}. Fetching from DB...`,
-      );
+    if (!requester) {
+      throw new ForbiddenException("You are not a member of this team.");
     }
 
-    if (memberIds.length > 0) {
-      this.logger.log(`Cache hit for team:members:${teamId}`);
-      return memberIds;
+    if (requester.status !== MemberStatus.ACCEPTED) {
+      throw new ForbiddenException("You are not a member of this team.");
     }
 
-    this.logger.log(`Cache miss for team:members:${teamId}. Fetching from DB...`);
-    try {
-      const membersFromDb = await this.memberRepo.find({
-        where: { team: { id: teamId } },
-        relations: ['team'],
-      });
+    const whereCondition: FindOptionsWhere<TeamMember> = {
+      teamId: teamId,
+    };
 
-      if (membersFromDb.length === 0) {
-        this.logger.log(`No members found for team ${teamId}.`);
-        return memberIds;
+    const isManager = [MemberRole.ADMIN, MemberRole.OWNER].includes(requester.role);
+
+    if (!isManager) {
+      whereCondition.status = MemberStatus.ACCEPTED;
+    }
+
+    const members = await this.memberRepo.find({
+      where: whereCondition,
+      order: {
+        role: 'ASC',
+        joinedAt: 'ASC'
       }
+    });
+    console.log("Members length", members.length);
+    const userIds = members.map(m => m.userId);
+    console.log("UserIds", userIds.length);
+    const users: User[] = unwrapRpcResult(await this.amqp.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+      payload: { userIds }
+    }));
 
-      memberIds = membersFromDb.map((member) => member.userId);
-
-      if (memberIds.length > 0) {
-        this.amqp.publish(
-          REDIS_EXCHANGE,
-          REDIS_PATTERN.SET_TEAM_MEMBERS,
-          { teamId, memberIds },
-        );
-      }
-
-      return memberIds;
-    } catch (dbError) {
-      this.logger.error(
-        `Failed to fetch members from DB for team ${teamId}`,
-        dbError,
-      );
-      throw new BadRequestException('Could not retrieve team members.');
-    }
+    const result = users.map((u) => {
+      const member = members.find(m => m.userId === u.id);
+      return {
+        ...member,
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        avatar: u.avatar,
+      } as TeamMember | Partial<User>
+    });
+    return result;
   }
 
   async getMembersWithProfiles(teamId: string) {
@@ -925,31 +833,41 @@ export class TeamService {
   }
 
   async findById(id: string, userId: string) {
-    const team = await this.teamRepo.createQueryBuilder("team")
-      .leftJoinAndSelect("team.members", "member")
-      .where("team.id = :id", { id: id })
-      .andWhere(qb => {
-        const subQuery = qb.subQuery()
-          .select("1")
-          .from(TeamMember, "m")
-          .where("m.teamId = :id", { id })
-          .andWhere("m.userId = :userId", { userId })
-          .getQuery();
-        return `EXISTS (${subQuery})`;
-      })
-      .getOne();
-    console.log(team)
+    const team = await this.teamRepo.findOne({
+      where: { id }
+    });
+
+    if (!team) {
+      throw new NotFoundException('Team not found');
+    }
+
+    const isMember = await this.dataSource.getRepository(TeamMember).count({
+      where: {
+        teamId: id,
+        userId: userId,
+        status: MemberStatus.ACCEPTED,
+        isActive: true
+      }
+    });
+
+    if (!isMember) {
+      throw new ForbiddenException('You do not have permission to view this team');
+    }
+
     return team;
   }
+
   async findParticipants(id: string) {
     return await this.memberRepo.findBy({ team: { id } });
   }
 
   async findByUserId(userId: string) {
-    return await this.teamRepo.createQueryBuilder("team")
-      .innerJoin("team.members", "member")
-      .where("member.userId = :userId", { userId })
-      .getMany();
+    console.log('Finding teams for user in service:', userId);
+    return await this.teamRepo.find({
+      where: {
+        members: { userId, status: MemberStatus.ACCEPTED },
+      }
+    });
   }
 
   async findRoomsByUserId(userId: string) {
@@ -983,9 +901,14 @@ export class TeamService {
   }
 
   async verifyPermission(userId: string, teamId: string, roles: MemberRole[]) {
-    const team = await this.findById(teamId, userId);
+    console.log("UserId", userId, "TeamId", teamId, "Roles", roles);
+    const team = await this.teamRepo.findOne({
+      where: { id: teamId, members: { userId, status: MemberStatus.ACCEPTED } },
+      relations: ['members'],
+    })
+    console.log(team)
     if (!team) {
-      throw new NotFoundException(`You are not a member of this team.`);
+      throw new ForbiddenException(`You are not a member of this team.`);
     }
     const requester = team.members.find((m) => m.userId === userId);
     console.log('Role', requester?.role)

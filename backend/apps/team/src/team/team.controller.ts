@@ -20,7 +20,7 @@ import { VerifyPermissionPayload } from '@app/contracts/team/dto/verify-permissi
 
 @Controller()
 export class TeamController {
-  constructor(private readonly teamService: TeamService) {}
+  constructor(private readonly teamService: TeamService) { }
   @RabbitRPC({
     exchange: TEAM_EXCHANGE,
     routingKey: TEAM_PATTERN.FIND_ALL,
@@ -38,7 +38,6 @@ export class TeamController {
     errorHandler: customErrorHandler,
   })
   async findByUserId(userId: string) {
-    console.log('Finding teams for user in service:', userId);
     return await this.teamService.findByUserId(userId);
   }
 
@@ -80,6 +79,26 @@ export class TeamController {
   })
   async addMember(addMemberDto: AddMember) {
     return await this.teamService.addMembers(addMemberDto);
+  }
+
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.ACCEPT_INVITATION,
+    queue: TEAM_PATTERN.ACCEPT_INVITATION,
+    errorHandler: customErrorHandler,
+  })
+  async acceptInvitation(payload: { userId: string; teamId: string, notificationId: string }) {
+    return await this.teamService.acceptInvitation(payload.userId, payload.teamId, payload.notificationId);
+  }
+
+  @RabbitRPC({
+    exchange: TEAM_EXCHANGE,
+    routingKey: TEAM_PATTERN.DECLINE_INVITATION,
+    queue: TEAM_PATTERN.DECLINE_INVITATION,
+    errorHandler: customErrorHandler,
+  })
+  async declineInvitation(payload: { userId: string; teamId: string, notificationId: string }) {
+    return await this.teamService.declineInvitation(payload.userId, payload.teamId, payload.notificationId);
   }
 
   @RabbitRPC({
@@ -170,8 +189,8 @@ export class TeamController {
     queue: TEAM_PATTERN.FIND_PARTICIPANTS,
     errorHandler: customErrorHandler,
   })
-  async findParticipants(teamId: string) {
-    return await this.teamService.getMembersWithProfiles(teamId);
+  async findParticipants(payload: { userId: string; teamId: string }) {
+    return await this.teamService.getTeamMembers(payload.userId, payload.teamId);
   }
 
   @RabbitRPC({
@@ -192,9 +211,7 @@ export class TeamController {
     queue: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
     errorHandler: customErrorHandler,
   })
-  async findParticipantsIds(teamId: string) {
-    return await this.teamService.getMembersFromTeam(teamId);
+  async findParticipantsIds(payload: { teamId: string, userId: string }) {
+    return await this.teamService.getTeamMembers(payload.userId, payload.teamId);
   }
-
- 
 }

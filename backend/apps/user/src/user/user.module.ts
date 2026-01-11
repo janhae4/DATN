@@ -41,7 +41,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
           }
         ],
         uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false }
+        connectionInitOptions: { wait: false },
       }),
     })
   ],

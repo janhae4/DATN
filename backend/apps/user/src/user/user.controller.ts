@@ -184,6 +184,7 @@ export class UserController {
     errorHandler: customErrorHandler
   })
   async findManyByIds(payload: { userIds: string[], forDiscussion?: boolean }) {
+    console.log(payload);
     return await this.userService.findManyByIds(payload.userIds, payload.forDiscussion);
   }
 
@@ -227,7 +228,7 @@ export class UserController {
     queue: USER_PATTERNS.REMOVE,
     errorHandler: customErrorHandler
   })
-  remove(@RabbitPayload('id') id: string) {
+  remove(id: string) {
     return this.userService.remove(id);
   }
 

@@ -322,6 +322,22 @@
             }
         },
         {
+            "label": "Frontend",
+            "command": "npm",
+            "args": [
+                "run",
+                "dev"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
             "label": "RUN ALL SERVICES",
             "dependsOn": [
                 "Api Gateway",
@@ -343,7 +359,8 @@
                 // "Testing",
                 "Calendar",
                 // "Gmail",
-                // "Video Chat"
+                // "Video Chat",
+                "Frontend"
             ],
             "problemMatcher": [],
             "group": {

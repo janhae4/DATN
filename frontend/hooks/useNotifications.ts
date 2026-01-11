@@ -1,70 +1,89 @@
 import { useState, useEffect, useCallback } from 'react';
 import { notificationService, Notification } from '../services/notificationService';
+import { useSocket } from '@/contexts/SocketContext';
+import { toast } from 'sonner';
+import apiClient from '@/services/apiClient';
 
 export const useNotifications = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchNotifications = useCallback(async () => {
-        setLoading(true);
+    const { socket, isConnected } = useSocket();
+
+    const fetchNotifications = useCallback(async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
         setError(null);
         try {
             const data = await notificationService.getAll();
             setNotifications(data);
         } catch (err: any) {
-            console.error('Failed to fetch notifications', err);
-            setError(err.response?.data?.message || err.message || 'Failed to fetch notifications');
+            toast.error('Failed to fetch notifications', err);
+            if (!isBackground) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch notifications');
+            }
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     }, []);
 
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    useEffect(() => {
+        if (!socket || !isConnected) return;
+
+        const handleNewNotification = (data: any) => {
+            console.log("🔔 New notification received:", data);
+            toast.info(data.title || "New notification");
+            fetchNotifications(true);
+        };
+
+        socket.on('notification', handleNewNotification);
+
+        return () => {
+            socket.off('notification', handleNewNotification);
+        };
+    }, [socket, isConnected, fetchNotifications]);
+
     const markAllAsRead = async () => {
         try {
-            await notificationService.markAllAsRead();
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            await notificationService.markAllAsRead();
         } catch (err) {
-            console.error('Failed to mark all as read', err);
+            toast.error('Failed to mark all as read');
+            fetchNotifications(true);
         }
     };
 
     const markAsRead = async (id: string) => {
         try {
-            await notificationService.markAsRead(id);
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+            await notificationService.markAsRead(id);
         } catch (err) {
-            console.error(`Failed to mark notification ${id} as read`, err);
+            toast.error(`Failed to mark notification ${id} as read`);
         }
     };
 
     const markAsUnread = async (id: string) => {
         try {
-            await notificationService.markAsUnread(id);
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: false } : n));
+            await notificationService.markAsUnread(id);
         } catch (err) {
-            console.error(`Failed to mark notification ${id} as unread`, err);
+            toast.error(`Failed to mark notification ${id} as unread`);
         }
     };
 
     const deleteNotification = async (id: string) => {
         try {
-            await notificationService.delete(id);
             setNotifications(prev => prev.filter(n => n.id !== id));
+            await notificationService.delete(id);
         } catch (err) {
-            console.error(`Failed to delete notification ${id}`, err);
+            toast.error(`Failed to delete notification ${id}`);
+            fetchNotifications(true);
         }
     };
-
-    useEffect(() => {
-        fetchNotifications();
-
-        const interval = setInterval(() => {
-            fetchNotifications();
-        }, 30000);
-
-        return () => clearInterval(interval);
-    }, [fetchNotifications]);
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -73,7 +92,7 @@ export const useNotifications = () => {
         unreadCount,
         loading,
         error,
-        refetch: fetchNotifications,
+        refetch: () => fetchNotifications(false),
         markAllAsRead,
         markAsRead,
         markAsUnread,

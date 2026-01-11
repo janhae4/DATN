@@ -27,17 +27,14 @@ export function ProjectTogglerCombobox() {
   const [open, setOpen] = React.useState(false)
   const router = useRouter()
   
-  // 1. Get IDs directly from URL (Single Source of Truth)
   const params = useParams()
   const teamId = params.teamId as string
   console.log("Current teamId in ProjectTogglerCombobox:", teamId);
   const projectId = params.projectId as string
 
-  // 2. Fetch Projects list for the current Team
   const { projects } = useProjects(teamId)
 
   console.log("Projects in ProjectTogglerCombobox:", projects);
-  // 3. Fetch details for the currently active Project
   const { project: selectedProject, isLoading: isProjectLoading } = useProject(projectId)
 
   const handleSelectProject = (newProjectId: string) => {

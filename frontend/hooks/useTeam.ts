@@ -1,31 +1,72 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  teamService, 
-  CreateTeamDto, 
-  UpdateTeamDto, 
+import {
+  teamService,
+  CreateTeamDto,
+  UpdateTeamDto,
   LeaveMemberDto,
   RemoveMemberDto,
   TransferOwnershipDto,
   ChangeRoleMemberDto,
-  AddMemberDto
 } from "@/services/teamService";
-import { useUserProfile } from "./useAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { Team } from "@/types";
+import apiClient from "@/services/apiClient";
 
 // --- Hooks ---
 
 export const useTeams = () => {
-  const { data: user } = useUserProfile();
-  
-  return useQuery({
-    queryKey: ["teams", user?.id],
-    queryFn: () => teamService.getTeams(), 
+  const { user, isLoading } = useAuth();
+
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => teamService.getTeams(),
     enabled: !!user?.id,
   });
+
+  const isTrulyLoading =
+    isLoading ||
+    query.isLoading ||
+    (query.status === 'pending' && query.fetchStatus === 'idle');
+
+  const acceptInviteMutation = useMutation({
+    mutationFn: async (payload: { teamId: string; notificationId: string }) => {
+      return apiClient.post(`/teams/${payload.teamId}/member/accepted`, {
+        notificationId: payload.notificationId
+      });
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["team", variables.teamId] });
+    },
+  });
+
+  const declineInviteMutation = useMutation({
+    mutationFn: async (payload: { teamId: string; notificationId: string }) => {
+      return apiClient.delete(`/teams/${payload.teamId}/member/declined`, {
+        data: { notificationId: payload.notificationId }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    }
+  });
+
+  return {
+    ...query,
+    acceptInvite: acceptInviteMutation.mutateAsync,
+    declineInvite: declineInviteMutation.mutateAsync,
+    isAccepting: acceptInviteMutation.isPending,
+    isDeclining: declineInviteMutation.isPending,
+    isLoading: isTrulyLoading,
+  };
 };
 
 export const useTeam = (teamId: string | null) => {
   return useQuery({
-    queryKey: ["team", teamId],
+    queryKey: ["team"],
     queryFn: () => teamService.getTeam(teamId as string),
     enabled: !!teamId,
   });
@@ -43,25 +84,30 @@ export const useTeamMembers = (teamId: string | null) => {
 
 export const useCreateTeam = () => {
   const queryClient = useQueryClient();
-  const { data: user } = useUserProfile();
+  const router = useRouter();
 
   return useMutation({
-    mutationFn: (data: CreateTeamDto) => teamService.createTeam(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+    mutationFn: (data: any) => teamService.createTeam(data),
+
+    onSuccess: async (newTeam) => {
+      queryClient.setQueryData(["teams"], (oldTeams: Team[] | undefined) => {
+        if (!oldTeams) return [newTeam];
+        return [...oldTeams, newTeam];
+      });
+      await queryClient.invalidateQueries({ queryKey: ["teams"] });
+      router.push(`/${newTeam.id}`);
     },
   });
 };
 
 export const useUpdateTeam = () => {
   const queryClient = useQueryClient();
-  const { data: user } = useUserProfile();
 
   return useMutation({
     mutationFn: ({ teamId, data }: { teamId: string; data: UpdateTeamDto }) =>
       teamService.updateTeam(teamId, data),
     onSuccess: (updatedTeam) => {
-      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
       queryClient.invalidateQueries({ queryKey: ["team", updatedTeam.id] });
     },
   });
@@ -69,24 +115,22 @@ export const useUpdateTeam = () => {
 
 export const useDeleteTeam = () => {
   const queryClient = useQueryClient();
-  const { data: user } = useUserProfile();
 
   return useMutation({
     mutationFn: (teamId: string) => teamService.deleteTeam(teamId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 };
 
 export const useLeaveTeam = () => {
   const queryClient = useQueryClient();
-  const { data: user } = useUserProfile();
 
   return useMutation({
     mutationFn: (payload: LeaveMemberDto) => teamService.leaveTeam(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 };
@@ -96,21 +140,20 @@ export const useRemoveMember = () => {
   return useMutation({
     mutationFn: (payload: RemoveMemberDto) => teamService.removeMember(payload),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });
+      queryClient.invalidateQueries({ queryKey: ["teamMembers"] });
     },
   });
 };
 
 export const useTransferOwnership = () => {
   const queryClient = useQueryClient();
-  const { data: user } = useUserProfile();
-  
+
   return useMutation({
     mutationFn: (payload: TransferOwnershipDto) => teamService.transferOwnership(payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["team", variables.teamId] });
       queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });
-      queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 };
@@ -125,73 +168,11 @@ export const useChangeMemberRole = () => {
   });
 };
 
-export const useDiscussions = (teamId: string | null) => {
-  return useQuery({
-    queryKey: ["discussions", teamId],
-    queryFn: () => teamService.getDiscussions(teamId as string),
-    enabled: !!teamId,
-  });
-};
-
-export const useDiscussion = (discussionId: string | null) => {
-  return useQuery({
-    queryKey: ["discussion", discussionId],
-    queryFn: () => teamService.getDiscussion(discussionId as string),
-    enabled: !!discussionId,
-  });
-};
-
-export const useMessages = (discussionId: string | null) => {
-  return useQuery({
-    queryKey: ["messages", discussionId],
-    queryFn: () => teamService.getMessages(discussionId as string),
-    enabled: !!discussionId,
-    refetchInterval: 5000,
-  });
-};
-
-// --- Mutations ---
-
-export const useSendMessage = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ discussionId, content }: { discussionId: string; content: string }) =>
-      teamService.sendMessage(discussionId, content),
-    onSuccess: (_, variables) => {
-      // Optimistically update or invalidate
-      queryClient.invalidateQueries({ queryKey: ["messages", variables.discussionId] });
-    },
-  });
-};
-
-export const useCreateDiscussion = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ teamId, name, ownerId, memberIds }: { teamId: string; name: string; ownerId: string; memberIds?: string[] }) =>
-      // Lưu ý: createDiscussion trong service vẫn yêu cầu các tham số này
-      teamService.createDiscussion(teamId, name, memberIds), 
-    onSuccess: (newDiscussion, variables) => {
-      // Sửa: Dùng biến từ closure hoặc response nếu cần, ở đây variables.teamId là ok
-      // Lưu ý: createDiscussion trong service của bạn hiện tại không nhận ownerId làm tham số thứ 3,
-      // mà là (teamId, name, memberIds). Hãy kiểm tra lại teamService nếu cần.
-      // Dưới đây tôi đã sửa lại mutationFn để khớp với teamService bạn gửi trước đó.
-      queryClient.invalidateQueries({ queryKey: ["discussions", variables.teamId] });
-    },
-  });
-};
-
-export const useGetOrCreateDirectMessage = () => {
-  return useMutation({
-    mutationFn: ({ currentUserId, targetUserId }: { currentUserId: string; targetUserId: string }) =>
-      teamService.getOrCreateDirectMessage(targetUserId), // Sửa: Service chỉ nhận targetUserId
-  });
-};
-
 export const useAddMember = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ teamId, requesterId, memberIds }: { teamId: string; requesterId: string; memberIds: string[] }) =>
-      teamService.addMember({ teamId, requesterId, memberIds }), // Sửa: Truyền object DTO chuẩn
+    mutationFn: ({ teamId, memberIds }: { teamId: string; memberIds: string[] }) =>
+      teamService.addMember({ teamId, memberIds }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });
     },

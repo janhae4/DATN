@@ -24,7 +24,6 @@ import {
   CreateAuthDto,
   ForgotPasswordDto,
   GoogleAccountDto,
-  JwtDto,
   LoginDto,
   Role,
   VerifyAccountDto,
@@ -178,6 +177,7 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
   async googleCallback(@Req() request: Request, @Res() res: Response) {
+    console.log('GOOGLE CALLBACK');
     await this.authService.handleGoogleCallback(request.user as GoogleAccountDto, res);
   }
 

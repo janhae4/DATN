@@ -1,7 +1,8 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 import { SprintsService } from './sprints.service';
-import { CreateSprintDto, SPRINT_PATTERNS, SprintStatus, UpdateSprintDto } from '@app/contracts';
+import { CreateSprintDto, EVENTS, EVENTS_EXCHANGE, SPRINT_PATTERNS, SprintStatus, UpdateSprintDto } from '@app/contracts';
+import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 
 @Controller()
 export class SprintsController {

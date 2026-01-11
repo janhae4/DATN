@@ -41,11 +41,7 @@ import { GmailService } from './gmail.service';
                 exchanges: [
                     {
                         name: GMAIL_EXCHANGE,
-                        type: 'topic',
-                    },
-                    {
-                        name: EVENTS_EXCHANGE,
-                        type: 'topic',
+                        type: 'direct',
                     },
                 ],
                 uri: cfg.getRMQUrl(),
