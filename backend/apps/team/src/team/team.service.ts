@@ -901,17 +901,14 @@ export class TeamService {
   }
 
   async verifyPermission(userId: string, teamId: string, roles: MemberRole[]) {
-    console.log("UserId", userId, "TeamId", teamId, "Roles", roles);
     const team = await this.teamRepo.findOne({
       where: { id: teamId, members: { userId, status: MemberStatus.ACCEPTED } },
       relations: ['members'],
     })
-    console.log(team)
     if (!team) {
       throw new ForbiddenException(`You are not a member of this team.`);
     }
     const requester = team.members.find((m) => m.userId === userId);
-    console.log('Role', requester?.role)
     if (!requester || !roles.includes(requester.role)) {
       throw new ForbiddenException(
         'You do not have permission to perform this action.',

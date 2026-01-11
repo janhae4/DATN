@@ -5,10 +5,7 @@ import {
   CHATBOT_EXCHANGE,
   ClientConfigModule,
   ClientConfigService,
-  EVENTS_EXCHANGE,
   REDIS_EXCHANGE,
-  TEAM_EXCHANGE,
-  USER_EXCHANGE,
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { AiDiscussion, AiDiscussionSchema } from './schema/ai-discussion.schema';

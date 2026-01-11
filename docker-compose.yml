@@ -181,12 +181,12 @@ services:
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     volumes:
       - mongo-data:/data/db
-      - ./init-mongo.sh:/scripts/init-mongo.sh
     environment:
       - MONGODB_URI=mongodb://mongo_db:27017/mongo_db?directConnection=true
       - MONGO_HOST=mongo_db
     networks:
       - app-network
+
   mongo_rs_init:
     image: mongo:8.0
     depends_on:
@@ -194,7 +194,8 @@ services:
     volumes:
       - ./init-mongo.sh:/scripts/init-mongo.sh
     entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
-
+    networks:
+      - app-network
   api_gateway:
     <<: *nest-service
     container_name: api_gateway

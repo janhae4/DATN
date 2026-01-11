@@ -1,9 +1,12 @@
-FROM node:20-alpine
-WORKDIR /usr/src/app
+FROM node:20-alpine AS builder
+WORKDIR /app
 COPY package*.json ./
-RUN npm install
-COPY libs ./libs
-COPY tsconfig*.json ./
-COPY nest-cli.json ./
+RUN npm ci
 COPY . .
 RUN npm run build
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --only=production --ignore-scripts && npm cache clean --force
+COPY --from=builder /app/dist ./dist

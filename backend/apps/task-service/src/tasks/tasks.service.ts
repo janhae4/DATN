@@ -232,7 +232,7 @@ export class TasksService {
     }))
 
     let members = [];
-
+    console.log("PERMISSION GRANTED")
     if (sprintId) {
       const response = await this.amqpConnection.request({
         exchange: TEAM_EXCHANGE,
@@ -240,13 +240,17 @@ export class TasksService {
         payload: teamId,
         timeout: RPC_TIMEOUT,
       });
-      const memberIds = unwrapRpcResult(response);
+      const memberIds: MemberDto[] = unwrapRpcResult(response);
+      console.log("PERMISSION TEAMID GRANTED")
+      console.log("memberIds", memberIds)
 
       members = unwrapRpcResult(await this.amqpConnection.request({
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.GET_BULK_SKILLS,
-        payload: memberIds
+        payload: memberIds.map(m => m.id),
       }))
+
+      console.log("PERMISSION MEMBERS GRANTED")
     }
 
     await this.amqpConnection.publish(CHATBOT_EXCHANGE, 'suggest_task', {

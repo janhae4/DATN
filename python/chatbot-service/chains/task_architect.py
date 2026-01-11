@@ -56,7 +56,7 @@ class TaskArchitect:
                 - TỔNG QUAN: Tự xây dựng lộ trình học tập/làm việc tuần tự cho một người.
             """
         
-        prompt_template = """
+        system_prompt = """
             ROLE: Senior Project Manager & System Architect AI.
             
             CONTEXT:
@@ -84,19 +84,22 @@ class TaskArchitect:
             Thiết kế giao diện Login | uuid của người được giao  | Figma | 40 | Vì bạn có Target Skill là UI/UX | 2023-01-01 | 2023-02-01.
             Viết API xác thực | uuid của người được giao  | NodeJS | 60 | Vì bạn đã có kinh nghiệm làm Backend trước đó | 2023-01-01 | 2023-02-01.
         """
-        prompt = ChatPromptTemplate.from_template(prompt_template)
-        chain = prompt | self.llm_service.get_llm() | StrOutputParser()
         
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Hãy lập kế hoạch cho mục tiêu: {objective}"}
+        ]
+
+        print(f"--> [SUGGEST TASK] Đang gọi LLM (Native Ollama)...")
+        def run_chat_sync():
+            return self.llm_service.chat(messages)
+            
+        stream = await asyncio.to_thread(run_chat_sync)
         print(f"--> [SUGGEST TASK] Gợi ý task với mục tiêu: {objective}")
 
-        def _blocking_stream(params):
-            return chain.stream(params)
 
-        async for chunk in stream_blocking_generator(_blocking_stream, {
-            "members_context": members_context,
-            "objective": objective,
-            "current_date": current_date,
-            "assignment_rules": assignment_rules
-        }):
-            print(f"--> [SUGGEST TASK] Nhận được chunk: {chunk}")
-            yield chunk
+        for chunk in stream:
+            content = chunk.get('message', {}).get('content', '')
+            if content:
+                print(f"Chunk: {content}", end="", flush=True)
+                yield content

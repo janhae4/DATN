@@ -328,7 +328,7 @@ export class ClientConfigService {
   getChatbotDatabaseURL(): string {
     return this.config.get<string>(
       'CHATBOT_DATABASE_URL',
-      'mongodb://localhost:27017',
+      'mongodb://localhost:27017/chatbot_db?directConnection=true',
     );
   }
 

@@ -28,6 +28,7 @@ import { map, Observable } from 'rxjs';
 import Redis from 'ioredis';
 import { GetTasksByProjectDto, GetTasksByTeamDto } from './dto/get-task-filter.dto';
 import { FileService } from '../file/file.service';
+import { ApiBody } from '@nestjs/swagger';
 
 @Controller('tasks')
 @UseGuards(RoleGuard)
@@ -164,6 +165,17 @@ export class TaskController {
 
   @Post('suggest-stream')
   @Sse('suggest-stream')
+  @ApiBody({
+    type: 'object',
+    schema: {
+      properties: {
+        query: { type: 'string' },
+        projectId: { type: 'string' },
+        teamId: { type: 'string' },
+        sprintId: { type: 'string' }
+      }
+    }
+  })
   async sse(
     @Body() { query, projectId, teamId, sprintId }: { query: string; projectId: string; teamId: string, sprintId: string },
     @CurrentUser('id') userId: string

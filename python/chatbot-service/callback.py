@@ -73,12 +73,9 @@ async def publish_suggest_task_response(user_id: str, content: dict):
     payload = {
         "userId": user_id,
         **content
-    }
-    
-    print(f"--> [Py->SSE] Chuẩn bị gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
-    
+    }    
+    print(f"--> [Py->SSE] Chuẩn bị gửi task cho {user_id}: {content}")
     message_json = json.dumps(payload)
-    
     await redis_client.publish(f"task_suggest:{user_id}", message_json)
     print(f"--> [Py->SSE] Gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
 
