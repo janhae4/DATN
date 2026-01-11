@@ -1,8 +1,30 @@
+x-nest-service: &nest-service
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  env_file:
+    - ./backend/.env.dev
+  networks:
+    - app-network
+  depends_on:
+    rabbitmq:
+      condition: service_healthy
+    postgres:
+      condition: service_started
+    redis:
+      condition: service_started
+  #   mongo_db:
+  #     condition: service_started
+  #   chroma: 
+  #     condition: service_started
+  #   minio:
+  #     condition: service_started
+
 services:
   rabbitmq:
     image: rabbitmq:management
-    hostname: "rabbitmq"
-    container_name: rabbitmq_broker
+    hostname: rabbitmq
+    container_name: rabbitmq
     ports:
       - "5672:5672" 
       - "15672:15672"
@@ -16,20 +38,24 @@ services:
       retries: 5
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - app-network
 
   redis:
     image: redis:alpine
-    hostname: "redis"
-    container_name: redis_backend
+    hostname: redis
+    container_name: redis
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
+    networks:
+      - app-network
 
   postgres:
     image: postgres:alpine
-    hostname: "postgres"
-    container_name: postgres_backend
+    hostname: postgres
+    container_name: postgres
     ports:
       - "5432:5432"
     environment:
@@ -39,6 +65,8 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+    networks:
+      - app-network
 
   pgadmin:
     image: dpage/pgadmin4
@@ -50,6 +78,8 @@ services:
       - "5050:80" 
     depends_on:
       - postgres
+    networks:
+      - app-network
       
   meili-search:
     image: getmeili/meilisearch:v1.16
@@ -59,7 +89,9 @@ services:
     environment:
       MEILI_MASTER_KEY: "A7Uu1TlCVUtQRaUpFY9Z2sLoJeZMYVi0"
     volumes:
-      - ./meili-data:/meili_data
+      - meili-data:/meili_data
+    networks:
+      - app-network
 
   chroma:
     image: chromadb/chroma
@@ -69,71 +101,61 @@ services:
       - "8000:8000"
     volumes:
       - chroma-data:/chroma/.chroma/chroma
+    networks:
+      - app-network
 
-  # worker:
-  #   build: 
-  #     context: ./python/ner-service
-  #     dockerfile: Dockerfile
-    
-  #   container_name: task_ner
+  chatbot: 
+    build:
+      context: ./python/chatbot-service
+      dockerfile: Dockerfile
+    container_name: python_chatbot_worker
+    restart: unless-stopped
+    volumes:
+      - ./python/chatbot-service:/app
+    environment:
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      CHROMA_HOST: "chroma" 
+      CHROMA_PORT: "8000"
+      MINIO_ENDPOINT: "minio:9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+      MINIO_USE_SSL: "false"
+      MINIO_BUCKET_NAME: "documents"
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      OLLAMA_MODEL: "gemma2:2b"
+      OLLAMA_EMBEDDING_MODEL: "siv/Qwen3-Embedding-0.6B-GGUF:f16"
+      THREADPOOL_MAX_WORKERS: "4"
+      PYTHONUNBUFFERED: "1"
 
-  #   command: ["python", "main.py"]
-    
-  #   volumes:
-  #     - ./python/ner-service:/app
-    
-  #   ports:
-  #     - "4002:4002"
-      
-  #   environment:
-  #     RABBITMQ_HOST: rabbitmq
-  #     QUEUE_NAME: process_nlp
-      
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_started
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      chroma:
+        condition: service_started
+      minio:
+        condition: service_started
+    networks:
+      - app-network
 
-  # chatbot: 
-  #   build: 
-  #     context: ./python/chatbot-service
-  #     dockerfile: dockerfile
-  #   container_name: rag_chatbot
-  #   command: ["python", "main.py"]
-  #   volumes:
-  #     - ./python/chatbot-service:/app
-  #   ports:
-  #     - "4003:4003"
-  #   environment:
-  #     RABBITMQ_HOST: rabbitmq
-  #     INGESTION_QUEUE: ingestion_queue
-  #     RAG_QUEUE: rag_queue
-  #     SUMMARIZE_QUEUE: summarize_queue
-  #     RESPONSE_QUEUE: chatbot_service_queue
-  #     NOTIFICATION_QUEUE: notifications_service_queue
-  #     CHROMA_HOST: chroma
-  #     CHROMA_PORT: 8000      
-  #     OLLAMA_BASE_URL: http://ollama:11434 
-  #     OLLAMA_MODEL: gemma3:4b
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+      - ./init-ollama.sh:/init-ollama.sh
+    entrypoint: ["/bin/sh", "/init-ollama.sh"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - app-network
 
-  # ollama:
-  #   image: ollama/ollama
-  #   container_name: ollama_service
-  #   ports:
-  #     - "11434:11434"
-  #   volumes:
-  #     - ollama-data:/root/.ollama
-  #     - ./init-ollama.sh:/init-ollama.sh
-  #   entrypoint: ["/bin/sh", "/init-ollama.sh"]
-  #   deploy:
-  #     resources:
-  #       reservations:
-  #         devices:
-  #           - driver: nvidia
-  #             count: 1
-  #             capabilities: [gpu]
-  
   minio:
     image: minio/minio
     container_name: minio_service
@@ -148,6 +170,8 @@ services:
     command: [ "server", "--console-address", ":9001", "/data" ]
     volumes:
       - minio-data:/data
+    networks:
+      - app-network
 
   mongo_db:
     image: mongo:8.0
@@ -161,6 +185,8 @@ services:
     environment:
       - MONGODB_URI=mongodb://mongo_db:27017/mongo_db?directConnection=true
       - MONGO_HOST=mongo_db
+    networks:
+      - app-network
   mongo_rs_init:
     image: mongo:8.0
     depends_on:
@@ -169,18 +195,130 @@ services:
       - ./init-mongo.sh:/scripts/init-mongo.sh
     entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
 
+  api_gateway:
+    <<: *nest-service
+    container_name: api_gateway
+    command: npm run start:prod:api-gateway
+    ports:
+      - "3000:3000"
+
+  auth_service:
+    <<: *nest-service
+    container_name: auth_service
+    command: npm run start:prod:auth
+
+  user_service:
+    <<: *nest-service
+    container_name: user_service
+    command: npm run start:prod:user
+
+  redis_service:
+    <<: *nest-service
+    container_name: redis_service_app
+    command: npm run start:prod:redis
+
+  project_service:
+    <<: *nest-service
+    container_name: project_service
+    command: npm run start:prod:project
+
+  task_service:
+    <<: *nest-service
+    container_name: task_service
+    command: npm run start:prod:task
+
+  sprint_service:
+    <<: *nest-service
+    container_name: sprint_service
+    command: npm run start:prod:sprint
+
+  epic_service:
+    <<: *nest-service
+    container_name: epic_service
+    command: npm run start:prod:epic
+
+  label_service:
+    <<: *nest-service
+    container_name: label_service
+    command: npm run start:prod:label
+
+  list_service:
+    <<: *nest-service
+    container_name: list_service
+    command: npm run start:prod:list
+
+  team_service:
+    <<: *nest-service
+    container_name: team_service
+    command: npm run start:prod:team
+
+  search_service:
+    <<: *nest-service
+    container_name: search_service
+    command: npm run start:prod:search
+    depends_on:
+      - meili-search
+      - chroma
+
+  socket_service:
+    <<: *nest-service
+    container_name: socket_service
+    command: npm run start:prod:socket
+    ports:
+      - "3001:3001"
+
+  notification_service:
+    <<: *nest-service
+    container_name: notification_service
+    command: npm run start:prod:notification
+
+  ai_discussion_service:
+    <<: *nest-service
+    container_name: ai_discussion_service
+    command: npm run start:prod:ai-discussion
+
+  calendar_service:
+    <<: *nest-service
+    container_name: calendar_service
+    command: npm run start:prod:calendar
+
+  gmail_service:
+    <<: *nest-service
+    container_name: gmail_service
+    command: npm run start:prod:gmail
+
   mongo-express:
     image: mongo-express
     restart: always
     ports:
       - "8081:8081"
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root  # (Tùy chọn nếu mongo có pass)
-      ME_CONFIG_MONGODB_ADMINPASSWORD: root # (Tùy chọn nếu mongo có pass)
-      ME_CONFIG_MONGODB_URL: mongodb://mongo_db:27017/ # Kết nối nội bộ Docker
-      ME_CONFIG_BASICAUTH: "false" # Tắt đăng nhập web cho tiện dev
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root 
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root
+      ME_CONFIG_MONGODB_URL: mongodb://mongo_db:27017/ 
+      ME_CONFIG_BASICAUTH: "false" 
     depends_on:
       - mongo_db
+  
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    container_name: nextjs_frontend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - INTERNAL_API_URL=http://api_gateway:3000
+    networks:
+      - app-network
+    depends_on:
+      - api_gateway
+
+  
 volumes:
   postgres-data:
   redis-data:
@@ -190,3 +328,7 @@ volumes:
   chroma-data:
   mongo-data:
   meili-data:
+
+networks:
+  app-network:
+    driver: bridge
