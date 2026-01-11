@@ -30,4 +30,5 @@ class RetrieverService:
             })
         request = RerankRequest(query=query, passages=passages)
         results = self.ranker.rerank(request)
+        print(f"[Reranker] Done. Top score: {results[0]['score'] if results else 'N/A'}")
         return results

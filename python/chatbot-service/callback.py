@@ -9,6 +9,7 @@ from chains.task_architect import TaskArchitect
 from config import (
     EVENTS_EXCHANGE,
     ASK_QUESTION_ROUTING_KEY,
+    SEARCH_EXCHANGE,
     SEND_FILE_STATUS_ROUTING_KEY,
     SEND_NOTIFICATION_ROUTING_KEY,
     SUGGEST_TASK_ROUTING_KEY,
@@ -172,7 +173,7 @@ async def ingestion_callback(
                 await send_notification(channel, user_id, file_id, "failed", f"Failed to process '{original_name}': {error_message}")
                 await send_status_file(channel, user_id, file_id ,original_name, "failed", team_id)
 
-async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, task_architect: TaskArchitect, channel: Channel):
+async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, task_architect: TaskArchitect, vectorstore_service: VectorStoreService,channel: Channel):
     """
     Callback xử lý các tác vụ tương tác (RAG, Summarize).
     """
@@ -218,11 +219,9 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 if not question: raise ValueError("Tin nhắn thiếu 'question'.")
 
                 print(f"--> [RAG] Câu hỏi từ user '{user_id}': {question}")
-                # await publish_to_redis(discussion_id, question, is_completed=False)
                 
                 async for chunk in rag_chain.ask_question_for_user(question, user_id, team_id, chat_history):
                     await publish_to_redis(discussion_id, chunk, is_completed=False)
-                    # await publish_response(channel, socket_id, discussion_id, chunk, "chunk", team_id, membersToNotify=membersToNotify)
                 
                 retrieved_metadata = rag_chain.get_last_retrieved_context()
                 await publish_to_redis(discussion_id, "", is_completed=True, metadata=retrieved_metadata)
@@ -232,14 +231,17 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 file_name = payload_dto.get('summarizeFileName')
                 if not file_name: raise ValueError("Tin nhắn thiếu 'summarizeFileName'.")
                 
-                await publish_response(channel, socket_id, discussion_id, "Summarizing...", "start", team_id, membersToNotify=membersToNotify)
                 print(f"--> [SUMMARIZE] Bắt đầu tóm tắt file '{file_name}' cho user '{user_id}'.")
                 
-                documents = await minio_service.load_documents(file_name)
-                async for chunk in summarizer.summarize(documents):
-                    await publish_to_redis(discussion_id, chunk, is_completed=False)
+                try:
+                    documents = await vectorstore_service.process_and_store(user_id, file_name, search_exchange=SEARCH_EXCHANGE, team_id=team_id)
+                    print(f"--> [VECTOR] Đã lưu xong!")
+                    async for chunk in summarizer.summarize(documents):
+                        await publish_to_redis(discussion_id, chunk, is_completed=False)
+                    await publish_to_redis(discussion_id, "", is_completed=True)
+                except Exception as e:
+                    print(f"--> [VECTOR ERROR] Lỗi lưu vector: {e}")
                     
-                await publish_to_redis(discussion_id, "", is_completed=True)
             
             elif pattern_from_key == 'suggest_task':
                 raw_objective = payload_dto.get('objective')

@@ -4,14 +4,25 @@ from services.llm_service import LLMService
 class Summarizer:
     def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
+        
 
     async def summarize(self, documents):
         if not documents:
             yield "Không có nội dung để tóm tắt."
             return
         
-        print(documents)
-        full_text = "\n\n".join([doc.page_content for doc in documents])
+        text_parts = []
+        for doc in documents:
+            if hasattr(doc, 'page_content'):
+                text_parts.append(doc.page_content)
+            elif isinstance(doc, tuple) and len(doc) > 0:
+                text_parts.append(str(doc[0]))
+            elif isinstance(doc, str):
+                text_parts.append(doc)
+            elif isinstance(doc, dict) and 'page_content' in doc:
+                text_parts.append(doc['page_content'])
+                
+        full_text = "\n\n".join(text_parts)
         
         system_prompt = f"""
             Bạn là một trợ lý AI chuyên tóm tắt văn bản.

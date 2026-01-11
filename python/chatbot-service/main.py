@@ -105,6 +105,7 @@ async def main():
             summarizer=summarizer, 
             minio_service=minio_service,
             task_architect=task_architect,
+            vectorstore_service=vectorstore_service,
             channel=channel
         )
         remove_consumer = partial(
