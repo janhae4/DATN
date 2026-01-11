@@ -484,7 +484,7 @@ export class GmailService implements OnModuleInit {
         await this.mailerService.sendMail({
             to: payload.user.email,
             subject: 'Reset Your Password',
-            template: 'verification', // Using same template for simplicity or create reset-password.hbs
+            template: 'verification',
             context: {
                 user: payload.user,
                 code: payload.code,

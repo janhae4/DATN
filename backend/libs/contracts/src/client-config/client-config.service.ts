@@ -326,8 +326,9 @@ export class ClientConfigService {
   */
 
   getChatbotDatabaseURL(): string {
+    console.log('DATABASE_CHATBOT_URL', this.config.get<string>('DATABASE_CHATBOT_URL', 'mongodb://localhost:27017/chatbot_db?directConnection=true'));
     return this.config.get<string>(
-      'CHATBOT_DATABASE_URL',
+      'DATABASE_CHATBOT_URL',
       'mongodb://localhost:27017/chatbot_db?directConnection=true',
     );
   }
@@ -532,9 +533,10 @@ export class ClientConfigService {
 */
 
   getFileDatabaseUrl(): string {
+    console.log('DATABASE_FILE_URL', this.config.get<string>('DATABASE_FILE_URL', 'mongodb://localhost:27017/file?directConnection=true'));
     return this.config.get<string>(
       'DATABASE_FILE_URL',
-      'mongodb://localhost:27017/file?directConnection=true', // Thêm tham số này
+      'mongodb://localhost:27017/file?directConnection=true',
     );
   }
 

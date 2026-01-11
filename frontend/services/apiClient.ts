@@ -5,6 +5,17 @@ import qs from "qs";
 let isRefreshing = false;
 let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void }[] = [];
 
+const isServer = typeof window === 'undefined';
+
+console.log("isServer: ", isServer);
+console.log("process.env.NEXT_PUBLIC_API_URL: ", process.env.NEXT_PUBLIC_API_URL);
+console.log("process.env.INTERNAL_API_URL: ", process.env.INTERNAL_API_URL);
+const baseURL = isServer
+  ? process.env.INTERNAL_API_URL || 'http://api_gateway:3000'
+  : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+console.log("baseURL: ", baseURL);
+
 /**
  * Xử lý tất cả request trong hàng đợi
  * @param error Lỗi (nếu refresh fail)
@@ -41,7 +52,7 @@ const refreshAccessToken = async () => {
 // --- Cấu hình apiClient CHÍNH ---
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

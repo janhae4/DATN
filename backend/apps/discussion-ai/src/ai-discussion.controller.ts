@@ -1,8 +1,8 @@
 import { CHATBOT_PATTERN } from '@app/contracts/chatbot/chatbot.pattern';
 import { Controller } from '@nestjs/common';
-import { CHATBOT_EXCHANGE, EVENTS, EVENTS_EXCHANGE, User } from '@app/contracts';
-import type { AddMemberEventPayload, CreateTeamEventPayload, LeaveMember, MessageMetadataDto, MessageUserChatbot, RemoveMemberEventPayload, RemoveTeamEventPayload, SendAiMessageEventPayload } from '@app/contracts';
-import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { CHATBOT_EXCHANGE} from '@app/contracts';
+import type {MessageMetadataDto, MessageUserChatbot} from '@app/contracts';
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import { customErrorHandler } from '@app/common';
 import { AiDiscussionService } from './ai-discussion.service';
 

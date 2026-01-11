@@ -8,7 +8,6 @@ import {
   Patch,
   Get,
   UseGuards,
-  Res,
   DefaultValuePipe,
   ParseIntPipe,
 } from '@nestjs/common';
@@ -29,7 +28,6 @@ import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { Role } from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
-import type { Response } from 'express';
 
 @ApiTags('File Management')
 @ApiBearerAuth()
@@ -129,8 +127,8 @@ export class FileController {
   @Get()
   @ApiOperation({ summary: '6. List all files with pagination' })
   @ApiQuery({ name: 'projectId', required: false, type: 'string' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default: 1' }) // Swagger
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default: 10' }) // Swagger
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default: 1' }) 
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default: 10' })
   @ApiResponse({ status: 200, description: 'Returns paginated files' })
   getFiles(
     @CurrentUser('id') userId: string,
@@ -141,7 +139,6 @@ export class FileController {
     return this.fileService.getFiles(userId, projectId, page, limit);
   }
 
-  // --- THÊM ĐOẠN NÀY ---
   @Post(':fileId/confirm')
   @ApiOperation({ summary: '7. Confirm file upload completion' })
   @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to confirm' })
@@ -154,6 +151,4 @@ export class FileController {
   ) {
     return this.fileService.confirmUpload(fileId, userId, projectId);
   }
-
-
 }

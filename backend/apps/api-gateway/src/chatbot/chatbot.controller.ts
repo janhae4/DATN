@@ -19,7 +19,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
-import { ApiBearerAuth, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { REDIS_CLIENT, Role } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -167,13 +167,23 @@ export class ChatbotController {
 
   @Post('handle-message')
   @Sse('handle-message')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        discussionId: { type: 'string' },
+        summarizeId: { type: 'string' },
+      },
+    },
+  })
   async handleMessageStream(
-    @Body() body: { message: string, discussionId: string },
+    @Body() body: { message: string, discussionId: string, summarizeId: string },
     @CurrentUser('id') userId: string
   ): Promise<Observable<MessageEvent>> {
     console.log('handleMessageStream', body, userId);
     const result = unwrapRpcResult(
-      await this.chatbotService.handleMessage(body.message, body.discussionId, userId)
+      await this.chatbotService.handleMessage(body.message, body.discussionId, userId, body.summarizeId)
     )
 
     const redisSub = this.redis.duplicate();

@@ -51,7 +51,7 @@
     "start:prod:notification": "node dist/apps/notification/main.js",
     "start:prod:video-chat": "node dist/apps/video-chat/main.js",
     "start:prod:discussion": "node dist/apps/discussion/main.js",
-    "start:prod:ai-discussion": "node dist/apps/ai-discussion/main.js",
+    "start:prod:ai-discussion": "node dist/apps/discussion-ai/main.js",
 
     "start:dev:all": "concurrently -n api,auth,user,task,redis \"npm:start:dev:api-gateway\" \"npm:start:dev:user\" \"npm:start:dev:auth\" \"npm:start:dev:task\" \"npm:start:dev:redis\"",
     "start:dev:ai-discussion:test": "concurrently -n api,auth,user,notification,ai-discussion \"npm:start:dev:api-gateway\" \"npm:start:dev:user\" \"npm:start:dev:auth\" \"npm:start:dev:notification\" \"npm:start:dev:ai-discussion\"",

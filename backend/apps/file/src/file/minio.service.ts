@@ -114,7 +114,7 @@ export class MinioService implements OnModuleInit {
                 this.bucketName,
                 storageKey,
                 expiry,
-                { 'response-content-disposition': `attachment; filename="${downloadFilename}"` } // Quan trọng: Đặt tên file download
+                { 'response-content-disposition': `attachment; filename="${downloadFilename}"` }
             );
             return url;
         } catch (err: any) {

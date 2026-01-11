@@ -3,10 +3,29 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN npx nest build ai-discussion && \
+    npx nest build api-gateway && \
+    npx nest build auth && \
+    npx nest build user && \
+    npx nest build project-service && \
+    npx nest build task-service && \
+    npx nest build sprint-service && \
+    npx nest build epic-service && \
+    npx nest build label-service && \
+    npx nest build list-service && \
+    npx nest build team && \
+    npx nest build search-service && \
+    npx nest build socket && \
+    npx nest build notification && \
+    npx nest build calendar-service && \
+    npx nest build gmail && \
+    npx nest build file && \
+    npx nest build redis
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
-RUN npm ci --only=production --ignore-scripts && npm cache clean --force
+RUN npm ci --only=production && npm cache clean --force
+RUN npm install --no-save @css-inline/css-inline-linux-x64-musl
 COPY --from=builder /app/dist ./dist

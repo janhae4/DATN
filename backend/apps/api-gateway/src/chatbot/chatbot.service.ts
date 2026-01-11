@@ -174,13 +174,13 @@ export class ChatbotService {
     return unwrapRpcResult(result)
   }
 
-  async handleMessage(message: string, discussionId: string, userId: string) {
+  async handleMessage(message: string, discussionId: string, userId: string, summarizeFileName?: string) {
     this.logger.log(`Received new message for ${discussionId}. Sender: ${userId}`);
     console.log("User ID:", userId);
     const result = await this.amqp.request<AiDiscussionDto>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.HANDLE_MESSAGE,
-      payload: { message, discussionId, userId }
+      payload: { message, discussionId, userId, summarizeFileName }
     })
     return unwrapRpcResult(result)
   }

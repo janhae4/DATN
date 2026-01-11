@@ -314,6 +314,4 @@ export class FileService {
 
         return { downloadUrl };
     }
-
-
 }

@@ -43,6 +43,10 @@ import { GmailService } from './gmail.service';
                         name: GMAIL_EXCHANGE,
                         type: 'direct',
                     },
+                    {
+                        name: EVENTS_EXCHANGE,
+                        type: 'topic',
+                    }
                 ],
                 uri: cfg.getRMQUrl(),
                 connectionInitOptions: { wait: true, timeout: 20000 },
