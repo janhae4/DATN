@@ -9,6 +9,12 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Check, Plus, Edit } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
@@ -94,29 +100,36 @@ export function ListPicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={disabled}
-          className="h-7 px-2 flex items-center gap-2"
-        >
-          {selectedList ? (
-            <>
-              {/* 3. Cập nhật màu cho phần hiển thị Selected */}
-              <span
-                className={cn(
-                  "inline-block h-2 w-2 rounded-full",
-                  categoryColorMap[selectedList.category] || "bg-neutral-500"
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                className="h-7 px-2 flex items-center gap-2"
+              >
+                {selectedList ? (
+                  <>
+                    {/* 3. Cập nhật màu cho phần hiển thị Selected */}
+                    <span
+                      className={cn(
+                        "inline-block h-2 w-2 rounded-full",
+                        categoryColorMap[selectedList.category] || "bg-neutral-500"
+                      )}
+                    ></span>
+                    <span className="truncate">{selectedList.name}</span>
+                  </>
+                ) : (
+                  <span>List</span>
                 )}
-              ></span>
-              <span className="truncate">{selectedList.name}</span>
-            </>
-          ) : (
-            <span>List</span>
-          )}
-        </Button>
-      </PopoverTrigger>
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Status List</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <PopoverContent className="w-64 p-0" align="start">
         <div className="flex flex-col">
           {renderSection("Not started", grouped.todo)}
@@ -124,14 +137,14 @@ export function ListPicker({
           {renderSection("Done", grouped.done)}
 
           <Separator />
-          
+
           <div className="p-2">
             <ListCreateDialog projectId={projectId}>
               <Button
                 type="button"
                 variant="ghost"
                 className="w-full justify-start h-8 px-2"
-                onClick={(e) => e.stopPropagation()} 
+                onClick={(e) => e.stopPropagation()}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create list

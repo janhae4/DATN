@@ -52,6 +52,7 @@ class RAGChain:
         base_retriever = vectorstore.as_retriever()
         
         retriever = await self.retriever_service.build_compression_retriever(base_retriever)
+        print(f"[RAG_CHAIN] Retriever built: {type(retriever)}")
 
         prompt_template = """
         ### VAI TRÒ CỦA BẠN ###
@@ -84,32 +85,41 @@ class RAGChain:
         """
     
         prompt = ChatPromptTemplate.from_template(prompt_template)
+        
+        # Log trước khi bắt đầu stream
+        print(f"--> [RAG_CHAIN] Đang chuẩn bị gọi LLM (Ollama)...")
+        
         document_chain = create_stuff_documents_chain(self.llm_service.get_llm(), prompt)
         rag_chain = create_retrieval_chain(retriever, document_chain)
 
         formatted_history = format_chat_history(chat_history)
 
         def _blocking_stream(params):
+            print(f"--> [RAG_CHAIN] Đang thực thi stream trong ThreadPool...")
             return rag_chain.stream(params)
         
         self.clear_last_context()
 
         gen = functools.partial(_blocking_stream, {"input": question, "chat_history": formatted_history})
-        async for chunk in stream_blocking_generator(gen):
-            if isinstance(chunk, dict):
-                if ("context" in chunk and chunk["context"]):
-                    self.last_retrieved_context = self._format_context(chunk["context"])
-                    print(f"[RAG_CHAIN] Context: {self.last_retrieved_context}")
-                if "answer" in chunk and chunk["answer"]:
-                    yield chunk["answer"]
-                continue
-            
-            content = getattr(chunk, "content", None)
-            
-            if content:
-                yield content
-                continue
-            
-            chunk_str = str(chunk).strip()
-            if chunk_str and not chunk_str.startswith("{") and not chunk_str.endswith("}"):
-                yield chunk_str
+        
+        try:
+            async for chunk in stream_blocking_generator(gen):
+                if isinstance(chunk, dict):
+                    if ("context" in chunk and chunk["context"]):
+                        self.last_retrieved_context = self._format_context(chunk["context"])
+                        print(f"[RAG_CHAIN] Context retrieved ({len(self.last_retrieved_context)} docs): {self.last_retrieved_context}")
+                    if "answer" in chunk and chunk["answer"]:
+                        yield chunk["answer"]
+                    continue
+                
+                content = getattr(chunk, "content", None)
+                if content:
+                    yield content
+                    continue
+                
+                chunk_str = str(chunk).strip()
+                if chunk_str and not chunk_str.startswith("{") and not chunk_str.endswith("}"):
+                    yield chunk_str
+        except Exception as e:
+            print(f"[RAG_CHAIN] LỖI TRONG LUỒNG STREAM: {e}")
+            yield f"Lỗi hệ thống: {str(e)}"

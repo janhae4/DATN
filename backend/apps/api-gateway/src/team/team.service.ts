@@ -140,4 +140,20 @@ export class TeamService {
       payload: payload,
     }));
   }
+
+  async verifyPermission(userId: string, teamId: string, allowedRoles: MemberRole[]) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { userId, teamId, roles: allowedRoles },
+    }));
+  }
+
+  async verifyMemberPermission(userId: string, teamId: string, allowedRoles: MemberRole[]) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { userId, teamId, roles: allowedRoles },
+    }));
+  }
 }

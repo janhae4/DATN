@@ -16,7 +16,8 @@ import {
   CalendarDays,
   MoreVertical,
   Plus,
-  HelpCircle
+  HelpCircle,
+  Crown
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -40,6 +41,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CreateProjectModal } from "../project/CreateProjectModal";
 import { AddMemberDialog } from "./AddMemberDialog";
+import { Member } from "@/types/social";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TeamHeaderProps {
   team?: Team;
@@ -49,8 +58,10 @@ interface TeamHeaderProps {
   canManage: boolean;
   onDelete: () => void;
   onLeave: () => void;
+  onTransferOwnership?: (newOwnerId: string) => void;
   onSettingsClick: () => void;
   onStartTour?: () => void;
+  members?: Member[];
 }
 
 export function TeamHeader({
@@ -61,10 +72,16 @@ export function TeamHeader({
   canManage,
   onDelete,
   onLeave,
+  onTransferOwnership,
   onSettingsClick,
   onStartTour,
+  members = [],
 }: TeamHeaderProps) {
-  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isLeaveAlertOpen, setIsLeaveAlertOpen] = useState(false);
+  const [isTransferAlertOpen, setIsTransferAlertOpen] = useState(false);
+  const [selectedNewOwnerId, setSelectedNewOwnerId] = useState<string>("");
+
   const params = useParams();
   const teamId = params?.teamId as string;
 
@@ -104,17 +121,26 @@ export function TeamHeader({
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Team Options</DropdownMenuLabel>
 
-                {canManage && (
-                  <DropdownMenuItem onClick={onSettingsClick} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                )}
-
                 <DropdownMenuSeparator />
 
+                {onStartTour && (
+                  <>
+                    <DropdownMenuItem onClick={onStartTour} className="cursor-pointer">
+                      <HelpCircle className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span>Take a Tour</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+
                 <DropdownMenuItem
-                  onClick={() => setIsAlertOpen(true)}
+                  onClick={() => {
+                    if (isOwner) {
+                      setIsDeleteAlertOpen(true);
+                    } else {
+                      setIsLeaveAlertOpen(true);
+                    }
+                  }}
                   className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
                 >
                   {isOwner ? (
@@ -129,6 +155,18 @@ export function TeamHeader({
                     </>
                   )}
                 </DropdownMenuItem>
+
+                {isOwner && memberCount > 1 && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsTransferAlertOpen(true);
+                    }}
+                    className="text-amber-600 focus:text-amber-600 focus:bg-amber-50 cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Leave Team</span>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -214,13 +252,38 @@ export function TeamHeader({
 
       </div>
 
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+      {/* Delete Team Dialog */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{isOwner ? "Delete Team?" : "Leave Team?"}</AlertDialogTitle>
+            <AlertDialogTitle>Delete Team?</AlertDialogTitle>
             <AlertDialogDescription>
-              {isOwner
-                ? "This action is irreversible. All messages, tasks, and data will be permanently deleted."
+              This action is irreversible. All messages, tasks, and data will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onDelete();
+                setIsDeleteAlertOpen(false);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Team
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Leave Team Dialog (Normal or Owner ONLY member) */}
+      <AlertDialog open={isLeaveAlertOpen} onOpenChange={setIsLeaveAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Team?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isOwner && memberCount === 1
+                ? "You are the only member. Leaving will leave the team without an owner. You should probably delete the team instead."
                 : "You will lose access to all private channels and projects in this team."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -228,12 +291,66 @@ export function TeamHeader({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                isOwner ? onDelete() : onLeave();
-                setIsAlertOpen(false);
+                onLeave();
+                setIsLeaveAlertOpen(false);
               }}
-              className={isOwner ? "bg-red-600 hover:bg-red-700" : ""}
+              disabled={isOwner && memberCount === 1}
             >
               Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Transfer & Leave Dialog (Owner with members) */}
+      <AlertDialog open={isTransferAlertOpen} onOpenChange={setIsTransferAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Transfer Ownership & Leave</AlertDialogTitle>
+            <AlertDialogDescription>
+              As the owner, you must transfer ownership to another member before leaving the team.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="py-4">
+            <Select onValueChange={setSelectedNewOwnerId} value={selectedNewOwnerId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a new owner" />
+              </SelectTrigger>
+              <SelectContent>
+                {members
+                  .filter(m => m.role !== MemberRole.OWNER)
+                  .map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={member.avatar} />
+                          <AvatarFallback>{member.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span>{member.name}</span>
+                        <span className="text-xs text-muted-foreground">({member.email})</span>
+                      </div>
+                    </SelectItem>
+                  ))
+                }
+              </SelectContent>
+            </Select>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedNewOwnerId("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (onTransferOwnership && selectedNewOwnerId) {
+                  onTransferOwnership(selectedNewOwnerId);
+                  setIsTransferAlertOpen(false);
+                  setSelectedNewOwnerId("");
+                }
+              }}
+              disabled={!selectedNewOwnerId}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Transfer & Leave
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

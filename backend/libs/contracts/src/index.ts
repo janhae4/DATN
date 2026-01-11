@@ -1,5 +1,6 @@
-
 export * from './enums';
+export * from './enums/priority.enum';
+export * from './enums/approval-status.enum';
 export * from './error';
 export * from './constants';
 export * from './pagination.dto';

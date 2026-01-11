@@ -43,10 +43,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-import { DateRangePicker } from "../DateRangePicker"
-import { Epic, EpicStatus, Priority } from "@/types" 
+import { DateRangePicker } from "../../DateRangePicker"
+import { Epic, EpicStatus, Priority } from "@/types"
 import { useEpics } from "@/hooks/useEpics"
-import { ColorPicker } from "../color-picker/ColorPicker"
+import { ColorPicker } from "../ColorPicker"
 
 // --- Maps (Giữ nguyên) ---
 const statusMap: Record<EpicStatus, { label: string; icon: React.ElementType; color: string }> = {
@@ -74,7 +74,7 @@ const nullPriority = {
 interface EpicEditDialogProps {
   children: React.ReactNode
   projectId: string
-  epics: Epic[] 
+  epics: Epic[]
 }
 
 export function EpicEditDialog({ children, projectId, epics }: EpicEditDialogProps) {
@@ -119,21 +119,21 @@ export function EpicEditDialog({ children, projectId, epics }: EpicEditDialogPro
 
     try {
       await updateEpic(selectedId, {
-            title,
-            description: description || undefined,
-            status,
-            priority,
-            color,
-            startDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
-            dueDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-        }
+        title,
+        description: description || undefined,
+        status,
+        priority,
+        color,
+        startDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+        dueDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      }
       )
 
       toast.success(`Epic "${title}" updated!`)
       setOpen(false)
     } catch (error: any) {
-        console.error("Error updating epic:", error)
-        toast.error("Failed to update epic.")
+      console.error("Error updating epic:", error)
+      toast.error("Failed to update epic.")
     }
   }
 
@@ -151,14 +151,14 @@ export function EpicEditDialog({ children, projectId, epics }: EpicEditDialogPro
       toast.error("Failed to delete epic.")
     }
   }
-  
+
   const renderOption = (Icon: React.ElementType, label: string, color: string) => (
     <div className="flex items-center gap-2">
       <Icon className={cn("h-4 w-4", color)} />
       <span className="capitalize">{label}</span>
     </div>
   )
-  
+
   const getPriorityInfo = (p: Priority) => priorityMap[p] || nullPriority;
   const currentPriorityInfo = getPriorityInfo(priority);
   const currentStatusInfo = statusMap[status];
@@ -254,9 +254,9 @@ export function EpicEditDialog({ children, projectId, epics }: EpicEditDialogPro
                 <Label>Color</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-10 h-10 p-0 rounded-md border shadow-sm" 
+                    <Button
+                      variant="outline"
+                      className="w-10 h-10 p-0 rounded-md border shadow-sm"
                       style={{ backgroundColor: color }}
                       type="button"
                       disabled={!selectedId || isUpdating || isDeleting}
@@ -278,9 +278,9 @@ export function EpicEditDialog({ children, projectId, epics }: EpicEditDialogPro
           <DialogFooter className="flex justify-between sm:justify-between">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button 
-                  type="button" 
-                  variant="destructive" 
+                <Button
+                  type="button"
+                  variant="destructive"
                   size="sm"
                   disabled={!selectedId || isUpdating || isDeleting}
                 >

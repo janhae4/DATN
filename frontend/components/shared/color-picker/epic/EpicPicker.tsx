@@ -14,6 +14,12 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useEpics } from "@/hooks/useEpics"
 
 interface EpicPickerProps {
@@ -104,7 +110,14 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{renderSelected()}</PopoverTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>{renderSelected()}</PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Epic</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <PopoverContent className="w-64 p-0" align="start">
         <div className="flex flex-col">
           <div className="p-2">
@@ -126,7 +139,7 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
               type="button"
               className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted"
               onClick={() => {
-                onChange(null) 
+                onChange(null)
                 setOpen(false)
               }}
             >

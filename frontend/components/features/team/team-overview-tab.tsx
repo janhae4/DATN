@@ -374,7 +374,6 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
 
         <Separator />
 
-        <Separator />
 
         <div id="team-members">
           <TeamMembersList members={members} teamId={teamId} />

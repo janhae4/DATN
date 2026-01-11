@@ -10,6 +10,7 @@ import {
   useTeamMembers,
   useDeleteTeam,
   useLeaveTeam,
+  useTransferOwnership,
 } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 import { MemberRole } from "@/types/common/enums";
@@ -36,6 +37,7 @@ export default function TeamDetailsPage() {
 
   const deleteTeamMutation = useDeleteTeam();
   const leaveTeamMutation = useLeaveTeam();
+  const transferOwnershipMutation = useTransferOwnership();
 
   const currentMember = members.find((m) => m.id === user?.id);
   const userRole = currentMember?.role;
@@ -66,6 +68,17 @@ export default function TeamDetailsPage() {
     }
   };
 
+  const handleTransferAndLeave = async (newOwnerId: string) => {
+    try {
+      await transferOwnershipMutation.mutateAsync({ teamId, newOwnerId });
+      await leaveTeamMutation.mutateAsync({ teamId });
+      toast.success("Ownership transferred and left team");
+      router.push("/dashboard");
+    } catch (error) {
+      toast.error("Failed to transfer and leave");
+    }
+  };
+
   if (isTeamLoading || isMembersLoading) {
     return (
       <div className="flex-1 p-6 space-y-6 bg-background/50">
@@ -91,8 +104,10 @@ export default function TeamDetailsPage() {
           canManage={canManage}
           onDelete={handleDelete}
           onLeave={handleLeave}
+          onTransferOwnership={handleTransferAndLeave}
           onSettingsClick={() => router.push(`/team/${teamId}/settings`)}
           onStartTour={startTour}
+          members={members}
         />
 
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

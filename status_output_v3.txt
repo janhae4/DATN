@@ -1,0 +1,33 @@
+On branch main
+Your branch is ahead of 'origin/main' by 2 commits.
+  (use "git push" to publish your local commits)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   backend/package.json
+	modified:   frontend/app/(main)/[teamId]/documentation/page.tsx
+	modified:   frontend/components/AI-assistant/AI-assistant.tsx
+	modified:   frontend/components/features/backlogs/task/SuggestTaskByAi.tsx
+	modified:   frontend/components/features/summary/EmailBox.tsx
+	deleted:    frontend/components/features/team/allMembers.tsx
+	deleted:    frontend/components/features/team/allTeams.tsx
+	modified:   frontend/components/features/team/team-header.tsx
+	modified:   frontend/components/features/team/team-overview-tab.tsx
+	modified:   frontend/components/sidebar/app-sidebar.tsx
+	modified:   frontend/hooks/useGmail.ts
+	modified:   frontend/package-lock.json
+	modified:   frontend/package.json
+	modified:   python/chatbot-service/chains/rag_chain.py
+	modified:   python/chatbot-service/models/reranker.py
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   frontend/app/(secondary)/team-create/page.tsx
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	status_output.txt
+	status_output_v2.txt
+	status_output_v3.txt
+

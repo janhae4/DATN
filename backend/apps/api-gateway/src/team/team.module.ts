@@ -23,5 +23,6 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
   ],
   controllers: [TeamController],
   providers: [TeamService],
+  exports: [TeamService],
 })
 export class TeamModule { }

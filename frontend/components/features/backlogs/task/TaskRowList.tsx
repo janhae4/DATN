@@ -22,6 +22,7 @@ type TaskRowListProps = {
   selectedIds?: string[];
   onSelect?: (taskId: string, checked: boolean) => void;
   onMultiSelectChange: (ids: string[]) => void;
+  onDeleteTask?: (taskId: string) => void;
 };
 
 export function TaskRowList({
@@ -36,7 +37,11 @@ export function TaskRowList({
   selectedIds = [],
   onSelect,
   onMultiSelectChange,
+  onDeleteTask,
 }: TaskRowListProps) {
+  // ...
+  // ...
+
   const [anchorId, setAnchorId] = React.useState<string | null>(null);
   const [initialSnapshot, setInitialSnapshot] = React.useState<string[]>([]);
   console.log("Rendering BacklogAccordionItem with", tasks.length, "tasks");
@@ -148,6 +153,7 @@ export function TaskRowList({
       selected={selectedIds.includes(task.id)}
       onSelect={onSelect}
       onUpdateTask={onUpdateTask}
+      onDeleteTask={onDeleteTask}
       isSelectionDragging={isDraggingSelection}
       onStartSelection={() => handleStartSelection(task.id)}
       onMoveSelection={() => handleMoveSelection(task.id)}

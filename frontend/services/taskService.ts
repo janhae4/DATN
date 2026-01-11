@@ -23,6 +23,7 @@ export interface CreateTaskDto {
 export interface UpdateTaskDto extends Partial<Omit<CreateTaskDto, "projectId">> {
   position?: number;
   labelIds?: string[];
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 export interface BaseTaskFilterDto {

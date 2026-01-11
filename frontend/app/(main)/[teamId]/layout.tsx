@@ -63,8 +63,6 @@ export default function TeamLayout({
   }
 
   return (
-    <TeamProvider>
-      <TeamGuard>{children}</TeamGuard>
-    </TeamProvider>
+    <TeamGuard>{children}</TeamGuard>
   );
 }

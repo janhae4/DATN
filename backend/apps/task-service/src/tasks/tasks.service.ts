@@ -398,6 +398,12 @@ export class TasksService {
       else if (parentId) query.andWhere('task.parentId = :parentId', { parentId });
     }
 
+    // Filter - Only reporter can see their REJECTED tasks
+    query.andWhere(new Brackets(qb => {
+      qb.where("task.approvalStatus != 'REJECTED'")
+        .orWhere("task.reporterId = :userId", { userId });
+    }));
+
     if (priority && priority.length > 0) query.andWhere('task.priority IN (:...priorities)', { priorities: priority });
     if (epicId) query.andWhere('task.epicId IN (:...epicId)', { epicId });
     else if (epicId === null) query.andWhere('task.epicId IS NULL');

@@ -82,7 +82,6 @@ export default function Backlogs() {
       epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
       sprintId: sprints.length > 0 ? sprints.map((s) => s.id) : undefined,
-      teamId,
       limit: 50,
       page: sprintPage,
     };
@@ -239,6 +238,12 @@ export default function Backlogs() {
               updates: { sprintId: sprint.id },
             });
             toast.success(`Moved ${idsNeedUpdate.length} tasks to sprint`);
+
+            const currentTasksInSprint = allVisibleTasks.filter(t => t.sprintId === sprint.id);
+            const movedTasks = allVisibleTasks.filter(t => idsNeedUpdate.includes(t.id));
+            const newSprintTasks = [...currentTasksInSprint, ...movedTasks];
+            console.log(`Tasks in Sprint [${sprint.title}]:`, newSprintTasks);
+
             setSelectedIds([]);
           } catch (error) {
             console.error(error);

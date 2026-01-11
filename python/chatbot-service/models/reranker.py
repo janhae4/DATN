@@ -19,10 +19,11 @@ class SentenceTransformerRerank(BaseDocumentCompressor):
         callbacks: Callbacks = None,
     ) -> Sequence[Document]:
         """Compress documents using Sentence Transformer CrossEncoder, processing one by one."""
+        print(f"[Reranker] Received {len(documents)} documents to rerank for query: '{query[:50]}...'")
+        
         if not documents:
             return []
 
-        print(f"[Reranker] Reranking {len(documents)} documents for query: '{query[:50]}...'")
         
         scores: List[float] = []
         for doc in documents:

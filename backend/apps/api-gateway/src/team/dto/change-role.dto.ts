@@ -3,6 +3,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsString } from 'class-validator';
 
 export class ChangeRoleMember {
+  @IsString()
+  teamId: string;
+
   @ApiProperty({
     description:
       'The unique identifier of the member whose role is being changed.',

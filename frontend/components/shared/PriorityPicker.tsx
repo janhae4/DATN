@@ -7,6 +7,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Priority } from "@/types/common/enums"; // Import Priority Enum
@@ -71,25 +77,32 @@ export function PriorityPicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            "h-7 px-2 flex items-center gap-2",
-            getPriorityColor(priority),
-            disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
-          )}
-          onClick={(e) => e.stopPropagation()}
-          disabled={disabled}
-        >
-          <FlagIcon className="h-4 w-4" />
-          <span className="text-xs font-medium hidden group-hover:inline-block sm:inline-block">
-             {getPriorityLabel(priority)}
-          </span>
-        </Button>
-      </PopoverTrigger>
-      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "h-7 px-2 flex items-center gap-2",
+                  getPriorityColor(priority),
+                  disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                )}
+                onClick={(e) => e.stopPropagation()}
+                disabled={disabled}
+              >
+                <FlagIcon className="h-4 w-4" />
+                <span className="text-xs font-medium hidden group-hover:inline-block sm:inline-block">
+                  {getPriorityLabel(priority)}
+                </span>
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Priority</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
       <PopoverContent className="w-40 p-1" align="start" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col gap-1">
           {priorities.map((p) => (
@@ -108,7 +121,7 @@ export function PriorityPicker({
               <span className="text-sm">{p.label}</span>
             </Button>
           ))}
-          
+
           <div className="h-px bg-muted my-1" />
 
           <Button

@@ -32,11 +32,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-import { DateRangePicker } from "../DateRangePicker"
+import { DateRangePicker } from "../../DateRangePicker"
 import { EpicStatus, Priority } from "@/types/common/enums"
 import { useEpics } from "@/hooks/useEpics"
 import { CreateEpicDto } from "@/services/epicService"
-import { ColorPicker } from "../color-picker/ColorPicker"
+import { ColorPicker } from "../ColorPicker"
 
 // Maps (Same as before)
 const statusMap: Record<EpicStatus, { label: string; icon: React.ElementType; color: string }> = {
@@ -108,7 +108,7 @@ export function EpicCreateDialog({ children, projectId }: EpicCreateDialogProps)
       }
 
       await createEpic(newEpic)
-      
+
       toast.success(`Epic "${title}" created!`)
       setOpen(false)
     } catch (error: any) {
@@ -125,7 +125,7 @@ export function EpicCreateDialog({ children, projectId }: EpicCreateDialogProps)
       <span className="capitalize">{label}</span>
     </div>
   )
-  
+
   const getPriorityInfo = (p: Priority) => priorityMap[p] || nullPriority;
   const currentPriorityInfo = getPriorityInfo(priority);
   const currentStatusInfo = statusMap[status];
@@ -169,7 +169,7 @@ export function EpicCreateDialog({ children, projectId }: EpicCreateDialogProps)
                 <Select value={status} onValueChange={(v: EpicStatus) => setStatus(v)} disabled={isCreating}>
                   <SelectTrigger id="status" className="w-full">
                     <SelectValue asChild>
-                       {renderOption(currentStatusInfo.icon, currentStatusInfo.label, currentStatusInfo.color)}
+                      {renderOption(currentStatusInfo.icon, currentStatusInfo.label, currentStatusInfo.color)}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -204,9 +204,9 @@ export function EpicCreateDialog({ children, projectId }: EpicCreateDialogProps)
                 <Label>Color</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-10 h-10 p-0 rounded-md border shadow-sm" 
+                    <Button
+                      variant="outline"
+                      className="w-10 h-10 p-0 rounded-md border shadow-sm"
                       style={{ backgroundColor: color }}
                       type="button"
                     />

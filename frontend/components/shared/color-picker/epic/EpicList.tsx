@@ -15,7 +15,7 @@ import { EpicDetailDialog } from "./EpicDetailDialog"
 import { Epic, EpicStatus } from "@/types"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { HelpTooltip } from "../HelpTooltip"
+import { HelpTooltip } from "../../HelpTooltip"
 
 export function EpicList() {
     const params = useParams()

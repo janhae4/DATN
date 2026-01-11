@@ -10,6 +10,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 interface DatePickerProps {
@@ -34,31 +40,38 @@ export function DatePicker({ date, onDateSelect, disabled = false }: DatePickerP
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size={date ? "default" : "icon"}
-          className={cn(
-            "w-auto  text-left font-normal ",
-            !date && "text-muted-foreground/50 ml-3 hover:text-muted-foreground",
-            disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
-          )}
-          // Prevent the click/pointer from bubbling to parent row which opens the modal
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          disabled={disabled}
-        >
-          <CalendarIcon className="h-5 w-5" />
-          {date && (
-            <span className="ml-1.5 text-sm">
-              {displayDate?.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size={date ? "default" : "icon"}
+                className={cn(
+                  "w-auto  text-left font-normal ",
+                  !date && "text-muted-foreground/50 ml-3 hover:text-muted-foreground",
+                  disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                )}
+                // Prevent the click/pointer from bubbling to parent row which opens the modal
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                disabled={disabled}
+              >
+                <CalendarIcon className="h-5 w-5" />
+                {date && (
+                  <span className="ml-1.5 text-sm">
+                    {displayDate?.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Due Date</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <PopoverContent className="w-auto overflow-hidden p-0" align="start">
         <Calendar
           mode="single"

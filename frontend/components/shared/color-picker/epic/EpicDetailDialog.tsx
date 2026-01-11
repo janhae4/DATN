@@ -24,12 +24,12 @@ import { cn } from "@/lib/utils"
 import { Epic, EpicStatus, Priority, ListCategoryEnum, Task } from "@/types"
 import { useTasks } from "@/hooks/useTasks"
 import { useEpics } from "@/hooks/useEpics"
-import { ColorPicker } from "../color-picker/ColorPicker"
-import { DateRangePicker } from "../DateRangePicker"
+import { ColorPicker } from "../ColorPicker"
+import { DateRangePicker } from "../../DateRangePicker"
 import { DateRange } from "react-day-picker"
 import { toast } from "sonner"
 import { listService } from "@/services/listService"
-import { TaskDetailModal } from "../../features/backlogs/taskmodal"
+import { TaskDetailModal } from "../../../features/backlogs/taskmodal"
 
 // Maps status/priority (Reused for consistency)
 const statusMap: Record<EpicStatus, { label: string; icon: React.ElementType; color: string }> = {

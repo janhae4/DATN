@@ -137,16 +137,14 @@ export function NotificationPopover() {
                 currentNotifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`flex flex-col gap-1 p-3 rounded-xl transition-colors hover:bg-muted/50 ${
-                      !notification.isRead ? "bg-muted/100" : ""
-                    }`}
+                    className={`flex flex-col gap-1 p-3 rounded-xl transition-colors hover:bg-muted/50 ${!notification.isRead ? "bg-muted/100" : ""
+                      }`}
                   >
                     {/* Header: Title + Actions (Read/Delete) */}
                     <div className="flex items-start justify-between gap-2">
                       <h5
-                        className={`text-sm leading-none ${
-                          !notification.isRead ? "font-semibold" : "font-medium"
-                        }`}
+                        className={`text-sm leading-none ${!notification.isRead ? "font-semibold" : "font-medium"
+                          }`}
                       >
                         {notification.title}
                       </h5>
@@ -207,7 +205,7 @@ export function NotificationPopover() {
                     )}
 
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(notification.createdAt), {
+                      {formatDistanceToNow(new Date(new Date(notification.createdAt).getTime() + 7 * 60 * 60 * 1000), {
                         addSuffix: true,
                       })}
                     </p>

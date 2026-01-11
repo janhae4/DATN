@@ -39,7 +39,7 @@ export function TeamGuard({ children }: { children: React.ReactNode }) {
   const { data: teams, isLoading, isRefetching } = useTeams();
   const { setActiveTeam } = useTeamContext();
   const currentTeam = teams?.find((t) => t.id === teamId)
-  
+
   const shouldRedirect =
     !!teamId &&
     !isLoading &&
@@ -64,7 +64,7 @@ export function TeamGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (isLoading || teams === undefined) {
+  if (isLoading || isRefetching || teams === undefined) {
     return (
       <div className="h-screen w-full flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -72,7 +72,7 @@ export function TeamGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (shouldRedirect && teams && teams.length > 0) {
+  if (shouldRedirect && teams && teams.length > 0 && !isRefetching) {
     const defaultTeam = teams[0];
     return <RedirectToDefaultProject teamId={defaultTeam.id} />;
   }

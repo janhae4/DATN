@@ -113,7 +113,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         name: project.name,
         url: `/${teamId}/${project.id}/dashboard`,
         icon: Frame,
-        raw: project, 
+        raw: project,
       }))
   }, [projects, teamId])
 
@@ -142,6 +142,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         resolvedUrl = `/${teamId}/meeting`
       } else if (item.url === "documentation") {
         resolvedUrl = `/${teamId}/documentation`
+      } else if (item.url === "ai-assistant") {
+        resolvedUrl = `/${teamId}/ai-assistant`
       } else if (item.url === "dashboard" && item.title === "Project management") {
         resolvedUrl = `/${teamId}`
       } else {

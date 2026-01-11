@@ -8,11 +8,11 @@ import {
   Table2,
   UploadCloud,
   X,
-  FileUp,
   Search,
   FileText,
   Loader2,
-  HelpCircle
+  HelpCircle,
+  FileUp
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

@@ -139,10 +139,11 @@ export function useTasks(filters?: UseTasksFilters) {
       return { previousData };
     },
 
-    onError: (_err, _newTodo, context) => {
+    onError: (err, _newTodo, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(tasksQueryKey, context.previousData);
       }
+      toast.error((err as any).response?.data?.message || "Failed to update task");
     },
 
     onSettled: (data, error, variables) => {

@@ -37,6 +37,7 @@ export function BacklogTaskList({
   error,
   onRowClick,
   onUpdateTask,
+  onDeleteTasks,
   selectedIds,
   onSelect,
   onMultiSelectChange,
@@ -120,6 +121,7 @@ export function BacklogTaskList({
               isDraggable={true}
               onRowClick={onRowClick}
               onUpdateTask={handleUpdateTask}
+              onDeleteTask={(id) => onDeleteTasks([id])}
               selectedIds={selectedIds}
               onSelect={onSelect}
               onMultiSelectChange={onMultiSelectChange}
