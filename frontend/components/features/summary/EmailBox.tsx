@@ -221,7 +221,11 @@ const ComposeMailDialog = ({ open, onOpenChange, type, initialData, onSend }: Co
 };
 
 export function EmailBox() {
+<<<<<<< HEAD
   const { emails, loading, loadingMore, error, getMailDetail, sendMail, replyMail, loadMore } = useGmail(20);
+=======
+  const { emails, loading, loadingMore, error, isAuthError, refetch, getMailDetail, sendMail, replyMail, loadMore } = useGmail(20);
+>>>>>>> origin/blank_branch
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeData, setComposeData] = useState<any>(null);
 
@@ -302,7 +306,11 @@ export function EmailBox() {
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-muted-foreground" />
+<<<<<<< HEAD
               Inbox (Last 20)
+=======
+              Inbox
+>>>>>>> origin/blank_branch
             </div>
             <TooltipProvider>
               <Tooltip>
@@ -328,7 +336,11 @@ export function EmailBox() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm font-medium text-muted-foreground animate-pulse">Verifying connection...</p>
             </div>
+<<<<<<< HEAD
           ) : !isLinked ? (
+=======
+          ) : (!isLinked || isAuthError) ? (
+>>>>>>> origin/blank_branch
             <div className="h-[250px] flex flex-col items-center justify-center text-center p-4 space-y-4 animate-in fade-in duration-500">
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold tracking-tight">Connect Gmail</h3>
@@ -348,7 +360,20 @@ export function EmailBox() {
           ) : loading ? (
             <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
           ) : error ? (
+<<<<<<< HEAD
             <div className="text-red-500 text-sm">{error}</div>
+=======
+            <div className="h-[250px] flex flex-col items-center justify-center text-center p-4">
+              <div className="p-3 rounded-full bg-red-50 dark:bg-red-900/10 mb-3">
+                <X className="h-6 w-6 text-red-500" />
+              </div>
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">Unable to load emails</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                Try Again
+              </Button>
+            </div>
+>>>>>>> origin/blank_branch
           ) : (
             <div className="h-[250px] overflow-y-auto pr-4" onScroll={handleScroll}>
               <div className="flex flex-col gap-1">
@@ -402,6 +427,7 @@ export function EmailBox() {
                         <Separator />
 
                         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
+<<<<<<< HEAD
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -415,6 +441,8 @@ export function EmailBox() {
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+=======
+>>>>>>> origin/blank_branch
                           <div className="flex gap-2">
                             <TooltipProvider>
                               <Tooltip>

@@ -15,8 +15,14 @@ import { toast } from "sonner";
 import { TaskFilters } from "@/hooks/useTaskManagement";
 import { useDebounce } from "@/hooks/useDebounce";
 import { GetTasksParams } from "@/services/taskService";
+import { useGanttTour } from "@/hooks/touring/useGanttTour";
+import { useTheme } from "next-themes";
 
 const GanttPage = () => {
+  const { theme, resolvedTheme } = useTheme();
+  // We use resolvedTheme to also support 'system' preference
+  const isDark = (theme === "dark" || resolvedTheme === "dark");
+
   const [view, setView] = React.useState<ViewMode>(ViewMode.Day);
   const params = useParams();
   const rawProjectId = params.projectId as unknown as
@@ -38,6 +44,7 @@ const GanttPage = () => {
   });
   const [expandedProjectIds, setExpandedProjectIds] = React.useState<Record<string, boolean>>({});
   const [debouncedSearch] = useDebounce(filters.searchText, 500);
+  const { startTour } = useGanttTour();
 
   const apiParams: GetTasksParams = React.useMemo(
     () => ({
@@ -87,6 +94,34 @@ const GanttPage = () => {
   } else if (view === ViewMode.Week) {
     columnWidth = 250;
   }
+
+  // Dynamic Colors based on Theme
+  const ganttColors = React.useMemo(() => {
+    if (isDark) {
+      return {
+        barBackgroundColor: "#52525b", // zinc-600
+        barBackgroundSelectedColor: "#71717a", // zinc-500
+        barProgressColor: "#3b82f6", // blue-500
+        barProgressSelectedColor: "#60a5fa", // blue-400
+        projectBackgroundColor: "#065f46", // emerald-800
+        projectBackgroundSelectedColor: "#064e3b", // emerald-900
+        projectProgressColor: "#34d399", // emerald-400
+        projectProgressSelectedColor: "#10b981", // emerald-500
+        arrowColor: "#a1a1aa", // zinc-400
+      };
+    }
+    return {
+      barBackgroundColor: "black",
+      barBackgroundSelectedColor: "#9ca3af",
+      barProgressColor: "#3b82f6",
+      barProgressSelectedColor: "#1d4ed8",
+      projectBackgroundColor: "#d1fae5",
+      projectBackgroundSelectedColor: "#a7f3d0",
+      projectProgressColor: "#10b981",
+      projectProgressSelectedColor: "#059669",
+      arrowColor: undefined,
+    };
+  }, [isDark]);
 
   const handleTaskChange = async (task: Task) => {
     // Call API - Optimistic update is already handled by useTasks mutation
@@ -144,7 +179,6 @@ const GanttPage = () => {
     if (!open) setSelectedTask(null);
   };
 
-  // ... (Giữ nguyên các handler update task khác: handleListChange, handleDateChange, etc.)
   const handleListChange = (taskId: string, listId: string) =>
     updateTask(taskId, { listId });
   const handleDateChange = (taskId: string, newDate: Date | undefined) =>
@@ -168,7 +202,7 @@ const GanttPage = () => {
   // --- RENDER LOGIC ---
 
   if (isLoading) {
-    return <div className="p-4">Loading tasks...</div>; // Có thể thay bằng Skeleton UI
+    return <div className="p-4">Loading tasks...</div>;
   }
 
   return (
@@ -180,11 +214,38 @@ const GanttPage = () => {
                         ._CZjuD{ border-radius: 10px; }
                         ._1nBOt{ display: flex; align-items: center; justify-content: center; flex-direction: row; }
                         ._1nBOt > *{ display: flex; font-weight: bold; align-items: center; justify-content: center; flex-direction: row; }
+                        
+                        /* Dark Mode Overrides for Gantt Chart */
+                        ${isDark ? `
+                          .gantt-task-react-header {
+                            fill: #27272a; /* zinc-800 */
+                            stroke: #3f3f46; /* zinc-700 */
+                          }
+                          .gantt-task-react-grid-row {
+                            fill: #18181b; /* zinc-950 */
+                            stroke: #27272a; /* zinc-800 */
+                          }
+                           .gantt-task-react-grid-row:nth-child(even) {
+                            fill: #09090b; /* zinc-950 darker */
+                          }
+                          .gantt-task-react-today-highlight {
+                            fill: rgba(255, 255, 255, 0.05);
+                          }
+                          text {
+                            fill: #e4e4e7 !important; /* zinc-200 */
+                          }
+                          .gantt-task-react-task-list-header {
+                             color: #e4e4e7;
+                             background-color: #18181b !important;
+                             border-bottom: 1px solid #27272a;
+                          }
+                          /* Fix for task list table background */
+                          ._2k9Ys { background-color: #18181b !important; color: #e4e4e7 !important; }
+                        ` : ''}
                     `,
         }}
       />
 
-      {/* View Switcher luôn hiển thị để user có thể tương tác (tạo task mới, đổi view) */}
       <ViewSwitcher
         onViewModeChange={(viewMode) => setView(viewMode)}
         onViewListChange={setIsChecked}
@@ -192,10 +253,10 @@ const GanttPage = () => {
         currentViewMode={view}
         searchQuery={filters.searchText}
         onSearchQueryChange={(query) => setFilters(prev => ({ ...prev, searchText: query }))}
+        onStartTour={startTour}
       />
 
-      {/* LOGIC FIX: Chỉ hiển thị Gantt nếu có tasks */}
-      <div className="flex-1 overflow-hidden">
+      <div id="gantt-chart-container" className="flex-1 overflow-hidden">
         {ganttTasks.length > 0 ? (
           <Gantt
             tasks={ganttTasks}
@@ -211,17 +272,12 @@ const GanttPage = () => {
             rowHeight={50}
             barFill={65}
             barCornerRadius={4}
-            barProgressColor="#3b82f6"
-            barProgressSelectedColor="#1d4ed8"
-            barBackgroundColor="black"
-            projectProgressColor="#10b981"
-            projectBackgroundColor="#d1fae5"
-            fontFamily="roboto"
+            {...ganttColors}
+            fontFamily="inherit"
             fontSize="12px"
           />
         ) : (
-          // Empty State UI
-          <div className="flex flex-col items-center justify-center h-[400px] text-gray-500 border rounded-lg m-4 bg-gray-50">
+          <div className="flex flex-col items-center justify-center h-[400px] text-gray-500 border rounded-lg m-4 bg-gray-50 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400">
             <p className="text-lg font-medium">No tasks found</p>
             <p className="text-sm">
               Create a new task to view the Gantt chart.

@@ -35,8 +35,6 @@ async function bootstrap() {
   );
   app.useGlobalGuards(app.get(RoleGuard));
   app.useGlobalFilters(app.get(RpcErrorToHttpFilter));
-  console.log('--- ĐANG START SERVER ---');
   await app.listen(process.env.port ?? 3000, '0.0.0.0');
-  console.log('--- SERVER ĐÃ CHẠY ---');
 }
 bootstrap();

@@ -2,6 +2,10 @@ import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import styles from "./layout.module.css";
 import Header from "@/components/layout/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+<<<<<<< HEAD
+=======
+import { TeamProvider } from "@/contexts/TeamContext";
+>>>>>>> origin/blank_branch
 
 export default function MainLayout({
   children,
@@ -9,6 +13,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
+<<<<<<< HEAD
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className=" h-screen w-screen overflow-x-hidden">
@@ -21,5 +26,21 @@ export default function MainLayout({
         </div>
       </SidebarInset>
     </SidebarProvider>
+=======
+    <TeamProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset className=" h-screen w-screen overflow-x-hidden">
+          <div className={styles.mainLayout}>
+            <main className={styles.content}>
+              <Header />
+              {/* <ChatWidget/> */}
+              <div className={styles.pageWrapper}>{children}</div>
+            </main>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TeamProvider>
+>>>>>>> origin/blank_branch
   );
 }

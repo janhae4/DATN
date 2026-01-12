@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 import { Check, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -51,7 +52,7 @@ export function AssigneePicker({
       .slice(0, 2);
   };
 
-  const toggleUser = (userId: string) => {
+  const toggleUser = async (userId: string) => {
     if (value.includes(userId)) {
       onChange(value.filter((id) => id !== userId));
     } else {
@@ -61,40 +62,47 @@ export function AssigneePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div
-          role="button"
-          className={cn(
-            "cursor-pointer outline-none flex items-center justify-center",
-            className
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          {selectedUsers.length > 0 ? (
-            <div className="flex -space-x-2 hover:space-x-1 transition-all duration-200">
-              {selectedUsers.slice(0, 3).map((user) => (
-                <Avatar key={user.id} className="h-6 w-6 border-2 border-background ring-1 ring-border/10 transition-transform hover:scale-110 hover:z-10" title={user.name}>
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="text-[10px] bg-primary/5 text-primary font-medium">
-                    {getInitials(user.name)}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-              {selectedUsers.length > 3 && (
-                <div className="h-6 w-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground ring-1 ring-border/10" title={selectedUsers.slice(3).map((u) => u.name).join(", ")}>
-                  +{selectedUsers.length - 3}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="h-6 w-6 rounded-full border border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors bg-background">
-              <UserIcon className="h-3 w-3 text-muted-foreground/50" />
-            </div>
-          )}
-        </div>
-      </PopoverTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <div
+                role="button"
+                className={cn(
+                  "cursor-pointer outline-none flex items-center justify-center",
+                  className
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                {selectedUsers.length > 0 ? (
+                  <div className="flex -space-x-2 hover:space-x-1 transition-all duration-200">
+                    {selectedUsers.slice(0, 3).map((user) => (
+                      <Avatar key={user.id} className="h-6 w-6 border-2 border-background ring-1 ring-border/10 transition-transform hover:scale-110 hover:z-10" title={user.name}>
+                        <AvatarImage src={user.avatar} />
+                        <AvatarFallback className="text-[10px] bg-primary/5 text-primary font-medium">
+                          {getInitials(user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {selectedUsers.length > 3 && (
+                      <div className="h-6 w-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground ring-1 ring-border/10" title={selectedUsers.slice(3).map((u) => u.name).join(", ")}>
+                        +{selectedUsers.length - 3}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-6 w-6 rounded-full border border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors bg-background">
+                    <UserIcon className="h-3 w-3 text-muted-foreground/50" />
+                  </div>
+                )}
+              </div>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Assignees</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <PopoverContent className="p-0 w-[200px]" align="end" side="bottom">
         <Command>
           <CommandInput placeholder="Search user..." />

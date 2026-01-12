@@ -1,4 +1,8 @@
 import { Priority } from '@app/contracts/enums/priority.enum';
+<<<<<<< HEAD
+=======
+import { ApprovalStatus } from '@app/contracts/enums/approval-status.enum';
+>>>>>>> origin/blank_branch
 import {
   Column,
   CreateDateColumn,
@@ -27,7 +31,11 @@ export class Task {
   @Column({ type: 'uuid', name: 'projectId', nullable: false })
   projectId: string;
 
+<<<<<<< HEAD
   @Column({ type: 'uuid', name: 'teamId', nullable: true }) 
+=======
+  @Column({ type: 'uuid', name: 'teamId', nullable: true })
+>>>>>>> origin/blank_branch
   @Index()
   teamId: string | null;
 
@@ -74,6 +82,16 @@ export class Task {
   @Column({ type: 'real', default: 65535, nullable: false })
   position: number;
 
+<<<<<<< HEAD
+=======
+  @Column({
+    type: 'enum',
+    enum: ApprovalStatus,
+    default: ApprovalStatus.PENDING,
+  })
+  approvalStatus: ApprovalStatus;
+
+>>>>>>> origin/blank_branch
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 

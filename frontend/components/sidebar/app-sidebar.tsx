@@ -29,48 +29,41 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-const data = {
+const data: {
+  navMain: {
+    title: string
+    url: string
+    icon: any
+    isActive?: boolean
+    items?: {
+      title: string
+      url: string
+    }[]
+  }[]
+} = {
   navMain: [
     {
       title: "Project management",
       url: "dashboard",
       icon: Bot,
       isActive: true,
-      items: [
-        {
-          title: "Dashboard",
-          url: "dashboard#summary",
-        },
-        {
-          title: "Boards",
-          url: "dashboard#boards",
-        },
-        {
-          title: "Backlogs",
-          url: "dashboard#backlogs",
-        },
-        {
-          title: "Timeline",
-          url: "dashboard#timeline",
-        },
-      ],
     },
-    {
-      title: "Meeting",
-      url: "meeting",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "Join a meeting",
-          url: "meeting",
-        },
-        {
-          title: "Meeting history",
-          url: "meeting/summary",
-        },
-      ],
-    },
+    // {
+    //   title: "Meeting",
+    //   url: "meeting",
+    //   icon: SquareTerminal,
+    //   isActive: true,
+    //   items: [
+    //     {
+    //       title: "Join a meeting",
+    //       url: "meeting",
+    //     },
+    //     {
+    //       title: "Meeting history",
+    //       url: "meeting/summary",
+    //     },
+    //   ],
+    // },
     {
       title: "Documentation",
       url: "documentation",
@@ -89,12 +82,12 @@ const data = {
       icon: CalendarDays,
       isActive: true,
     },
-    {
-      title: "Messages",
-      url: "chat",
-      icon: MessageCircle,
-      isActive: true,
-    },
+    // {
+    //   title: "Messages",
+    //   url: "chat",
+    //   icon: MessageCircle,
+    //   isActive: true
+    // },
     {
       title: "AI Assistant",
       url: "ai-assistant",
@@ -102,7 +95,7 @@ const data = {
       isActive: true,
     },
   ],
-};
+}
 
 import { useProjects } from "@/hooks/useProjects";
 import { useParams } from "next/navigation";
@@ -114,12 +107,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { projects } = useProjects(teamId);
 
   const formattedProjects = React.useMemo(() => {
-    return projects.map((project) => ({
-      name: project.name,
-      url: `/${teamId}/${project.id}/dashboard`,
-      icon: Frame,
-    }));
-  }, [projects, teamId]);
+    return projects
+      .map((project) => ({
+        id: project.id,
+        name: project.name,
+        url: `/${teamId}/${project.id}/dashboard`,
+        icon: Frame,
+        raw: project,
+      }))
+  }, [projects, teamId])
 
   const effectiveProjectId = React.useMemo(() => {
     if (projectId) return projectId;
@@ -129,55 +125,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navMainWithParams = React.useMemo(() => {
     if (!teamId) {
-      return data.navMain.map((item) => ({
-        ...item,
-        url: "#",
-        items: item.items?.map((sub) => ({ ...sub, url: "#" })),
-      }));
+      return data.navMain
     }
 
-    const projectBasePath = effectiveProjectId
-      ? `/${teamId}/${effectiveProjectId}`
-      : `/${teamId}`;
+    const basePath = effectiveProjectId ? `/${teamId}/${effectiveProjectId}` : null
 
     return data.navMain.map((item) => {
-      let resolvedUrl: string;
+      let resolvedUrl: string
 
-      if (
-        ["team", "calendar", "meeting", "documentation", "chat"].includes(
-          item.url
-        )
-      ) {
-        resolvedUrl = `/${teamId}/${item.url}`;
-      } else if (item.url === "dashboard") {
-        resolvedUrl = effectiveProjectId
-          ? `${projectBasePath}/dashboard`
-          : `/${teamId}/create-project`;
+      // Routes that only need teamId
+      if (item.url === "team") {
+        resolvedUrl = `/${teamId}/team`
+      } else if (item.url === "calendar") {
+        resolvedUrl = `/${teamId}/calendar`
+      } else if (item.url === "meeting") {
+        resolvedUrl = `/${teamId}/meeting`
+      } else if (item.url === "documentation") {
+        resolvedUrl = `/${teamId}/documentation`
       } else if (item.url === "ai-assistant") {
-        resolvedUrl = `/ai-assistant`;
+        resolvedUrl = `/${teamId}/ai-assistant`
+      } else if (item.url === "dashboard" && item.title === "Project management") {
+        resolvedUrl = `/${teamId}`
       } else {
-        resolvedUrl = `${projectBasePath}/${item.url}`;
+        // Routes that need both teamId and projectId
+        resolvedUrl = basePath ? `${basePath}/${item.url}` : `/${teamId}`
       }
 
       return {
         ...item,
         url: resolvedUrl,
         items: item.items
-          ? item.items.map((subItem) => {
-              if (item.url === "meeting") {
-                return { ...subItem, url: `/${teamId}/${subItem.url}` };
-              }
-              return {
-                ...subItem,
-                url: effectiveProjectId
-                  ? `${projectBasePath}/${
-                      subItem.url.split("#")[1]
-                        ? "dashboard#" + subItem.url.split("#")[1]
-                        : subItem.url
-                    }`
-                  : "#",
-              };
-            })
+          ? item.items.map((subItem) => ({
+            ...subItem,
+            url: item.url === "meeting"
+              ? `/${teamId}/${subItem.url}`
+              : basePath
+                ? `${basePath}/${subItem.url}`
+                : `/${teamId}`,
+          }))
           : item.items,
       };
     });

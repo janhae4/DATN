@@ -16,8 +16,35 @@ export const useGmail = (initialMaxResults = 20) => {
             setEmails(data.emails || []);
             setNextPageToken(data.nextPageToken || null);
         } catch (err: any) {
+<<<<<<< HEAD
             console.error('Failed to fetch gmail', err);
             setError(err.response?.data?.message || err.message || 'Failed to fetch emails');
+=======
+            const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch emails';
+            const statusCode = err.response?.status;
+
+            // Comprehensive check for auth-related issues
+            // Note: Backend currently returns 500 when tokens are not found in Redis
+            const isAuthIssue =
+                statusCode === 401 ||
+                statusCode === 403 ||
+                statusCode === 500 || // Treat 500 as potential auth issue for Gmail
+                errorMessage.toLowerCase().includes('google account') ||
+                errorMessage.toLowerCase().includes('link') ||
+                errorMessage.toLowerCase().includes('authenticate') ||
+                errorMessage.toLowerCase().includes('token');
+
+            if (!isAuthIssue) {
+                console.error('Failed to fetch gmail', err);
+            }
+
+            // If it's a 500 but we suspect auth, provide a better message
+            const finalMessage = (statusCode === 500 && !errorMessage.includes('Google'))
+                ? 'Please link your Google account to access emails'
+                : errorMessage;
+
+            setError(finalMessage);
+>>>>>>> origin/blank_branch
         } finally {
             setLoading(false);
         }
@@ -59,6 +86,14 @@ export const useGmail = (initialMaxResults = 20) => {
         loading,
         loadingMore,
         error,
+<<<<<<< HEAD
+=======
+        isAuthError: error?.toLowerCase().includes('google account') ||
+            error?.toLowerCase().includes('link') ||
+            error?.toLowerCase().includes('authenticate') ||
+            error?.toLowerCase().includes('token') ||
+            error === 'Please link your Google account to access emails',
+>>>>>>> origin/blank_branch
         refetch: fetchEmails,
         loadMore,
         getMailDetail,

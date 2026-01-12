@@ -2,9 +2,7 @@
 
 import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import TimelineView from "./features/timeline/TimelineView";
 import dynamic from "next/dynamic";
-import { Loader2 } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { BacklogSkeleton } from "./skeletons/BackLogSkeleton";
 import { KanbanSkeleton } from "./skeletons/KanbanSkeleton";
@@ -32,13 +30,23 @@ const GanttChart = dynamic(() => import("./shared/ganttchart/ganttChart"), {
 
 // const TimelineView = dynamic(() => import("./features/timeline/TimelineView"), { ssr: false })
 
-function getTabFromHash(): string {
-  if (typeof window === "undefined") return "backlogs";
+function getInitialTab(): string {
+  if (typeof window === "undefined") return "summary";
+
+  // Try search params first
+  const searchParams = new URLSearchParams(window.location.search);
+  const tabParam = searchParams.get("tab");
+  if (tabParam && ["backlogs", "summary", "boards", "timeline"].includes(tabParam)) {
+    return tabParam;
+  }
+
+  // Try hash second
   const hash = window.location.hash.replace("#", "");
   if (["backlogs", "summary", "boards", "timeline"].includes(hash)) {
     return hash;
   }
-  return "backlogs";
+
+  return "summary";
 }
 
 const GenericTabSkeleton = () => (
@@ -52,14 +60,14 @@ const GenericTabSkeleton = () => (
 );
 
 export function TabsNav() {
-  const [activeTab, setActiveTab] = React.useState<string>("backlogs");
+  const [activeTab, setActiveTab] = React.useState<string>("summary");
 
   React.useEffect(() => {
-    // Set initial tab from hash on mount
-    setActiveTab(getTabFromHash());
+    // Set initial tab on mount
+    setActiveTab(getInitialTab());
 
     const handleHashChange = () => {
-      setActiveTab(getTabFromHash());
+      setActiveTab(getInitialTab());
     };
 
     window.addEventListener("hashchange", handleHashChange);
@@ -83,20 +91,21 @@ export function TabsNav() {
         className="h-full flex flex-col w-full"
       >
         <TabsList>
-          <TabsTrigger value="backlogs">Backlogs</TabsTrigger>
           <TabsTrigger value="summary">Summary</TabsTrigger>
+          <TabsTrigger value="backlogs">Backlogs</TabsTrigger>
           <TabsTrigger value="boards">Boards</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
+        <TabsContent value="summary" className="flex-1 overflow-y-auto">
+          <Summary />
+        </TabsContent>
         <TabsContent
           value="backlogs"
           className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent"
         >
           <Backlogs />
         </TabsContent>
-        <TabsContent value="summary" className="flex-1 overflow-y-auto">
-          <Summary />
-        </TabsContent>
+
         <TabsContent value="boards" className="flex-1 overflow-hidden min-w-0">
           <KanbanBoard />
         </TabsContent>

@@ -8,6 +8,7 @@ import {
   Patch,
   Get,
   UseGuards,
+  Res,
   DefaultValuePipe,
   ParseIntPipe,
 } from '@nestjs/common';
@@ -28,6 +29,7 @@ import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { Role } from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
+import type { Response } from 'express';
 
 @ApiTags('File Management')
 @ApiBearerAuth()
@@ -127,7 +129,7 @@ export class FileController {
   @Get()
   @ApiOperation({ summary: '6. List all files with pagination' })
   @ApiQuery({ name: 'projectId', required: false, type: 'string' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default: 1' }) 
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default: 1' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default: 10' })
   @ApiResponse({ status: 200, description: 'Returns paginated files' })
   getFiles(
@@ -151,4 +153,6 @@ export class FileController {
   ) {
     return this.fileService.confirmUpload(fileId, userId, projectId);
   }
+
+
 }

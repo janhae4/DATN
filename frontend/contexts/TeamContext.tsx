@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useTeams } from "@/hooks/useTeam";
 import { Team } from "@/types/social";
+import { useParams } from "next/navigation";
 
 interface TeamContextType {
   teams: (Team & { role: string })[] | undefined;
@@ -15,17 +16,35 @@ const TeamContext = createContext<TeamContextType | undefined>(undefined);
 
 export function TeamProvider({ children }: { children: React.ReactNode }) {
   const { data: teams, isLoading } = useTeams();
+  const params = useParams();
+  const teamId = params?.teamId as string;
   const [activeTeam, setActiveTeam] = useState<(Team & { role: string }) | undefined>(undefined);
 
-  // Auto-select first team
+  // Sync activeTeam with URL teamId or auto-select first team
   useEffect(() => {
-    if (teams && teams.length > 0 && !activeTeam) {
-      setActiveTeam(teams[0]);
+    if (teams && teams.length > 0) {
+      if (teamId) {
+        const teamFromUrl = teams.find(t => t.id === teamId);
+        if (teamFromUrl) {
+          setActiveTeam(teamFromUrl);
+        } else if (!activeTeam) {
+          setActiveTeam(teams[0]);
+        }
+      } else if (!activeTeam) {
+        setActiveTeam(teams[0]);
+      }
     }
-  }, [teams, activeTeam]);
+  }, [teams, teamId, activeTeam]);
+
+  const value = useMemo(() => ({
+    teams,
+    activeTeam,
+    setActiveTeam,
+    isLoading
+  }), [teams, activeTeam, isLoading]);
 
   return (
-    <TeamContext.Provider value={{ teams, activeTeam, setActiveTeam, isLoading }}>
+    <TeamContext.Provider value={value}>
       {children}
     </TeamContext.Provider>
   );

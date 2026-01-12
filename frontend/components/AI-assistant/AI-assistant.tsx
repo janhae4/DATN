@@ -2,83 +2,18 @@
 
 import * as React from "react";
 import {
-  Send,
-  Sparkles,
-  Loader2,
-  BrainCircuit,
-  Plus,
-  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  MoreVertical,
-  Trash2,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
-import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { cn } from "@/lib/utils";
-
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useAiDiscussion } from "@/hooks/useAiDiscussion";
 import { useAiChat } from "@/hooks/useAiChat";
-import { AiDiscussion, AiMessage } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 
-const MarkdownRenderer = ({ text }: { text: string }) => (
-  <ReactMarkdown
-    rehypePlugins={[rehypeRaw]}
-    components={{
-      code: ({ node, inline, className, children, ...props }: any) => {
-        const match = /language-(\w+)/.exec(className || "");
-        return !inline ? (
-          <div className="rounded-xl overflow-hidden my-4 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <SyntaxHighlighter
-              style={vscDarkPlus as any}
-              language={match ? match[1] : "text"}
-              PreTag="div"
-              customStyle={{
-                margin: 0,
-                padding: "1.25rem",
-                fontSize: "13px",
-                backgroundColor: "transparent",
-              }}
-              className="bg-zinc-900 dark:bg-black"
-              {...props}
-            >
-              {String(children).replace(/\n$/, "")}
-            </SyntaxHighlighter>
-          </div>
-        ) : (
-          <code
-            className="bg-zinc-100 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded text-sm font-mono"
-            {...props}
-          >
-            {children}
-          </code>
-        );
-      },
-      p: ({ children }) => (
-        <p className="leading-7 mb-4 last:mb-0">{children}</p>
-      ),
-      ul: ({ children }) => (
-        <ul className="list-disc pl-5 space-y-2 mb-4">{children}</ul>
-      ),
-    }}
-  >
-    {text}
-  </ReactMarkdown>
-);
+import { Button } from "@/components/ui/button";
+import { Sidebar } from "./sidebar";
+import { MessageList } from "./message-list";
+import { ChatInput } from "./chat-input";
 
 export default function AIAssistantUI() {
   const queryClient = useQueryClient();
@@ -117,12 +52,20 @@ export default function AIAssistantUI() {
   const { ref: sidebarBottomRef, inView: isSidebarBottomInView } = useInView();
   const { ref: messageTopRef, inView: isMessageTopInView } = useInView();
 
+<<<<<<< HEAD
+=======
+  // Handle auto-fetching discussions
+>>>>>>> origin/blank_branch
   React.useEffect(() => {
     if (isSidebarBottomInView && hasNextPageDiscussions) {
       fetchNextPageDiscussions();
     }
   }, [isSidebarBottomInView, hasNextPageDiscussions, fetchNextPageDiscussions]);
 
+<<<<<<< HEAD
+=======
+  // Handle auto-fetching messages
+>>>>>>> origin/blank_branch
   React.useEffect(() => {
     if (
       isMessageTopInView &&
@@ -142,6 +85,10 @@ export default function AIAssistantUI() {
     fetchNextPageMessages,
   ]);
 
+<<<<<<< HEAD
+=======
+  // Handle scroll position after fetching older messages
+>>>>>>> origin/blank_branch
   React.useLayoutEffect(() => {
     const viewport = messageViewportRef.current;
     if (
@@ -160,6 +107,10 @@ export default function AIAssistantUI() {
     }
   }, [messages, isFetchingNextPageMessages]);
 
+<<<<<<< HEAD
+=======
+  // Handle auto-scroll to bottom
+>>>>>>> origin/blank_branch
   React.useEffect(() => {
     const anchor = messageBottomRef.current;
     const viewport = messageViewportRef.current;
@@ -168,11 +119,19 @@ export default function AIAssistantUI() {
 
     const distanceFromBottom =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+<<<<<<< HEAD
     const isAtBottom = distanceFromBottom < 100;
 
     if (isStreaming || streamingContent || isAtBottom) {
       anchor.scrollIntoView({
         behavior: isStreaming || streamingContent ? "auto" : "smooth",
+=======
+    const isAtBottom = distanceFromBottom < 150;
+
+    if (isStreaming || streamingContent || isAtBottom) {
+      anchor.scrollIntoView({
+        behavior: isStreaming || streamingContent ? "smooth" : "auto",
+>>>>>>> origin/blank_branch
         block: "end",
       });
     }
@@ -202,6 +161,7 @@ export default function AIAssistantUI() {
             return;
           }
 
+<<<<<<< HEAD
           setTimeout(() => {
             messageBottomRef.current?.scrollIntoView({
               behavior: "smooth",
@@ -209,6 +169,8 @@ export default function AIAssistantUI() {
             });
           }, 10);
 
+=======
+>>>>>>> origin/blank_branch
           buffer += chunk;
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
@@ -225,6 +187,7 @@ export default function AIAssistantUI() {
               ) {
                 const newId = parsed.metadata.discussionId;
                 localNewId = newId;
+<<<<<<< HEAD
 
                 queryClient.setQueryData(["ai-discussions"], (oldData: any) => {
                   localNewId = parsed.metadata.discussionId;
@@ -232,18 +195,27 @@ export default function AIAssistantUI() {
                   queryClient.invalidateQueries({
                     queryKey: ["ai-discussions"],
                   });
+=======
+                queryClient.invalidateQueries({
+                  queryKey: ["ai-discussions"],
+>>>>>>> origin/blank_branch
                 });
               }
               if (parsed.text) {
                 fullText += parsed.text;
                 setStreamingContent(fullText);
               }
+<<<<<<< HEAD
             } catch (e) {}
+=======
+            } catch (e) { }
+>>>>>>> origin/blank_branch
           });
 
           if (!sendingDiscussionId && localNewId) {
             setActiveId(localNewId);
           }
+<<<<<<< HEAD
 
           setTimeout(() => {
             messageBottomRef.current?.scrollIntoView({
@@ -251,6 +223,8 @@ export default function AIAssistantUI() {
               block: "end",
             });
           }, 10);
+=======
+>>>>>>> origin/blank_branch
         },
       });
     } catch (error) {
@@ -262,6 +236,7 @@ export default function AIAssistantUI() {
   const createNewChat = () => {
     setActiveId(undefined);
     setInput("");
+<<<<<<< HEAD
   };
 
   return (
@@ -343,10 +318,36 @@ export default function AIAssistantUI() {
       <main className="flex-1 flex flex-col h-full min-w-0 bg-white dark:bg-[#09090b]">
         <header className="flex items-center justify-between px-6 h-14 border-b border-zinc-200 dark:border-zinc-800/50 shrink-0">
           <div className="flex items-center gap-4">
+=======
+    setStreamingContent("");
+  };
+
+  return (
+    <div className="flex w-full h-[85vh] md:h-[90vh] border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 overflow-hidden relative font-sans">
+      <Sidebar
+        isOpen={isSidebarOpen}
+        discussions={discussions}
+        activeId={activeId}
+        isLoading={isLoadingList}
+        isFetchingNextPage={isFetchingNextPageDiscussions}
+        bottomRef={sidebarBottomRef}
+        onNewChat={createNewChat}
+        onSelectChat={(id) => {
+          setStreamingContent("");
+          setActiveId(id);
+        }}
+        onDeleteChat={deleteDiscussion}
+      />
+
+      <main className="flex-1 flex flex-col h-full min-w-0 bg-white dark:bg-[#09090b] relative w-full">
+        <header className="flex items-center justify-between px-4 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 sticky top-0 z-30 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+>>>>>>> origin/blank_branch
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+<<<<<<< HEAD
               className="text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
               {isSidebarOpen ? (
@@ -358,10 +359,23 @@ export default function AIAssistantUI() {
             <div className="flex items-center gap-2">
               <BrainCircuit className="h-5 w-5 text-indigo-500" />
               <h2 className="text-sm font-bold tracking-tight">Nexus AI</h2>
+=======
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            >
+              {isSidebarOpen ? (
+                <PanelLeftClose className="h-4 w-4" />
+              ) : (
+                <PanelLeftOpen className="h-4 w-4" />
+              )}
+            </Button>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">Taskora AI</span>
+>>>>>>> origin/blank_branch
             </div>
           </div>
         </header>
 
+<<<<<<< HEAD
         <div
           ref={messageViewportRef}
           className="flex-1 overflow-y-auto custom-scrollbar min-h-0"
@@ -519,3 +533,26 @@ export default function AIAssistantUI() {
     </div>
   );
 }
+=======
+        <MessageList
+          messages={messages}
+          streamingContent={streamingContent}
+          isStreaming={isStreaming}
+          isFetchingNextPage={isFetchingNextPageMessages}
+          activeId={activeId}
+          viewportRef={messageViewportRef}
+          topRef={messageTopRef}
+          bottomRef={messageBottomRef}
+        />
+
+        <ChatInput
+          input={input}
+          setInput={setInput}
+          onSend={handleSend}
+          isStreaming={isStreaming}
+        />
+      </main>
+    </div>
+  );
+}
+>>>>>>> origin/blank_branch

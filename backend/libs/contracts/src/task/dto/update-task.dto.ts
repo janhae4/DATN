@@ -9,4 +9,9 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
   @IsArray()
   @IsString({ each: true })
   labelIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  assigneeIds?: string[];
 }

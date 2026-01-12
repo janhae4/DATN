@@ -107,7 +107,11 @@ export function useTasks(filters?: UseTasksFilters) {
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
 
+<<<<<<< HEAD
       const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
+=======
+      const previousData = queryClient.getQueryData(tasksQueryKey);
+>>>>>>> origin/blank_branch
 
       let optimisticLabels: TaskLabel[] | undefined = undefined;
       if (updates.labelIds && projectLabels.length > 0) {
@@ -116,6 +120,7 @@ export function useTasks(filters?: UseTasksFilters) {
         );
       }
 
+<<<<<<< HEAD
       queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
         if (!old || !old.data) return old;
 
@@ -130,16 +135,43 @@ export function useTasks(filters?: UseTasksFilters) {
               }
               : task
           ),
+=======
+      queryClient.setQueryData<any>(tasksQueryKey, (old: any) => {
+        if (!old || !old.pages) return old;
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((task: any) =>
+              task.id === id
+                ? {
+                  ...task,
+                  ...updates,
+                  ...(optimisticLabels ? { labels: optimisticLabels } : {}),
+                }
+                : task
+            ),
+          })),
+>>>>>>> origin/blank_branch
         };
       });
 
       return { previousData };
     },
 
+<<<<<<< HEAD
     onError: (_err, _newTodo, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(tasksQueryKey, context.previousData);
       }
+=======
+    onError: (err, _newTodo, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(tasksQueryKey, context.previousData);
+      }
+      toast.error((err as any).response?.data?.message || "Failed to update task");
+>>>>>>> origin/blank_branch
     },
 
     onSettled: (data, error, variables) => {
@@ -152,6 +184,7 @@ export function useTasks(filters?: UseTasksFilters) {
     mutationFn: ({ ids, updates }: { ids: string[], updates: UpdateTaskDto }) => taskService.updateTasks(ids, updates),
     onMutate: async ({ ids, updates }) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
+<<<<<<< HEAD
       const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
 
       queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
@@ -174,6 +207,40 @@ export function useTasks(filters?: UseTasksFilters) {
               ? { ...task, ...updates }
               : task
           ),
+=======
+      const previousData = queryClient.getQueryData(tasksQueryKey);
+
+      queryClient.setQueryData<any>(tasksQueryKey, (old: any) => {
+        if (!old || !old.pages) return old!;
+
+        const isMovingSprint = updates.sprintId !== undefined;
+        const isMovingEpic = updates.epicId !== undefined;
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => {
+            let newData = page.data;
+            let newTotal = page.total;
+
+            if (isMovingSprint || isMovingEpic) {
+              const matchedTasks = page.data.filter((task: any) => ids.includes(task.id));
+              newData = page.data.filter((task: any) => !ids.includes(task.id));
+              newTotal = Math.max(0, page.total - matchedTasks.length);
+            } else {
+              newData = page.data.map((task: any) =>
+                ids.includes(task.id)
+                  ? { ...task, ...updates }
+                  : task
+              );
+            }
+
+            return {
+              ...page,
+              data: newData,
+              total: newTotal
+            };
+          })
+>>>>>>> origin/blank_branch
         };
       });
 
@@ -206,6 +273,7 @@ export function useTasks(filters?: UseTasksFilters) {
     mutationFn: (ids: string[]) => taskService.deleteTasks(ids),
     onMutate: async (ids) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
+<<<<<<< HEAD
       const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
       queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
         if (!old || !old.data) return old!;
@@ -214,6 +282,22 @@ export function useTasks(filters?: UseTasksFilters) {
           ...old,
           data: old.data.filter((task) => !ids.includes(task.id)),
           total: old.total - ids.length
+=======
+      const previousData = queryClient.getQueryData(tasksQueryKey);
+      queryClient.setQueryData<any>(tasksQueryKey, (old: any) => {
+        if (!old || !old.pages) return old!;
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => {
+            const matchedTasks = page.data.filter((task: any) => ids.includes(task.id));
+            return {
+              ...page,
+              data: page.data.filter((task: any) => !ids.includes(task.id)),
+              total: Math.max(0, page.total - matchedTasks.length)
+            };
+          })
+>>>>>>> origin/blank_branch
         };
       });
 

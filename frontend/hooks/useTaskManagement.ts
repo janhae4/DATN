@@ -100,7 +100,11 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
       prevTask && prevTask.id === taskId ? { ...prevTask, ...updates } : prevTask
     )
     // Server update
+<<<<<<< HEAD
     serverUpdateTask(taskId, updates)
+=======
+    return serverUpdateTask(taskId, updates)
+>>>>>>> origin/blank_branch
   }, [serverUpdateTask])
 
   const handleUpdateCell = React.useCallback((taskId: string, columnId: "title", value: string) => {
@@ -124,7 +128,11 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
   }, [updateTask])
 
   const handleAssigneeChange = React.useCallback((taskId: string, assigneeIds: string[]) => {
+<<<<<<< HEAD
     updateTask(taskId, { assigneeIds });
+=======
+    return updateTask(taskId, { assigneeIds });
+>>>>>>> origin/blank_branch
   }, [updateTask])
 
   const handleListChange = React.useCallback((taskId: string, listId: string) => {

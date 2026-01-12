@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 
 import { MoreHorizontal, ChevronRight, ChevronDown, GitCommit } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { EpicPicker } from "@/components/shared/epic/EpicPicker"
+import { EpicPicker } from "@/components/shared/color-picker/epic/EpicPicker"
 import { AssigneePicker } from "@/components/shared/assignee/AssigneePicker"
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
 import LabelTag from "@/components/shared/label/LabelTag"

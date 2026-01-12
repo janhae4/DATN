@@ -10,10 +10,12 @@ import {
 import { AuthModule } from '../auth/auth.module';
 import { ClientsModule } from '@nestjs/microservices';
 import { ProjectService } from './project.service';
+import { TeamModule } from '../team/team.module';
 
 @Module({
   imports: [
     AuthModule,
+    TeamModule,
     ClientConfigModule,
     ClientsModule.registerAsync([
       {
@@ -28,4 +30,4 @@ import { ProjectService } from './project.service';
   controllers: [ProjectController],
   providers: [ProjectService],
 })
-export class ProjectModule {}
+export class ProjectModule { }

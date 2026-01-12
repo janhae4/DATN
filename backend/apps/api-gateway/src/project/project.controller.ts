@@ -20,17 +20,29 @@ import {
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
+import { TeamService } from '../team/team.service';
+import { MemberRole } from '@app/contracts';
+
 @Controller('project')
 @UseGuards(RoleGuard)
 @Roles(Role.ADMIN, Role.USER)
 export class ProjectController {
-  constructor(private readonly projectService: ProjectService) { }
+  constructor(
+    private readonly projectService: ProjectService,
+    private readonly teamService: TeamService,
+  ) { }
 
   @Post()
-  create(
+  async create(
     @Body() createProjectDto: CreateProjectDto,
     @CurrentUser('id') id: string,
   ) {
+    if (createProjectDto.teamId) {
+      await this.teamService.verifyPermission(id, createProjectDto.teamId, [
+        MemberRole.OWNER,
+        MemberRole.ADMIN,
+      ]);
+    }
     return this.projectService.create({ ...createProjectDto, ownerId: id });
   }
 
@@ -50,13 +62,8 @@ export class ProjectController {
   update(
     @Param('id') id: string,
     @Body() updateProjectDto: UpdateProjectDto,
-    @CurrentUser() user: JwtDto,
   ) {
-    const dtoWithUser = {
-      ...updateProjectDto,
-      ownerId: user.id,
-    };
-    return this.projectService.update(id, dtoWithUser);
+    return this.projectService.update(id, updateProjectDto);
   }
 
   @Delete(':id')

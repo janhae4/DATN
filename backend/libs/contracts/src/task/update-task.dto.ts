@@ -1,6 +1,7 @@
 import { PartialType } from '@nestjs/swagger';
 import { CreateTaskDto } from './create-task.dto';
-import { IsOptional, IsArray, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsArray, IsString, IsUUID, IsEnum } from 'class-validator';
+import { ApprovalStatus } from '../enums/approval-status.enum';
 
 export class UpdateTaskDto extends PartialType(CreateTaskDto) {
     @IsOptional()
@@ -14,4 +15,8 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
     @IsString({ each: true })
     @IsUUID('4', { each: true })
     assigneeIds?: string[];
+
+    @IsOptional()
+    @IsEnum(ApprovalStatus)
+    approvalStatus?: ApprovalStatus;
 }

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -29,3 +30,14 @@ COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 RUN npm install --no-save @css-inline/css-inline-linux-x64-musl
 COPY --from=builder /app/dist ./dist
+=======
+FROM node:20-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install
+COPY libs ./libs
+COPY tsconfig*.json ./
+COPY nest-cli.json ./
+COPY . .
+RUN npm run build
+>>>>>>> origin/blank_branch

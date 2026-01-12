@@ -9,6 +9,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+<<<<<<< HEAD
+=======
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+>>>>>>> origin/blank_branch
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -103,6 +112,7 @@ export function LabelPopover({
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
+<<<<<<< HEAD
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -113,6 +123,25 @@ export function LabelPopover({
           <Tags className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
+=======
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-6 w-6 rounded-md text-muted-foreground"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Tags className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Labels</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+>>>>>>> origin/blank_branch
 
       <PopoverContent
         className="w-80 p-0"

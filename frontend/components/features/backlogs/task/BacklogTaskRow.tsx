@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Plus as PlusIcon,
   Network,
+  User as UserIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { PriorityPicker } from "@/components/shared/PriorityPicker";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { ListPicker } from "@/components/shared/list/ListPicker";
-import { EpicPicker } from "@/components/shared/epic/EpicPicker";
+import { EpicPicker } from "@/components/shared/color-picker/epic/EpicPicker";
 import { AssigneePicker } from "@/components/shared/assignee/AssigneePicker";
 import { LabelPopover } from "@/components/shared/label/LabelPopover";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import LabelTag from "@/components/shared/label/LabelTag";
 import { AddNewTaskRow } from "./AddNewTaskRow";
+import { TaskApprovalControl } from "./TaskApprovalControl";
 
 // Hooks & Services
 import { UpdateTaskDto } from "@/services/taskService";
@@ -42,6 +44,7 @@ import { useTeamMembers } from "@/hooks/useTeam";
 import { toast } from "sonner";
 import { isEqual } from "lodash";
 import { is } from "date-fns/locale";
+import { useUserProfile } from "@/hooks/useAuth";
 
 interface BacklogTaskRowProps {
   task: Task;
@@ -56,6 +59,7 @@ interface BacklogTaskRowProps {
   onStartSelection?: () => void;
   onMoveSelection?: () => void;
   level?: number;
+  onDeleteTask?: (taskId: string) => void;
 }
 
 export const BacklogTaskRow = React.memo(_BacklogTaskRow, (prev, next) => {
@@ -85,6 +89,7 @@ function _BacklogTaskRow({
   onStartSelection,
   onMoveSelection,
   level = 0,
+  onDeleteTask,
 }: BacklogTaskRowProps) {
   const params = useParams();
   const teamId = params.teamId as string;
@@ -229,6 +234,13 @@ function _BacklogTaskRow({
   const hiddenLabels = labels.slice(MAX_VISIBLE);
 
   const { data: teamMembers } = useTeamMembers(teamId);
+  const { data: user } = useUserProfile();
+
+  const currentRole = React.useMemo(() => {
+    if (!user || !teamMembers) return null;
+    const member = teamMembers.find((m: any) => m.userId === user.id);
+    return member ? member.role : null;
+  }, [user, teamMembers]);
 
   return (
     <>
@@ -342,8 +354,21 @@ function _BacklogTaskRow({
                 />
               </div>
             ) : (
-              <div className="flex-1 min-w-0 flex items-center gap-2">
-                <span className="px-2 text-sm truncate block max-w-[200px]">
+              <div className="flex-1 min-w-0 flex items-center gap-3">
+                <TaskApprovalControl
+                  task={task}
+                  currentRole={currentRole}
+                  user={user || null}
+                  onUpdateTask={onUpdateTask}
+                  onDeleteTask={onDeleteTask}
+                  stopPropagation={stopPropagation}
+                />
+
+                <span className={cn(
+                  "px-2 text-sm truncate block max-w-[200px] transition-all",
+                  task.approvalStatus === 'PENDING' ? "text-muted-foreground italic font-normal" :
+                    task.approvalStatus === 'REJECTED' ? "text-red-400 line-through decoration-red-400/50" : "font-medium"
+                )}>
                   {task.title}
                 </span>
 
@@ -370,17 +395,24 @@ function _BacklogTaskRow({
             {" "}
             <div className="flex gap-2 opacity-0 group-hover:opacity-100">
               {!isEditingTitle && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-6 w-6 rounded-md cursor-pointer text-muted-foreground flex-shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsEditingTitle(true);
-                  }}
-                >
-                  <Edit className="h-3 w-3" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-6 rounded-md cursor-pointer text-muted-foreground flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsEditingTitle(true);
+                        }}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="text-xs">Edit Title</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
               <LabelPopover
                 taskId={task.id}

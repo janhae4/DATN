@@ -23,7 +23,7 @@ import { useParams } from "next/navigation"
 import { DocumentList } from "./TaskDocuments/DocumentList"
 import { UploadTab } from "./TaskDocuments/UploadTab"
 import { AttachedFileItem } from "./TaskDocuments/AttachedFileItem"
-import { FilePreviewDialog } from "@/app/(main)/[teamId]/documentation/file-preview-dialog"
+import { FilePreviewDialog } from "@/components/features/documentation/file-preview-dialog"
 import { Attachment } from "@/types"
 
 interface TaskDocumentsProps {

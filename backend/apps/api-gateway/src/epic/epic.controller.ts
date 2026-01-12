@@ -2,25 +2,40 @@ import { Controller, Post, Body, UseGuards, Get, Param, Put, Delete } from '@nes
 import { CreateEpicDto, UpdateEpicDto, EPIC_PATTERNS } from '@app/contracts';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
-import { Role } from '@app/contracts';
 import { EpicService } from './epic.service';
 import { Inject } from '@nestjs/common';
-import { EPIC_EXCHANGE } from '@app/contracts';
+import { CurrentUser } from '../common/role/current-user.decorator';
+import { EPIC_EXCHANGE, MemberRole, PROJECT_EXCHANGE, PROJECT_PATTERNS, Role } from '@app/contracts';
 import { ClientProxy } from '@nestjs/microservices';
+import { TeamService } from '../team/team.service';
+import { firstValueFrom } from 'rxjs';
+import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Controller('epics')
+@UseGuards(RoleGuard)
+@Roles(Role.USER, Role.ADMIN)
 export class EpicController {
-  constructor(private readonly epicService: EpicService,  @Inject(EPIC_EXCHANGE) private readonly client: ClientProxy) {}
+  constructor(
+    private readonly epicService: EpicService,
+    private readonly teamService: TeamService,
+    @Inject(EPIC_EXCHANGE) private readonly client: ClientProxy,
+    @Inject(PROJECT_EXCHANGE) private readonly projectClient: ClientProxy,
+  ) { }
 
-  @Post("hello")
-  async getHello(@Body() body: any) {
-    return this.client.send('hello', body);
-  }
-  
   @Post()
-  @UseGuards(RoleGuard)
-  @Roles(Role.USER)
-  create(@Body() createEpicDto: CreateEpicDto) {
+  async create(
+    @Body() createEpicDto: CreateEpicDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    const project = unwrapRpcResult(await firstValueFrom(
+      this.projectClient.send(PROJECT_PATTERNS.GET_BY_ID, { id: createEpicDto.projectId })
+    ));
+    if (project && project.teamId) {
+      await this.teamService.verifyPermission(userId, project.teamId, [
+        MemberRole.OWNER,
+        MemberRole.ADMIN,
+      ]);
+    }
     return this.epicService.create(createEpicDto);
   }
 

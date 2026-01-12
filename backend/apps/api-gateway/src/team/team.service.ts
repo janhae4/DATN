@@ -12,7 +12,6 @@ import {
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { unwrapRpcResult } from '../common/helper/rpc';
-import { not } from 'joi';
 
 @Injectable()
 export class TeamService {
@@ -138,6 +137,22 @@ export class TeamService {
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.CHANGE_ROLE,
       payload: payload,
+    }));
+  }
+
+  async verifyPermission(userId: string, teamId: string, allowedRoles: MemberRole[]) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { userId, teamId, roles: allowedRoles },
+    }));
+  }
+
+  async verifyMemberPermission(userId: string, teamId: string, allowedRoles: MemberRole[]) {
+    return unwrapRpcResult(await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { userId, teamId, roles: allowedRoles },
     }));
   }
 }

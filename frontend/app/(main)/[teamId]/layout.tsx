@@ -63,8 +63,12 @@ export default function TeamLayout({
   }
 
   return (
+<<<<<<< HEAD
     <TeamProvider>
       <TeamGuard>{children}</TeamGuard>
     </TeamProvider>
+=======
+    <TeamGuard>{children}</TeamGuard>
+>>>>>>> origin/blank_branch
   );
 }

@@ -92,17 +92,11 @@ export class TeamController {
     @CurrentUser('id') requesterId: string,
     @Body() payload: AddMember,
   ) {
-    try {
-      console.log('Adding member:', { teamId, requesterId, payload });
-      return await this.teamService.addMember({
-        ...payload,
-        teamId,
-        requesterId,
-      });
-    } catch (error) {
-      console.error('Error adding member:', error);
-      throw error;
-    }
+    return await this.teamService.addMember({
+      ...payload,
+      teamId,
+      requesterId,
+    });
   }
 
   @Post(':teamId/member/accepted')
@@ -164,6 +158,10 @@ export class TeamController {
   }
 
   @Post(':teamId/member/transfer-ownership')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Transfer team ownership' })
+  @ApiParam({ name: 'teamId', description: 'Team id' })
+  @ApiBody({ type: TransferOwnership })
   transferOwnership(
     @Param('teamId') teamId: string,
     @CurrentUser('id') requesterId: string,
@@ -211,11 +209,11 @@ export class TeamController {
     @Param('teamId') teamId: string,
     @Param('memberId') memberId: string,
     @CurrentUser('id') requesterId: string,
-    @Body('role') role: MemberRole,
+    @Body() body: ChangeRoleMember,
   ) {
     return this.teamService.changeRole({
       targetId: memberId,
-      newRole: role,
+      newRole: body.newRole,
       teamId,
       requesterId,
     });

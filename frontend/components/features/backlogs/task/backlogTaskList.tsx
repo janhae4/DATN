@@ -11,7 +11,6 @@ import { TaskRowList } from "./TaskRowList";
 import { UpdateTaskDto } from "@/services/taskService";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
 import { TaskListSkeleton } from "@/components/skeletons/TaskListSkeleton";
-import { PaginationControl } from "@/components/shared/PaginationControl";
 
 type BacklogTaskListProps = {
   lists?: List[];
@@ -25,9 +24,9 @@ type BacklogTaskListProps = {
   selectedIds?: string[];
   onSelect?: (taskId: string, checked: boolean) => void;
   onMultiSelectChange: (ids: string[]) => void;
-  page: number;
-  setPage: (page: number) => void;
-  totalPages: number;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
 };
 
 export function BacklogTaskList({
@@ -38,12 +37,13 @@ export function BacklogTaskList({
   error,
   onRowClick,
   onUpdateTask,
+  onDeleteTasks,
   selectedIds,
   onSelect,
   onMultiSelectChange,
-  page = 1,
-  setPage,
-  totalPages,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
 }: BacklogTaskListProps) {
   console.log("Rendering BacklogAccordionItem with", tasks.length, "tasks");
 
@@ -61,6 +61,31 @@ export function BacklogTaskList({
     window.addEventListener("pointerup", handleGlobalPointerUp);
     return () => window.removeEventListener("pointerup", handleGlobalPointerUp);
   }, [isSelectionDragging]);
+  const observerTarget = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage || !fetchNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const listsList = lists ?? [];
 
@@ -96,6 +121,7 @@ export function BacklogTaskList({
               isDraggable={true}
               onRowClick={onRowClick}
               onUpdateTask={handleUpdateTask}
+              onDeleteTask={(id) => onDeleteTasks([id])}
               selectedIds={selectedIds}
               onSelect={onSelect}
               onMultiSelectChange={onMultiSelectChange}
@@ -149,13 +175,11 @@ export function BacklogTaskList({
         </Button>
       )}
 
-      {!isLoading && totalPages > 1 && (
-        <div className="mt-4 pt-4 border-t flex justify-center pb-2">
-          <PaginationControl
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
+      <div ref={observerTarget} className="h-4 w-full" />
+
+      {isFetchingNextPage && (
+        <div className="flex justify-center p-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       )}
     </div>

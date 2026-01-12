@@ -16,7 +16,8 @@ import { useTasks, useTask } from "@/hooks/useTasks"; // 1. IMPORT useTask
 import { useProject } from "@/hooks/useProjects";
 import { useTeamMembers } from "@/hooks/useTeam";
 import { useTaskLabels } from "@/hooks/useTaskLabel";
-import { EpicPicker } from "@/components/shared/epic/EpicPicker";
+import { EpicPicker } from "@/components/shared/color-picker/epic/EpicPicker";
+import { toast } from "sonner";
 
 interface TaskMetaBoxProps {
   task: Task;
@@ -84,11 +85,30 @@ export function TaskMetaBox({
           </div>
         </DetailRow>
 
+        {/* --- START DATE --- */}
+        <DetailRow icon={<CalendarIcon className="h-4 w-4" />} label="Start date">
+          <DatePicker
+            date={task.startDate ? new Date(task.startDate) : undefined}
+            onDateSelect={(date) => {
+              if (date && task.dueDate && date > new Date(task.dueDate)) {
+                toast.error("Start date cannot be after due date");
+                return;
+              }
+              updateTask(task.id, { startDate: date?.toISOString() });
+            }}
+          />
+        </DetailRow>
+
         {/* --- DUE DATE --- */}
         <DetailRow icon={<CalendarIcon className="h-4 w-4" />} label="Due date">
           <DatePicker
             date={task.dueDate ? new Date(task.dueDate) : undefined}
             onDateSelect={(date) => {
+              if (date && task.startDate && date < new Date(task.startDate)) {
+                toast.error("Due date cannot be before start date");
+                return;
+              }
+
               if (onDateChange) onDateChange(date);
               else updateTask(task.id, { dueDate: date?.toISOString() });
             }}

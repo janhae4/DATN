@@ -10,6 +10,10 @@ import {
   useTeamMembers,
   useDeleteTeam,
   useLeaveTeam,
+<<<<<<< HEAD
+=======
+  useTransferOwnership,
+>>>>>>> origin/blank_branch
 } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 import { MemberRole } from "@/types/common/enums";
@@ -17,6 +21,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TeamHeader } from "@/components/features/team/team-header";
 import { TeamOverviewTab } from "@/components/features/team/team-overview-tab";
 
+<<<<<<< HEAD
+=======
+import { useTeamTour } from "@/hooks/touring/useTeamTour";
+
+>>>>>>> origin/blank_branch
 export default function TeamDetailsPage() {
   const params = useParams();
   const teamId = params.teamId as string;
@@ -30,8 +39,16 @@ export default function TeamDetailsPage() {
   const { data: members = [], isLoading: isMembersLoading } =
     useTeamMembers(teamId);
 
+<<<<<<< HEAD
   const deleteTeamMutation = useDeleteTeam();
   const leaveTeamMutation = useLeaveTeam();
+=======
+  const { startTour } = useTeamTour();
+
+  const deleteTeamMutation = useDeleteTeam();
+  const leaveTeamMutation = useLeaveTeam();
+  const transferOwnershipMutation = useTransferOwnership();
+>>>>>>> origin/blank_branch
 
   const currentMember = members.find((m) => m.id === user?.id);
   const userRole = currentMember?.role;
@@ -62,6 +79,20 @@ export default function TeamDetailsPage() {
     }
   };
 
+<<<<<<< HEAD
+=======
+  const handleTransferAndLeave = async (newOwnerId: string) => {
+    try {
+      await transferOwnershipMutation.mutateAsync({ teamId, newOwnerId });
+      await leaveTeamMutation.mutateAsync({ teamId });
+      toast.success("Ownership transferred and left team");
+      router.push("/dashboard");
+    } catch (error) {
+      toast.error("Failed to transfer and leave");
+    }
+  };
+
+>>>>>>> origin/blank_branch
   if (isTeamLoading || isMembersLoading) {
     return (
       <div className="flex-1 p-6 space-y-6 bg-background/50">
@@ -87,7 +118,14 @@ export default function TeamDetailsPage() {
           canManage={canManage}
           onDelete={handleDelete}
           onLeave={handleLeave}
+<<<<<<< HEAD
           onSettingsClick={() => router.push(`/team/${teamId}/settings`)}
+=======
+          onTransferOwnership={handleTransferAndLeave}
+          onSettingsClick={() => router.push(`/team/${teamId}/settings`)}
+          onStartTour={startTour}
+          members={members}
+>>>>>>> origin/blank_branch
         />
 
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

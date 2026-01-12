@@ -12,7 +12,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useTeamContext } from "@/contexts/TeamContext";
 import { useTeamMembers } from "@/hooks/useTeam";
 import { useUserProfile } from "@/hooks/useAuth";
 import { AddMemberDialog } from "@/components/features/team/AddMemberDialog";

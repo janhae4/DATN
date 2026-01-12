@@ -25,6 +25,7 @@ import { Task, Epic, Sprint, SprintStatus } from "@/types";
 import { useTasks } from "@/hooks/useTasks";
 import { useSprints } from "@/hooks/useSprints";
 import { useLists } from "@/hooks/useList";
+import { useBacklogTour } from "@/hooks/touring/useBacklogTour";
 import { calculateNewPositionForTask } from "@/lib/position-utils";
 import { Button } from "@/components/ui/button";
 import { Trash2, X } from "lucide-react";
@@ -34,12 +35,16 @@ import { GetTasksParams } from "@/services/taskService";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import AccessDeniedState from "../team/AccessDenied";
 import { AxiosError } from "axios";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 export default function Backlogs() {
   // 1. Get Project ID from URL
   const params = useParams();
   const projectId = params.projectId as string;
   const teamId = params.teamId as string;
+
+  const [viewLayout, setViewLayout] = React.useState<"list" | "split">("list");
 
   const [filters, setFilters] = React.useState<TaskFilters>({
     searchText: "",
@@ -52,8 +57,8 @@ export default function Backlogs() {
   });
 
   const [debouncedSearch] = useDebounce(filters.searchText, 500);
-  const [backLogPage, setBackLogPage] = React.useState(1);
   const [sprintPage, setSprintPage] = React.useState(1);
+  const { startTour } = useBacklogTour();
 
   const { sprints, error: sprintError } = useSprints(projectId, teamId, [
     SprintStatus.PLANNED,
@@ -77,7 +82,6 @@ export default function Backlogs() {
       epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
       sprintId: sprints.length > 0 ? sprints.map((s) => s.id) : undefined,
-      teamId,
       limit: 50,
       page: sprintPage,
     };
@@ -95,10 +99,9 @@ export default function Backlogs() {
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
       parentId: "null",
       sprintId: "null",
-      limit: 8,
-      page: backLogPage,
+      limit: 15,
     };
-  }, [projectId, debouncedSearch, filters, backLogPage]);
+  }, [projectId, debouncedSearch, filters]);
 
   const {
     tasks: backlogTasks,
@@ -111,6 +114,9 @@ export default function Backlogs() {
     suggestTaskByAi,
     totalPages,
     total: backlogTotal,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = useTasks(backlogQueryFilters);
 
   const { tasks: sprintTasks, isLoading: isLoadingSprint } =
@@ -232,6 +238,12 @@ export default function Backlogs() {
               updates: { sprintId: sprint.id },
             });
             toast.success(`Moved ${idsNeedUpdate.length} tasks to sprint`);
+
+            const currentTasksInSprint = allVisibleTasks.filter(t => t.sprintId === sprint.id);
+            const movedTasks = allVisibleTasks.filter(t => idsNeedUpdate.includes(t.id));
+            const newSprintTasks = [...currentTasksInSprint, ...movedTasks];
+            console.log(`Tasks in Sprint [${sprint.title}]:`, newSprintTasks);
+
             setSelectedIds([]);
           } catch (error) {
             console.error(error);
@@ -424,37 +436,109 @@ export default function Backlogs() {
             onFilterChange={setFilters}
             createTasks={createTasks}
             suggestTaskByAi={suggestTaskByAi}
+            viewLayout={viewLayout}
+            onViewLayoutChange={setViewLayout}
+            onStartTour={startTour}
           />
-          {/* Sprints Section */}
-          <SprintList
-            key="sprint-list"
-            tasks={tasksInSprints.filter((task) => !task.parentId)}
-            allTasks={allVisibleTasks}
-            onRowClick={handleRowClick}
-            onUpdateTask={updateTask}
-            selectedIds={selectedIds}
-            onSelect={handleSelectTask}
-            onMultiSelectChange={setSelectedIds}
-          />
-          {/* Backlog Section */}
-          <BacklogAccordionItem
-            key="backlog-item"
-            lists={lists}
-            taskCount={backlogTotal || 0}
-            tasks={tasksInBacklog.filter((task) => !task.parentId)}
-            allTasks={allVisibleTasks}
-            isLoading={isLoading}
-            totalPages={totalPages}
-            page={backLogPage}
-            setPage={setBackLogPage}
-            error={error}
-            onRowClick={handleRowClick}
-            onUpdateTask={updateTask}
-            onDeleteTasks={deleteTasks}
-            selectedIds={selectedIds}
-            onSelect={handleSelectTask}
-            onMultiSelectChange={setSelectedIds}
-          />
+
+          {viewLayout === "list" ? (
+            <>
+              {/* Sprints Section */}
+              <div id="sprint-list-section">
+                <SprintList
+                  key="sprint-list"
+                  tasks={tasksInSprints.filter((task) => !task.parentId)}
+                  allTasks={allVisibleTasks}
+                  onRowClick={handleRowClick}
+                  onUpdateTask={updateTask}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelectTask}
+                  onMultiSelectChange={setSelectedIds}
+                />
+              </div>
+              {/* Backlog Section */}
+              <div id="backlog-list-section">
+                <BacklogAccordionItem
+                  key="backlog-item"
+                  lists={lists}
+                  taskCount={backlogTotal || 0}
+                  tasks={tasksInBacklog.filter((task) => !task.parentId)}
+                  allTasks={allVisibleTasks}
+                  isLoading={isLoading}
+                  fetchNextPage={fetchNextPage}
+                  hasNextPage={hasNextPage}
+                  isFetchingNextPage={isFetchingNextPage}
+                  error={error}
+                  onRowClick={handleRowClick}
+                  onUpdateTask={updateTask}
+                  onDeleteTasks={deleteTasks}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelectTask}
+                  onMultiSelectChange={setSelectedIds}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-row gap-6 h-[calc(100vh-250px)] overflow-hidden">
+              {/* Left side: Backlog */}
+              <div id="backlog-list-section" className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden">
+                <div className="flex items-center gap-2 mb-3 px-1 shrink-0">
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-muted-foreground/30 rounded-full" />
+                    Backlog
+                  </h3>
+                  <Badge variant="secondary" className="rounded-full h-5 text-[10px] font-bold">
+                    {backlogTotal || 0}
+                  </Badge>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-6">
+                  <BacklogAccordionItem
+                    key="backlog-item-split"
+                    lists={lists}
+                    taskCount={backlogTotal || 0}
+                    tasks={tasksInBacklog.filter((task) => !task.parentId)}
+                    allTasks={allVisibleTasks}
+                    isLoading={isLoading}
+                    fetchNextPage={fetchNextPage}
+                    hasNextPage={hasNextPage}
+                    isFetchingNextPage={isFetchingNextPage}
+                    error={error}
+                    onRowClick={handleRowClick}
+                    onUpdateTask={updateTask}
+                    onDeleteTasks={deleteTasks}
+                    selectedIds={selectedIds}
+                    onSelect={handleSelectTask}
+                    onMultiSelectChange={setSelectedIds}
+                  />
+                </div>
+              </div>
+
+              <Separator orientation="vertical" className="h-full bg-border/40 shrink-0" />
+
+              {/* Right side: Sprints */}
+              <div id="sprint-list-section" className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden">
+                <div className="flex items-center gap-2 mb-3 px-1 shrink-0">
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-primary/40 rounded-full" />
+                    Active Sprints
+                  </h3>
+                </div>
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-6">
+                  <SprintList
+                    key="sprint-list-split"
+                    tasks={tasksInSprints.filter((task) => !task.parentId)}
+                    allTasks={allVisibleTasks}
+                    onRowClick={handleRowClick}
+                    onUpdateTask={updateTask}
+                    selectedIds={selectedIds}
+                    onSelect={handleSelectTask}
+                    onMultiSelectChange={setSelectedIds}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </Accordion>
       </div>
     </DndContext>

@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Priority } from '../enums/priority.enum';
+import { ApprovalStatus } from '../enums/approval-status.enum';
 
 export class CreateTaskDto {
   @ApiProperty({
@@ -19,6 +20,10 @@ export class CreateTaskDto {
   @IsString()
   @IsNotEmpty()
   title: string;
+
+  @IsOptional()
+  @IsEnum(ApprovalStatus)
+  approvalStatus?: ApprovalStatus;
 
   @ApiPropertyOptional({
     description: 'Detailed description of the task',
@@ -118,4 +123,13 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   skill?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'IDs of the users assigned to this task',
+    type: [String],
+    format: 'uuid',
+  })
+  @IsUUID('all', { each: true })
+  @IsOptional()
+  assigneeIds?: string[];
 }
