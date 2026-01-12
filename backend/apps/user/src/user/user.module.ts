@@ -6,10 +6,7 @@ import {
   Account,
   ClientConfigModule,
   ClientConfigService,
-<<<<<<< HEAD
   EVENTS_EXCHANGE,
-=======
->>>>>>> origin/blank_branch
   Follow,
   TEAM_EXCHANGE,
   User,
