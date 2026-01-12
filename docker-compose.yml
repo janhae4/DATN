@@ -13,12 +13,12 @@ x-nest-service: &nest-service
       condition: service_started
     redis:
       condition: service_started
-  #   mongo_db:
-  #     condition: service_started
-  #   chroma: 
-  #     condition: service_started
-  #   minio:
-  #     condition: service_started
+    mongo_db:
+      condition: service_started
+    chroma: 
+      condition: service_started
+    minio:
+      condition: service_started
 
 services:
   rabbitmq:
@@ -167,6 +167,7 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
       MINIO_NOTIFY_WEBHOOK_ENABLE_primary: "on"
       MINIO_NOTIFY_WEBHOOK_ENDPOINT_primary: "http://host.docker.internal:3000/webhooks/upload-completed"
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
     command: [ "server", "--console-address", ":9001", "/data" ]
     volumes:
       - minio-data:/data
@@ -181,12 +182,12 @@ services:
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     volumes:
       - mongo-data:/data/db
-      - ./init-mongo.sh:/scripts/init-mongo.sh
     environment:
       - MONGODB_URI=mongodb://mongo_db:27017/mongo_db?directConnection=true
       - MONGO_HOST=mongo_db
     networks:
       - app-network
+
   mongo_rs_init:
     image: mongo:8.0
     depends_on:
@@ -194,7 +195,8 @@ services:
     volumes:
       - ./init-mongo.sh:/scripts/init-mongo.sh
     entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
-
+    networks:
+      - app-network
   api_gateway:
     <<: *nest-service
     container_name: api_gateway
@@ -256,16 +258,16 @@ services:
     <<: *nest-service
     container_name: search_service
     command: npm run start:prod:search
-    depends_on:
-      - meili-search
-      - chroma
+    # depends_on:
+    #   - meili-search
+    #   - chroma
 
   socket_service:
     <<: *nest-service
     container_name: socket_service
     command: npm run start:prod:socket
     ports:
-      - "3001:3001"
+      - "4001:4001"
 
   notification_service:
     <<: *nest-service
@@ -276,7 +278,6 @@ services:
     <<: *nest-service
     container_name: ai_discussion_service
     command: npm run start:prod:ai-discussion
-
   calendar_service:
     <<: *nest-service
     container_name: calendar_service
@@ -286,6 +287,11 @@ services:
     <<: *nest-service
     container_name: gmail_service
     command: npm run start:prod:gmail
+
+  file_service:
+    <<: *nest-service
+    container_name: file_service
+    command: npm run start:prod:file
 
   mongo-express:
     image: mongo-express
@@ -305,7 +311,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
     container_name: nextjs_frontend
     restart: always
     ports:
@@ -313,10 +319,9 @@ services:
     environment:
       - PORT=5000
       - INTERNAL_API_URL=http://api_gateway:3000
+      - NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
     networks:
       - app-network
-    depends_on:
-      - api_gateway
 
   
 volumes:
