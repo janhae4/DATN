@@ -32,6 +32,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext"; 
 import { ProjectVisibility } from "@/types/common/enums"; 
 import { useRouter } from "next/navigation";
+import { useTeamContext } from "@/contexts/TeamContext";
 
 const formSchema = z.object({
   name: z.string().min(1, "Project name is required").max(100, "Name is too long"),

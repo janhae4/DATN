@@ -23,8 +23,5 @@ export type Task = {
   fileIds?: string[]; // IDs of attached files
   taskLabels?: TaskLabel[];
   children?: Task[];
-<<<<<<< HEAD
-=======
   approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
->>>>>>> origin/blank_branch
 };
