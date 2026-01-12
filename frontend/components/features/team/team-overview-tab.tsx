@@ -17,10 +17,7 @@ import {
   CheckCircle2,
   Clock,
   Circle,
-<<<<<<< HEAD
-=======
   Loader2,
->>>>>>> origin/blank_branch
 } from "lucide-react";
 
 import {
@@ -39,27 +36,19 @@ import { Separator } from "@/components/ui/separator";
 // Hooks
 import { useProjects } from "@/hooks/useProjects";
 import { Member, TeamMember } from "@/types/social";
-<<<<<<< HEAD
-=======
 import { useUserProfile } from "@/hooks/useAuth";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
->>>>>>> origin/blank_branch
 
 // Components
 import { TeamAnalytics } from "./team-analytics";
 import { StatsCard } from "./StatsCard";
 import { EmptyState } from "./EmptyState";
 import { TeamMembersList } from "./TeamMembersList";
-<<<<<<< HEAD
-import { useMemo, useState } from "react";
-import { ProjectSprintsModal } from "./ProjectSprintsModal";
-=======
 import { ProjectSprintsModal } from "./ProjectSprintsModal";
 import { TaskDetailModal } from "../backlogs/taskmodal";
 import { Task } from "@/types";
 import { listService } from "@/services/listService";
 import { useQuery } from "@tanstack/react-query";
->>>>>>> origin/blank_branch
 
 interface TeamOverviewTabProps {
   teamId: string;
@@ -81,19 +70,6 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
   };
 
   const { projects, isLoading: isLoadingProjects } = useProjects(teamId);
-<<<<<<< HEAD
-
-  const {
-    tasks = [],
-    isLoading: isLoadingTasks,
-    error,
-  } = useTasks({
-    teamId,
-    sortBy: ["priority:DESC", "dueDate:ASC"],
-    sortOrder: "ASC",
-  });
-
-=======
   const { data: user } = useUserProfile();
 
   const {
@@ -164,7 +140,6 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
     [isLoadingTasks, hasNextPage, isFetchingNextPage, fetchNextPage]
   );
 
->>>>>>> origin/blank_branch
   const projectLookup = useMemo(() => {
     if (!projects) return {};
     return projects.reduce((acc, project) => {
@@ -174,22 +149,7 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
   }, [projects]);
 
   const activeProjectsCount = projects?.length || 0;
-<<<<<<< HEAD
-  const activeTasksCount = tasks.filter(
-    (task) => task.listId !== "done"
-  ).length;
-
-  const upcomingTasks = useMemo(() => {
-    return tasks
-      .filter((t) => t.dueDate)
-      .sort((a, b) => {
-        return new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime();
-      })
-      .slice(0, 10);
-  }, [tasks]);
-=======
   const activeTasksCount = totalTasks || 0;
->>>>>>> origin/blank_branch
 
   const getDueDateLabel = (dateStr: string | null) => {
     if (!dateStr) return "No date";
@@ -208,11 +168,7 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
 
   return (
     <>
-<<<<<<< HEAD
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-=======
       <div id="team-stats" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
->>>>>>> origin/blank_branch
         {/* SECTION 2: ENHANCED STATS CARDS */}
         <div className="grid gap-4 md:grid-cols-3">
           <StatsCard
@@ -237,54 +193,29 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
             title="Active Tasks"
             value={activeTasksCount}
             icon={CheckCircle2}
-<<<<<<< HEAD
-            trend="12 due soon"
-            trendUp={false}
-            description="In progress"
-=======
             trend={overdueCount > 0 ? `${overdueCount} overdue` : `${dueSoonCount} due soon`}
             trendUp={overdueCount > 0 ? false : true}
             description="Assigned to you"
->>>>>>> origin/blank_branch
             loading={isLoadingTasks}
           />
         </div>
 
         {/* SECTION 3: ANALYTICS CHARTS */}
-<<<<<<< HEAD
-        <TeamAnalytics members={members} projects={projects || []} />
-=======
         <div id="team-analytics">
           <TeamAnalytics members={members} projects={projects || []} />
         </div>
->>>>>>> origin/blank_branch
 
         <Separator />
 
         {/* SECTION 4: RECENT LISTS GRID */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* RECENT PROJECTS */}
-<<<<<<< HEAD
-          <Card className="h-full flex flex-col">
-=======
           <Card id="recent-projects" className="h-full flex flex-col">
->>>>>>> origin/blank_branch
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
                 <CardTitle className="text-xl">Recent Projects</CardTitle>
                 <CardDescription>Recently accessed projects.</CardDescription>
               </div>
-<<<<<<< HEAD
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={() => router.push(`/team/${teamId}/projects`)}
-              >
-                View All <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-=======
->>>>>>> origin/blank_branch
             </CardHeader>
             <CardContent className="flex-1">
               {isLoadingProjects ? (
@@ -334,11 +265,7 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
 
           {/* ACTIVE DISCUSSIONS */}
           {/* UPCOMING TASKS */}
-<<<<<<< HEAD
-          <Card className="h-full flex flex-col shadow-sm border-muted/60">
-=======
           <Card id="my-tasks" className="h-full flex flex-col shadow-sm border-muted/60">
->>>>>>> origin/blank_branch
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
                 <CardTitle className="text-xl flex items-center gap-2">
@@ -349,21 +276,10 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
                   Tasks due soon across projects.
                 </CardDescription>
               </div>
-<<<<<<< HEAD
-              <Button variant="ghost" size="sm" className="text-xs">
-                View All <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </CardHeader>
-            <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-[300px] px-6">
-                {/* Giả lập Loading State - Dùng biến isLoadingProjects tạm hoặc tạo biến mới */}
-                {isLoadingProjects ? (
-=======
             </CardHeader>
             <CardContent className="flex-1 p-0">
               <div className="h-[300px] px-6 overflow-y-auto">
                 {isLoadingTasks ? (
->>>>>>> origin/blank_branch
                   <div className="space-y-4 py-2">
                     {[1, 2, 3, 4].map((i) => (
                       <div key={i} className="flex items-center gap-3">
@@ -377,11 +293,7 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
                   </div>
                 ) : (
                   <div className="space-y-1 py-2">
-<<<<<<< HEAD
-                    {upcomingTasks.length === 0 ? (
-=======
                     {myTasks.length === 0 ? (
->>>>>>> origin/blank_branch
                       <div className="py-8">
                         <EmptyState
                           icon={CheckCircle2}
@@ -390,68 +302,6 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
                         />
                       </div>
                     ) : (
-<<<<<<< HEAD
-                      upcomingTasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="group p-3 rounded-lg hover:bg-muted/50 transition-all border border-transparent hover:border-border/50 flex items-start gap-3 cursor-pointer"
-                        >
-                          {/* Status Checkbox */}
-                          <div className="mt-0.5 relative group/check">
-                            <Circle className="h-5 w-5 text-muted-foreground group-hover/check:hidden" />
-                            <CheckCircle2 className="h-5 w-5 text-primary hidden group-hover/check:block animate-in zoom-in duration-200" />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <p
-                                className={`text-sm font-medium truncate ${
-                                  task.priority === "high" ? "text-red-600" : ""
-                                }`}
-                              >
-                                {task.title}
-                              </p>
-                              <Badge
-                                variant="outline"
-                                className={`text-[10px] h-5 px-1.5 border-0 capitalize ${
-                                  task.priority === "high"
-                                    ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
-                                    : task.priority === "medium"
-                                    ? "bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
-                                    : "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                                }`}
-                              >
-                                {task.priority}
-                              </Badge>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1 truncate max-w-[120px]">
-                                <FolderKanban className="h-3 w-3" />
-                                {task.projectId}
-                              </span>
-                              <span className="w-1 h-1 rounded-full bg-border" />
-                              <span
-                                className={`flex items-center gap-1 ${
-                                  task.dueDate === "Overdue"
-                                    ? "text-red-500 font-medium"
-                                    : ""
-                                }`}
-                              >
-                                <Clock className="h-3 w-3" />
-                                {task.dueDate
-                                  ? getDueDateLabel(task.dueDate)
-                                  : "No date"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </ScrollArea>
-=======
                       <>
                         {myTasks.map((task, index) => (
                           <div
@@ -518,26 +368,12 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
                   </div>
                 )}
               </div>
->>>>>>> origin/blank_branch
             </CardContent>
           </Card>
         </div>
 
         <Separator />
 
-<<<<<<< HEAD
-        <TeamMembersList members={members} teamId={teamId} />
-      </div>
-
-      {selectedProjectId && (
-          <ProjectSprintsModal
-            projectId={selectedProjectId}
-            teamId={teamId}
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-          />
-      )}
-=======
 
         <div id="team-members">
           <TeamMembersList members={members} teamId={teamId} />
@@ -567,7 +403,6 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
         onLabelsChange={(id, labels) => handleUpdateTask(id, { labelIds: labels })}
         updateTask={handleUpdateTask}
       />
->>>>>>> origin/blank_branch
     </>
   );
 }

@@ -9,15 +9,12 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover"
-<<<<<<< HEAD
-=======
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
->>>>>>> origin/blank_branch
 import { Check, Plus, Edit } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
@@ -103,31 +100,6 @@ export function ListPicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-<<<<<<< HEAD
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={disabled}
-          className="h-7 px-2 flex items-center gap-2"
-        >
-          {selectedList ? (
-            <>
-              {/* 3. Cập nhật màu cho phần hiển thị Selected */}
-              <span
-                className={cn(
-                  "inline-block h-2 w-2 rounded-full",
-                  categoryColorMap[selectedList.category] || "bg-neutral-500"
-                )}
-              ></span>
-              <span className="truncate">{selectedList.name}</span>
-            </>
-          ) : (
-            <span>List</span>
-          )}
-        </Button>
-      </PopoverTrigger>
-=======
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -158,7 +130,6 @@ export function ListPicker({
           <TooltipContent className="text-xs">Status List</TooltipContent>
         </Tooltip>
       </TooltipProvider>
->>>>>>> origin/blank_branch
       <PopoverContent className="w-64 p-0" align="start">
         <div className="flex flex-col">
           {renderSection("Not started", grouped.todo)}
@@ -166,22 +137,13 @@ export function ListPicker({
           {renderSection("Done", grouped.done)}
 
           <Separator />
-<<<<<<< HEAD
-          
-=======
-
->>>>>>> origin/blank_branch
           <div className="p-2">
             <ListCreateDialog projectId={projectId}>
               <Button
                 type="button"
                 variant="ghost"
                 className="w-full justify-start h-8 px-2"
-<<<<<<< HEAD
-                onClick={(e) => e.stopPropagation()} 
-=======
                 onClick={(e) => e.stopPropagation()}
->>>>>>> origin/blank_branch
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create list

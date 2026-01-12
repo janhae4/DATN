@@ -38,7 +38,7 @@ export default function CalendarTaskList() {
 
     useEffect(() => {
         if (selectedProjectId) {
-            fetchTasks(selectedProjectId);
+            fetchTasks(selectedProjectId, teamId);
         } else {
             setTasks([]);
         }
@@ -59,10 +59,10 @@ export default function CalendarTaskList() {
         }
     };
 
-    const fetchTasks = async (projectId: string) => {
+    const fetchTasks = async (projectId: string, teamId: string) => {
         try {
             setIsLoadingTasks(true);
-            const data = await taskService.getTasks({ projectId });
+            const data = await taskService.getTasks({ projectId, teamId });
             setTasks(data.data || []);
         } catch (error) {
             console.error("Failed to fetch tasks:", error);

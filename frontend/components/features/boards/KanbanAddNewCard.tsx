@@ -1,36 +1,42 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { useTaskManagementContext } from "@/components/providers/TaskManagementContext"
-import { X } from "lucide-react"
-import { useTasks } from "@/hooks/useTasks"
-import { Task } from "@/types"
+import * as React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
+import { X } from "lucide-react";
+import { useTasks } from "@/hooks/useTasks";
+import { Task } from "@/types";
 interface KanbanAddNewCardProps {
-  listId: string
-  sprintId: string
-  projectId: string
-  onCancel: () => void
+  listId: string;
+  sprintId: string;
+  teamId: string;
+  projectId: string;
+  onCancel: () => void;
 }
 
-export function KanbanAddNewCard({ listId, sprintId, projectId, onCancel }: KanbanAddNewCardProps) {
+export function KanbanAddNewCard({
+  listId,
+  sprintId,
+  teamId,
+  projectId,
+  onCancel,
+}: KanbanAddNewCardProps) {
   const {
     newRowTitle,
     setNewRowTitle,
     handleAddNewRow,
     setNewTaskListId,
-    handleInputKeyDown
-  } = useTaskManagementContext()
+    handleInputKeyDown,
+  } = useTaskManagementContext();
 
-
-  const { createTask } = useTasks({ projectId })
+  const { createTask } = useTasks({ projectId, teamId });
 
   React.useEffect(() => {
-    setNewTaskListId(listId)
-    setNewRowTitle("")
-  }, [listId, setNewTaskListId, setNewRowTitle])
+    setNewTaskListId(listId);
+    setNewRowTitle("");
+  }, [listId, setNewTaskListId, setNewRowTitle]);
 
   const handleCreate = () => {
     if (newRowTitle.trim()) {
@@ -39,12 +45,12 @@ export function KanbanAddNewCard({ listId, sprintId, projectId, onCancel }: Kanb
         listId: listId,
         sprintId: sprintId || undefined,
         projectId: projectId,
-      }
-      createTask(newTask)
-      setNewRowTitle("")
-      onCancel()
+      };
+      createTask(newTask);
+      setNewRowTitle("");
+      onCancel();
     }
-  }
+  };
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       onCancel();
@@ -78,15 +84,11 @@ export function KanbanAddNewCard({ listId, sprintId, projectId, onCancel }: Kanb
           >
             <X className="h-4 w-4" />
           </Button>
-          <Button
-            size="sm"
-            className="h-7 px-3 text-xs"
-            onClick={handleCreate}
-          >
+          <Button size="sm" className="h-7 px-3 text-xs" onClick={handleCreate}>
             Add
           </Button>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -12,13 +12,20 @@ import { AddNewTaskRow } from "./task/AddNewTaskRow";
 interface TaskSubtasksProps {
   taskId: string;
   projectId: string;
+  teamId: string;
   lists: List[];
   onRowClick: (task: Task) => void;
 }
 
-export function TaskSubtasks({ taskId, projectId, lists, onRowClick }: TaskSubtasksProps) {
+export function TaskSubtasks({
+  taskId,
+  teamId,
+  projectId,
+  lists,
+  onRowClick,
+}: TaskSubtasksProps) {
   // 1. Lấy dữ liệu từ hook
-  const { tasks, updateTask } = useTasks({ projectId });
+  const { tasks, updateTask } = useTasks({ projectId, teamId });
 
   // 2. State cho việc thêm mới
   const [isAdding, setIsAdding] = React.useState(false);
@@ -47,8 +54,14 @@ export function TaskSubtasks({ taskId, projectId, lists, onRowClick }: TaskSubta
         {/* Nếu không có subtask và không đang thêm mới -> Hiển thị Empty State gọn */}
         {subtasks.length === 0 && !isAdding ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
-            <p className="text-sm text-muted-foreground mb-2">No subtasks yet</p>
-            <Button variant="outline" size="sm" onClick={() => setIsAdding(true)}>
+            <p className="text-sm text-muted-foreground mb-2">
+              No subtasks yet
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAdding(true)}
+            >
               <Plus className="mr-2 h-3 w-3" /> Add a subtask
             </Button>
           </div>

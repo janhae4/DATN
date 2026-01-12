@@ -16,10 +16,6 @@ export const useGmail = (initialMaxResults = 20) => {
             setEmails(data.emails || []);
             setNextPageToken(data.nextPageToken || null);
         } catch (err: any) {
-<<<<<<< HEAD
-            console.error('Failed to fetch gmail', err);
-            setError(err.response?.data?.message || err.message || 'Failed to fetch emails');
-=======
             const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch emails';
             const statusCode = err.response?.status;
 
@@ -44,7 +40,6 @@ export const useGmail = (initialMaxResults = 20) => {
                 : errorMessage;
 
             setError(finalMessage);
->>>>>>> origin/blank_branch
         } finally {
             setLoading(false);
         }
@@ -86,14 +81,11 @@ export const useGmail = (initialMaxResults = 20) => {
         loading,
         loadingMore,
         error,
-<<<<<<< HEAD
-=======
         isAuthError: error?.toLowerCase().includes('google account') ||
             error?.toLowerCase().includes('link') ||
             error?.toLowerCase().includes('authenticate') ||
             error?.toLowerCase().includes('token') ||
             error === 'Please link your Google account to access emails',
->>>>>>> origin/blank_branch
         refetch: fetchEmails,
         loadMore,
         getMailDetail,

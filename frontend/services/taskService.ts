@@ -39,13 +39,7 @@ export interface BaseTaskFilterDto {
   sortOrder?: 'ASC' | 'DESC';
   page?: number;
   limit?: number;
-}
-
-export interface GetTasksParams extends BaseTaskFilterDto {
-  projectId: string;
-}
-
-export interface GetTasksByTeamParams extends BaseTaskFilterDto {
+  projectId?: string;
   teamId: string;
 }
 
@@ -56,13 +50,13 @@ export const taskService = {
    * Lấy danh sách Task
    * GET /tasks?projectId=...
    */
-  getTasks: async (params: GetTasksParams): Promise<Pagination<Task>> => {
+  getTasks: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
     const response = await apiClient.get("/tasks", { params });
     return response.data;
   },
 
-  getTasksByTeam: async (params: GetTasksByTeamParams): Promise<Pagination<Task>> => {
-    const response = await apiClient.get(`/tasks/by-team`, { params });
+  getTasksByTeam: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
+    const response = await apiClient.get(`/tasks/by-team`, { data: { teamId: params.teamId } });
     return response.data;
   },
 
@@ -134,8 +128,8 @@ export const taskService = {
   },
 
 
-  getAllTaskLabelByProjectId: async (projectId: string): Promise<TaskLabel[]> => {
-    const response = await apiClient.get<TaskLabel[]>(`/tasks/tasklabel?projectId=${projectId}`);
+  getAllTaskLabelByProjectId: async (projectId: string, teamId: string): Promise<TaskLabel[]> => {
+    const response = await apiClient.get<TaskLabel[]>(`/tasks/${teamId}/tasklabel?projectId=${projectId}`);
     return response.data;
   },
 

@@ -43,11 +43,10 @@ import { TaskDetailModal } from "../backlogs/taskmodal";
 import { KanbanSprintSelection } from "./KanbanSprintSelection";
 import { toast } from "sonner";
 import { ResolveSubtasksDialog } from "./ResolveSubtasksDialog";
-import { GetTasksParams } from "@/services/taskService";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
 import { useBoardTour } from "@/hooks/touring/useBoardTour";
+import { BaseTaskFilterDto } from "@/services/taskService";
 
 
 
@@ -64,6 +63,7 @@ export function KanbanBoard() {
   const {
     allData,
     projectId,
+    teamId,
     selectedTask,
     setSelectedTask,
     handleUpdateCell,
@@ -90,7 +90,7 @@ export function KanbanBoard() {
   });
   const [debouncedSearch] = useDebounce(filters.searchText, 500);
 
-  const apiParams: GetTasksParams = React.useMemo(
+  const apiParams: BaseTaskFilterDto = React.useMemo(
     () => ({
       projectId,
       search: debouncedSearch,
@@ -106,6 +106,7 @@ export function KanbanBoard() {
           ? [activeSprint.id]
           : undefined,
       limit: 50,
+      teamId
     }),
     [projectId, debouncedSearch, filters, activeSprint]
   );
@@ -431,6 +432,7 @@ export function KanbanBoard() {
                 <KanbanColumn
                   key={list.id}
                   projectId={projectId}
+                  teamId={teamId}
                   list={list}
                   sprintId={activeSprint?.id || ""}
                   tasks={tasksByList[list.id] || []}

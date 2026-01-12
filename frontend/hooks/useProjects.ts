@@ -1,17 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Project } from "@/types";
 // Import các DTO từ service đã refactor
-<<<<<<< HEAD
-import { 
-  projectService, 
-  CreateProjectDto, 
-  UpdateProjectDto 
-=======
 import {
   projectService,
   CreateProjectDto,
   UpdateProjectDto
->>>>>>> origin/blank_branch
 } from "@/services/projectService";
 
 export function useProjects(teamId?: string) {
@@ -26,11 +19,7 @@ export function useProjects(teamId?: string) {
   } = useQuery({
     queryKey,
     queryFn: () => projectService.getProjects(teamId!),
-<<<<<<< HEAD
-    enabled: !!teamId, 
-=======
     enabled: !!teamId,
->>>>>>> origin/blank_branch
   });
 
   // 2. Create Project
@@ -47,11 +36,7 @@ export function useProjects(teamId?: string) {
       projectService.updateProject(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-<<<<<<< HEAD
-      queryClient.invalidateQueries({ queryKey: ["project"] }); 
-=======
       queryClient.invalidateQueries({ queryKey: ["project"] });
->>>>>>> origin/blank_branch
     },
   });
 
@@ -59,17 +44,12 @@ export function useProjects(teamId?: string) {
   const deleteProjectMutation = useMutation({
     mutationFn: (id: string) => projectService.deleteProject(id),
     onSuccess: () => {
-<<<<<<< HEAD
-      queryClient.invalidateQueries({ queryKey });
-    },
-=======
       console.log("Delete mutation success, invalidating projects for team:", teamId);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
     onError: (error) => {
       console.error("Mutation deleteProject failed:", error);
     }
->>>>>>> origin/blank_branch
   });
 
   return {

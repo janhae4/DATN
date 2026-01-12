@@ -57,8 +57,10 @@ interface EpicDetailDialogProps {
 export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogProps) {
     const params = useParams();
     const projectId = params.projectId as string;
+    const teamId = params.teamId as string;
     const { tasks: epicTasks, createTask, isLoading: isTasksLoading, updateTask } = useTasks({
         projectId,
+        teamId: teamId,
         epicId: epic?.id ? [epic.id] : undefined
     });
     const { updateEpic } = useEpics(projectId);

@@ -54,6 +54,7 @@ import { useInView } from "react-intersection-observer";
 
 interface KanbanColumnProps {
   projectId: string;
+  teamId: string;
   list: List;
   tasks: Task[];
   hasNextPage: boolean;
@@ -70,6 +71,7 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({
   projectId,
+  teamId,
   list,
   tasks,
   hasNextPage,
@@ -150,15 +152,14 @@ export function KanbanColumn({
             ? "bg-green-500/10 border-green-500/30 ring-2 ring-green-500/20"
             : "bg-secondary/60 border-primary/20 ring-2 ring-primary/10"
           : isLimitExceeded
-            ? "bg-red-500/5 border-red-500/20"
-            : ""
+          ? "bg-red-500/5 border-red-500/20"
+          : ""
       )}
     >
       <div className="flex bg-secondary px-4 pt-4 pb-3 z-20 items-center justify-between shrink-0 border-b border-border/10">
         <div className="flex items-center gap-2.5">
           {list.category === ListCategoryEnum.TODO && (
             <Circle className="h-4 w-4 text-muted-foreground" />
-
           )}
           {list.category === ListCategoryEnum.IN_PROGRESS && (
             <Clock className="h-4 w-4 text-blue-500" />
@@ -190,7 +191,10 @@ export function KanbanColumn({
                   <AlertCircle className="h-4 w-4 text-destructive" />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-destructive-foreground bg-destructive border-destructive">
+              <TooltipContent
+                side="bottom"
+                className="text-destructive-foreground bg-destructive border-destructive"
+              >
                 <p>WIP Limit Exceeded! This column has too many tasks.</p>
               </TooltipContent>
             </Tooltip>
@@ -238,7 +242,10 @@ export function KanbanColumn({
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Move Left
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={isLast || isNextDone} onClick={onMoveRight}>
+                <DropdownMenuItem
+                  disabled={isLast || isNextDone}
+                  onClick={onMoveRight}
+                >
                   <ArrowRight className="mr-2 h-4 w-4" />
                   Move Right
                 </DropdownMenuItem>
@@ -261,8 +268,15 @@ export function KanbanColumn({
                               <TooltipTrigger asChild>
                                 <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                               </TooltipTrigger>
-                              <TooltipContent className="max-w-[200px]" side="right">
-                                <p>Work In Progress (WIP) limits restrict the maximum number of tasks allowed in this column to prevent bottlenecks.</p>
+                              <TooltipContent
+                                className="max-w-[200px]"
+                                side="right"
+                              >
+                                <p>
+                                  Work In Progress (WIP) limits restrict the
+                                  maximum number of tasks allowed in this column
+                                  to prevent bottlenecks.
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </Label>
@@ -332,6 +346,7 @@ export function KanbanColumn({
               <KanbanAddNewCard
                 listId={list.id}
                 projectId={projectId}
+                teamId={teamId}
                 sprintId={sprintId}
                 onCancel={() => setIsAdding(false)}
               />
@@ -376,8 +391,7 @@ export function KanbanColumn({
                 Loading more...
               </span>
             ) : (
-              <span className="text-xs text-muted-foreground/50">
-              </span>
+              <span className="text-xs text-muted-foreground/50"></span>
             )}
           </div>
         )}

@@ -23,5 +23,6 @@ export type Task = {
   fileIds?: string[]; // IDs of attached files
   taskLabels?: TaskLabel[];
   children?: Task[];
+  teamId: string;
   approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
 };

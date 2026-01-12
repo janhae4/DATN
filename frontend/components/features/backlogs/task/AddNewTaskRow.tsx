@@ -33,8 +33,9 @@ export function AddNewTaskRow({
 }: AddNewTaskRowProps) {
   const params = useParams();
   const projectId = params.projectId as string;
+  const teamId = params.teamId as string;
 
-  const { createTask, isLoading } = useTasks({ projectId });
+  const { createTask, isLoading } = useTasks({ projectId, teamId });
 
   React.useEffect(() => {
     console.log("🟢 MOUNT AddNewTaskRow");

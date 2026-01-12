@@ -2,7 +2,6 @@
 
 import { useTeam, useTeams } from "@/hooks/useTeam";
 import AccessDeniedState from "@/components/features/team/AccessDenied";
-import { TeamProvider } from "@/contexts/TeamContext";
 import { TeamGuard } from "@/providers/team-guard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useParams, useRouter } from "next/navigation";
@@ -63,12 +62,6 @@ export default function TeamLayout({
   }
 
   return (
-<<<<<<< HEAD
-    <TeamProvider>
-      <TeamGuard>{children}</TeamGuard>
-    </TeamProvider>
-=======
     <TeamGuard>{children}</TeamGuard>
->>>>>>> origin/blank_branch
   );
 }

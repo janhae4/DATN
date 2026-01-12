@@ -58,7 +58,8 @@ interface EpicDetailDialogProps {
 export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogProps) {
     const params = useParams();
     const projectId = params.projectId as string;
-    const { tasks, createTask } = useTasks({ projectId });
+    const teamId = params.teamId as string;
+    const { tasks, createTask } = useTasks({ projectId, teamId: teamId });
     const { updateEpic, isUpdating } = useEpics(projectId);
 
     // Fetch lists to identify which list is "TODO"

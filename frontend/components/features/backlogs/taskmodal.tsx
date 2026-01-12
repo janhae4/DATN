@@ -129,6 +129,7 @@ export function TaskDetailModal({
           {/* 2. SUBTASKS SECTION */}
           <TaskSubtasks
             taskId={task.id}
+            teamId={task.teamId}
             projectId={task.projectId}
             lists={lists}
             onRowClick={handleSubtaskClick}

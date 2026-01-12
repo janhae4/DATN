@@ -30,7 +30,7 @@ const INITIAL_FILTERS: TaskFilters = {
 }
 
 export const useTaskManagement = (projectId: string = "project-phoenix-1", teamId: string = "team-1") => {
-  const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask } = useTasks({ projectId })
+  const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask } = useTasks({ projectId, teamId })
   const { sprints: serverSprints, updateSprint: serverUpdateSprint } = useSprints(projectId, teamId);
   const { epics: serverEpics } = useEpics(projectId)
   const { labels: serverLabels } = useLabels(projectId)
@@ -100,11 +100,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
       prevTask && prevTask.id === taskId ? { ...prevTask, ...updates } : prevTask
     )
     // Server update
-<<<<<<< HEAD
-    serverUpdateTask(taskId, updates)
-=======
     return serverUpdateTask(taskId, updates)
->>>>>>> origin/blank_branch
   }, [serverUpdateTask])
 
   const handleUpdateCell = React.useCallback((taskId: string, columnId: "title", value: string) => {
@@ -128,11 +124,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
   }, [updateTask])
 
   const handleAssigneeChange = React.useCallback((taskId: string, assigneeIds: string[]) => {
-<<<<<<< HEAD
-    updateTask(taskId, { assigneeIds });
-=======
     return updateTask(taskId, { assigneeIds });
->>>>>>> origin/blank_branch
   }, [updateTask])
 
   const handleListChange = React.useCallback((taskId: string, listId: string) => {
@@ -184,6 +176,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
       epicId: parentId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      teamId: teamId,
       labelIds: [], // Added missing required field init
     }
 
@@ -289,6 +282,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
     epics,
     labels,
     filters,
+    teamId,
     setFilters,
     selectedTask,
     setSelectedTask,

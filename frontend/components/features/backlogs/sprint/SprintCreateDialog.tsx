@@ -19,10 +19,7 @@ import { toast } from "sonner";
 import { SprintStatus } from "@/types/common/enums";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
 import { useParams } from "next/navigation";
-<<<<<<< HEAD
-=======
 import { HelpTooltip } from "@/components/shared/HelpTooltip";
->>>>>>> origin/blank_branch
 
 interface SprintCreateDialogProps {
   children: React.ReactNode;
@@ -84,11 +81,7 @@ export function SprintCreateDialog({
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-<<<<<<< HEAD
-            <DialogTitle>Create Sprint</DialogTitle>
-=======
             <DialogTitle className="flex items-center gap-2">Create Sprint <HelpTooltip text="A sprint is a short, time-boxed period when a scrum team works to complete a set amount of work." /></DialogTitle>
->>>>>>> origin/blank_branch
             <DialogDescription>
               Add a new sprint to your project (Plan dates later).
             </DialogDescription>

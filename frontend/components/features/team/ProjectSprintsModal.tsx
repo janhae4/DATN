@@ -17,19 +17,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-<<<<<<< HEAD
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-=======
->>>>>>> origin/blank_branch
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { useSprints } from "@/hooks/useSprints";
-<<<<<<< HEAD
-import { useTasks } from "@/hooks/useTasks";
-import { useLists } from "@/hooks/useList";
-=======
->>>>>>> origin/blank_branch
 import { SprintStatus, ListCategoryEnum } from "@/types";
 import { SprintProgressView } from "./SprintProgressView";
 
@@ -76,17 +67,6 @@ export function ProjectSprintsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-<<<<<<< HEAD
-      <DialogContent className="w-5xl max-w-[90vw] h-[90vh] flex flex-col p-0 overflow-hidden bg-white border-zinc-200 shadow-xl">
-        <DialogHeader className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-          <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-black">
-            <div className="p-1.5 bg-zinc-100 rounded-md">
-              <LayoutList className="h-4 w-4 text-black" />
-            </div>
-            Project Roadmap
-          </DialogTitle>
-          <div className="text-xs text-zinc-500">{sprints.length} sprints</div>
-=======
       <DialogContent className="w-5xl max-w-[90vw] h-[90vh] flex flex-col p-0 overflow-hidden bg-background border-border shadow-xl">
         <DialogHeader className="px-6 py-4 border-b border-border flex items-center justify-between">
           <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-foreground">
@@ -96,21 +76,10 @@ export function ProjectSprintsModal({
             Project Roadmap
           </DialogTitle>
           <div className="text-xs text-muted-foreground">{sprints.length} sprints</div>
->>>>>>> origin/blank_branch
         </DialogHeader>
 
         <div className="flex-1 flex overflow-hidden">
           {/* Sidebar - Chỉ fetch sprints */}
-<<<<<<< HEAD
-          <aside className="w-80 border-r border-zinc-100 flex flex-col bg-zinc-50">
-            <div className="p-4 pb-2">
-              <p className="text-xs text-zinc-500 uppercase tracking-wide pl-1">
-                Timeline
-              </p>
-            </div>
-            <ScrollArea className="flex-1 px-3">
-              <div className="space-y-1 pb-4">
-=======
           <aside className="w-80 border-r border-border flex flex-col bg-muted/30">
             <div className="p-4 pb-2">
               <p className="text-xs text-muted-foreground uppercase tracking-wide pl-1">
@@ -119,7 +88,6 @@ export function ProjectSprintsModal({
             </div>
             <div className="flex-1 px-1 overflow-y-auto">
               <div className="space-y-1 pb-4 px-2">
->>>>>>> origin/blank_branch
                 {isLoading ? (
                   <SprintListSkeleton />
                 ) : (
@@ -128,17 +96,10 @@ export function ProjectSprintsModal({
                       key={sprint.id}
                       onClick={() => handleSprintSelect(sprint)}
                       className={cn(
-<<<<<<< HEAD
-                        "w-full text-left p-3 rounded-md transition-all duration-200",
-                        selectedSprintId === sprint.id
-                          ? "bg-black text-white"
-                          : "text-zinc-600 hover:bg-zinc-100 hover:text-black"
-=======
                         "w-full text-left p-3 rounded-xl transition-all duration-200 border border-transparent mb-1",
                         selectedSprintId === sprint.id
                           ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20 border-primary"
                           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-border"
->>>>>>> origin/blank_branch
                       )}
                     >
                       <div className="flex justify-between items-start mb-1.5">
@@ -146,13 +107,6 @@ export function ProjectSprintsModal({
                           {sprint.title}
                         </p>
                         {sprint.status === SprintStatus.ACTIVE && (
-<<<<<<< HEAD
-                          <span className="h-2 w-2 rounded-full bg-black" />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-zinc-400">
-                        <CalendarDays className="h-3 w-3" />
-=======
                           <span className={cn(
                             "h-2 w-2 rounded-full",
                             selectedSprintId === sprint.id ? "bg-primary-foreground" : "bg-primary"
@@ -161,7 +115,6 @@ export function ProjectSprintsModal({
                       </div>
                       <div className="flex items-center gap-2 text-[11px] opacity-80">
                         <CalendarDays className="h-3.5 w-3.5" />
->>>>>>> origin/blank_branch
                         <span>
                           {sprint.startDate
                             ? format(new Date(sprint.startDate), "dd MMM")
@@ -176,19 +129,11 @@ export function ProjectSprintsModal({
                   ))
                 )}
               </div>
-<<<<<<< HEAD
-            </ScrollArea>
-          </aside>
-
-          {/* Main Content - Fetch tasks dựa trên selected sprint */}
-          <main className="flex-1 bg-white overflow-hidden flex flex-col">
-=======
             </div>
           </aside>
 
           {/* Main Content - Fetch tasks dựa trên selected sprint */}
           <main className="flex-1 bg-background overflow-hidden flex flex-col">
->>>>>>> origin/blank_branch
             {selectedSprint && selectedSprintId ? (
               <SprintProgressView
                 teamId={teamId}
@@ -196,15 +141,9 @@ export function ProjectSprintsModal({
                 sprint={selectedSprint}
               />
             ) : (
-<<<<<<< HEAD
-              <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 gap-2">
-                <LayoutList className="h-10 w-10" />
-                <p className="text-sm">Select a sprint to view details</p>
-=======
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2">
                 <LayoutList className="h-10 w-10 opacity-20" />
                 <p className="text-sm font-medium">Select a sprint to view details</p>
->>>>>>> origin/blank_branch
               </div>
             )}
           </main>
@@ -217,18 +156,9 @@ export function ProjectSprintsModal({
 function SprintListSkeleton() {
   return (
     <div className="space-y-1">
-<<<<<<< HEAD
-      {[1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-14 w-full rounded bg-zinc-100" />
-      ))}
-    </div>
-  );
-}
-=======
       {[1, 2, 3, 4, 5].map((i) => (
         <Skeleton key={i} className="h-20 w-full rounded-xl" />
       ))}
     </div>
   );
 }
->>>>>>> origin/blank_branch

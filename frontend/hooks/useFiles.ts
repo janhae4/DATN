@@ -19,32 +19,20 @@ const getMimeTypeByExtension = (fileName: string): string => {
   return extension ? (mimeMap[extension] || `application/${extension}`) : 'application/octet-stream';
 };
 
-<<<<<<< HEAD
-export function useFiles(projectId?: string, page: number = 1, limit: number = 10) {
-  const queryClient = useQueryClient();
-
-=======
 // 1. Nhận thêm tham số page và limit
 export function useFiles(projectId?: string, page: number = 1, limit: number = 10) {
   const queryClient = useQueryClient();
 
   // 2. QueryKey phải chứa page và limit để cache riêng từng trang
->>>>>>> origin/blank_branch
   const queryKey = ["files", projectId || "personal", page, limit];
 
   const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey,
     queryFn: () => fileService.getFiles(projectId, page, limit),
-<<<<<<< HEAD
-    staleTime: 1000 * 60 * 5,
-    placeholderData: keepPreviousData,
-
-=======
     staleTime: 1000 * 60 * 5, // 5 phút
     placeholderData: keepPreviousData, // QUAN TRỌNG: Giữ data trang cũ khi đang fetch trang mới (UX mượt hơn)
 
     // 3. Select: Transform data nhưng KHÔNG ĐƯỢC vứt pagination đi
->>>>>>> origin/blank_branch
     select: (response: GetFilesResponse) => {
       const mappedFiles: Attachment[] = response.data.map((file) => {
         return {
@@ -69,26 +57,17 @@ export function useFiles(projectId?: string, page: number = 1, limit: number = 1
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-<<<<<<< HEAD
-      const { uploadUrl, fileId } = await fileService.initiateUpload({
-        fileName: file.name,
-        fileType: file.type
-=======
       // 4. Fix Upload: Truyền thêm fileType để MinIO ký signature đúng
       const { uploadUrl, fileId } = await fileService.initiateUpload({
         fileName: file.name,
         fileType: file.type // BẮT BUỘC CÓ
->>>>>>> origin/blank_branch
       }, projectId);
 
       await fileService.uploadFileToMinIO(uploadUrl, file);
       return fileId;
     },
     onSuccess: () => {
-<<<<<<< HEAD
-=======
       // Invalidate toàn bộ cache liên quan đến teamId (bất kể trang nào)
->>>>>>> origin/blank_branch
       queryClient.invalidateQueries({ queryKey: ["files", projectId || "personal"] });
       toast.success("Tải lên thành công!");
     },
@@ -134,18 +113,11 @@ export function useFiles(projectId?: string, page: number = 1, limit: number = 1
   };
 
   return {
-<<<<<<< HEAD
-    files: data?.files || [],
-    pagination: data?.pagination || null,
-    isLoading,
-    isPlaceholderData,
-=======
     // Trả về data đã transform (nếu chưa có data thì fallback mảng rỗng)
     files: data?.files || [],
     pagination: data?.pagination || null, // Trả về pagination cho UI dùng
     isLoading,
     isPlaceholderData, // Cờ này để UI biết đang load trang kế tiếp (có thể làm mờ bảng)
->>>>>>> origin/blank_branch
 
     uploadFile: uploadMutation.mutateAsync,
     isUploading: uploadMutation.isPending,

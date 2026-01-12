@@ -31,12 +31,12 @@ import { Button } from "@/components/ui/button";
 import { Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
-import { GetTasksParams } from "@/services/taskService";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import AccessDeniedState from "../team/AccessDenied";
 import { AxiosError } from "axios";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { BaseTaskFilterDto } from "@/services/taskService";
 
 export default function Backlogs() {
   // 1. Get Project ID from URL
@@ -69,11 +69,12 @@ export default function Backlogs() {
 
   console.log("Sprints loaded in Backlogs:", sprints.length);
 
-  const sprintQueryFilters: GetTasksParams = React.useMemo(() => {
+  const sprintQueryFilters: BaseTaskFilterDto = React.useMemo(() => {
     const { sprintIds, ...otherFilters } = filters;
 
     return {
       projectId,
+      teamId,
       search: debouncedSearch,
       assigneeIds:
         filters.assigneeIds.length > 0 ? filters.assigneeIds : undefined,
@@ -87,9 +88,10 @@ export default function Backlogs() {
     };
   }, [projectId, debouncedSearch, filters, sprintPage, sprints]);
 
-  const backlogQueryFilters: GetTasksParams = React.useMemo(() => {
+  const backlogQueryFilters: BaseTaskFilterDto = React.useMemo(() => {
     return {
       projectId,
+      teamId,
       search: debouncedSearch,
       assigneeIds:
         filters.assigneeIds.length > 0 ? filters.assigneeIds : undefined,
@@ -239,8 +241,12 @@ export default function Backlogs() {
             });
             toast.success(`Moved ${idsNeedUpdate.length} tasks to sprint`);
 
-            const currentTasksInSprint = allVisibleTasks.filter(t => t.sprintId === sprint.id);
-            const movedTasks = allVisibleTasks.filter(t => idsNeedUpdate.includes(t.id));
+            const currentTasksInSprint = allVisibleTasks.filter(
+              (t) => t.sprintId === sprint.id
+            );
+            const movedTasks = allVisibleTasks.filter((t) =>
+              idsNeedUpdate.includes(t.id)
+            );
             const newSprintTasks = [...currentTasksInSprint, ...movedTasks];
             console.log(`Tasks in Sprint [${sprint.title}]:`, newSprintTasks);
 
@@ -481,13 +487,19 @@ export default function Backlogs() {
           ) : (
             <div className="flex flex-row gap-6 h-[calc(100vh-250px)] overflow-hidden">
               {/* Left side: Backlog */}
-              <div id="backlog-list-section" className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden">
+              <div
+                id="backlog-list-section"
+                className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden"
+              >
                 <div className="flex items-center gap-2 mb-3 px-1 shrink-0">
                   <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                     <span className="w-1.5 h-4 bg-muted-foreground/30 rounded-full" />
                     Backlog
                   </h3>
-                  <Badge variant="secondary" className="rounded-full h-5 text-[10px] font-bold">
+                  <Badge
+                    variant="secondary"
+                    className="rounded-full h-5 text-[10px] font-bold"
+                  >
                     {backlogTotal || 0}
                   </Badge>
                 </div>
@@ -514,10 +526,16 @@ export default function Backlogs() {
                 </div>
               </div>
 
-              <Separator orientation="vertical" className="h-full bg-border/40 shrink-0" />
+              <Separator
+                orientation="vertical"
+                className="h-full bg-border/40 shrink-0"
+              />
 
               {/* Right side: Sprints */}
-              <div id="sprint-list-section" className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden">
+              <div
+                id="sprint-list-section"
+                className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden"
+              >
                 <div className="flex items-center gap-2 mb-3 px-1 shrink-0">
                   <h3 className="font-semibold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
                     <span className="w-1.5 h-4 bg-primary/40 rounded-full" />

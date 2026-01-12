@@ -14,9 +14,9 @@ import { useProject } from "@/hooks/useProjects";
 import { toast } from "sonner";
 import { TaskFilters } from "@/hooks/useTaskManagement";
 import { useDebounce } from "@/hooks/useDebounce";
-import { GetTasksParams } from "@/services/taskService";
 import { useGanttTour } from "@/hooks/touring/useGanttTour";
 import { useTheme } from "next-themes";
+import { BaseTaskFilterDto } from "@/services/taskService";
 
 const GanttPage = () => {
   const { theme, resolvedTheme } = useTheme();
@@ -46,8 +46,9 @@ const GanttPage = () => {
   const [debouncedSearch] = useDebounce(filters.searchText, 500);
   const { startTour } = useGanttTour();
 
-  const apiParams: GetTasksParams = React.useMemo(
+  const apiParams: BaseTaskFilterDto = React.useMemo(
     () => ({
+      teamId: params.teamId as string,
       projectId: projectId as string,
       search: debouncedSearch,
       assigneeIds:

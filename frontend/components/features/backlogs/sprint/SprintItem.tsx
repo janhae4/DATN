@@ -6,11 +6,7 @@ import { AccordionContent, AccordionItem } from "@/components/ui/accordion";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Table, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-<<<<<<< HEAD
-import { Rocket, PlusIcon, ChevronDown } from "lucide-react";
-=======
 import { Rocket, PlusIcon, ChevronDown, Trash2 } from "lucide-react";
->>>>>>> origin/blank_branch
 import { formatDate } from "@/lib/backlog-utils";
 import { useDroppable, useDndContext } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
@@ -19,16 +15,11 @@ import { Button } from "@/components/ui/button";
 import { AddNewTaskRow } from "../task/AddNewTaskRow";
 import { StartSprintDialog } from "./StartSprintDialog";
 import { CompleteSprintDialog } from "./CompleteSprintDialog";
-<<<<<<< HEAD
-import { SprintStatus } from "@/types/common/enums";
-import { on } from "events";
-=======
 import { DeleteSprintDialog } from "./DeleteSprintDialog";
 import { SprintStatus } from "@/types/common/enums";
 import { useParams } from "next/navigation";
 import { useSprints } from "@/hooks/useSprints";
 import { toast } from "sonner";
->>>>>>> origin/blank_branch
 
 interface SprintItemProps {
   sprint: Sprint;
@@ -53,14 +44,11 @@ export function SprintItem({
   onSelect,
   onMultiSelectChange,
 }: SprintItemProps) {
-<<<<<<< HEAD
-=======
   const params = useParams();
   const projectId = params.projectId as string;
   const teamId = params.teamId as string;
   const { deleteSprint } = useSprints(projectId, teamId);
 
->>>>>>> origin/blank_branch
   const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id);
   const totalTasks = sprintTasks.length;
 
@@ -133,8 +121,6 @@ export function SprintItem({
               </CompleteSprintDialog>
             )}
 
-<<<<<<< HEAD
-=======
             <DeleteSprintDialog sprint={sprint}>
               <Button
                 variant="ghost"
@@ -145,7 +131,6 @@ export function SprintItem({
               </Button>
             </DeleteSprintDialog>
 
->>>>>>> origin/blank_branch
             <span className="text-sm font-normal text-muted-foreground">
               {totalTasks} {totalTasks === 1 ? "task" : "tasks"}
             </span>

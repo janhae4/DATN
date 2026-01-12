@@ -4,20 +4,17 @@ import {
   taskService,
   CreateTaskDto,
   UpdateTaskDto,
-  GetTasksParams,
-  GetTasksByTeamParams,
+  BaseTaskFilterDto,
 } from "@/services/taskService";
 import { streamHelper } from "@/services/apiClient";
 import { toast } from "sonner";
 
-type UseTasksFilters = GetTasksParams | GetTasksByTeamParams;
-
-export function useTasks(filters?: UseTasksFilters) {
+export function useTasks(filters?: BaseTaskFilterDto) {
   const queryClient = useQueryClient();
   const tasksQueryKey = ["tasks", filters];
   const projectId = filters && 'projectId' in filters ? filters.projectId : undefined;
   const teamId = filters && 'teamId' in filters ? filters.teamId : undefined;
-  const labelsQueryKey = ["labels", projectId];
+  const labelsQueryKey = ["labels", projectId || teamId];
   const {
     data,
     fetchNextPage,
@@ -30,23 +27,11 @@ export function useTasks(filters?: UseTasksFilters) {
     queryKey: tasksQueryKey,
     queryFn: async ({ pageParam }) => {
       const page = pageParam as number;
-      console.log("Fetching tasks for page", page, "with filters", filters);
       if (!filters) throw new Error("No filters provided");
-      if ('projectId' in filters && filters.projectId) {
         return taskService.getTasks({
           ...filters,
           page,
         });
-      }
-
-      if ('teamId' in filters && filters.teamId) {
-        return taskService.getTasksByTeam({
-          ...filters,
-          page,
-        });
-      }
-
-      throw new Error("Missing projectId or teamId");
     },
     initialPageParam: filters?.page || 1,
     getNextPageParam: (lastPage, allPages) => {
@@ -65,8 +50,8 @@ export function useTasks(filters?: UseTasksFilters) {
     isLoading: isLoadingLabels,
   } = useQuery<TaskLabel[]>({
     queryKey: labelsQueryKey,
-    queryFn: () => taskService.getAllTaskLabelByProjectId(projectId!),
-    enabled: !!projectId,
+    queryFn: () => taskService.getAllTaskLabelByProjectId(projectId!, teamId!),
+    enabled: !!projectId || !!teamId,
   });
 
   // --- MUTATIONS ---
@@ -107,11 +92,7 @@ export function useTasks(filters?: UseTasksFilters) {
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
 
-<<<<<<< HEAD
-      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
-=======
       const previousData = queryClient.getQueryData(tasksQueryKey);
->>>>>>> origin/blank_branch
 
       let optimisticLabels: TaskLabel[] | undefined = undefined;
       if (updates.labelIds && projectLabels.length > 0) {
@@ -120,22 +101,6 @@ export function useTasks(filters?: UseTasksFilters) {
         );
       }
 
-<<<<<<< HEAD
-      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
-        if (!old || !old.data) return old;
-
-        return {
-          ...old,
-          data: old.data.map((task) =>
-            task.id === id
-              ? {
-                ...task,
-                ...updates,
-                ...(optimisticLabels ? { labels: optimisticLabels } : {}),
-              }
-              : task
-          ),
-=======
       queryClient.setQueryData<any>(tasksQueryKey, (old: any) => {
         if (!old || !old.pages) return old;
 
@@ -153,25 +118,17 @@ export function useTasks(filters?: UseTasksFilters) {
                 : task
             ),
           })),
->>>>>>> origin/blank_branch
         };
       });
 
       return { previousData };
     },
 
-<<<<<<< HEAD
-    onError: (_err, _newTodo, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(tasksQueryKey, context.previousData);
-      }
-=======
     onError: (err, _newTodo, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(tasksQueryKey, context.previousData);
       }
       toast.error((err as any).response?.data?.message || "Failed to update task");
->>>>>>> origin/blank_branch
     },
 
     onSettled: (data, error, variables) => {
@@ -184,30 +141,6 @@ export function useTasks(filters?: UseTasksFilters) {
     mutationFn: ({ ids, updates }: { ids: string[], updates: UpdateTaskDto }) => taskService.updateTasks(ids, updates),
     onMutate: async ({ ids, updates }) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
-<<<<<<< HEAD
-      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
-
-      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
-        if (!old || !old.data) return old!;
-
-        const isMovingSprint = updates.sprintId !== undefined;
-        const isMovingEpic = updates.epicId !== undefined;
-        if (isMovingSprint || isMovingEpic) {
-          return {
-            ...old,
-            data: old.data.filter((task) => !ids.includes(task.id)),
-            total: Math.max(0, old.total - ids.length),
-          };
-        }
-
-        return {
-          ...old,
-          data: old.data.map((task) =>
-            ids.includes(task.id)
-              ? { ...task, ...updates }
-              : task
-          ),
-=======
       const previousData = queryClient.getQueryData(tasksQueryKey);
 
       queryClient.setQueryData<any>(tasksQueryKey, (old: any) => {
@@ -240,7 +173,6 @@ export function useTasks(filters?: UseTasksFilters) {
               total: newTotal
             };
           })
->>>>>>> origin/blank_branch
         };
       });
 
@@ -273,16 +205,6 @@ export function useTasks(filters?: UseTasksFilters) {
     mutationFn: (ids: string[]) => taskService.deleteTasks(ids),
     onMutate: async (ids) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
-<<<<<<< HEAD
-      const previousData = queryClient.getQueryData<Pagination<Task>>(tasksQueryKey);
-      queryClient.setQueryData<Pagination<Task>>(tasksQueryKey, (old) => {
-        if (!old || !old.data) return old!;
-
-        return {
-          ...old,
-          data: old.data.filter((task) => !ids.includes(task.id)),
-          total: old.total - ids.length
-=======
       const previousData = queryClient.getQueryData(tasksQueryKey);
       queryClient.setQueryData<any>(tasksQueryKey, (old: any) => {
         if (!old || !old.pages) return old!;
@@ -297,7 +219,6 @@ export function useTasks(filters?: UseTasksFilters) {
               total: Math.max(0, page.total - matchedTasks.length)
             };
           })
->>>>>>> origin/blank_branch
         };
       });
 

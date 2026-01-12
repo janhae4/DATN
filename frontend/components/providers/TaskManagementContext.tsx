@@ -22,6 +22,7 @@ interface TaskManagementContextType {
   newTaskListId: string;
   dataIds: string[];
   projectId: string;
+  teamId: string;
 
   activeSprint: Sprint | null;
   startSprint: (sprintId: string) => Promise<void>;
