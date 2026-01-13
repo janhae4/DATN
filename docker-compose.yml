@@ -5,21 +5,21 @@ x-nest-service: &nest-service
     - app-network
   extra_hosts:
     - "host.docker.internal:host-gateway"
-  # depends_on:
-  #   rabbitmq:
-  #     condition: service_healthy
-  #   postgres:
-  #     condition: service_started
-  #   redis:
-  #     condition: service_started
-  #   mongo_db:
-  #     condition: service_started
-  #   chroma: 
-  #     condition: service_started
-  #   minio:
-  #     condition: service_started
+  depends_on:
+    rabbitmq:
+      condition: service_healthy
+    postgres:
+      condition: service_started
+    redis:
+      condition: service_started
+    mongo_db:
+      condition: service_started
+    chroma: 
+      condition: service_started
+    minio:
+      condition: service_started
 
-services:
+services:    
   rabbitmq:
     image: rabbitmq:management
     hostname: rabbitmq
@@ -40,45 +40,45 @@ services:
     networks:
       - app-network
 
-  # redis:
-  #   image: redis:alpine
-  #   hostname: redis
-  #   container_name: redis
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis-data:/data
-  #   networks:
-  #     - app-network
+  redis:
+    image: redis:alpine
+    hostname: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
 
-  # postgres:
-  #   image: postgres:alpine
-  #   hostname: postgres
-  #   container_name: postgres
-  #   ports:
-  #     - "5432:5432"
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #     POSTGRES_DB: postgres
-  #   volumes:
-  #     - postgres-data:/var/lib/postgresql/data
-  #     - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
-  #   networks:
-  #     - app-network
+  postgres:
+    image: postgres:alpine
+    hostname: postgres
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+    networks:
+      - app-network
 
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   container_name: pgadmin_container
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com 
-  #     PGADMIN_DEFAULT_PASSWORD: root
-  #   ports:
-  #     - "5050:80" 
-  #   depends_on:
-  #     - postgres
-  #   networks:
-  #     - app-network
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com 
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80" 
+    depends_on:
+      - postgres
+    networks:
+      - app-network
       
   meili-search:
     image: getmeili/meilisearch:v1.16
@@ -189,15 +189,15 @@ services:
     networks:
       - app-network
 
-  # mongo_rs_init:
-  #   image: mongo:8.0
-  #   depends_on:
-  #     - mongo_db
-  #   volumes:
-  #     - ./init-mongo.sh:/scripts/init-mongo.sh
-  #   entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
-  #   networks:
-  #     - app-network
+  mongo_rs_init:
+    image: mongo:8.0
+    depends_on:
+      - mongo_db
+    volumes:
+      - ./init-mongo.sh:/scripts/init-mongo.sh
+    entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
+    networks:
+      - app-network
   api_gateway:
     <<: *nest-service
     container_name: api_gateway
@@ -299,14 +299,14 @@ services:
       args:
           APP_NAME: team
 
-  search_service:
-    <<: *nest-service
-    container_name: search_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: search-service
+  # search_service:
+  #   <<: *nest-service
+  #   container_name: search_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: search-service
 
   socket_service:
     <<: *nest-service
