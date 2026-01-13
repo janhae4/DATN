@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useTeams } from "@/hooks/useTeam";
+import { useAuth } from "@/contexts/AuthContext";
 
 function RedirectToDefaultProject({ teamId }: { teamId: string }) {
   const router = useRouter();
@@ -35,10 +36,9 @@ export function TeamGuard({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const router = useRouter();
   const teamId = params.teamId as string | undefined;
-
   const { data: teams, isLoading, isRefetching } = useTeams();
   const { setActiveTeam } = useTeamContext();
-  const currentTeam = teams?.find((t) => t.id === teamId)
+  const currentTeam = teams?.find((t) => t.id === teamId);
 
   const shouldRedirect =
     !!teamId &&

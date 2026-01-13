@@ -65,7 +65,7 @@ export class BaseTaskFilterDto {
     sortOrder: 'ASC' | 'DESC' = 'ASC';
 
     @IsOptional()
-    @IsString({each: true})
+    @IsString({ each: true })
     @Transform(({ value }) => {
         if (typeof value === 'string') return [value];
         return value;
@@ -83,16 +83,12 @@ export class BaseTaskFilterDto {
     @IsNumber()
     @Min(1)
     limit?: number = 10;
-}
 
-export class GetTasksByProjectDto extends BaseTaskFilterDto {
-    @IsUUID()
-    @IsNotEmpty()
-    projectId: string;
-}
-
-export class GetTasksByTeamDto extends BaseTaskFilterDto {
     @IsUUID()
     @IsNotEmpty()
     teamId: string;
+
+    @IsUUID()
+    @IsNotEmpty()
+    projectId: string;
 }

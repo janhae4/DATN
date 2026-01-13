@@ -1,5 +1,6 @@
 import os
 
+REDIS_HOST =        os.environ.get("REDIS_HOST", "localhost")
 RABBITMQ_URL =      os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost/")
 RABBITMQ_QUEUE =    os.environ.get("RABBITMQ_QUEUE", "rag_requests")
 OLLAMA_BASE_URL =   os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")

@@ -1,24 +1,23 @@
 x-nest-service: &nest-service
-  build:
-    context: ./backend
-    dockerfile: Dockerfile
   env_file:
     - ./backend/.env.dev
   networks:
     - app-network
-  depends_on:
-    rabbitmq:
-      condition: service_healthy
-    postgres:
-      condition: service_started
-    redis:
-      condition: service_started
-    mongo_db:
-      condition: service_started
-    chroma: 
-      condition: service_started
-    minio:
-      condition: service_started
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  # depends_on:
+  #   rabbitmq:
+  #     condition: service_healthy
+  #   postgres:
+  #     condition: service_started
+  #   redis:
+  #     condition: service_started
+  #   mongo_db:
+  #     condition: service_started
+  #   chroma: 
+  #     condition: service_started
+  #   minio:
+  #     condition: service_started
 
 services:
   rabbitmq:
@@ -41,45 +40,45 @@ services:
     networks:
       - app-network
 
-  redis:
-    image: redis:alpine
-    hostname: redis
-    container_name: redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - app-network
+  # redis:
+  #   image: redis:alpine
+  #   hostname: redis
+  #   container_name: redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - app-network
 
-  postgres:
-    image: postgres:alpine
-    hostname: postgres
-    container_name: postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
-    networks:
-      - app-network
+  # postgres:
+  #   image: postgres:alpine
+  #   hostname: postgres
+  #   container_name: postgres
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: postgres
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #     - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+  #   networks:
+  #     - app-network
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin_container
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com 
-      PGADMIN_DEFAULT_PASSWORD: root
-    ports:
-      - "5050:80" 
-    depends_on:
-      - postgres
-    networks:
-      - app-network
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   container_name: pgadmin_container
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com 
+  #     PGADMIN_DEFAULT_PASSWORD: root
+  #   ports:
+  #     - "5050:80" 
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - app-network
       
   meili-search:
     image: getmeili/meilisearch:v1.16
@@ -121,18 +120,20 @@ services:
       MINIO_SECRET_KEY: "minioadmin"
       MINIO_USE_SSL: "false"
       MINIO_BUCKET_NAME: "documents"
+      REDIS_HOST: "redis"
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       OLLAMA_MODEL: "gemma2:2b"
       OLLAMA_EMBEDDING_MODEL: "siv/Qwen3-Embedding-0.6B-GGUF:f16"
       THREADPOOL_MAX_WORKERS: "4"
       PYTHONUNBUFFERED: "1"
-
     depends_on:
       rabbitmq:
         condition: service_healthy
       chroma:
         condition: service_started
       minio:
+        condition: service_started
+      ollama:
         condition: service_started
     networks:
       - app-network
@@ -188,110 +189,179 @@ services:
     networks:
       - app-network
 
-  mongo_rs_init:
-    image: mongo:8.0
-    depends_on:
-      - mongo_db
-    volumes:
-      - ./init-mongo.sh:/scripts/init-mongo.sh
-    entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
-    networks:
-      - app-network
+  # mongo_rs_init:
+  #   image: mongo:8.0
+  #   depends_on:
+  #     - mongo_db
+  #   volumes:
+  #     - ./init-mongo.sh:/scripts/init-mongo.sh
+  #   entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
+  #   networks:
+  #     - app-network
   api_gateway:
     <<: *nest-service
     container_name: api_gateway
-    command: npm run start:prod:api-gateway
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: api-gateway
     ports:
       - "3000:3000"
 
   auth_service:
     <<: *nest-service
     container_name: auth_service
-    command: npm run start:prod:auth
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: auth
 
   user_service:
     <<: *nest-service
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: user
     container_name: user_service
-    command: npm run start:prod:user
 
   redis_service:
     <<: *nest-service
     container_name: redis_service_app
-    command: npm run start:prod:redis
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: redis
 
   project_service:
     <<: *nest-service
     container_name: project_service
-    command: npm run start:prod:project
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: project-service
 
   task_service:
     <<: *nest-service
     container_name: task_service
-    command: npm run start:prod:task
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: task-service
 
   sprint_service:
     <<: *nest-service
     container_name: sprint_service
-    command: npm run start:prod:sprint
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: sprint-service
 
   epic_service:
     <<: *nest-service
     container_name: epic_service
-    command: npm run start:prod:epic
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: epic-service
 
   label_service:
     <<: *nest-service
     container_name: label_service
-    command: npm run start:prod:label
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: label-service
 
   list_service:
     <<: *nest-service
     container_name: list_service
-    command: npm run start:prod:list
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: list-service
 
   team_service:
     <<: *nest-service
     container_name: team_service
-    command: npm run start:prod:team
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: team
 
   search_service:
     <<: *nest-service
     container_name: search_service
-    command: npm run start:prod:search
-    # depends_on:
-    #   - meili-search
-    #   - chroma
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: search-service
 
   socket_service:
     <<: *nest-service
     container_name: socket_service
-    command: npm run start:prod:socket
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: socket
     ports:
       - "4001:4001"
 
   notification_service:
     <<: *nest-service
-    container_name: notification_service
-    command: npm run start:prod:notification
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: notification
 
   ai_discussion_service:
     <<: *nest-service
     container_name: ai_discussion_service
-    command: npm run start:prod:ai-discussion
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: discussion-ai
+
   calendar_service:
     <<: *nest-service
     container_name: calendar_service
-    command: npm run start:prod:calendar
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: calendar-service
 
   gmail_service:
     <<: *nest-service
     container_name: gmail_service
-    command: npm run start:prod:gmail
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: gmail
 
   file_service:
     <<: *nest-service
     container_name: file_service
-    command: npm run start:prod:file
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+          APP_NAME: file
 
   mongo-express:
     image: mongo-express
@@ -322,6 +392,8 @@ services:
       - NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   
 volumes:

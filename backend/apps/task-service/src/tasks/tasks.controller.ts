@@ -101,8 +101,8 @@ export class TasksController {
     queue: TASK_PATTERNS.UPDATE,
     errorHandler: customErrorHandler,
   })
-  update(payload: { id: string; updateTaskDto: UpdateTaskDto }) {
-    return this.tasksService.update(payload.id, payload.updateTaskDto);
+  update(payload: { id: string; updateTaskDto: UpdateTaskDto, userId: string }) {
+    return this.tasksService.update(payload.id, payload.updateTaskDto, payload.userId);
   }
 
   @RabbitRPC({
@@ -111,8 +111,8 @@ export class TasksController {
     queue: TASK_PATTERNS.REMOVE,
     errorHandler: customErrorHandler,
   })
-  remove(payload: { id: string }) {
-    return this.tasksService.remove(payload.id);
+  remove(payload: { id: string, userId: string, teamId: string }) {
+    return this.tasksService.remove(payload.id, payload.teamId, payload.userId);
   }
 
   @RabbitRPC({
@@ -191,8 +191,8 @@ export class TasksController {
     queue: TASK_PATTERNS.GET_ALL_TASK_LABEL,
     errorHandler: customErrorHandler,
   })
-  getAllTaskLabel(payload: { projectId: string }) {
-    return this.tasksService.getAllTaskLabel(payload.projectId);
+  getAllTaskLabel(payload: { projectId: string, teamId: string, userId: string }) {
+    return this.tasksService.getAllTaskLabel(payload.projectId, payload.teamId, payload.userId);
   }
 
   @RabbitRPC({
@@ -201,7 +201,7 @@ export class TasksController {
     queue: TASK_PATTERNS.REMOVE_FILE,
     errorHandler: customErrorHandler,
   })
-  removeFile(payload: { taskId: string; fileId: string }) {
+  removeFile(payload: { taskId: string; fileId: string, userId: string }) {
     return this.tasksService.removeFile(payload.taskId, payload.fileId);
   }
 
@@ -211,7 +211,7 @@ export class TasksController {
     queue: TASK_PATTERNS.ADD_FILES,
     errorHandler: customErrorHandler,
   })
-  addFiles(payload: { taskId: string; fileIds: string[] }) {
+  addFiles(payload: { taskId: string; fileIds: string[], userId: string }) {
     return this.tasksService.addFiles(payload.taskId, payload.fileIds);
   }
 

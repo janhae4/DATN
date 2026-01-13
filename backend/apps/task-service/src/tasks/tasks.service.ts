@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, In, SelectQueryBuilder, Not, Brackets } from 'typeorm';
-import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS, GetTasksByProjectDto, BaseTaskFilterDto, GetTasksByTeamDto, CHATBOT_PATTERN, MemberDto } from '@app/contracts';
+import { Repository, IsNull, In, SelectQueryBuilder, Not, Brackets, FindOptionsWhere } from 'typeorm';
+import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS, GetTasksByProjectDto, BaseTaskFilterDto, GetTasksByTeamDto, CHATBOT_PATTERN, MemberDto, Error, ApprovalStatus, ForbiddenException } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
 import { RabbitSubscribe, Nack, AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { AUTH_EXCHANGE, CHATBOT_EXCHANGE, EVENTS_EXCHANGE, LABEL_EXCHANGE, LIST_CLIENT, LIST_EXCHANGE, PROJECT_CLIENT, RPC_TIMEOUT, TASK_EXCHANGE, TEAM_EXCHANGE, USER_EXCHANGE } from '@app/contracts/constants';
@@ -498,37 +498,73 @@ export class TasksService {
   }
 
   async findOne(id: string): Promise<Task> {
-    const task = await this.taskRepository.findOne({ where: { id } });
+    const task = await this.taskRepository.findOne({
+      where: { id },
+    });
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
     return task;
   }
 
-  async update(id: string, updateTaskDto: UpdateTaskDto): Promise<any> {
-    const { labelIds, ...updates } = updateTaskDto;
-    const task = await this.findOne(id);
+  async update(id: string, updatePayload: UpdateTaskDto, userId: string): Promise<any> {
+    const task = await this.taskRepository.findOne({
+      where: { id },
+    });
+    if (!task) throw new NotFoundException(`Task not found in this team`);
 
-    const updatedTask = this.taskRepository.merge(task, updates);
-    await this.taskRepository.save(updatedTask);
+    const isAdminOrOwner = await this._isAdminOrOwner(task.teamId!, userId);
+    if (!isAdminOrOwner) {
+      if (updatePayload.approvalStatus !== undefined) throw new ForbiddenException("Only Owner/Admin can change approval status.");
+      if (updatePayload.assigneeIds) throw new ForbiddenException("Members cannot change assignees.");
+      if (task.approvalStatus !== ApprovalStatus.APPROVED) throw new ForbiddenException("Task must be approved before it can be edited.");
+      const isReporter = task.reporterId === userId;
+      const isAssignee = task.assigneeIds.includes(userId);
+      if (!isReporter && !isAssignee) throw new ForbiddenException("You can only edit tasks you created or are assigned to.");
+    }
+
+    const { labelIds, ...updates } = updatePayload;
+    this.taskRepository.merge(task, updates);
+    await this.taskRepository.save(task);
+
     if (labelIds !== undefined) {
-      console.log("labelIds while update ", labelIds)
       await this.assignLabels(id, labelIds);
-      return this.findLabelsByTaskId(id)
     }
     return this.findOne(id);
   }
 
-  async remove(id: string): Promise<{ success: boolean }> {
-    const result = await this.taskRepository.delete(id);
+  async remove(id: string, teamId: string, userId: string): Promise<{ success: boolean }> {
+    const whereCondition: FindOptionsWhere<Task> = {
+      id,
+      teamId
+    };
+
+    const isAdminOrOwner = await this._isAdminOrOwner(teamId, userId);
+    if (!isAdminOrOwner) {
+      whereCondition.reporterId = userId;
+      whereCondition.approvalStatus = In([
+        ApprovalStatus.PENDING,
+        ApprovalStatus.REJECTED
+      ]);
+    }
+    const result = await this.taskRepository.delete(whereCondition);
+
     if (result.affected === 0) {
-      throw new NotFoundException(`Task with ID ${id} not found`);
+      throw new NotFoundException(
+        'Task not found or you do not have permission to delete this task'
+      );
     }
     return { success: true };
   }
 
-
-  // task-service/src/tasks/tasks.service.ts
+  private async _isAdminOrOwner(teamId: string, userId: string): Promise<boolean> {
+    const checkRole: Error = await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { teamId, userId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
+    });
+    return !checkRole?.error;
+  }
 
   private async assignLabels(taskId: string, labelIds: string[]) {
     if (labelIds && labelIds.length > 0) {
@@ -671,7 +707,14 @@ export class TasksService {
 
 
 
-  async getAllTaskLabel(projectId: string) {
+  async getAllTaskLabel(projectId: string, teamId: string, userId: string) {
+    unwrapRpcResult(
+      await this.amqpConnection.request({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+        payload: { teamId, userId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+      })
+    )
     try {
       return this.taskLabelRepository.find({
         where: { projectId },
@@ -689,7 +732,6 @@ export class TasksService {
       throw new NotFoundException(`Task with ID ${taskId} not found`);
     }
 
-    // Combine existing and new file IDs, ensuring uniqueness
     const currentFiles = task.fileIds || [];
     const newFileIds = fileIds.filter(id => !currentFiles.includes(id));
 

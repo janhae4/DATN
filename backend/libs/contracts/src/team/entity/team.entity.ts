@@ -17,11 +17,7 @@ export class Team {
   @Column()
   name: string;
 
-<<<<<<< HEAD
-  @Column({nullable: true})
-=======
   @Column({ nullable: true })
->>>>>>> origin/blank_branch
   avatar?: string;
 
   @Column()
@@ -33,11 +29,7 @@ export class Team {
   @Column({
     type: 'enum',
     enum: TeamStatus,
-<<<<<<< HEAD
-    default: TeamStatus.ARCHIVED,
-=======
     default: TeamStatus.ACTIVE,
->>>>>>> origin/blank_branch
   })
   status: TeamStatus;
 

@@ -55,7 +55,6 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
       const response = await login({ username, password });
       console.log(response);
       if (response.isFirstLogin) {
-        console.log("First login");
         router.push("/auth/onboarding");
       } else {
         try {

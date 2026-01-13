@@ -34,21 +34,18 @@ export class ProjectService {
     );
   }
 
-  // --- READ ---
   async findOne(id: string) {
     return unwrapRpcResult(
       this.client.send(PROJECT_PATTERNS.GET_BY_ID, { id }),
     );
   }
 
-  // --- UPDATE ---
   async update(id: string, updateProjectDto: UpdateProjectDto) {
     return unwrapRpcResult(
       this.client.send(PROJECT_PATTERNS.UPDATE, { id, updateProjectDto }),
     );
   }
 
-  // --- DELETE ---
   async remove(id: String) {
     return unwrapRpcResult(this.client.send(PROJECT_PATTERNS.REMOVE, { id }));
   }
@@ -58,4 +55,6 @@ export class ProjectService {
       this.client.send(PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID, { teamId }),
     );
   }
+
+
 }

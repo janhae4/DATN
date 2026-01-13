@@ -101,7 +101,7 @@ export class FileService {
             projectId,
         });
     }
-    async getFilesByIds(fileIds: string[]) {
-        return this.sendRpcRequest(FILE_PATTERN.GET_FILES_BY_IDS, { fileIds });
+    async getFilesByIds(fileIds: string[], userId: string) {
+        return this.sendRpcRequest(FILE_PATTERN.GET_FILES_BY_IDS, { fileIds, userId });
     }
 }

@@ -3,12 +3,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsString } from 'class-validator';
 
 export class ChangeRoleMember {
-<<<<<<< HEAD
-=======
   @IsString()
   teamId: string;
 
->>>>>>> origin/blank_branch
   @ApiProperty({
     description:
       'The unique identifier of the member whose role is being changed.',

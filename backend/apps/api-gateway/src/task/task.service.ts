@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, TASK_EXCHANGE, EPIC_EXCHANGE, EPIC_PATTERNS, EpicStatus, GetTasksByTeamDto } from '@app/contracts';
+import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, TASK_EXCHANGE, EPIC_EXCHANGE, EPIC_PATTERNS, EpicStatus, GetTasksByTeamDto, BaseTaskFilterDto } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
 import { Priority } from '@app/contracts/enums/priority.enum';
-import { GetTasksByProjectDto } from './dto/get-task-filter.dto';
 
 @Injectable()
 export class TaskService {
@@ -84,7 +83,7 @@ export class TaskService {
     }));
   }
 
-  async findAllByProjectId(userId: string, filters: GetTasksByProjectDto) {
+  async findAllByProjectId(userId: string, filters: BaseTaskFilterDto) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.FIND_ALL,
@@ -100,60 +99,60 @@ export class TaskService {
     }));
   }
 
-  async update(id: string, updateTaskDto: UpdateTaskDto) {
+  async update(id: string, updateTaskDto: UpdateTaskDto, userId: string) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.UPDATE,
-      payload: { id, updateTaskDto },
+      payload: { id, updateTaskDto, userId },
     }));
   }
 
-  async remove(id: string) {
+  async remove(id: string, teamId: string, userId: string) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.REMOVE,
-      payload: { id },
+      payload: { id, teamId, userId },
     }));
   }
 
-  async addFiles(taskId: string, fileIds: string[]) {
+  async addFiles(taskId: string, fileIds: string[], userId: string) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.ADD_FILES,
-      payload: { taskId, fileIds },
+      payload: { taskId, fileIds, userId },
     }));
   }
 
-  async removeFile(taskId: string, fileId: string) {
+  async removeFile(taskId: string, fileId: string, userId: string) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.REMOVE_FILE,
-      payload: { taskId, fileId },
+      payload: { taskId, fileId, userId },
     }));
   }
 
-  async findLabelsByTaskId(taskId: string) {
+  async findLabelsByTaskId(taskId: string, userId: string) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.FIND_ALL_LABELS_BY_TASK_ID,
-      payload: { taskId },
+      payload: { taskId, userId },
     }));
   }
 
 
-  async getAllTaskLabel(projectId: string) {
+  async getAllTaskLabel(projectId: string, teamId: string, userId: string) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.GET_ALL_TASK_LABEL,
-      payload: { projectId },
+      payload: { projectId, teamId, userId },
     }))
   }
 
-  async handleLabelDeleted(payload: { labelId: string }) {
+  async handleLabelDeleted(labelId: string, userId: string) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
       routingKey: TASK_PATTERNS.HANDLE_LABEL_DELETED,
-      payload: { id: payload.labelId },
+      payload: { id: labelId, userId },
     }));
   }
 
@@ -165,10 +164,10 @@ export class TaskService {
     }));
   }
 
-  async findAllByTeamId(userId: string, filters: GetTasksByTeamDto) {
+  async findAllByTeamId(userId: string, filters: BaseTaskFilterDto) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
-      routingKey: TASK_PATTERNS.FIND_ALL_BY_TEAM_ID,
+      routingKey: TASK_PATTERNS.FIND_ALL,
       payload: { userId, filters },
     }));
   }

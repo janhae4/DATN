@@ -1,43 +1,44 @@
-<<<<<<< HEAD
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npx nest build ai-discussion && \
-    npx nest build api-gateway && \
-    npx nest build auth && \
-    npx nest build user && \
-    npx nest build project-service && \
-    npx nest build task-service && \
-    npx nest build sprint-service && \
-    npx nest build epic-service && \
-    npx nest build label-service && \
-    npx nest build list-service && \
-    npx nest build team && \
-    npx nest build search-service && \
-    npx nest build socket && \
-    npx nest build notification && \
-    npx nest build calendar-service && \
-    npx nest build gmail && \
-    npx nest build file && \
-    npx nest build redis
+ARG APP_NAME
+# RUN npx nest build ai-discussion && \
+#     npx nest build api-gateway && \
+#     npx nest build auth && \
+#     npx nest build user && \
+#     npx nest build project-service && \
+#     npx nest build task-service && \
+#     npx nest build sprint-service && \
+#     npx nest build epic-service && \
+#     npx nest build label-service && \
+#     npx nest build list-service && \
+#     npx nest build team && \
+#     npx nest build search-service && \
+#     npx nest build socket && \
+#     npx nest build notification && \
+#     npx nest build calendar-service && \
+#     npx nest build gmail && \
+#     npx nest build file && \
+#     npx nest build redis
+RUN npx nest build ${APP_NAME}
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
-RUN npm install --no-save @css-inline/css-inline-linux-x64-musl
-COPY --from=builder /app/dist ./dist
-=======
-FROM node:20-alpine
-WORKDIR /usr/src/app
-COPY package*.json ./
-RUN npm install
-COPY libs ./libs
-COPY tsconfig*.json ./
-COPY nest-cli.json ./
-COPY . .
-RUN npm run build
->>>>>>> origin/blank_branch
+ARG APP_NAME
+
+RUN if [ "$APP_NAME" = "gmail" ]; then \
+npm install --no-save @css-inline/css-inline-linux-x64-musl; \
+    else \
+    echo "Skipping optional packages for $APP_NAME"; \
+    fi
+
+COPY --from=builder /app/dist/apps/${APP_NAME} ./dist
+
+CMD ["node", "dist/main"]
+
+

@@ -10,7 +10,7 @@
   "monorepo": true,
   "root": "apps/api-gateway",
   "projects": {
-    "ai-discussion": {
+    "discussion-ai": {
       "type": "application",
       "root": "apps/discussion-ai",
       "entryFile": "main",

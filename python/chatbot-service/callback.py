@@ -16,10 +16,10 @@ from config import (
     SUMMARIZE_DOCUMENT_ROUTING_KEY,
     STREAM_RESPONSE_ROUTING_KEY,
     SOCKET_EXCHANGE,
-    TASK_EXCHANGE
+    REDIS_HOST
 )
 
-redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0)
+redis_client = redis.Redis(host=REDIS_HOST, port=6379, db=0)
 
 async def publish_to_redis(discussion_id: str, content: str, is_completed: bool = False, metadata: dict = None):
     """
