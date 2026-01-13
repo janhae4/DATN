@@ -11,3 +11,6 @@ class LLMService:
 
     def chat(self, messages):
         return self.client.chat(model=OLLAMA_MODEL, messages=messages, stream=True)
+    
+    def chatWithOutStream(self, messages):
+        return self.client.chat(model=OLLAMA_MODEL, messages=messages)

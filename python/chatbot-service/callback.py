@@ -246,7 +246,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
             elif pattern_from_key == 'suggest_task':
                 raw_objective = payload_dto.get('objective')
                 members = payload_dto.get('members', [])
-                
+                print(f"--> [SUGGEST TASK] Nhận được objective: length: {len(raw_objective)}")
                 if len(raw_objective) > 20:
                     print(f"--> [SUGGEST TASK] Objective quá dài, đang tóm tắt...")
                     objective = await summarizer.summarize_objective(raw_objective)

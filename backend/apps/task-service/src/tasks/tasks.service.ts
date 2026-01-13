@@ -598,8 +598,6 @@ export class TasksService {
     }
   }
 
-
-
   async findLabelsByTaskId(taskId: string): Promise<TaskLabel[]> {
     return this.taskLabelRepository.find({
       where: { taskId },
@@ -680,8 +678,6 @@ export class TasksService {
     return this.taskRepository.update({ sprintId }, { sprintId: null });
   }
 
-
-
   async handleLabelDeleted(payload: { id: string }) {
     try {
       await this.taskLabelRepository.delete({ labelId: payload.id });
@@ -703,9 +699,6 @@ export class TasksService {
       return new Nack(true);
     }
   }
-
-
-
 
   async getAllTaskLabel(projectId: string, teamId: string, userId: string) {
     unwrapRpcResult(
@@ -838,6 +831,4 @@ export class TasksService {
       })),
     };
   }
-
-
 }

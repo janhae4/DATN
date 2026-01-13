@@ -54,7 +54,7 @@ class Summarizer:
         """
         Tóm tắt mục tiêu thành đúng 5 từ, không ký tự đặc biệt.
         """
-        prompt= """
+        prompt= f"""
             Bạn là một chuyên gia phân tích dự án. 
             Nhiệm vụ:  Người dùng đã nhập một yêu cầu rất chi tiết hoặc dài dòng về một mục tiêu dự án.
             Nhiệm vụ của bạn là trích xuất và tóm tắt lại mục tiêu cốt lõi đó thành một câu hoặc một đoạn ngắn gọn
@@ -74,7 +74,7 @@ class Summarizer:
         
         try:
             response = await asyncio.to_thread(
-                self.llm_service.chat,
+                self.llm_service.chatWithOutStream,
                 messages
             )
             
