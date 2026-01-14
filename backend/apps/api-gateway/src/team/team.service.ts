@@ -10,13 +10,13 @@ import {
   TransferOwnership,
 } from '@app/contracts';
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { unwrapRpcResult } from '../common/helper/rpc';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class TeamService {
   private logger = new Logger(TeamService.name);
-  constructor(private readonly amqpConnection: AmqpConnection) { }
+  constructor(private readonly amqpConnection: RmqClientService) { }
 
   async findAll() {
     return unwrapRpcResult(await this.amqpConnection.request({

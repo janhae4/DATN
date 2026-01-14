@@ -9,23 +9,6 @@ import { AuthModule } from '../auth/auth.module';
   imports: [
     ClientConfigModule,
     forwardRef(() => AuthModule),
-    ClientsModule.registerAsync([
-      {
-        name: 'CALENDAR_SERVICE',
-        imports: [ClientConfigModule],
-        inject: [ClientConfigService],
-        useFactory: (config: ClientConfigService) => ({
-          transport: Transport.RMQ,
-          options: {
-            urls: [config.getRMQUrl()],
-            queue: 'calendar_queue', 
-            queueOptions: {
-              durable: true,
-            },
-          },
-        }),
-      },
-    ]),
   ],
   controllers: [CalendarController],
   providers: [CalendarService],

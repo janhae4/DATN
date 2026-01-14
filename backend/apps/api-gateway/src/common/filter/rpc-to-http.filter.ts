@@ -4,31 +4,43 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 
 @Catch()
 export class RpcErrorToHttpFilter implements ExceptionFilter {
+  private readonly logger = new Logger(RpcErrorToHttpFilter.name);
+
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
+    const request = ctx.getRequest();
 
-    // Nếu là lỗi RPC kiểu object { error: true, message: {...} }
-    if (exception?.error && exception?.message?.statusCode) {
-      const status = exception.message.statusCode || HttpStatus.INTERNAL_SERVER_ERROR;
-      const message = exception.message.message || 'Unexpected error';
-      return response.status(status).json({ message });
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const resPayload =
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : { message: exception.message || 'Internal Server Error' };
+
+    const errorResponse = typeof resPayload === 'string'
+      ? { message: resPayload }
+      : resPayload;
+
+    if (status >= 500) {
+      this.logger.error(
+        `[${request.method}] ${request.url}`,
+        exception.stack,
+      );
     }
 
-    // Nếu là HttpException thật
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
-      const message = exception.getResponse();
-      return response.status(status).json(message);
-    }
-
-    // Mặc định
-    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      message: exception?.message || 'Internal Server Error',
+    return response.status(status).json({
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      ...errorResponse as object,
     });
   }
 }

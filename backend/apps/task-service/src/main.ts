@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { TasksModule } from './tasks/tasks.module';
-import { Transport } from '@nestjs/microservices';
 import cookieParser from 'cookie-parser';
+import { RpcResponseInterceptor } from '@app/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(TasksModule);
@@ -11,10 +11,8 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+  app.useGlobalInterceptors(new RpcResponseInterceptor());
   app.use(cookieParser())
   await app.init();
-
-  console.log('Task Service is running:');
-  console.log('- Microservice: Listening to RabbitMQ');
 }
 bootstrap();

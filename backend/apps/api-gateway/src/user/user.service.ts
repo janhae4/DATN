@@ -9,10 +9,11 @@ import {
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { UserOnboardingDto } from '../auth/dto/user-onboarding.dto';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly amqpConnection: AmqpConnection) { }
+  constructor(private readonly amqpConnection: RmqClientService) { }
   create(createUserDto: CreateUserDto) {
     return this.amqpConnection.request({
       exchange: USER_EXCHANGE,

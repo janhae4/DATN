@@ -6,6 +6,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Notification } from './entity/notification.entity';
 import { NotificationGateway } from './notification.gateway';
+import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
@@ -19,20 +20,7 @@ import { NotificationGateway } from './notification.gateway';
       }),
     }),
     TypeOrmModule.forFeature([Notification]),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (cfg: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: NOTIFICATION_EXCHANGE,
-            type: 'direct',
-          }
-        ],
-        uri: cfg.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-      }),
-    })
+    RmqModule.register({ exchanges: [{ name: NOTIFICATION_EXCHANGE, type: 'driect' }] }),
   ],
   providers: [NotificationService, NotificationController, NotificationGateway],
   controllers: [NotificationController],

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import {
   AiDiscussionDto,
@@ -6,19 +6,17 @@ import {
   CHATBOT_PATTERN,
   ConversationResponseDto,
   MessageMetadataDto,
-  MessageUserChatbot,
 } from '@app/contracts';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { unwrapRpcResult } from '../common/helper/rpc';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class ChatbotService {
   private readonly logger = new Logger(ChatbotService.name);
 
   constructor(
-    private readonly amqp: AmqpConnection,
+    private readonly amqp: RmqClientService,
   ) {
-
   }
 
   async askQuestion(question: string) {

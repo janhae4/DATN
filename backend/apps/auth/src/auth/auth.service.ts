@@ -35,8 +35,7 @@ import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { ResetCodeDto } from './dto/reset-code.dto';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { unwrapRpcResult } from '@app/common';
+import { RmqClientService } from '@app/common/rabbitmq/rmq.service';
 
 @Injectable()
 export class AuthService {
@@ -44,18 +43,18 @@ export class AuthService {
 
   constructor(
     private jwtService: JwtService,
-    private readonly amqp: AmqpConnection
+    private readonly amqp: RmqClientService
   ) { }
 
   async register(createAuthDto: CreateAuthDto) {
     this.logger.log(
       `Starting registration for user: ${createAuthDto.email}...`,
     );
-    const user = await unwrapRpcResult(await this.amqp.request<User & Error>({
+    const user = await this.amqp.request<User & Error>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.CREATE_LOCAL,
       payload: createAuthDto,
-    }))
+    })
 
     this.logger.log(`User ${user.id} created. Emitting welcome email.`);
     this.amqp.publish(EVENTS_EXCHANGE, EVENTS.REGISTER, user);
@@ -220,11 +219,11 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     this.logger.log(`Login attempt for ${loginDto.username}...`);
-    const user: User = unwrapRpcResult(await this.amqp.request<User>({
+    const user: User = await this.amqp.request<User>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.VALIDATE,
       payload: loginDto,
-    }))
+    })
 
     if (!user) {
       this.logger.warn(`Invalid credentials for ${loginDto.username}.`);
@@ -248,11 +247,11 @@ export class AuthService {
     if (!payload) throw new UnauthorizedException('Invalid refresh token');
 
     try {
-      const stored = unwrapRpcResult(await this.amqp.request<StoredRefreshTokenDto>({
+      const stored = await this.amqp.request<StoredRefreshTokenDto>({
         exchange: REDIS_EXCHANGE,
         routingKey: REDIS_PATTERN.GET_STORED_REFRESH_TOKEN,
         payload: { userId: payload.id, sessionId: payload.sessionId },
-      }));
+      });
 
       if (!stored) {
         this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
@@ -275,11 +274,11 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token (Reuse Detected)');
       }
 
-      const lockKey = unwrapRpcResult(await this.amqp.request<string>({
+      const lockKey = await this.amqp.request<string>({
         exchange: REDIS_EXCHANGE,
         routingKey: REDIS_PATTERN.SET_LOCK_KEY,
         payload: { userId: payload.id, sessionId: payload.sessionId },
-      }));
+      });
 
       if (!lockKey) {
         throw new RpcException({ statusCode: 429, message: 'Refresh in progress' });
@@ -330,7 +329,7 @@ export class AuthService {
     const tokenDigest = this.hashToken(refreshToken);
     const hashedRefresh = await bcrypt.hash(tokenDigest, 10);
 
-    unwrapRpcResult(await this.amqp.request({
+    await this.amqp.request({
       exchange: REDIS_EXCHANGE,
       routingKey: REDIS_PATTERN.STORE_REFRESH_TOKEN,
       payload: {
@@ -339,7 +338,7 @@ export class AuthService {
         hashedRefresh,
         exp: REFRESH_TTL,
       }
-    }))
+    })
 
     if (!accessToken || !refreshToken) throw new NotFoundException('Failed to generate tokens');
 
@@ -527,7 +526,7 @@ export class AuthService {
     const user = this.amqp.request<User>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.UPDATE_PASSWORD,
-      payload: changePasswordDto.id,
+      payload: changePasswordDto.id!,
     })
     if (!user) {
       this.logger.warn(`User ${changePasswordDto.id} not found.`);

@@ -1,5 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import { MessagePattern, Payload, EventPattern } from '@nestjs/microservices';
+import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { GmailService } from './gmail.service';
 import {
     GMAIL_PATTERNS,
@@ -10,6 +10,8 @@ import {
     User,
     SendEmailVerificationDto,
     EVENTS,
+    GMAIL_EXCHANGE,
+    EVENTS_EXCHANGE,
 } from '@app/contracts';
 
 @Controller()
@@ -18,79 +20,128 @@ export class GmailController {
 
     constructor(private readonly gmailService: GmailService) { }
 
-    @MessagePattern(GMAIL_PATTERNS.GET_UNREAD_MAILS)
-    async handleGetUnreadMails(@Payload() payload: { userId: string }) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.GET_UNREAD_MAILS,
+        queue: GMAIL_PATTERNS.GET_UNREAD_MAILS,
+    })
+    async handleGetUnreadMails(payload: { userId: string }) {
         this.logger.log(`Received get unread mails request for user: ${payload.userId}`);
-        try {
-            return await this.gmailService.getUnreadEmails(payload.userId);
-        } catch (error) {
-            this.logger.error('Error handling get unread mails', error);
-            throw error;
-        }
+        return this.gmailService.getUnreadEmails(payload.userId);
     }
 
-    @MessagePattern(GMAIL_PATTERNS.GET_MAIL_LIST)
-    async handleGetMailList(@Payload() payload: GetMailListDto) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.GET_MAIL_LIST,
+        queue: GMAIL_PATTERNS.GET_MAIL_LIST,
+    })
+    async handleGetMailList(payload: GetMailListDto) {
         this.logger.log(`Received get mail list request for user: ${payload.userId}`);
-        return await this.gmailService.getMailList(payload);
+        return this.gmailService.getMailList(payload);
     }
 
-    @MessagePattern(GMAIL_PATTERNS.GET_MAIL_DETAIL)
-    async handleGetMailDetail(@Payload() payload: GetMailDetailDto) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.GET_MAIL_DETAIL,
+        queue: GMAIL_PATTERNS.GET_MAIL_DETAIL,
+    })
+    async handleGetMailDetail(payload: GetMailDetailDto) {
         this.logger.log(`Received get mail detail request for message: ${payload.messageId}`);
-        return await this.gmailService.getMailDetail(payload);
+        return this.gmailService.getMailDetail(payload);
     }
 
-    @MessagePattern(GMAIL_PATTERNS.SEND_MAIL)
-    async handleSendMail(@Payload() payload: SendMailDto) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.SEND_MAIL,
+        queue: GMAIL_PATTERNS.SEND_MAIL,
+    })
+    async handleSendMail(payload: SendMailDto) {
         this.logger.log(`Received send mail request for user: ${payload.userId}`);
-        return await this.gmailService.sendEmail(payload);
+        return this.gmailService.sendEmail(payload);
     }
 
-    @MessagePattern(GMAIL_PATTERNS.REPLY_MAIL)
-    async handleReplyMail(@Payload() payload: ReplyMailDto) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.REPLY_MAIL,
+        queue: GMAIL_PATTERNS.REPLY_MAIL,
+    })
+    async handleReplyMail(payload: ReplyMailDto) {
         this.logger.log(`Received reply mail request for thread: ${payload.threadId}`);
-        return await this.gmailService.replyMail(payload);
+        return this.gmailService.replyMail(payload);
     }
 
-    @MessagePattern('gmail_status')
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: 'gmail_status',
+        queue: 'gmail_status',
+    })
     async handleStatus() {
         this.logger.log('Received status check request');
-        return await this.gmailService.getStatus();
+        return this.gmailService.getStatus();
     }
 
-    @EventPattern(EVENTS.REGISTER)
-    async register(@Payload() user: User) {
-        return this.gmailService.sendRegisterEmail(user);
-    }
-
-    @EventPattern(EVENTS.LOGIN)
-    async login(@Payload() user: User) {
-        return this.gmailService.sendLoginEmail(user, '');
-    }
-
-    @MessagePattern(GMAIL_PATTERNS.SEND_LOGIN_EMAIL)
-    async sendEmailLogin(@Payload() payload: { user: User; ip: string }) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.SEND_LOGIN_EMAIL,
+        queue: GMAIL_PATTERNS.SEND_LOGIN_EMAIL,
+    })
+    async sendEmailLogin(payload: { user: User; ip: string }) {
         return this.gmailService.sendLoginEmail(payload.user, payload.ip);
     }
 
-    @MessagePattern(GMAIL_PATTERNS.SEND_EMAIL_PASSWORD_CHANGE)
-    async sendEmailPasswordChange(@Payload() user: User) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.SEND_EMAIL_PASSWORD_CHANGE,
+        queue: GMAIL_PATTERNS.SEND_EMAIL_PASSWORD_CHANGE,
+    })
+    async sendEmailPasswordChange(user: User) {
         return this.gmailService.sendChangePasswordEmail(user);
     }
 
-    @MessagePattern(GMAIL_PATTERNS.SEND_EMAIL_REGISTER)
-    async sendEmailRegister(@Payload() user: User) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.SEND_EMAIL_REGISTER,
+        queue: GMAIL_PATTERNS.SEND_EMAIL_REGISTER,
+    })
+    async sendEmailRegister(user: User) {
         return this.gmailService.sendRegisterEmail(user);
     }
 
-    @MessagePattern(GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL)
-    async sendVerificationEmail(@Payload() verificationEmail: SendEmailVerificationDto) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL,
+        queue: GMAIL_PATTERNS.SEND_VERIFICATION_EMAIL,
+    })
+    async sendVerificationEmail(verificationEmail: SendEmailVerificationDto) {
         return this.gmailService.sendVerificationEmail(verificationEmail);
     }
 
-    @MessagePattern(GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL)
-    async sendResetPasswordEmail(@Payload() resetPassword: SendEmailVerificationDto) {
+    @RabbitRPC({
+        exchange: GMAIL_EXCHANGE,
+        routingKey: GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL,
+        queue: GMAIL_PATTERNS.SEND_RESET_PASSWORD_EMAIL,
+    })
+    async sendResetPasswordEmail(resetPassword: SendEmailVerificationDto) {
         return this.gmailService.sendResetPasswordEmail(resetPassword);
+    }
+
+    @RabbitSubscribe({
+        exchange: EVENTS_EXCHANGE,
+        routingKey: EVENTS.REGISTER,
+        queue: 'events.gmail.register',
+    })
+    async register(user: User) {
+        this.logger.log(`Event: User registered ${user.email}`);
+        await this.gmailService.sendRegisterEmail(user);
+    }
+
+    @RabbitSubscribe({
+        exchange: EVENTS_EXCHANGE,
+        routingKey: EVENTS.LOGIN,
+        queue: 'events.gmail.login',
+    })
+    async login(user: User) {
+        this.logger.log(`Event: User logged in ${user.email}`);
+        await this.gmailService.sendLoginEmail(user, '');
     }
 }

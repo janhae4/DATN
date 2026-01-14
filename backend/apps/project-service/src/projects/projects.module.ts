@@ -11,6 +11,7 @@ import {
 } from '@app/contracts';
 import { ClientsModule } from '@nestjs/microservices';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
@@ -25,27 +26,12 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       }),
     }),
     TypeOrmModule.forFeature([Project]),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (configService: ClientConfigService) => ({
-        uri: configService.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-        exchanges: [{
-          name: PROJECT_EXCHANGE,
-          type: 'direct',
-        }],
-        enableControllerDiscovery: true
-      })
+    RmqModule.register({
+      exchanges: [{
+        name: PROJECT_EXCHANGE,
+        type: 'direct',
+      }],
     }),
-    ClientsModule.registerAsync([
-      {
-        name: LIST_EXCHANGE,
-        imports: [ClientConfigModule],
-        inject: [ClientConfigService],
-        useFactory: (config: ClientConfigService) => config.listClientOptions,
-      },
-    ]),
   ],
 
   controllers: [ProjectsController],

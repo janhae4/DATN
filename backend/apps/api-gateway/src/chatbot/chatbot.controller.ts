@@ -27,7 +27,7 @@ import multer from 'multer';
 import type { Response } from 'express';
 import { RoleGuard } from '../common/role/role.guard';
 import { CurrentUser } from '../common/role/current-user.decorator';
-import { finalize, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 import Redis from 'ioredis';
 import { unwrapRpcResult } from '../common/helper/rpc';
 

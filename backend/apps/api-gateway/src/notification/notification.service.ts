@@ -7,13 +7,12 @@ import {
   NotificationEventDto,
   NotificationUpdateDto,
 } from '@app/contracts';
-import { firstValueFrom } from 'rxjs';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class NotificationService {
   constructor(
-    private readonly amqp: AmqpConnection,
+    private readonly amqp: RmqClientService,
   ) { }
 
   createNotification(createDto: NotificationEventDto) {

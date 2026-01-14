@@ -14,20 +14,29 @@ import {
   MemberRole,
 } from '@app/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, QueryBuilder, In } from 'typeorm';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { Repository, Not } from 'typeorm';
 import { Sprint } from '@app/contracts/sprint/entity/sprint.entity';
-import { unwrapRpcResult } from '@app/common';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class SprintsService {
   constructor(
     @InjectRepository(Sprint)
     private readonly sprintRepository: Repository<Sprint>,
-    private readonly amqpConnection: AmqpConnection,
+    private readonly amqpConnection: RmqClientService,
   ) { }
 
   async create(createSprintDto: CreateSprintDto) {
+    await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: {
+        userId: createSprintDto.userId,
+        teamId: createSprintDto.teamId,
+        roles: [MemberRole.ADMIN, MemberRole.OWNER],
+      }
+    })
+    
     const sprintData: Partial<Sprint> = {
       title: createSprintDto.title,
       goal: createSprintDto.goal,
@@ -135,13 +144,11 @@ export class SprintsService {
       throw new BadRequestException('Project ID and Team ID are required');
     }
 
-    unwrapRpcResult(
-      await this.amqpConnection.request({
-        exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-        payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
-      })
-    )
+    await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+    })
 
     const query = this.sprintRepository.createQueryBuilder('sprint')
       .where('sprint.projectId = :projectId', { projectId })

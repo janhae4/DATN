@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { FilterQuery, Model } from 'mongoose';
 import {
@@ -11,8 +11,6 @@ import {
   MemberShip,
   MessageMetadataDto,
   NotFoundException,
-  REDIS_EXCHANGE,
-  REDIS_PATTERN,
   RemoveTeamEventPayload,
   SEARCH_EXCHANGE,
   SEARCH_PATTERN,
@@ -24,10 +22,9 @@ import {
   USER_EXCHANGE,
   USER_PATTERNS,
 } from '@app/contracts';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { AiDiscussion, TeamSnapshot } from './schema/ai-discussion.schema';
 import { AiMessage } from './schema/message.schema';
-import Redis from 'ioredis';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class AiDiscussionService {
@@ -40,8 +37,7 @@ export class AiDiscussionService {
     private aiMessageModel: Model<AiMessage>,
     @InjectConnection()
     private readonly connection: mongoose.Connection,
-    private readonly amqp: AmqpConnection,
-    @Inject(REDIS_EXCHANGE) private readonly redis: Redis
+    private readonly amqp: RmqClientService,
   ) { }
 
   private createLatestMessageSnapshot(messageDoc: AiMessage): AiMessageSnapshot {

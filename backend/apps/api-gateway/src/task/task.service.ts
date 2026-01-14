@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, TASK_EXCHANGE, EPIC_EXCHANGE, EPIC_PATTERNS, EpicStatus, GetTasksByTeamDto, BaseTaskFilterDto } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
 import { Priority } from '@app/contracts/enums/priority.enum';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class TaskService {
 
   constructor(
-    private readonly amqp: AmqpConnection,
-
+    private readonly amqp: RmqClientService,
   ) { }
 
   async create(createTaskDto: CreateTaskDto) {

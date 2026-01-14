@@ -6,41 +6,18 @@ import { google, gmail_v1 } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { SendMailDto, ReplyMailDto, GetMailListDto, GetMailDetailDto, User, SendEmailVerificationDto } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
-export class GmailService implements OnModuleInit {
+export class GmailService {
     private readonly logger = new Logger(GmailService.name);
     private readonly oauth2Client: OAuth2Client;
 
-    async onModuleInit() {
-        try {
-            this.logger.log('Setting up RabbitMQ bindings...');
-            const url = this.configService.getRMQUrl();
-            const conn = await amqplib.connect(url);
-            const ch = await conn.createChannel();
-
-            // Ensure Queue exists and bind to Gmail Exchange (for RPC calls from Auth/User service)
-            await ch.assertQueue(GMAIL_QUEUE, { durable: true });
-            await ch.bindQueue(GMAIL_QUEUE, GMAIL_EXCHANGE, '#');
-
-            // Bind to Events Exchange (for Event patterns)
-            await ch.bindQueue(GMAIL_QUEUE, EVENTS_EXCHANGE, EVENTS.REGISTER);
-            await ch.bindQueue(GMAIL_QUEUE, EVENTS_EXCHANGE, EVENTS.LOGIN);
-
-            this.logger.log('RabbitMQ bindings established successfully');
-            await ch.close();
-            await conn.close();
-        } catch (error) {
-            this.logger.error('Failed to setup RabbitMQ bindings', error);
-        }
-    }
-
     constructor(
         private readonly configService: ClientConfigService,
-        private readonly amqpConnection: AmqpConnection,
+        private readonly amqpConnection: RmqClientService,
         private readonly mailerService: MailerService,
     ) {
-        // Initialize OAuth2 client with credentials from config
         this.oauth2Client = new google.auth.OAuth2(
             this.configService.getGoogleClientId(),
             this.configService.getGoogleClientSecret(),
@@ -53,7 +30,6 @@ export class GmailService implements OnModuleInit {
      */
     private async getGmailClient(userId: string): Promise<gmail_v1.Gmail> {
         try {
-            // Get user's Gmail tokens from Redis
             const tokens = await this.getUserTokens(userId);
 
             this.oauth2Client.setCredentials({
@@ -79,7 +55,6 @@ export class GmailService implements OnModuleInit {
                 exchange: REDIS_EXCHANGE,
                 routingKey: REDIS_PATTERN.GET_GOOGLE_TOKEN,
                 payload: userId,
-                timeout: 5000,
             });
 
             if (!tokens || !tokens.refreshToken) {
@@ -111,7 +86,6 @@ export class GmailService implements OnModuleInit {
             const messages = response.data.messages || [];
             this.logger.log(`Found ${messages.length} unread emails`);
 
-            // Fetch details for each message
             const emailDetails = await Promise.all(
                 messages.map(async (message) => {
                     const detail = await gmail.users.messages.get({
@@ -248,31 +222,21 @@ export class GmailService implements OnModuleInit {
         }
 
         if (payload.parts && payload.parts.length > 0) {
-            // 1. Try to find HTML part
             const htmlPart = payload.parts.find((part: any) => part.mimeType === 'text/html');
             if (htmlPart) {
                 return this.getEmailBody(htmlPart);
             }
-
-            // 2. Try to find Plain Text part
-            // We only take text/plain if no HTML text was found in siblings, 
-            // but we might want to keep searching other branches for HTML if we were strict.
-            // However, usually alternative means they are equivalent. 
-            // If it is 'multipart/mixed', the text part might be just one part.
-            // Let's look for multipart/alternative first which is usually the container for content
 
             const alternativePart = payload.parts.find((part: any) => part.mimeType === 'multipart/alternative');
             if (alternativePart) {
                 return this.getEmailBody(alternativePart);
             }
 
-            // If no alternative matching, look for specific text part
             const textPart = payload.parts.find((part: any) => part.mimeType === 'text/plain');
             if (textPart) {
                 return this.getEmailBody(textPart);
             }
 
-            // 3. If still nothing, recurse into other multipart/* (mixed, related, etc)
             const otherMultipart = payload.parts.find((part: any) => part.mimeType.startsWith('multipart/'));
             if (otherMultipart) {
                 return this.getEmailBody(otherMultipart);
@@ -323,7 +287,6 @@ export class GmailService implements OnModuleInit {
         try {
             const gmail = await this.getGmailClient(payload.userId);
 
-            // Get original message to extract headers
             const original = await gmail.users.messages.get({
                 userId: 'me',
                 id: payload.messageId,

@@ -13,6 +13,7 @@ import { AiDiscussionController } from './ai-discussion.controller';
 import { AiDiscussionService } from './ai-discussion.service';
 import { AiMessage, AiMessageSchema } from './schema/message.schema';
 import Redis from 'ioredis';
+import { RmqModule } from '@app/common';
 @Module({
   imports: [
     ClientConfigModule,
@@ -32,20 +33,13 @@ import Redis from 'ioredis';
         schema: AiMessageSchema,
       }
     ]),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: CHATBOT_EXCHANGE,
-            type: 'direct',
-          }
-        ],
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-        enableControllerDiscovery: true,
-      })
+    RmqModule.register({
+      exchanges: [
+        {
+          name: CHATBOT_EXCHANGE,
+          type: 'direct',
+        }
+      ]
     })
   ],
   providers: [

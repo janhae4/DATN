@@ -4,7 +4,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AUTH_EXCHANGE, ClientConfigModule, ClientConfigService, EVENTS_EXCHANGE, GMAIL_EXCHANGE, NOTIFICATION_EXCHANGE, REDIS_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
 import { JwtModule } from '@nestjs/jwt';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
@@ -17,30 +17,10 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
         secret: cfg.getJWTSecret(),
       }),
     }),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (cfg: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: AUTH_EXCHANGE,
-            type: 'direct'
-          }
-        ],
-        uri: cfg.getRMQUrl(),
-        connectionInitOptions: { wait: true, timeout: 20000 },
-        logger: {
-          error: (str: string) => {
-            console.error(str);
-          },
-          log: (str: string) => {
-            console.log(str);
-          },
-          warn: (str: string) => {
-            console.warn(str);
-          },
-        },
-      }),
+    RmqModule.register({
+      exchanges: [
+        { name: AUTH_EXCHANGE, type: 'direct' },
+      ]
     })
   ],
   controllers: [AuthController],

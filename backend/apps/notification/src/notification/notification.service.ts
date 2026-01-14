@@ -4,13 +4,9 @@ import { Repository } from 'typeorm';
 import {
   NotificationEventDto,
   NotificationUpdateDto,
-  AddMemberEventPayload,
-  GMAIL_EXCHANGE,
-  GMAIL_PATTERNS,
-  NotificationType
 } from '@app/contracts';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Notification } from './entity/notification.entity';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class NotificationService {
@@ -18,7 +14,7 @@ export class NotificationService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
-    private readonly amqp: AmqpConnection
+    private readonly amqp: RmqClientService
   ) { }
 
   // async handleTeamAddMember(payload: AddMemberEventPayload) {

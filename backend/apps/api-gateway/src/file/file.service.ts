@@ -1,19 +1,17 @@
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Injectable } from '@nestjs/common';
-import { CHATBOT_EXCHANGE, FILE_EXCHANGE, FILE_PATTERN } from '@app/contracts';
+import { FILE_EXCHANGE, FILE_PATTERN } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
-import { MinioWebhookEvent } from '../webhooks/dto/hook-upload.dto';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class FileService {
-    constructor(private readonly amqp: AmqpConnection) { }
+    constructor(private readonly amqp: RmqClientService) { }
 
     private async sendRpcRequest(routingKey: string, payload: any) {
         const response = await this.amqp.request({
             exchange: FILE_EXCHANGE,
             routingKey: routingKey,
             payload: payload,
-            timeout: 5000,
         });
         return unwrapRpcResult(response);
     }

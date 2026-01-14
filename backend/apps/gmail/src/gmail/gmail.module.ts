@@ -13,6 +13,7 @@ import {
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { GmailController } from './gmail.controller';
 import { GmailService } from './gmail.service';
+import { RmqModule } from '@app/common';
 
 @Module({
     imports: [
@@ -34,35 +35,9 @@ import { GmailService } from './gmail.service';
                 },
             }),
         }),
-        RabbitMQModule.forRootAsync({
-            imports: [ClientConfigModule],
-            inject: [ClientConfigService],
-            useFactory: (cfg: ClientConfigService) => ({
-                exchanges: [
-                    {
-                        name: GMAIL_EXCHANGE,
-                        type: 'direct',
-                    },
-                    {
-                        name: EVENTS_EXCHANGE,
-                        type: 'topic',
-                    }
-                ],
-                uri: cfg.getRMQUrl(),
-                connectionInitOptions: { wait: true, timeout: 20000 },
-                logger: {
-                    error: (str: string) => {
-                        console.error('[RabbitMQ Error]', str);
-                    },
-                    log: (str: string) => {
-                        console.log('[RabbitMQ]', str);
-                    },
-                    warn: (str: string) => {
-                        console.warn('[RabbitMQ Warning]', str);
-                    },
-                },
-            }),
-        }),
+        RmqModule.register({
+            exchanges: [{ name: GMAIL_EXCHANGE, type: 'direct' }],
+        })
     ],
     controllers: [GmailController],
     providers: [GmailService],

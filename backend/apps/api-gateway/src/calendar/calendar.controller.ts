@@ -15,12 +15,11 @@ import { GetEventDto } from './dto/get-event.dto';
 export class CalendarController {
   constructor(private readonly calendarService: CalendarService) { }
 
-  // 1. Lấy danh sách sự kiện
   @Get()
   @Roles(Role.ADMIN, Role.USER)
   getEvents(
     @CurrentUser() user: any,
-    @Query() filter: GetEventDto // Hứng query params vào đây
+    @Query() filter: GetEventDto
   ) {
     return this.calendarService.listEvents(user.id, filter);
   }
@@ -30,21 +29,19 @@ export class CalendarController {
   getCalendars(@CurrentUser() user: any) {
     return this.calendarService.listCalendars(user.id);
   }
-  // api-gateway/src/calendar/calendar.controller.ts
-  @Get(':id') // <--- Thêm cái này
+
+  @Get(':id')
   @Roles(Role.ADMIN, Role.USER)
   getEvent(@CurrentUser() user: any, @Param('id') eventId: string) {
     return this.calendarService.getEvent(user.id, eventId);
   }
 
-  // 2. Tạo sự kiện mới
   @Post()
   @Roles(Role.ADMIN, Role.USER)
   createEvent(@CurrentUser() user: any, @Body() dto: CreateEventDto) {
     return this.calendarService.createEvent(user.id, dto);
   }
 
-  // 3. Xóa sự kiện
   @Delete(':id')
   @Roles(Role.ADMIN, Role.USER)
   deleteEvent(@CurrentUser() user: any, @Param('id') eventId: string) {

@@ -25,11 +25,10 @@ import {
   REDIS_PATTERN,
   UserSkill,
   UserOnboardingDto,
+  EVENTS,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
-import { EVENTS } from '@app/contracts/events/events.pattern';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { unwrapRpcResult } from '@app/common';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class UserService {
@@ -45,7 +44,7 @@ export class UserService {
     private readonly followRepo: Repository<Follow>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly amqp: AmqpConnection
+    private readonly amqp: RmqClientService
   ) { }
 
   private async create(createUserDto: Partial<User>) {
@@ -381,11 +380,11 @@ export class UserService {
 
   async findManyByIds(ids: string[], forDiscussion?: boolean) {
     console.log(ids.length)
-    const cachedUsers: Partial<User>[] = unwrapRpcResult(await this.amqp.request({
+    const cachedUsers = await this.amqp.request<Partial<User>[]>({
       exchange: REDIS_EXCHANGE,
       routingKey: REDIS_PATTERN.GET_USER_INFO,
       payload: ids,
-    }))
+    })
 
     const cachedIds = new Set(cachedUsers.map(u => u.id));
     const missingIds = ids.filter(id => !cachedIds.has(id));

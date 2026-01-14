@@ -9,9 +9,11 @@ import {
   EPIC_EXCHANGE,
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
+    ClientConfigModule,
     TypeOrmModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],
@@ -23,20 +25,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       }),
     }),
     TypeOrmModule.forFeature([Epic]),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (configService: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: EPIC_EXCHANGE,
-            type: 'direct',
-          },
-        ],
-        uri: configService.getRMQUrl(),
-        enableControllerDiscovery: true
-      }),
-    })
+    RmqModule.register({ exchanges: [{ name: EPIC_EXCHANGE, type: 'direct' }] }),
   ],
   controllers: [EpicsController],
   providers: [EpicsService],

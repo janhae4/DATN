@@ -11,7 +11,7 @@ import { TaskLabel as TaskLabelEvent } from '@app/contracts/events/task-label.ev
 import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, lastValueFrom } from 'rxjs';
-import { unwrapRpcResult } from '@app/common';
+import { RmqClientService, } from '@app/common';
 import { List } from '@app/contracts/list/list/list.entity';
 
 @Injectable()
@@ -22,7 +22,7 @@ export class TasksService {
     private readonly taskRepository: Repository<Task>,
     @InjectRepository(TaskLabel)
     private readonly taskLabelRepository: Repository<TaskLabel>,
-    private readonly amqpConnection: AmqpConnection,
+    private readonly amqpConnection: RmqClientService,
     @Inject(LABEL_CLIENT) private readonly labelClient: ClientProxy,
     @Inject(PROJECT_CLIENT) private readonly projectClient: ClientProxy,
     @Inject(LIST_CLIENT) private readonly listClient: ClientProxy,
@@ -33,7 +33,6 @@ export class TasksService {
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
       payload: token,
-      timeout: RPC_TIMEOUT,
     });
     return response.id;
   }
@@ -128,12 +127,11 @@ export class TasksService {
       }
 
       try {
-        const permissionResult = await this.amqpConnection.request({
+        await this.amqpConnection.request({
           exchange: TEAM_EXCHANGE,
           routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
           payload: { userId, teamId: project.teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
         });
-        unwrapRpcResult(permissionResult);
       } catch (err) {
         console.error('Permission verification failed:', err);
         throw new BadRequestException('You do not have permission to delete tasks in this project');
@@ -183,9 +181,11 @@ export class TasksService {
     const allLabelIds = [...new Set(tasksWithLabels.flatMap(item => item.labelIds))];
 
     try {
-      const labelsDetails = await lastValueFrom(
-        this.labelClient.send<Label[]>(TaskLabelEvent.GET_DETAILS, { labelIds: allLabelIds })
-      );
+      const labelsDetails = await this.amqpConnection.request<Label[]>({
+        exchange: LABEL_EXCHANGE,
+        routingKey: LABEL_PATTERNS.GET_DETAILS,
+        payload: { ids: allLabelIds }
+      });
 
       if (!labelsDetails || !Array.isArray(labelsDetails)) return;
 
@@ -224,31 +224,26 @@ export class TasksService {
 
   async suggestTask(userId: string, objective: string, projectId: string, sprintId: string, teamId: string) {
     console.log("Sending AI request for user:", userId, "with objective:", objective, "team Id:", teamId);
-    unwrapRpcResult(await this.amqpConnection.request({
+    await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
       payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
-      timeout: RPC_TIMEOUT,
-    }))
+    })
 
     let members = [];
     console.log("PERMISSION GRANTED")
     if (sprintId) {
-      const response = await this.amqpConnection.request({
+      const memberIds = await this.amqpConnection.request<MemberDto[]>({
         exchange: TEAM_EXCHANGE,
         routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
         payload: teamId,
-        timeout: RPC_TIMEOUT,
       });
-      const memberIds: MemberDto[] = unwrapRpcResult(response);
-      console.log("PERMISSION TEAMID GRANTED")
-      console.log("memberIds", memberIds)
 
-      members = unwrapRpcResult(await this.amqpConnection.request({
+      members = await this.amqpConnection.request({
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.GET_BULK_SKILLS,
         payload: memberIds.map(m => m.id),
-      }))
+      })
 
       console.log("PERMISSION MEMBERS GRANTED")
     }
@@ -284,13 +279,11 @@ export class TasksService {
   }
 
   private async verifyPermission(userId: string, teamId: string) {
-    unwrapRpcResult(
-      await this.amqpConnection.request({
-        exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-        payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
-      })
-    )
+    await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+    })
   }
 
   private async _getTasksCommon(query: SelectQueryBuilder<Task>, filters: BaseTaskFilterDto, userId: string, projectId?: string, teamId?: string) {
@@ -314,13 +307,11 @@ export class TasksService {
 
     let member: MemberDto | null = null;
     if (teamId) {
-      member = unwrapRpcResult(
-        await this.amqpConnection.request({
-          exchange: TEAM_EXCHANGE,
-          routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
-          payload: { teamId, userId },
-        })
-      )
+      member = await this.amqpConnection.request({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
+        payload: { teamId, userId },
+      })
       if (!member) throw new NotFoundException('Member not found');
     }
 
@@ -355,8 +346,7 @@ export class TasksService {
       let lists: List[] = [];
       const payload = projectId ? { projectId } : { teamId };
       const pattern = projectId ? LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID : LIST_PATTERNS.FIND_ALL_BY_TEAM;
-      lists = unwrapRpcResult(await firstValueFrom(this.listClient.send(pattern, payload)));
-
+      lists = await this.amqpConnection.request<List[]>({ exchange: LIST_EXCHANGE, routingKey: pattern, payload });
       const targetCategoryListIds = lists
         .filter(l => isCompleted ? l.category === ListCategoryEnum.DONE : l.category !== ListCategoryEnum.DONE)
         .map(l => l.id);
@@ -570,9 +560,11 @@ export class TasksService {
     if (labelIds && labelIds.length > 0) {
       try {
 
-        const labels = await lastValueFrom(
-          this.labelClient.send<Label[]>(TaskLabelEvent.GET_DETAILS, { labelIds })
-        );
+        const labels = await this.amqpConnection.request({
+          exchange: LABEL_EXCHANGE,
+          routingKey: LABEL_PATTERNS.GET_DETAILS,
+          payload: { labelIds },
+        });
 
         console.log("labels------------ ", labels)
 
@@ -609,11 +601,11 @@ export class TasksService {
     projectId: string,
   ) {
     console.log("completeSprint", sprintId)
-    const lists = unwrapRpcResult(
-      await firstValueFrom(
-        this.listClient.send(LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId })
-      )
-    ) as List[];
+    const lists = await this.amqpConnection.request<List[]>({
+      exchange: LIST_EXCHANGE,
+      routingKey: LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID,
+      payload: { projectId }
+    });
 
     console.log("lists", lists)
 
@@ -645,13 +637,11 @@ export class TasksService {
     console.log("bulkPayload", bulkPayload)
 
     if (bulkPayload.length > 0) {
-      unwrapRpcResult(
-        await this.amqpConnection.request({
-          exchange: USER_EXCHANGE,
-          routingKey: USER_PATTERNS.INCREMENT_BULK_SKILLS,
-          payload: bulkPayload,
-        })
-      )
+      await this.amqpConnection.request({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.INCREMENT_BULK_SKILLS,
+        payload: bulkPayload,
+      })
     }
 
     return await this.moveIncompleteTasksToBacklog(sprintId, completeList, incompleteList[0]);
@@ -701,13 +691,12 @@ export class TasksService {
   }
 
   async getAllTaskLabel(projectId: string, teamId: string, userId: string) {
-    unwrapRpcResult(
-      await this.amqpConnection.request({
-        exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-        payload: { teamId, userId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
-      })
-    )
+    await this.amqpConnection.request({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+      payload: { teamId, userId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+    })
+
     try {
       return this.taskLabelRepository.find({
         where: { projectId },

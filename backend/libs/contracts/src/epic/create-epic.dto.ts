@@ -80,6 +80,11 @@ export class CreateEpicDto {
   @IsOptional()
   dueDate?: string;
 
-  // Đã XÓA: sprintId (Entity không có cột này)
-  // Đã XÓA: memberIds (Entity không có relation trực tiếp này)
+  @ApiProperty({
+    example: '660e8400-e29b-41d4-a716-446655440000',
+    description: 'ID của team chứa epic này (nếu có)',
+  })
+  @IsOptional()
+  @IsUUID()
+  teamId: string
 }

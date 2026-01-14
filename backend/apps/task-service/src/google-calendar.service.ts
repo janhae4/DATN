@@ -1,15 +1,16 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { calendar_v3, google } from 'googleapis';
 import { ClientProxy } from '@nestjs/microservices';
-import { REDIS_CLIENT, REDIS_PATTERN } from '@app/contracts';
+import { REDIS_CLIENT, REDIS_EXCHANGE, REDIS_PATTERN } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
+import { RmqClientService } from '@app/common';
 @Injectable()
 export class GoogleCalendarService {
   private readonly logger = new Logger(GoogleCalendarService.name);
 
   constructor(
-    @Inject(REDIS_CLIENT) private readonly redisClient: ClientProxy,
-  ) {}
+    private readonly amqp: RmqClientService
+  ) { }
 
   private async getCalendarClient(
     userId: string,
@@ -32,7 +33,8 @@ export class GoogleCalendarService {
       Date.now() > oAuth2Client.credentials.expiry_date
     ) {
       const { credentials } = await oAuth2Client.refreshAccessToken();
-      this.redisClient.emit(REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
+
+      this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
         userId,
         accessToken: credentials.access_token,
         refreshToken: credentials.refresh_token,
@@ -48,17 +50,17 @@ export class GoogleCalendarService {
       description: task.description || '',
       start: task.startDate
         ? {
-            dateTime: new Date(task.startDate).toISOString(),
-            timeZone: 'Asia/Ho_Chi_Minh',
-          }
+          dateTime: new Date(task.startDate).toISOString(),
+          timeZone: 'Asia/Ho_Chi_Minh',
+        }
         : undefined,
       end: task.dueDate
         ? {
-            dateTime: new Date(
-              new Date(task.dueDate).getTime() + 60 * 60 * 1000,
-            ).toISOString(),
-            timeZone: 'Asia/Ho_Chi_Minh',
-          }
+          dateTime: new Date(
+            new Date(task.dueDate).getTime() + 60 * 60 * 1000,
+          ).toISOString(),
+          timeZone: 'Asia/Ho_Chi_Minh',
+        }
         : undefined,
     };
   }

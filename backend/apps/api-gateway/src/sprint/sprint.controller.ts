@@ -19,31 +19,11 @@ export class SprintController {
   constructor(
     private readonly sprintService: SprintService,
     private readonly teamService: TeamService,
-    @Inject(PROJECT_EXCHANGE) private readonly projectClient: ClientProxy,
   ) { }
 
   @Post()
   async create(@Body() createSprintDto: CreateSprintDto, @CurrentUser('id') userId: string) {
-    if (!createSprintDto.userId) {
-      createSprintDto.userId = userId;
-    }
-
-    let teamId = createSprintDto.teamId;
-    if (!teamId && createSprintDto.projectId) {
-      const project = unwrapRpcResult(await firstValueFrom(
-        this.projectClient.send(PROJECT_PATTERNS.GET_BY_ID, { id: createSprintDto.projectId })
-      ));
-      teamId = project?.teamId;
-    }
-
-    if (teamId) {
-      await this.teamService.verifyPermission(userId, teamId, [
-        MemberRole.OWNER,
-        MemberRole.ADMIN,
-      ]);
-    }
-
-    return this.sprintService.create(createSprintDto);
+    return this.sprintService.create({ ...createSprintDto, userId });
   }
 
   @Get()

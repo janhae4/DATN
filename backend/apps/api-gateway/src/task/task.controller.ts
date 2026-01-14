@@ -40,9 +40,7 @@ export class TaskController {
   constructor(
     private readonly taskService: TaskService,
     private readonly fileService: FileService,
-    private readonly teamService: TeamService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-    @Inject(PROJECT_EXCHANGE) private readonly projectClient: ClientProxy,
   ) { }
 
   @Get(":teamId/tasklabel")

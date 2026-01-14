@@ -1,19 +1,18 @@
 import { Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { google, calendar_v3 } from 'googleapis';
 import { AUTH_EXCHANGE, AUTH_PATTERN } from '@app/contracts';
 import { CreateEventDto } from 'apps/api-gateway/src/calendar/dto/create-event.dto';
 import { UpdateEventDto } from 'apps/api-gateway/src/calendar/dto/update-event.dto';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class CalendarService {
   constructor(
-    private readonly amqp: AmqpConnection, // Dùng cái này gọi Auth Service
+    private readonly amqp: RmqClientService,
   ) { }
 
   private async getCalendarClient(userId: string): Promise<calendar_v3.Calendar> {
     try {
-      // Gọi Auth Service (RPC golevelup)
       const tokens = await this.amqp.request<any>({
         exchange: AUTH_EXCHANGE,
         routingKey: AUTH_PATTERN.GET_GOOGLE_TOKEN,

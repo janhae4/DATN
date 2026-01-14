@@ -65,6 +65,11 @@ export * from './client-config/client-config.module';
 export * from './client-config/client-config.service';
 
 /*----
+CALENDAR
+-----*/
+export * from './calendar/calendar.pattern';
+
+/*----
 EMAIL
 -----*/
 export * from './email/email.patterns';

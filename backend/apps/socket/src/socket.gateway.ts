@@ -34,6 +34,7 @@ import {
 } from '@app/contracts';
 import * as cookie from 'cookie';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { RmqClientService } from '@app/common';
 
 interface AuthenticatedSocket extends Socket {
   data: {
@@ -60,7 +61,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   protected readonly logger = new Logger(SocketGateway.name);
 
-  constructor(private readonly amqpConnection: AmqpConnection) { }
+  constructor(private readonly amqpConnection: RmqClientService) { }
 
   async _validateToken(client: AuthenticatedSocket): Promise<JwtDto | null> {
     const accessToken = cookie.parse(
@@ -81,7 +82,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
       payload: accessToken,
-      timeout: RPC_TIMEOUT,
     });
 
     if (!user) {
@@ -318,7 +318,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           teamId: teamId,
           socketId: client.id
         },
-        timeout: 10000,
       })
 
       if (!savedDiscussion) {
@@ -371,7 +370,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         summarizeFileName: fileId,
         socketId: client.id
       },
-      timeout: 10000,
     })
 
     if (!savedDiscussion) {

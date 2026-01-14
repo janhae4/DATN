@@ -7,26 +7,25 @@ import {
   ChangePasswordDto,
   ConfirmResetPasswordDto,
   CreateAuthDto,
-  Error,
   ForgotPasswordDto,
   GoogleAccountDto,
   JwtDto,
   LoginDto,
   LoginResponseDto,
   Provider,
-  RPC_TIMEOUT,
   User,
   USER_EXCHANGE,
   USER_PATTERNS,
 } from '@app/contracts';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { unwrapRpcResult } from '../common/helper/rpc';
 import { UserOnboardingDto } from './dto/user-onboarding.dto';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class AuthService {
   logger: any;
-  constructor(private readonly amqp: AmqpConnection, private readonly userService: UserService) { }
+  constructor(private readonly amqp: RmqClientService, 
+    private readonly userService: UserService
+  ) { }
 
   private setCookies(
     accessToken: string,
@@ -55,86 +54,77 @@ export class AuthService {
   }
 
   async register(payload: CreateAuthDto) {
-    return unwrapRpcResult(await this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.REGISTER,
-      payload,
-      timeout: RPC_TIMEOUT
-    }))
+      payload
+    })
   }
 
   async verifyLocal(userId: string, code: string) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VERIFY_LOCAL,
-      payload: { userId, code },
-      timeout: RPC_TIMEOUT
-    }))
+      payload: { userId, code }
+    })
   }
 
   async verifyForgetPasswordCode(userId: string, code: string, password: string) {
     console.log(userId, code, password);
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VERIFY_FORGOT_PASSWORD,
-      payload: { userId, code, password },
-      timeout: RPC_TIMEOUT
-    }))
+      payload: { userId, code, password }
+    })
   }
 
   async verifyForgetPasswordToken(token: string, password: string) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN,
-      payload: { token, password },
-      timeout: RPC_TIMEOUT
-    }))
+      payload: { token, password }
+    })
   }
 
   async verifyToken(token: string) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VERIFY_LOCAL_TOKEN,
-      payload: { token },
-      timeout: RPC_TIMEOUT
-    }))
+      payload: { token }
+    })
   }
 
   async resetCode(userId: string) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.RESET_CODE,
-      payload: { userId },
-      timeout: RPC_TIMEOUT
-    }))
+      payload: { userId }
+    })
   }
 
   async resetVerificationCode(userId: string) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.RESET_VERIFICATION_CODE,
-      payload: { userId },
-      timeout: RPC_TIMEOUT
-    }))
+      payload: { userId }
+    })
   }
 
   async changePassword(changePasswordDto: ChangePasswordDto) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.CHANGE_PASSWORD,
-      payload: changePasswordDto,
-      timeout: RPC_TIMEOUT
-    }))
+      payload: changePasswordDto
+    })
   }
 
   async login(payload: LoginDto, response: Response) {
     try {
-      const token = unwrapRpcResult(await this.amqp.request<LoginResponseDto>({
+      const token = await this.amqp.request<LoginResponseDto>({
         exchange: AUTH_EXCHANGE,
         routingKey: AUTH_PATTERN.LOGIN,
         payload: payload,
-        timeout: RPC_TIMEOUT
-      }))
+      });
 
       this.setCookies(token.accessToken, token.refreshToken, response);
       return { message: "Login successfully", isFirstLogin: token.isFirstLogin };
@@ -159,8 +149,7 @@ export class AuthService {
     const token: LoginResponseDto = await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.REFRESH,
-      payload: refreshToken,
-      timeout: RPC_TIMEOUT
+      payload: refreshToken
     })
 
     if (!token.accessToken || !token.refreshToken) {
@@ -186,50 +175,46 @@ export class AuthService {
   }
 
   async validateToken(token: string): Promise<JwtDto> {
-    return await unwrapRpcResult(this.amqp.request({
+    return this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
-      payload: token,
-      timeout: RPC_TIMEOUT
-    }));
+      payload: token
+    });
   }
 
   async handleGoogleCallback(user: GoogleAccountDto, response: Response) {
-    const tokens: LoginResponseDto = await unwrapRpcResult(this.amqp.request<LoginResponseDto>({
+    const tokens = await this.amqp.request<LoginResponseDto>({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.GOOGLE_CALLBACK,
-      payload: user,
-      timeout: RPC_TIMEOUT
-    }));
+      payload: user
+    });
     this.setCookies(tokens.accessToken, tokens.refreshToken, response);
+    console.log("GOOGLE CALLBACK SET COOKIES");
     return response.redirect(`${process.env.CLIENT_URL || 'http://localhost:5000'}/dashboard`);
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.FORGET_PASSWORD,
-      payload: forgotPasswordDto,
-      timeout: RPC_TIMEOUT
-    }));
+      payload: forgotPasswordDto
+    });
   }
 
   async forgotPasswordConfirm(confirmResetPasswordDto: ConfirmResetPasswordDto) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.RESET_PASSWORD_CONFIRM,
-      payload: confirmResetPasswordDto,
-      timeout: RPC_TIMEOUT
-    }));
+      payload: confirmResetPasswordDto
+    });
   }
 
   async verifyEmail(token: string) {
-    return await unwrapRpcResult(this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VERIFY_LOCAL_TOKEN,
-      payload: token,
-      timeout: RPC_TIMEOUT
-    }));
+      payload: token
+    });
   }
 
   async getGoogleConnectionStatus(userId: string): Promise<boolean> {

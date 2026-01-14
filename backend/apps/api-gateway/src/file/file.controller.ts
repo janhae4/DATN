@@ -29,7 +29,6 @@ import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { Role } from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
-import type { Response } from 'express';
 
 @ApiTags('File Management')
 @ApiBearerAuth()

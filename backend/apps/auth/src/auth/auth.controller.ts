@@ -1,5 +1,4 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices'; // Payload vẫn được import nhưng không được dùng
 import { AuthService } from './auth.service';
 import {
   AUTH_EXCHANGE,
@@ -12,7 +11,7 @@ import {
   JwtDto,
   LoginDto,
 } from '@app/contracts';
-import { MessageHandlerErrorBehavior, RabbitRPC } from '@golevelup/nestjs-rabbitmq';
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import { RabbitPayload } from '@golevelup/nestjs-rabbitmq/lib/rabbitmq.decorators';
 import { customErrorHandler } from '@app/common';
 

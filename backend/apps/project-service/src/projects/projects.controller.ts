@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { RabbitRPC } from '@golevelup/nestjs-rabbitmq'; 
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import {
   PROJECT_PATTERNS,
   CreateProjectDto,
@@ -7,40 +7,54 @@ import {
   PROJECT_EXCHANGE,
 } from '@app/contracts';
 import { ProjectsService } from './projects.service';
-import { MessagePattern } from '@nestjs/microservices';
 
 @Controller()
 export class ProjectsController {
-  constructor(private readonly projectService: ProjectsService) {}
+  constructor(private readonly projectService: ProjectsService) { }
 
-  // --- CREATE ---
-  @MessagePattern(PROJECT_PATTERNS.CREATE)
-  async create(createProjectDto: CreateProjectDto) {
-    console.log('Received create request:', createProjectDto);
-    return await this.projectService.create(createProjectDto);
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.CREATE,
+    queue: PROJECT_PATTERNS.CREATE,
+  })
+  create(createProjectDto: CreateProjectDto) {
+    return this.projectService.create(createProjectDto);
   }
 
-  // --- READ ---
-
-  @MessagePattern(PROJECT_PATTERNS.GET_BY_ID)
-  async findOne(payload: { id: string }) {
-    const project = await this.projectService.findOne(payload.id);
-    return project;
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.GET_BY_ID,
+    queue: PROJECT_PATTERNS.GET_BY_ID,
+  })
+  findOne(payload: { id: string }) {
+    return this.projectService.findOne(payload.id);
   }
 
-  @MessagePattern(PROJECT_PATTERNS.UPDATE)
-  async update(payload: { id: string; updateProjectDto: UpdateProjectDto }) {
-    const { id, updateProjectDto } = payload;
-    return await this.projectService.update(id, updateProjectDto);
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.UPDATE,
+    queue: PROJECT_PATTERNS.UPDATE,
+  })
+  update(payload: { id: string; updateProjectDto: UpdateProjectDto }) {
+    return this.projectService.update(payload.id, payload.updateProjectDto);
   }
 
-  @MessagePattern(PROJECT_PATTERNS.REMOVE)
-  async remove(payload: { id: string }) {
-    return await this.projectService.remove(payload.id);
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.REMOVE,
+    queue: PROJECT_PATTERNS.REMOVE,
+  })
+
+  remove(payload: { id: string }) {
+    return this.projectService.remove(payload.id);
   }
 
-  @MessagePattern(PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID)
-  async findAllByTeamId(payload: { teamId: string }) {
-    return await this.projectService.findAllByTeamId(payload.teamId);
+  @RabbitRPC({
+    exchange: PROJECT_EXCHANGE,
+    routingKey: PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID,
+    queue: PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID,
+  })
+  findAllByTeamId(payload: { teamId: string }) {
+    return this.projectService.findAllByTeamId(payload.teamId);
   }
 }

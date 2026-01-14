@@ -13,7 +13,7 @@ import {
   USER_EXCHANGE,
   UserSkill,
 } from '@app/contracts';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
@@ -27,27 +27,10 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       }),
     }),
     TypeOrmModule.forFeature([User, Account, Follow, UserSkill]),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: USER_EXCHANGE,
-            type: 'direct',
-          },
-          {
-            name: TEAM_EXCHANGE,
-            type: 'direct',
-          },
-          {
-            name: EVENTS_EXCHANGE,
-            type: 'topic'
-          }
-        ],
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-      }),
+    RmqModule.register({
+      exchanges: [
+        { name: USER_EXCHANGE, type: 'direct' },
+      ]
     })
   ],
   controllers: [UserController],

@@ -6,27 +6,15 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { FileSchema } from './schema/file.schema';
 import { FileService } from './file.service';
 import { MinioService } from './minio.service';
+import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
     ClientConfigModule,
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: FILE_EXCHANGE,
-            type: 'direct',
-            options: {
-              durable: true,
-            },
-          }
-        ],
-        uri: config.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-        enableControllerDiscovery: true
-      })
+    RmqModule.register({
+      exchanges: [
+        { name: FILE_EXCHANGE, type: 'topic' },
+      ],
     }),
     MongooseModule.forRootAsync({
       useFactory: (configService: ClientConfigService) => ({

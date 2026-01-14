@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery, UpdateQuery } from 'mongoose';
 import { BadRequestException, Error as RpcError, MemberRole, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS } from '@app/contracts';
@@ -6,7 +6,7 @@ import { FileDocument } from './schema/file.schema';
 import { MinioService } from './minio.service';
 import { randomUUID } from 'crypto';
 import path from 'path';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class FileService {
@@ -14,7 +14,7 @@ export class FileService {
     constructor(
         @InjectModel(File.name) private readonly fileModel: Model<FileDocument>,
         private readonly minioService: MinioService,
-        private readonly amqp: AmqpConnection
+        private readonly amqp: RmqClientService
     ) { }
 
     async deleteOne(query: FilterQuery<FileDocument>) {
@@ -180,7 +180,6 @@ export class FileService {
             throw new BadRequestException('Failed to update file record');
         }
 
-        // 4. Thông báo qua Socket để Client cập nhật UI ngay lập tức
         this.amqp.publish(
             SOCKET_EXCHANGE,
             FILE_PATTERN.COMPLETE_UPLOAD,
@@ -192,7 +191,6 @@ export class FileService {
             }
         );
 
-        // 5. Gửi sang Chatbot/AI để xử lý nội dung bên trong tập tin
         this.amqp.publish(
             CHATBOT_EXCHANGE,
             CHATBOT_PATTERN.PROCESS_DOCUMENT,
@@ -287,7 +285,7 @@ export class FileService {
         await this.fileModel.findOneAndUpdate(query, { status: fileStatus }, { new: true });
     }
 
-    async getViewUrl(fileId: string, userId: string, projectId?: string) { // Đổi tên hàm
+    async getViewUrl(fileId: string, userId: string, projectId?: string) {
         const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER], userId, projectId);
 
         const fileExtension = path.extname(file.originalName).toLowerCase();
@@ -296,7 +294,7 @@ export class FileService {
             throw new BadRequestException('File type cannot be viewed directly.');
         }
 
-        const viewUrl = await this.minioService.getPreSignedViewUrl( // Gọi hàm mới
+        const viewUrl = await this.minioService.getPreSignedViewUrl(
             file.storageKey,
             file.originalName
         );

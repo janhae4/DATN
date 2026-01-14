@@ -1,41 +1,99 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CalendarService } from './calendar-service.service';
-import { CreateEventDto } from 'apps/api-gateway/src/calendar/dto/create-event.dto';
-import { UpdateEventDto } from 'apps/api-gateway/src/calendar/dto/update-event.dto';
-
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
+import { CALENDAR_EXCHANGE, CALENDAR_PATTERN } from '@app/contracts';
+import { customErrorHandler } from '@app/common';
 
 @Controller()
 export class CalendarController {
   constructor(private readonly calendarService: CalendarService) { }
 
-@MessagePattern('calendar.listEvents') 
-  async listEvents(@Payload() data: { userId: string; startTime?: string; endTime?: string; calendarId?: string }) {
+  @RabbitRPC({
+    exchange: CALENDAR_EXCHANGE,
+    routingKey: CALENDAR_PATTERN.GET_EVENTS,
+    queue: CALENDAR_PATTERN.GET_EVENTS,
+    errorHandler: customErrorHandler
+  })
+  listEvents(data: {
+    userId: string;
+    startTime?: string;
+    endTime?: string;
+    calendarId?: string
+  }) {
     return this.calendarService.listEvents(data.userId, data);
   }
-  @MessagePattern('calendar.createEvent')
-  async createEvent(@Payload() data: { userId: string; dto: CreateEventDto }) {
-    console.log("data calendar: ", data)
-    return this.calendarService.createEvent(data.userId, data.dto);
+
+  @RabbitRPC({
+    exchange: CALENDAR_EXCHANGE,
+    routingKey: CALENDAR_PATTERN.CREATE_EVENT,
+    queue: CALENDAR_PATTERN.CREATE_EVENT,
+    errorHandler: customErrorHandler
+  })
+  createEvent(data: {
+    userId: string;
+    summary: string;
+    description: string;
+    startTime: string;
+    endTime: string;
+  }) {
+    return this.calendarService.createEvent(data.userId, {
+      summary: data.summary,
+      description: data.description,
+      startTime: data.startTime,
+      endTime: data.endTime
+    });
   }
 
-  @MessagePattern('calendar.deleteEvent')
-  async deleteEvent(@Payload() data: { userId: string; eventId: string }) {
+  @RabbitRPC({
+    exchange: CALENDAR_EXCHANGE,
+    routingKey: CALENDAR_PATTERN.DELETE_EVENT,
+    queue: CALENDAR_PATTERN.DELETE_EVENT,
+    errorHandler: customErrorHandler
+  })
+  deleteEvent(data: { userId: string; eventId: string }) {
     return this.calendarService.deleteEvent(data.userId, data.eventId);
   }
 
-  @MessagePattern('calendar.getEvent')
-  async getEvent(@Payload() data: { userId: string; eventId: string }) {
+  @RabbitRPC({
+    exchange: CALENDAR_EXCHANGE,
+    routingKey: CALENDAR_PATTERN.GET_EVENT_BY_ID,
+    queue: CALENDAR_PATTERN.GET_EVENT_BY_ID,
+    errorHandler: customErrorHandler
+  })
+  getEvent(data: { userId: string; eventId: string }) {
     return this.calendarService.getEvent(data.userId, data.eventId);
   }
 
-  @MessagePattern('calendar.updateEvent')
-  async updateEvent(@Payload() data: { userId: string; eventId: string; dto: UpdateEventDto }) {
-    return this.calendarService.updateEvent(data.userId, data.eventId, data.dto);
+  @RabbitRPC({
+    exchange: CALENDAR_EXCHANGE,
+    routingKey: CALENDAR_PATTERN.UPDATE_EVENT,
+    queue: CALENDAR_PATTERN.UPDATE_EVENT,
+    errorHandler: customErrorHandler
+  })
+  updateEvent(data: {
+    userId: string;
+    eventId: string;
+    summary: string;
+    description?: string;
+    startTime?: string;
+    endTime?: string;
+    calendarId?: string
+  }) {
+    return this.calendarService.updateEvent(data.userId, data.eventId, {
+      summary: data.summary,
+      description: data.description,
+      startTime: data.startTime,
+      endTime: data.endTime
+    });
   }
 
-  @MessagePattern('calendar.listCalendars')
-  async listCalendars(@Payload() userId: string) {
+  @RabbitRPC({
+    exchange: CALENDAR_EXCHANGE,
+    routingKey: CALENDAR_PATTERN.GET_CALENDARS,
+    queue: CALENDAR_PATTERN.GET_CALENDARS,
+    errorHandler: customErrorHandler
+  })
+  listCalendars(userId: string) {
     return this.calendarService.listCalendars(userId);
   }
 }

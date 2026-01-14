@@ -15,7 +15,6 @@ import { customErrorHandler } from '@app/common';
 export class RedisController {
   constructor(private readonly redisService: RedisService) { }
 
-
   @RabbitRPC({
     exchange: REDIS_EXCHANGE,
     routingKey: REDIS_PATTERN.IS_TOKEN_USED,

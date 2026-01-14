@@ -1,10 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions } from '@nestjs/microservices';
 import { TeamModule } from './team/team.module';
-import { ClientConfigService } from '@app/contracts';
+import { RpcResponseInterceptor } from '@app/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(TeamModule);
+  app.useGlobalInterceptors(new RpcResponseInterceptor());
   await app.init();
 }
 bootstrap();

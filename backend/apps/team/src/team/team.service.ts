@@ -37,9 +37,8 @@ import {
   NOTIFICATION_PATTERN,
   NotificationType,
 } from '@app/contracts';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { RemoveTeamEventPayload } from '@app/contracts/team/dto/remove-team.dto';
-import { unwrapRpcResult } from '@app/common';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class TeamService {
@@ -50,7 +49,7 @@ export class TeamService {
     private teamRepo: Repository<Team>,
     @InjectRepository(TeamMember)
     private memberRepo: Repository<TeamMember>,
-    private readonly amqp: AmqpConnection,
+    private readonly amqp: RmqClientService,
     @InjectDataSource()
     private readonly dataSource: DataSource,
   ) { }
@@ -66,7 +65,6 @@ export class TeamService {
         exchange: REDIS_EXCHANGE,
         routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
         payload: userIds,
-        timeout: 2000,
       });
       return new Map(profiles.map((p) => [p.id, p]));
     } catch (error) {
@@ -165,12 +163,11 @@ export class TeamService {
     this.logger.log(`Validating members for new team "${name}"...`);
 
 
-    const ownerProfile = unwrapRpcResult(await this.amqp.request<User>({
+    const ownerProfile = await this.amqp.request<User>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_ONE,
       payload: ownerId,
-      timeout: 2000,
-    }));
+    });
 
     if (!ownerProfile) {
       throw new BadRequestException('Owner not found.');
@@ -209,6 +206,8 @@ export class TeamService {
       teamSnapshot,
       owner: ownerProfile,
       members: [ownerProfile],
+      membersToNotify: savedTeam.members.map(m => m.userId),
+      createdAt: new Date(),
     } as CreateTeamEventPayload);
 
     if (memberIds && memberIds.length > 0) {
@@ -240,12 +239,11 @@ export class TeamService {
       `User [${requesterId}] adding ${memberIds.length} members to team [${teamId}].`,
     );
 
-    const usersFromCache: User[] = unwrapRpcResult(await this.amqp.request<EventUserSnapshot[]>({
+    const usersFromCache = await this.amqp.request<User[]>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
       payload: { userIds: [...memberIds, requesterId] },
-      timeout: 2000,
-    }));
+    });
 
 
     const updatedTeam = await this.dataSource.transaction(async (manager) => {
@@ -380,14 +378,12 @@ export class TeamService {
     this.logger.log(`Members removed from team [${teamId}]. Emitting event.`);
 
     const userIds = updatedTeam.members.map(m => m.userId);
-    const members: User[] = unwrapRpcResult(
+    const members: User[] =
       await this.amqp.request({
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
         payload: { userIds },
-        timeout: 1000,
       })
-    )
 
     const eventPayload: RemoveMemberEventPayload = {
       teamId,
@@ -414,7 +410,6 @@ export class TeamService {
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
         payload: { userId: [userId] },
-        timeout: 1000,
       });
       if (requesterProfile) {
         requesterName = requesterProfile.name;
@@ -556,7 +551,6 @@ export class TeamService {
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
         payload: { userIds: [requesterId] },
-        timeout: 1000,
       });
       requesterSnapshot = profile || { id: requesterId, name: 'Unknown' };
     } catch (e) {
@@ -711,11 +705,11 @@ export class TeamService {
     console.log("Members length", members.length);
     const userIds = members.map(m => m.userId);
     console.log("UserIds", userIds.length);
-    const users: User[] = unwrapRpcResult(await this.amqp.request({
+    const users: User[] = await this.amqp.request({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
       payload: { userIds }
-    }));
+    });
 
     const result = users.map((u) => {
       const member = members.find(m => m.userId === u.id);
@@ -750,14 +744,12 @@ export class TeamService {
 
     const memberIds = membersFromDb.map((m) => m.userId);
 
-    // 1. Thử lấy từ Cache trước
     let usersFromCache: EventUserSnapshot[] = [];
     try {
       usersFromCache = await this.amqp.request<EventUserSnapshot[]>({
         exchange: REDIS_EXCHANGE,
         routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
         payload: memberIds,
-        timeout: 2000,
       });
     } catch (cacheError) {
       this.logger.warn(
@@ -766,13 +758,11 @@ export class TeamService {
       );
     }
 
-    // 2. Tìm những ID bị thiếu trong Cache
     const foundInCacheIds = new Set(usersFromCache.map((u) => u.id));
     const missingIds = memberIds.filter((id) => !foundInCacheIds.has(id));
 
     let usersFromDb: User[] = [];
 
-    // 3. Nếu thiếu, gọi sang User Service để lấy
     if (missingIds.length > 0) {
       this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from User Service...`);
       try {
@@ -783,7 +773,6 @@ export class TeamService {
         });
         usersFromDb = Array.isArray(result) ? result : (result ? [result] : []);
 
-        // 4. Cập nhật lại vào Cache để lần sau nhanh hơn
         if (usersFromDb.length > 0) {
           this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, {
             users: usersFromDb,
@@ -794,7 +783,6 @@ export class TeamService {
       }
     }
 
-    // 5. Gộp danh sách từ Cache và DB
     const allFoundUsers: EventUserSnapshot[] = [
       ...usersFromCache,
       ...usersFromDb.map((u) => ({
@@ -805,7 +793,6 @@ export class TeamService {
       })),
     ];
 
-    // Tạo Map để lookup nhanh
     const profileMap = new Map(allFoundUsers.map((p) => [p.id, p]));
 
     const combinedMembers = membersFromDb.map((member) => {
@@ -881,12 +868,11 @@ export class TeamService {
   }
 
   async findParticipantRoles(userId: string, teamId: string) {
-    return unwrapRpcResult(await this.amqp.request<{ teamId: string; role: MemberRole }[]>({
+    return await this.amqp.request<{ teamId: string; role: MemberRole }[]>({
       exchange: REDIS_EXCHANGE,
       routingKey: REDIS_PATTERN.GET_USER_ROLE,
       payload: { userId, teamId },
-      timeout: 2000,
-    }))
+    })
   }
 
   async sendNotification(userId: string, teamId: string, message: NotificationEventDto) {

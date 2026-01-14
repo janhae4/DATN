@@ -1,9 +1,9 @@
 import { AddMemberEventPayload, ChangeRoleMember, CreateTeamEventPayload, LeaveMemberEventPayload, MemberRole, RemoveMemberEventPayload, RemoveTeamEventPayload, StoredRefreshTokenDto, Team, TEAM_EXCHANGE, TEAM_PATTERN, TransferOwnershipEventPayload, User } from '@app/contracts';
 import { BadRequestException } from '@app/contracts/error';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import Redis from 'ioredis';
+
 ConfigModule.forRoot();
 const TTL_24_HOURS = 86400;
 
@@ -12,7 +12,6 @@ export class RedisService {
   private redis: Redis;
   private readonly logger = new Logger(RedisService.name);
   constructor(
-    private readonly amqp: AmqpConnection
   ) {
     this.redis = new Redis({
       host: process.env.REDIS_CLIENT_HOST || 'localhost',

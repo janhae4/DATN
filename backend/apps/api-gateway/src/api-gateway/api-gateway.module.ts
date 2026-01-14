@@ -21,6 +21,7 @@ import { TaskModule } from '../task/task.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { VideoChatModule } from '../video-chat/video-chat.module';
 import { GmailModule } from '../gmail/gmail.module';
+import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
@@ -42,7 +43,8 @@ import { GmailModule } from '../gmail/gmail.module';
     CalendarModule,
     WebhooksModule,
     VideoChatModule,
-    GmailModule
+    GmailModule,
+    RmqModule
   ],
   controllers: [ApiGatewayController],
   providers: [RpcErrorToHttpFilter, ApiGatewayService],

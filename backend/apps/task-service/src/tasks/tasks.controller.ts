@@ -4,10 +4,7 @@ import { TasksService } from './tasks.service';
 import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, TEAM_EXCHANGE, GetTasksByProjectDto, GetTasksByTeamDto } from '@app/contracts';
 import { customErrorHandler } from '@app/common';
 import { LabelEvent } from '@app/contracts/events/label.event';
-import { finalize, map, Observable } from 'rxjs';
 import { AiStreamService } from './ai-stream.service';
-import type { Request } from 'express';
-import { unwrapRpcResult } from 'apps/api-gateway/src/common/helper/rpc';
 
 @Controller('tasks')
 export class TasksController {

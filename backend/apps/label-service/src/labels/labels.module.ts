@@ -8,6 +8,17 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
   imports: [
+    ClientConfigModule,
+    TypeOrmModule.forRootAsync({
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
+      useFactory: (configService: ClientConfigService) => ({
+        type: 'postgres',
+        url: configService.databaseLabelUrl,
+        entities: [Label],
+        synchronize: true,
+      }),
+    }),
     TypeOrmModule.forFeature([Label]),
     RabbitMQModule.forRootAsync({
       imports: [ClientConfigModule],
@@ -28,4 +39,4 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
   providers: [LabelsService],
   exports: [LabelsService],
 })
-export class LabelsModule {}
+export class LabelsModule { }

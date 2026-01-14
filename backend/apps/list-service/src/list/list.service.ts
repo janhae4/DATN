@@ -41,13 +41,13 @@ export class ListService {
   }
 
   async update(id: string, updateListDto: UpdateListDto): Promise<List> {
-    const list = await this.findOne(id); // Ensures the list exists
+    const list = await this.findOne(id);
     const updatedList = this.listRepository.merge(list, updateListDto);
     return this.listRepository.save(updatedList);
   }
 
   async remove(id: string): Promise<{ success: boolean }> {
-    const list = await this.findOne(id); // Ensures the list exists
+    const list = await this.findOne(id); 
     await this.listRepository.remove(list);
     return { success: true };
   }

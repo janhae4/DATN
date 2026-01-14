@@ -18,6 +18,7 @@ import {
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
 import { AiStreamService } from './ai-stream.service';
+import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
@@ -35,40 +36,11 @@ import { AiStreamService } from './ai-stream.service';
     TypeOrmModule.forFeature([Task, TaskLabel]),
 
     ClientConfigModule,
-    ClientsModule.registerAsync([
-      {
-        name: LABEL_CLIENT,
-        imports: [ClientConfigModule],
-        inject: [ClientConfigService],
-        useFactory: (configService: ClientConfigService) => configService.labelClientOptions,
-      },
-      {
-        name: PROJECT_CLIENT,
-        imports: [ClientConfigModule],
-        inject: [ClientConfigService],
-        useFactory: (configService: ClientConfigService) => configService.projectClientOptions,
-      },
-      {
-        name: LIST_CLIENT,
-        imports: [ClientConfigModule],
-        inject: [ClientConfigService],
-        useFactory: (configService: ClientConfigService) => configService.listClientOptions,
-      }
-    ]),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (configService: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: TASK_EXCHANGE,
-            type: 'direct',
-          }
-        ],
-        uri: configService.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-      }),
-    }),
+    RmqModule.register({
+      exchanges: [
+        { name: TASK_EXCHANGE, type: 'direct' }
+      ]
+    })
   ],
   controllers: [TasksController],
   providers: [TasksService, TasksController, AiStreamService],

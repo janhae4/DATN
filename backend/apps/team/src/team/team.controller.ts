@@ -4,15 +4,12 @@ import {
   AddMember,
   ChangeRoleMember,
   CreateTeamDto,
-  EVENTS,
-  EVENTS_EXCHANGE,
   LeaveMember,
   NotificationEventDto,
   RemoveMember,
   TEAM_EXCHANGE,
   TEAM_PATTERN,
   TransferOwnership,
-  User,
 } from '@app/contracts';
 import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import { customErrorHandler } from '@app/common';
