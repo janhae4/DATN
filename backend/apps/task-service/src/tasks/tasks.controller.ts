@@ -38,8 +38,8 @@ export class TasksController {
     queue: TASK_PATTERNS.DELETE_MANY,
     errorHandler: customErrorHandler,
   })
-  findAll(body: { taskIds: string[]; userId: string }) {
-    return this.tasksService.deleteMany(body.taskIds, body.userId);
+  findAll(body: { taskIds: string[]; userId: string, teamId: string }) {
+    return this.tasksService.deleteMany(body.taskIds, body.userId, body.teamId);
   }
 
   @RabbitRPC({
@@ -78,8 +78,8 @@ export class TasksController {
     queue: TASK_PATTERNS.UPDATE_MANY,
     errorHandler: customErrorHandler,
   })
-  updateMany(payload: { taskIds: string[]; updateTaskDto: UpdateTaskDto; userId: string }) {
-    return this.tasksService.updateMany(payload.taskIds, payload.updateTaskDto, payload.userId);
+  updateMany(payload: { taskIds: string[]; updateTaskDto: UpdateTaskDto; userId: string, teamId: string }) {
+    return this.tasksService.updateMany(payload.taskIds, payload.updateTaskDto, payload.userId, payload.teamId);
   }
 
   @RabbitRPC({

@@ -868,11 +868,15 @@ export class TeamService {
   }
 
   async findParticipantRoles(userId: string, teamId: string) {
-    return await this.amqp.request<{ teamId: string; role: MemberRole }[]>({
-      exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.GET_USER_ROLE,
-      payload: { userId, teamId },
-    })
+    return await this.memberRepo.findOne(
+      {
+        where: {
+          teamId,
+          userId,
+          status: MemberStatus.ACCEPTED
+        }
+      }
+    );
   }
 
   async sendNotification(userId: string, teamId: string, message: NotificationEventDto) {

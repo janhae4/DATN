@@ -11,9 +11,11 @@ import { SprintStatus } from "@/types/common/enums";
 import { useTasks } from "@/hooks/useTasks";
 import { useParams } from "next/navigation";
 import { useLists } from "@/hooks/useList";
+import { useSprints } from "@/hooks/useSprints";
 
 interface SprintListProps {
   tasks: Task[];
+  sprints: Sprint[];
   allTasks: Task[];
   selectedIds: string[];
   onSelect: (taskId: string, checked: boolean) => void;
@@ -25,6 +27,7 @@ interface SprintListProps {
 export const SprintList = React.memo(SprintListComponent);
 
 function SprintListComponent({
+  sprints,
   tasks,
   allTasks,
   selectedIds,
@@ -33,7 +36,6 @@ function SprintListComponent({
   onUpdateTask,
   onMultiSelectChange,
 }: SprintListProps) {
-  const { sprints } = useTaskManagementContext();
   const params = useParams();
   const projectId = params.projectId as string;
 
@@ -47,7 +49,6 @@ function SprintListComponent({
       ),
     [sprints]
   );
-
 
   return (
     <div className="flex flex-col gap-2 w-full">

@@ -132,4 +132,11 @@ export class CreateTaskDto {
   @IsUUID('all', { each: true })
   @IsOptional()
   assigneeIds?: string[];
+
+  @ApiProperty({
+    description: 'ID of the team this task belongs to',
+    format: 'uuid',
+  })
+  @IsUUID()
+  teamId: string
 }

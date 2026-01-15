@@ -48,8 +48,6 @@ import { useLabels } from "@/hooks/useLabels";
 import { useLists } from "@/hooks/useList";
 import { useSprints } from "@/hooks/useSprints";
 import { useTeamMembers } from "@/hooks/useTeam";
-// Removed useBacklogTour import
-import { HelpTooltip } from "@/components/shared/HelpTooltip"; // Import HelpTooltip here
 
 import { SprintCreateDialog } from "./sprint/SprintCreateDialog";
 import { CompleteSprintDialog } from "./sprint/CompleteSprintDialog";
@@ -132,7 +130,6 @@ export function BacklogFilterBar({
   showSprintDone && sprintStatus.push(SprintStatus.COMPLETED);
   const { sprints } = useSprints(projectId, teamId, sprintStatus);
   const { data: members } = useTeamMembers(teamId);
-  // Removed useBacklogTour hook usage
 
   const nonArchivedSprints = React.useMemo(() => {
     return sprints.filter(

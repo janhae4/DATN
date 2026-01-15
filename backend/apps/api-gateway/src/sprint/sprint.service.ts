@@ -15,7 +15,7 @@ export class SprintService {
   ) { }
 
   async create(createSprintDto: CreateSprintDto) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: SPRINT_EXCHANGE,
       routingKey: SPRINT_PATTERNS.CREATE,
       payload: createSprintDto,
@@ -23,7 +23,7 @@ export class SprintService {
   }
 
   async findAllByProjectId(projectId: string, userId: string) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: SPRINT_EXCHANGE,
       routingKey: SPRINT_PATTERNS.FIND_ALL_BY_PROJECT_ID,
       payload: { projectId, userId },
@@ -31,7 +31,7 @@ export class SprintService {
   }
 
   async findOne(id: string, userId: string) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: SPRINT_EXCHANGE,
       routingKey: SPRINT_PATTERNS.FIND_ONE_BY_ID,
       payload: { id, userId },
@@ -39,7 +39,7 @@ export class SprintService {
   }
 
   async update(id: string, updateSprintDto: UpdateSprintDto, userId: string) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: SPRINT_EXCHANGE,
       routingKey: SPRINT_PATTERNS.UPDATE,
       payload: { id, updateSprintDto, userId },
@@ -47,7 +47,7 @@ export class SprintService {
   }
 
   async remove(id: string, userId: string) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: SPRINT_EXCHANGE,
       routingKey: SPRINT_PATTERNS.REMOVE,
       payload: { id, userId },
@@ -55,7 +55,7 @@ export class SprintService {
   }
 
   async completeSprint(id: string, userId: string) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: SPRINT_EXCHANGE,
       routingKey: SPRINT_PATTERNS.COMPLETE_SPRINT,
       payload: { id, userId },
@@ -63,7 +63,7 @@ export class SprintService {
   }
 
   async findAll(projectId: string, teamId: string, userId: string, status?: SprintStatus[]) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: SPRINT_EXCHANGE,
       routingKey: SPRINT_PATTERNS.FIND_ALL,
       payload: { projectId, teamId, status, userId },

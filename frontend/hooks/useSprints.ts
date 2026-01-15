@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 export function useSprints(projectId: string, teamId: string, status?: SprintStatus[]) {
   const queryClient = useQueryClient();
-  const queryKey = ['sprints', projectId, teamId, status];
+  const queryKey = ['sprints', projectId, teamId];
 
   const {
     data: sprints = [],
@@ -18,8 +18,17 @@ export function useSprints(projectId: string, teamId: string, status?: SprintSta
   } = useQuery({
     queryKey,
     queryFn: () => sprintService.getSprints(projectId!, teamId!, status),
-    enabled: !!projectId && !!teamId,
+    enabled: !!projectId && !!teamId && !!status,
     placeholderData: (prev) => prev,
+    retry: (failureCount, error: any) => {
+      const status = error?.response?.status || error?.statusCode || error?.status;
+
+      if (status === 404) {
+        return false;
+      }
+      
+      return failureCount < 3;
+    },
   });
 
   const createSprintMutation = useMutation({

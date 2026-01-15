@@ -4,7 +4,7 @@ import { SprintsService } from './sprints.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Sprint } from '@app/contracts/sprint/entity/sprint.entity';
 import { ClientConfigModule, ClientConfigService, SPRINT_EXCHANGE } from '@app/contracts';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { RmqModule } from '@app/common';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sprint]),
@@ -18,19 +18,13 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
         synchronize: true,
       })
     }),
-    RabbitMQModule.forRootAsync({ 
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (configService: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: SPRINT_EXCHANGE,
-            type: 'direct',
-          },
-        ],
-        uri: configService.getRMQUrl(),
-        enableControllerDiscovery: true
-      }),
+    RmqModule.register({
+      exchanges: [
+        {
+          name: SPRINT_EXCHANGE,
+          type: 'direct'
+        }
+      ]
     })
   ],
   controllers: [SprintsController],

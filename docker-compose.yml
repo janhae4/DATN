@@ -381,7 +381,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
+        NEXT_PUBLIC_API_URL: http://localhost:3000
     container_name: nextjs_frontend
     restart: always
     ports:
@@ -389,7 +389,7 @@ services:
     environment:
       - PORT=5000
       - INTERNAL_API_URL=http://api_gateway:3000
-      - NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
     networks:
       - app-network
     extra_hosts:

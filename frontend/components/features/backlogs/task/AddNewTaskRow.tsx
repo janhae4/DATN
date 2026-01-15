@@ -29,7 +29,7 @@ export function AddNewTaskRow({
   parentId,
   epicId,
   onCancel,
-  isSubtask = false
+  isSubtask = false,
 }: AddNewTaskRowProps) {
   const params = useParams();
   const projectId = params.projectId as string;
@@ -45,20 +45,23 @@ export function AddNewTaskRow({
   const [title, setTitle] = React.useState("");
   const [selectedListId, setSelectedListId] = React.useState<string>("");
 
-  const stopPropagation = (e: React.MouseEvent | React.PointerEvent) => e.stopPropagation();
+  const stopPropagation = (e: React.MouseEvent | React.PointerEvent) =>
+    e.stopPropagation();
 
   React.useEffect(() => {
     if (lists && lists.length > 0 && !selectedListId) {
-      const todoList = lists.find(
-        (l) => l.category === ListCategoryEnum.TODO || l.name.toLowerCase() === "to do"
-      ) || lists[0];
+      const todoList =
+        lists.find(
+          (l) =>
+            l.category === ListCategoryEnum.TODO ||
+            l.name.toLowerCase() === "to do"
+        ) || lists[0];
       if (todoList) setSelectedListId(todoList.id);
     }
   }, [lists, selectedListId]);
 
   const handleCreate = async () => {
     if (!title.trim() || !projectId || !selectedListId) return;
-
     try {
       const newTaskPayload: CreateTaskDto = {
         title: title.trim(),
@@ -67,6 +70,7 @@ export function AddNewTaskRow({
         sprintId: sprintId || undefined,
         parentId: parentId || undefined,
         epicId: epicId || undefined,
+        teamId: teamId,
       };
 
       await createTask(newTaskPayload);
@@ -89,14 +93,26 @@ export function AddNewTaskRow({
   };
 
   return (
-    <TableRow onClick={stopPropagation} className="bg-muted/10 hover:bg-muted/20">
+    <TableRow
+      onClick={stopPropagation}
+      className="bg-muted/10 hover:bg-muted/20"
+    >
       <TableCell className="w-full">
         {/* Style indent cho Subtask input */}
-        <div className={cn("flex items-center gap-1", isSubtask ? "pl-12" : "ml-5")}>
-          {isSubtask && <CornerDownRight className="h-4 w-4 text-muted-foreground mr-2" />}
+        <div
+          className={cn(
+            "flex items-center gap-1",
+            isSubtask ? "pl-12" : "ml-5"
+          )}
+        >
+          {isSubtask && (
+            <CornerDownRight className="h-4 w-4 text-muted-foreground mr-2" />
+          )}
           <Input
             autoFocus
-            placeholder={isSubtask ? "Add a subtask..." : "Enter new task title..."}
+            placeholder={
+              isSubtask ? "Add a subtask..." : "Enter new task title..."
+            }
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -114,10 +130,24 @@ export function AddNewTaskRow({
 
       <TableCell className="w-fit">
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleCreate} disabled={isLoading || !title.trim()}>
-            {isLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : "Save"}
+          <Button
+            size="sm"
+            className="cursor-pointer"
+            onClick={handleCreate}
+            disabled={isLoading || !title.trim()}
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              "Save"
+            )}
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => onCancel?.()} disabled={isLoading}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onCancel?.()}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
         </div>

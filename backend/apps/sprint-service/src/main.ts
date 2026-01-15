@@ -1,10 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { SprintServiceModule } from './sprint-service.module';
 import { Logger } from '@nestjs/common';
 import { RpcResponseInterceptor } from '@app/common';
+import { SprintsModule } from './sprints/sprints.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(SprintServiceModule)
+  const app = await NestFactory.create(SprintsModule)
   app.useGlobalInterceptors(new RpcResponseInterceptor());
   await app.init();
 

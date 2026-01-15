@@ -28,18 +28,20 @@ import { useLists } from "@/hooks/useList";
 import { useBacklogTour } from "@/hooks/touring/useBacklogTour";
 import { calculateNewPositionForTask } from "@/lib/position-utils";
 import { Button } from "@/components/ui/button";
-import { Trash2, X } from "lucide-react";
+import { Ban, CheckCircle2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import AccessDeniedState from "../team/AccessDenied";
-import { AxiosError } from "axios";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BaseTaskFilterDto } from "@/services/taskService";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function Backlogs() {
-  // 1. Get Project ID from URL
   const params = useParams();
   const projectId = params.projectId as string;
   const teamId = params.teamId as string;
@@ -60,17 +62,35 @@ export default function Backlogs() {
   const [sprintPage, setSprintPage] = React.useState(1);
   const { startTour } = useBacklogTour();
 
-  const { sprints, error: sprintError } = useSprints(projectId, teamId, [
+  const {
+    sprints,
+    error: sprintError,
+    isLoading: isSprintsLoading,
+  } = useSprints(projectId, teamId, [
     SprintStatus.PLANNED,
     SprintStatus.ACTIVE,
     SprintStatus.ARCHIVED,
   ]);
+
+  const visibleSprints = React.useMemo(() => {
+    if (!sprints) return [];
+    if (filters.sprintIds.length > 0) {
+      return sprints.filter((s) => filters.sprintIds.includes(s.id));
+    }
+    return sprints;
+  }, [sprints, filters.sprintIds]);
+
   const { lists, error: listError } = useLists(projectId);
 
   console.log("Sprints loaded in Backlogs:", sprints.length);
+  const shouldFetchSprintTasks =
+    !isSprintsLoading && sprints && sprints.length > 0;
 
   const sprintQueryFilters: BaseTaskFilterDto = React.useMemo(() => {
-    const { sprintIds, ...otherFilters } = filters;
+    const targetSprintIds =
+      filters.sprintIds.length > 0
+        ? filters.sprintIds
+        : sprints.map((s) => s.id);
 
     return {
       projectId,
@@ -82,11 +102,11 @@ export default function Backlogs() {
       statusId: filters.listIds.length > 0 ? filters.listIds : undefined,
       epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
-      sprintId: sprints.length > 0 ? sprints.map((s) => s.id) : undefined,
+      sprintId: targetSprintIds,
       limit: 50,
       page: sprintPage,
     };
-  }, [projectId, debouncedSearch, filters, sprintPage, sprints]);
+  }, [projectId, debouncedSearch, filters, sprintPage, visibleSprints]);
 
   const backlogQueryFilters: BaseTaskFilterDto = React.useMemo(() => {
     return {
@@ -101,7 +121,7 @@ export default function Backlogs() {
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
       parentId: "null",
       sprintId: "null",
-      limit: 15,
+      limit: 10,
     };
   }, [projectId, debouncedSearch, filters]);
 
@@ -121,8 +141,9 @@ export default function Backlogs() {
     isFetchingNextPage,
   } = useTasks(backlogQueryFilters);
 
-  const { tasks: sprintTasks, isLoading: isLoadingSprint } =
-    useTasks(sprintQueryFilters);
+  const { tasks: sprintTasks } = useTasks(sprintQueryFilters, {
+    enabled: shouldFetchSprintTasks,
+  });
 
   const allVisibleTasks = React.useMemo(() => {
     return [...sprintTasks, ...backlogTasks];
@@ -140,6 +161,30 @@ export default function Backlogs() {
     "sprints",
     "epics",
   ]);
+
+  const pendingSelectedIds = React.useMemo(() => {
+    return allVisibleTasks
+      .filter(
+        (t) => selectedIds.includes(t.id) && t.approvalStatus === "PENDING"
+      )
+      .map((t) => t.id);
+  }, [allVisibleTasks, selectedIds]);
+
+  const handleBulkStatusChange = async (status: "APPROVED" | "REJECTED") => {
+    if (pendingSelectedIds.length === 0) {
+      toast.info("There is no pending task selected.");
+      return;
+    }
+
+    try {
+      await updateTasks({
+        ids: pendingSelectedIds,
+        updates: { approvalStatus: status },
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const handleUpdateCell = (
     taskId: string,
@@ -239,7 +284,6 @@ export default function Backlogs() {
               ids: idsNeedUpdate,
               updates: { sprintId: sprint.id },
             });
-            toast.success(`Moved ${idsNeedUpdate.length} tasks to sprint`);
 
             const currentTasksInSprint = allVisibleTasks.filter(
               (t) => t.sprintId === sprint.id
@@ -373,43 +417,97 @@ export default function Backlogs() {
 
       <div className="flex flex-col gap-8 py-4 relative">
         {selectedIds.length > 0 && (
-          <div
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 p-1.5 pl-5 
-                  bg-white/10 dark:bg-black/20 backdrop-blur-xl 
-                  rounded-full shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] 
-                  border border-white/20 dark:border-white/10
-                  animate-in fade-in zoom-in-95 slide-in-from-bottom-10 transition-all duration-500 ease-out"
-          >
-            <div className="flex items-center gap-2 mr-2">
-              <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[13px] font-bold tracking-tight text-zinc-800 dark:text-zinc-200">
-                {selectedIds.length}{" "}
-                <span className="font-medium opacity-70">selected</span>
-              </span>
-            </div>
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-10 duration-300">
+            <div className="flex items-center gap-1 p-2 pl-4 pr-2 dark:bg-zinc-900 dark:text-zinc-50 bg-zinc-50 text-zinc-900 rounded-full shadow-2xl border border-zinc-200/20 ring-1 ring-black/5">
+              {/* 1. Counter Section */}
+              <div className="flex items-center gap-2 mr-2">
+                <span className="flex items-center justify-center w-5 h-5 dark:bg-zinc-700 bg-zinc-200 rounded-full text-[10px] font-bold">
+                  {selectedIds.length}
+                </span>
+                <span className="text-sm font-medium text-zinc-400 dark:text-zinc-500 hidden sm:inline-block">
+                  selected
+                </span>
+              </div>
 
-            <div className="flex items-center gap-1">
-              {/* Nút Xóa với hiệu ứng Hover màu đỏ mềm */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDeleteSelected}
-                className="h-9 px-4 rounded-full bg-red-500/10 hover:bg-red-500 text-red-600 hover:text-white 
-                   transition-all duration-300 gap-2 text-xs font-bold border border-red-500/20"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Confirm Delete
-              </Button>
+              <div className="h-6 w-[1px] bg-zinc-700 dark:bg-zinc-300 mx-1" />
+              <div className="flex items-center gap-1">
+                {pendingSelectedIds.length > 0 && (
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleBulkStatusChange("APPROVED")} // Bạn cần hàm này
+                          className="h-9 w-9 rounded-full hover:bg-emerald-500/20 hover:text-emerald-500 text-zinc-400 dark:text-zinc-600 transition-colors"
+                        >
+                          <CheckCircle2 className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="bg-emerald-600 border-emerald-600 text-white"
+                      >
+                        <p>Approve selected</p>
+                      </TooltipContent>
+                    </Tooltip>
 
-              {/* Nút Hủy (X) - Glass effect */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full hover:bg-white/20 dark:hover:bg-zinc-800/50 transition-colors"
-                onClick={handleClearSelection}
-              >
-                <X className="h-4 w-4 text-zinc-500" />
-              </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleBulkStatusChange("REJECTED")}
+                          className="h-9 w-9 rounded-full hover:bg-orange-500/20 hover:text-orange-500 text-zinc-400 dark:text-zinc-600 transition-colors"
+                        >
+                          <Ban className="h-4.5 w-4.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="bg-orange-600 border-orange-600 text-white"
+                      >
+                        <p>Reject selected</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleDeleteSelected}
+                      className="h-9 w-9 rounded-full hover:bg-red-500/20 hover:text-red-500 text-zinc-400 dark:text-zinc-600 transition-colors"
+                    >
+                      <Trash2 className="h-4.5 w-4.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    className="bg-red-600 border-red-600 text-white"
+                  >
+                    <p>Delete selected</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="h-6 w-[1px] bg-zinc-700 dark:bg-zinc-300 mx-1" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClearSelection}
+                    className="h-9 w-9 rounded-full dark:hover:bg-zinc-800 hover:bg-zinc-200 text-zinc-500 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Clear selection</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         )}
@@ -453,6 +551,7 @@ export default function Backlogs() {
               <div id="sprint-list-section">
                 <SprintList
                   key="sprint-list"
+                  sprints={visibleSprints}
                   tasks={tasksInSprints.filter((task) => !task.parentId)}
                   allTasks={allVisibleTasks}
                   onRowClick={handleRowClick}
@@ -485,8 +584,7 @@ export default function Backlogs() {
               </div>
             </>
           ) : (
-            <div className="flex flex-row gap-6 h-[calc(100vh-250px)] overflow-hidden">
-              {/* Left side: Backlog */}
+            <div className="flex flex-row gap-6 h-[calc(80vh-190px)] overflow-hidden">
               <div
                 id="backlog-list-section"
                 className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden"
@@ -531,7 +629,6 @@ export default function Backlogs() {
                 className="h-full bg-border/40 shrink-0"
               />
 
-              {/* Right side: Sprints */}
               <div
                 id="sprint-list-section"
                 className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden"
@@ -545,6 +642,7 @@ export default function Backlogs() {
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-6">
                   <SprintList
                     key="sprint-list-split"
+                    sprints={visibleSprints}
                     tasks={tasksInSprints.filter((task) => !task.parentId)}
                     allTasks={allVisibleTasks}
                     onRowClick={handleRowClick}

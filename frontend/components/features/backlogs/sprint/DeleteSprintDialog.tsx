@@ -188,7 +188,7 @@ export function DeleteSprintDialog({
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleEmptyDelete}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-white"
                         >
                             Delete Sprint
                         </AlertDialogAction>

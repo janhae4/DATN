@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData, useInfiniteQuery, UseInfiniteQueryOptions, InfiniteData } from "@tanstack/react-query";
 import { Pagination, Task, TaskLabel } from "@/types";
 import {
   taskService,
@@ -9,12 +9,28 @@ import {
 import { streamHelper } from "@/services/apiClient";
 import { toast } from "sonner";
 
-export function useTasks(filters?: BaseTaskFilterDto) {
+type UseTasksOptions = Omit<
+  UseInfiniteQueryOptions<
+    Pagination<Task>,
+    unknown,
+    InfiniteData<Pagination<Task>>,
+    unknown[],
+    any
+  >,
+  "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
+>;
+
+export function useTasks(
+  filters?: BaseTaskFilterDto,
+  options?: UseTasksOptions
+) {
   const queryClient = useQueryClient();
+
   const tasksQueryKey = ["tasks", filters];
-  const projectId = filters && 'projectId' in filters ? filters.projectId : undefined;
-  const teamId = filters && 'teamId' in filters ? filters.teamId : undefined;
+  const projectId = filters?.projectId;
+  const teamId = filters?.teamId;
   const labelsQueryKey = ["labels", projectId || teamId];
+
   const {
     data,
     fetchNextPage,
@@ -28,10 +44,10 @@ export function useTasks(filters?: BaseTaskFilterDto) {
     queryFn: async ({ pageParam }) => {
       const page = pageParam as number;
       if (!filters) throw new Error("No filters provided");
-        return taskService.getTasks({
-          ...filters,
-          page,
-        });
+      return await taskService.getTasks({
+        ...filters,
+        page,
+      });
     },
     initialPageParam: filters?.page || 1,
     getNextPageParam: (lastPage, allPages) => {
@@ -40,10 +56,11 @@ export function useTasks(filters?: BaseTaskFilterDto) {
       }
       return undefined;
     },
-    enabled: !!projectId || !!teamId,
+    enabled: (!!projectId || !!teamId) && (options?.enabled !== false),
+    ...options,
   });
 
-  const tasks = data?.pages.flatMap((page) => page.data) || [];
+  const tasks = data?.pages.flatMap((page: Pagination<Task>) => page.data) || [];
 
   const {
     data: projectLabels = [],
@@ -63,22 +80,50 @@ export function useTasks(filters?: BaseTaskFilterDto) {
     },
   });
 
-  // Create Task
   const createTaskMutation = useMutation({
     mutationFn: (newTask: CreateTaskDto) => taskService.createTask(newTask),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      if (variables.sprintId) {
+        console.log("Refreshing specific Sprint...");
+        queryClient.invalidateQueries({
+          queryKey: ["tasks", { teamId, projectId, sprintId: [variables.sprintId] }]
+        });
+      } else {
+        console.log("Refreshing Backlog...");
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey as any[];
+            return key[0] === 'tasks' && key[1]?.sprintId === "null";
+          }
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: tasksQueryKey });
     },
+    onError: (error) => {
+      console.error(error);
+    }
   });
 
   const createTasksMutation = useMutation({
     mutationFn: ({ tasks, epic, sprintId }: { tasks: CreateTaskDto[], epic: string, sprintId?: string }) =>
       taskService.createTasks(tasks, epic, sprintId),
 
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      if (variables.sprintId) {
+        console.log("Refreshing specific Sprint...");
+        queryClient.invalidateQueries({
+          queryKey: ["tasks", { teamId, projectId, sprintId: [variables.sprintId] }]
+        });
+      } else {
+        console.log("Refreshing Backlog...");
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey as any[];
+            return key[0] === 'tasks' && key[1]?.sprintId === "null";
+          }
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: tasksQueryKey });
     },
     onError: (error) => {
       console.error(error);
@@ -138,7 +183,7 @@ export function useTasks(filters?: BaseTaskFilterDto) {
   });
 
   const updateTasksMutation = useMutation({
-    mutationFn: ({ ids, updates }: { ids: string[], updates: UpdateTaskDto }) => taskService.updateTasks(ids, updates),
+    mutationFn: ({ ids, updates }: { ids: string[], updates: UpdateTaskDto }) => taskService.updateTasks(ids, updates, teamId!),
     onMutate: async ({ ids, updates }) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
       const previousData = queryClient.getQueryData(tasksQueryKey);
@@ -147,7 +192,7 @@ export function useTasks(filters?: BaseTaskFilterDto) {
         if (!old || !old.pages) return old!;
 
         const isMovingSprint = updates.sprintId !== undefined;
-        const isMovingEpic = updates.epicId !== undefined;
+        const isMovingEpic = updates.epicId !== undefined
 
         return {
           ...old,
@@ -186,6 +231,32 @@ export function useTasks(filters?: BaseTaskFilterDto) {
       toast.error("Failed to move tasks");
     },
 
+    onSuccess: (updatedTasks, variables: any) => {
+      const requestedIds = variables.ids;
+      const successIds = Array.isArray(updatedTasks)
+        ? updatedTasks.map((t: any) => t.id)
+        : [];
+
+      const skippedIds = (requestedIds as string[]).filter(id => !successIds.includes(id));
+
+      if (skippedIds.length > 0) {
+        if (!Array.isArray(updatedTasks) && (updatedTasks as any).affected !== undefined) {
+          const affected = (updatedTasks as any).affected;
+          const failedCount = requestedIds.length - affected;
+          if (failedCount > 0) {
+            toast.warning(`${failedCount} task${failedCount > 1 ? "s" : ""} failed.`);
+          } else {
+            toast.success("Update successfully");
+          }
+          return;
+        }
+
+        toast.warning(`${skippedIds.length} task(${skippedIds.length > 1 ? "s" : ""}) failed.`);
+      } else {
+        toast.success("Update successfully");
+      }
+    },
+
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
@@ -202,7 +273,7 @@ export function useTasks(filters?: BaseTaskFilterDto) {
   });
 
   const deleteTasksMutation = useMutation({
-    mutationFn: (ids: string[]) => taskService.deleteTasks(ids),
+    mutationFn: (ids: string[]) => taskService.deleteTasks(ids, teamId!),
     onMutate: async (ids) => {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey });
       const previousData = queryClient.getQueryData(tasksQueryKey);

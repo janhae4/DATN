@@ -17,6 +17,10 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
     assigneeIds?: string[];
 
     @IsOptional()
+    @IsUUID()
+    teamId?: string
+
+    @IsOptional()
     @IsEnum(ApprovalStatus)
     approvalStatus?: ApprovalStatus;
 }

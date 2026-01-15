@@ -56,11 +56,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CreateTaskDto } from "@/services/taskService";
 import { useTeamMembers } from "@/hooks/useTeam";
-import {
-  ListCategoryEnum,
-  Priority,
-  SprintStatus,
-} from "@/types";
+import { ListCategoryEnum, Priority, SprintStatus } from "@/types";
 import { useLists } from "@/hooks/useList";
 import { useSprints } from "@/hooks/useSprints";
 import { useParams } from "next/navigation";
@@ -103,10 +99,14 @@ export function SuggestTaskByAi({
 }: SuggestTaskByAiProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [selectedSprintId, setSelectedSprintId] = React.useState<string | null>(null);
+  const [selectedSprintId, setSelectedSprintId] = React.useState<string | null>(
+    null
+  );
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [isThinking, setIsThinking] = React.useState(false);
-  const [suggestedTasks, setSuggestedTasks] = React.useState<SuggestedTask[]>([]);
+  const [suggestedTasks, setSuggestedTasks] = React.useState<SuggestedTask[]>(
+    []
+  );
   const [skillSearch, setSkillSearch] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
   const [summary, setSummary] = React.useState("");
@@ -117,8 +117,8 @@ export function SuggestTaskByAi({
   const { data: members = [] } = useTeamMembers(teamId);
   const { lists } = useLists(projectId);
   const { sprints = [] } = useSprints(projectId, teamId, [
-    SprintStatus.ACTIVE,
     SprintStatus.PLANNED,
+    SprintStatus.ACTIVE,
     SprintStatus.ARCHIVED,
   ]);
 
@@ -222,6 +222,7 @@ export function SuggestTaskByAi({
         projectId: projectId,
         listId: targetList.id,
         priority: Priority.MEDIUM,
+        teamId: teamId,
         skillName: t.skillName,
         exp: t.experience,
         reporterId: null,
@@ -258,7 +259,6 @@ export function SuggestTaskByAi({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl">
-
         {/* Header */}
         <DialogHeader className="px-6 py-4 border-b border-zinc-200/50 bg-white dark:bg-zinc-950 dark:border-zinc-800 z-20">
           <div className="flex items-center gap-3">
@@ -278,7 +278,6 @@ export function SuggestTaskByAi({
 
         <div className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-50/50 dark:bg-zinc-950/50">
           <div className="p-6 space-y-6">
-
             {/* Input Section */}
             <div className="relative group rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm transition-all focus-within:ring-2 focus-within:ring-zinc-900/5 dark:focus-within:ring-zinc-100/5 focus-within:border-zinc-900 dark:focus-within:border-zinc-100">
               <Textarea
@@ -291,7 +290,11 @@ export function SuggestTaskByAi({
               <div className="flex items-center justify-between p-2 border-t border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-b-2xl">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800"
+                    >
                       <Layers className="h-3.5 w-3.5" />
                       {selectedSprintId
                         ? sprints.find((s) => s.id === selectedSprintId)?.title
@@ -305,10 +308,15 @@ export function SuggestTaskByAi({
                       <CommandList>
                         <CommandEmpty>No sprint found.</CommandEmpty>
                         <CommandGroup>
-                          <CommandItem onSelect={() => setSelectedSprintId(null)} className="cursor-pointer text-xs">
+                          <CommandItem
+                            onSelect={() => setSelectedSprintId(null)}
+                            className="cursor-pointer text-xs"
+                          >
                             <Layers className="mr-2 h-3.5 w-3.5 opacity-50" />
                             No Sprint (Backlog)
-                            {selectedSprintId === null && <Check className="ml-auto h-3 w-3" />}
+                            {selectedSprintId === null && (
+                              <Check className="ml-auto h-3 w-3" />
+                            )}
                           </CommandItem>
                           {sprints.map((sprint) => (
                             <CommandItem
@@ -318,7 +326,9 @@ export function SuggestTaskByAi({
                             >
                               <div className="h-1.5 w-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 mr-2" />
                               {sprint.title}
-                              {selectedSprintId === sprint.id && <Check className="ml-auto h-3 w-3" />}
+                              {selectedSprintId === sprint.id && (
+                                <Check className="ml-auto h-3 w-3" />
+                              )}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -355,7 +365,6 @@ export function SuggestTaskByAi({
 
             {/* Generated Content Area */}
             <div ref={scrollRef} className="space-y-5 min-h-[100px]">
-
               {/* Summary Banner */}
               <AnimatePresence>
                 {summary && (
@@ -369,7 +378,9 @@ export function SuggestTaskByAi({
                     <div className="flex flex-col gap-2 pl-2">
                       <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
                         <Target className="h-4 w-4" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Identified Objective</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                          Identified Objective
+                        </span>
                       </div>
                       <Input
                         value={summary}
@@ -397,7 +408,7 @@ export function SuggestTaskByAi({
                       {/* Top Row: Index + Title + Delete */}
                       <div className="flex items-start gap-3">
                         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                          {String(idx + 1).padStart(2, '0')}
+                          {String(idx + 1).padStart(2, "0")}
                         </div>
 
                         <div className="flex-1">
@@ -416,7 +427,11 @@ export function SuggestTaskByAi({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setSuggestedTasks(prev => prev.filter(t => t.id !== task.id))}
+                          onClick={() =>
+                            setSuggestedTasks((prev) =>
+                              prev.filter((t) => t.id !== task.id)
+                            )
+                          }
                           className="h-6 w-6 text-zinc-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 -mr-2 -mt-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -433,7 +448,10 @@ export function SuggestTaskByAi({
                               {task.skillName || "Assign Skill"}
                             </button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-[200px] p-0" align="start">
+                          <PopoverContent
+                            className="w-[200px] p-0"
+                            align="start"
+                          >
                             <Command shouldFilter={false}>
                               <CommandInput
                                 placeholder="Skill..."
@@ -459,9 +477,19 @@ export function SuggestTaskByAi({
                                   </CommandGroup>
                                 )}
                                 <CommandGroup heading="Suggestions">
-                                  {["Frontend", "Backend", "Design", "DevOps", "Testing"]
-                                    .filter(s => s.toLowerCase().includes(skillSearch.toLowerCase()))
-                                    .map(s => (
+                                  {[
+                                    "Frontend",
+                                    "Backend",
+                                    "Design",
+                                    "DevOps",
+                                    "Testing",
+                                  ]
+                                    .filter((s) =>
+                                      s
+                                        .toLowerCase()
+                                        .includes(skillSearch.toLowerCase())
+                                    )
+                                    .map((s) => (
                                       <CommandItem
                                         key={s}
                                         onSelect={() => {
@@ -472,7 +500,14 @@ export function SuggestTaskByAi({
                                         }}
                                         className="text-xs"
                                       >
-                                        <Check className={cn("mr-2 h-3 w-3", task.skillName === s ? "opacity-100" : "opacity-0")} />
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-3 w-3",
+                                            task.skillName === s
+                                              ? "opacity-100"
+                                              : "opacity-0"
+                                          )}
+                                        />
                                         {s}
                                       </CommandItem>
                                     ))}
@@ -491,12 +526,15 @@ export function SuggestTaskByAi({
                             value={task.experience}
                             onChange={(e) => {
                               const newTasks = [...suggestedTasks];
-                              newTasks[idx].experience = parseInt(e.target.value) || 0;
+                              newTasks[idx].experience =
+                                parseInt(e.target.value) || 0;
                               setSuggestedTasks(newTasks);
                             }}
                             className="h-6 w-8 border-none bg-transparent p-0 text-center text-[11px] font-bold hover:bg-zinc-100 rounded focus:bg-white focus:ring-1 focus:ring-zinc-200 transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
-                          <span className="text-[10px] text-zinc-400 font-medium">exp</span>
+                          <span className="text-[10px] text-zinc-400 font-medium">
+                            exp
+                          </span>
                         </div>
 
                         <div className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
@@ -529,7 +567,9 @@ export function SuggestTaskByAi({
                               }}
                               className={cn(
                                 "bg-transparent text-[10px] font-medium focus:outline-none w-[70px]",
-                                task.dueDate && task.startDate && task.dueDate < task.startDate
+                                task.dueDate &&
+                                  task.startDate &&
+                                  task.dueDate < task.startDate
                                   ? "text-red-500"
                                   : "text-zinc-600 dark:text-zinc-400"
                               )}
@@ -552,7 +592,9 @@ export function SuggestTaskByAi({
                             <div className="flex items-center gap-2">
                               <div className="flex -space-x-2">
                                 {task.memberIds?.map((mId) => {
-                                  const member = members.find((m) => m.id === mId);
+                                  const member = members.find(
+                                    (m) => m.id === mId
+                                  );
                                   if (!member) return null;
                                   return (
                                     <TooltipProvider key={mId}>
@@ -560,10 +602,14 @@ export function SuggestTaskByAi({
                                         <TooltipTrigger>
                                           <Avatar className="h-6 w-6 border-2 border-white dark:border-zinc-900 ring-1 ring-zinc-200 dark:ring-zinc-800">
                                             <AvatarImage src={member?.avatar} />
-                                            <AvatarFallback className="text-[8px] bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{member?.name.charAt(0)}</AvatarFallback>
+                                            <AvatarFallback className="text-[8px] bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                                              {member?.name.charAt(0)}
+                                            </AvatarFallback>
                                           </Avatar>
                                         </TooltipTrigger>
-                                        <TooltipContent>{member?.name}</TooltipContent>
+                                        <TooltipContent>
+                                          {member?.name}
+                                        </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
                                   );
@@ -571,33 +617,59 @@ export function SuggestTaskByAi({
                               </div>
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full border border-dashed border-zinc-300 hover:border-zinc-400 text-zinc-400 hover:text-zinc-600">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-full border border-dashed border-zinc-300 hover:border-zinc-400 text-zinc-400 hover:text-zinc-600"
+                                  >
                                     <UserPlus className="h-3 w-3" />
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[200px] p-0" align="end">
+                                <PopoverContent
+                                  className="w-[200px] p-0"
+                                  align="end"
+                                >
                                   <Command>
-                                    <CommandInput placeholder="Assign member..." className="h-8 text-xs" />
+                                    <CommandInput
+                                      placeholder="Assign member..."
+                                      className="h-8 text-xs"
+                                    />
                                     <CommandList>
                                       <CommandGroup>
-                                        {members.map(member => {
-                                          const isSelected = task.memberIds?.includes(member.id);
+                                        {members.map((member) => {
+                                          const isSelected =
+                                            task.memberIds?.includes(member.id);
                                           return (
                                             <CommandItem
                                               key={member.id}
-                                              onSelect={() => toggleMember(task.id, member.id)}
+                                              onSelect={() =>
+                                                toggleMember(task.id, member.id)
+                                              }
                                               className="text-xs cursor-pointer"
                                             >
-                                              <div className={cn("mr-2 flex h-3 w-3 items-center justify-center rounded border", isSelected ? "bg-zinc-900 border-zinc-900 dark:bg-zinc-100 dark:border-zinc-100 text-white dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700")}>
-                                                {isSelected && <Check className="h-2 w-2" />}
+                                              <div
+                                                className={cn(
+                                                  "mr-2 flex h-3 w-3 items-center justify-center rounded border",
+                                                  isSelected
+                                                    ? "bg-zinc-900 border-zinc-900 dark:bg-zinc-100 dark:border-zinc-100 text-white dark:text-zinc-900"
+                                                    : "border-zinc-300 dark:border-zinc-700"
+                                                )}
+                                              >
+                                                {isSelected && (
+                                                  <Check className="h-2 w-2" />
+                                                )}
                                               </div>
                                               <Avatar className="h-5 w-5 mr-2">
-                                                <AvatarImage src={member.avatar} />
-                                                <AvatarFallback>{member.name[0]}</AvatarFallback>
+                                                <AvatarImage
+                                                  src={member.avatar}
+                                                />
+                                                <AvatarFallback>
+                                                  {member.name[0]}
+                                                </AvatarFallback>
                                               </Avatar>
                                               {member.name}
                                             </CommandItem>
-                                          )
+                                          );
                                         })}
                                       </CommandGroup>
                                     </CommandList>
@@ -607,7 +679,9 @@ export function SuggestTaskByAi({
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
-                              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Backlog</span>
+                              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+                                Backlog
+                              </span>
                             </div>
                           )}
                         </div>
@@ -620,7 +694,9 @@ export function SuggestTaskByAi({
                 {isThinking && (
                   <div className="rounded-xl border border-dashed border-zinc-200 p-6 flex flex-col items-center justify-center gap-3 bg-zinc-50/50 dark:border-zinc-800">
                     <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
-                    <p className="text-xs text-zinc-400 animate-pulse font-medium">Processing requirements...</p>
+                    <p className="text-xs text-zinc-400 animate-pulse font-medium">
+                      Processing requirements...
+                    </p>
                   </div>
                 )}
 
@@ -628,7 +704,9 @@ export function SuggestTaskByAi({
                 {!isThinking && suggestedTasks.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-10 text-center opacity-40">
                     <Lightbulb className="h-8 w-8 text-zinc-400 mb-2" />
-                    <p className="text-sm font-medium text-zinc-500">Awaiting your command</p>
+                    <p className="text-sm font-medium text-zinc-500">
+                      Awaiting your command
+                    </p>
                   </div>
                 )}
               </div>
@@ -651,7 +729,9 @@ export function SuggestTaskByAi({
               setIsSaving(true);
               try {
                 await handleImport(suggestedTasks);
-                toast.success(`Successfully imported ${suggestedTasks.length} tasks.`);
+                toast.success(
+                  `Successfully imported ${suggestedTasks.length} tasks.`
+                );
               } catch (error) {
                 console.error("Import error:", error);
                 toast.error("Failed to save tasks.");

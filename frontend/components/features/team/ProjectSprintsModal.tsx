@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import {
   CalendarDays,
-  CheckCircle2,
   LayoutList,
-  MoreHorizontal,
-  User,
 } from "lucide-react";
 
 import {
@@ -16,12 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { useSprints } from "@/hooks/useSprints";
-import { SprintStatus, ListCategoryEnum } from "@/types";
+import { SprintStatus } from "@/types";
 import { SprintProgressView } from "./SprintProgressView";
 
 export function ProjectSprintsModal({
@@ -36,8 +32,8 @@ export function ProjectSprintsModal({
   onClose: () => void;
 }) {
   const { sprints, isLoading } = useSprints(projectId, teamId, [
-    SprintStatus.ACTIVE,
     SprintStatus.PLANNED,
+    SprintStatus.ACTIVE,
     SprintStatus.COMPLETED,
   ]);
 

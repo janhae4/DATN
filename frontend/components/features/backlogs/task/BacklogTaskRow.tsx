@@ -199,7 +199,7 @@ function _BacklogTaskRow({
       if (targetEl && targetEl.releasePointerCapture) {
         try {
           targetEl.releasePointerCapture(e.pointerId);
-        } catch (e) { }
+        } catch (e) {}
       }
     }, 400);
   };
@@ -254,9 +254,9 @@ function _BacklogTaskRow({
         className={cn(
           "group cursor-pointer hover:bg-muted/50 transition-colors select-none p-2",
           isDragging &&
-          "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale",
+            "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale",
           selected &&
-          "bg-primary/5 hover:bg-primary/15 data-[state=selected]:bg-primary/5 rounded-lg p-10"
+            "bg-primary/5 hover:bg-primary/15 data-[state=selected]:bg-primary/5 rounded-lg p-10"
         )}
         onClick={(e) => {
           const target = e.target as HTMLElement;
@@ -313,25 +313,25 @@ function _BacklogTaskRow({
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
-
-            {/* Nút Toggle kiêm Create Subtask */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-6 w-6 p-0 hover:bg-muted text-muted-foreground transition-all",
-                subTasks.length > 0 || isAddingSubtask
-                  ? "opacity-100 w-6"
-                  : "opacity-0 w-0 overflow-hidden group-hover:w-6 group-hover:opacity-100"
-              )}
-              onClick={handleToggleExpand}
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
+            {task.approvalStatus === "APPROVED" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-6 w-6 p-0 hover:bg-muted text-muted-foreground transition-all",
+                  subTasks.length > 0 || isAddingSubtask
+                    ? "opacity-100 w-6"
+                    : "opacity-0 w-0 overflow-hidden group-hover:w-6 group-hover:opacity-100"
+                )}
+                onClick={handleToggleExpand}
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
+            )}
 
             {isEditingTitle ? (
               <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -364,15 +364,19 @@ function _BacklogTaskRow({
                   stopPropagation={stopPropagation}
                 />
 
-                <span className={cn(
-                  "px-2 text-sm truncate block max-w-[200px] transition-all",
-                  task.approvalStatus === 'PENDING' ? "text-muted-foreground italic font-normal" :
-                    task.approvalStatus === 'REJECTED' ? "text-red-400 line-through decoration-red-400/50" : "font-medium"
-                )}>
+                <span
+                  className={cn(
+                    "px-2 text-sm truncate block max-w-[200px] transition-all",
+                    task.approvalStatus === "PENDING"
+                      ? "text-muted-foreground italic font-normal"
+                      : task.approvalStatus === "REJECTED"
+                      ? "text-red-400 line-through decoration-red-400/50"
+                      : "font-medium"
+                  )}
+                >
                   {task.title}
                 </span>
 
-                {/* Badge đếm số subtask (chỉ hiện khi đang đóng) */}
                 {!isExpanded && subTasks.length > 0 && (
                   <div className="flex items-center text-[10px] text-muted-foreground bg-muted/80 px-1.5 py-0.5 rounded-sm border">
                     <Network className="w-3 h-3 mr-1" />
@@ -384,7 +388,6 @@ function _BacklogTaskRow({
           </div>
         </TableCell>
 
-        {/* --- CÁC CỘT KHÁC (GIỮ NGUYÊN) --- */}
         <TableCell></TableCell>
 
         <TableCell
@@ -410,7 +413,9 @@ function _BacklogTaskRow({
                         <Edit className="h-3 w-3" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent className="text-xs">Edit Title</TooltipContent>
+                    <TooltipContent className="text-xs">
+                      Edit Title
+                    </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}
@@ -522,10 +527,8 @@ function _BacklogTaskRow({
         </TableCell>
       </TableRow>
 
-      {/* --- RENDER SUBTASKS & CREATE ROW (NESTED) --- */}
       {isExpanded && (
         <>
-          {/* Render danh sách task con */}
           {subTasks.map((subtask) => (
             <BacklogTaskRow
               key={subtask.id}
@@ -540,11 +543,10 @@ function _BacklogTaskRow({
               isSelectionDragging={isSelectionDragging}
               onStartSelection={onStartSelection}
               onMoveSelection={onMoveSelection}
-              level={level + 1} // Tăng level để thụt sâu hơn
+              level={level + 1}
             />
           ))}
 
-          {/* 1. Form tạo subtask mới (Nếu đang trong chế độ thêm) */}
           {isAddingSubtask ? (
             <AddNewTaskRow
               lists={lists}
@@ -555,7 +557,6 @@ function _BacklogTaskRow({
               isSubtask={true}
             />
           ) : (
-            /* 2. Nút "Create Task" (Nếu không ở chế độ thêm VÀ đã có task con) */
             subTasks.length > 0 && (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={10} className="p-y-2 border-0">

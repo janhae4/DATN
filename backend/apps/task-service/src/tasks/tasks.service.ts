@@ -4,7 +4,7 @@ import { Repository, IsNull, In, SelectQueryBuilder, Not, Brackets, FindOptionsW
 import { CreateTaskDto, UpdateTaskDto, LABEL_CLIENT, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS, GetTasksByProjectDto, BaseTaskFilterDto, GetTasksByTeamDto, CHATBOT_PATTERN, MemberDto, Error, ApprovalStatus, ForbiddenException } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
 import { RabbitSubscribe, Nack, AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { AUTH_EXCHANGE, CHATBOT_EXCHANGE, EVENTS_EXCHANGE, LABEL_EXCHANGE, LIST_CLIENT, LIST_EXCHANGE, PROJECT_CLIENT, RPC_TIMEOUT, TASK_EXCHANGE, TEAM_EXCHANGE, USER_EXCHANGE } from '@app/contracts/constants';
+import { AUTH_EXCHANGE, CHATBOT_EXCHANGE, EVENTS_EXCHANGE, LABEL_EXCHANGE, LIST_CLIENT, LIST_EXCHANGE, PROJECT_CLIENT, PROJECT_EXCHANGE, RPC_TIMEOUT, TASK_EXCHANGE, TEAM_EXCHANGE, USER_EXCHANGE } from '@app/contracts/constants';
 import { LabelEvent } from '@app/contracts/events/label.event';
 import { Label } from '@app/contracts/label/entity/label.entity';
 import { TaskLabel as TaskLabelEvent } from '@app/contracts/events/task-label.event';
@@ -23,9 +23,6 @@ export class TasksService {
     @InjectRepository(TaskLabel)
     private readonly taskLabelRepository: Repository<TaskLabel>,
     private readonly amqpConnection: RmqClientService,
-    @Inject(LABEL_CLIENT) private readonly labelClient: ClientProxy,
-    @Inject(PROJECT_CLIENT) private readonly projectClient: ClientProxy,
-    @Inject(LIST_CLIENT) private readonly listClient: ClientProxy,
   ) { }
 
   async getUserIdFromToken(token: string): Promise<string> {
@@ -38,7 +35,7 @@ export class TasksService {
   }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    const { listId, position, labelIds, ...rest } = createTaskDto;
+    const { listId, position, labelIds, reporterId, teamId, ...rest } = createTaskDto;
 
     let newPosition = position;
     if (!newPosition) {
@@ -50,8 +47,19 @@ export class TasksService {
       newPosition = lastTask ? lastTask.position + 65535 : 65535;
     }
 
+    let approvalStatus = ApprovalStatus.PENDING;
+    try {
+      await this.amqpConnection.request({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
+        payload: { userId: reporterId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
+      })
+      approvalStatus = ApprovalStatus.APPROVED;
+    } catch {
+      approvalStatus = ApprovalStatus.PENDING
+    }
 
-    const newTask = this.taskRepository.create({ ...rest, listId, position: newPosition });
+    const newTask = this.taskRepository.create({ ...rest, listId, position: newPosition, teamId, approvalStatus });
     const savedTask = await this.taskRepository.save(newTask);
 
     if (labelIds) {
@@ -97,7 +105,7 @@ export class TasksService {
     return savedTasks;
   }
 
-  async deleteMany(taskIds: string[], userId: string) {
+  async deleteMany(taskIds: string[], teamId: string, userId: string) {
     console.log('deleteMany called with:', { taskIds, userId });
     if (!taskIds || !taskIds.length) {
       console.log('No task IDs provided or empty array');
@@ -105,46 +113,26 @@ export class TasksService {
     }
 
     try {
-      const firstTask = await this.taskRepository.findOne({
-        where: { id: In(taskIds) }
-      });
-
-      if (!firstTask) {
-        throw new NotFoundException('No tasks found to delete');
-      }
-
-      let project: Project;
-      try {
-        project = await firstValueFrom(
-          this.projectClient.send<Project>(PROJECT_PATTERNS.GET_BY_ID, { id: firstTask.projectId })
-        );
-      } catch (err) {
-        throw new BadRequestException('Could not verify project access');
-      }
-
-      if (!project) {
-        throw new NotFoundException('Project not found');
-      }
-
-      try {
-        await this.amqpConnection.request({
-          exchange: TEAM_EXCHANGE,
-          routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-          payload: { userId, teamId: project.teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
-        });
-      } catch (err) {
-        console.error('Permission verification failed:', err);
-        throw new BadRequestException('You do not have permission to delete tasks in this project');
-      }
-
       console.log('Executing delete for tasks:', taskIds);
-      const result = await this.taskRepository
+      const query = this.taskRepository
         .createQueryBuilder()
         .delete()
         .from(Task)
         .where("id IN (:...ids)", { ids: taskIds })
-        .execute();
 
+      const member = await this.amqpConnection.request<MemberDto>({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
+        payload: { teamId, userId },
+      });
+
+      if (!member) throw new NotFoundException(`You are not a member of this team.`);
+
+      if (member.role === MemberRole.MEMBER) {
+        query.andWhere("approvalStatus = :status", { status: 'PENDING' });
+        query.andWhere("reporterId = :userId", { userId });
+      }
+      const result = await query.execute();
       console.log(`Deleted ${result.affected} tasks`);
       return { success: true, deleted: result.affected };
     } catch (error) {
@@ -156,25 +144,49 @@ export class TasksService {
     }
   }
 
-  async updateMany(taskIds: string[], updateTaskDto: UpdateTaskDto, userId: string) {
-    if (!taskIds || taskIds.length === 0) {
+  async updateMany(taskIds: string[], updateTaskDto: UpdateTaskDto, userId: string, teamId: string) {
+    if (!taskIds?.length || !updateTaskDto || Object.keys(updateTaskDto).length === 0) {
       return { affected: 0 };
     }
+    const member = await this.amqpConnection.request<MemberDto>({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
+      payload: { teamId, userId },
+    })
+    if (!member) throw new BadRequestException('User not in team');
 
-    if (!updateTaskDto || Object.keys(updateTaskDto).length === 0) {
-      console.warn('UpdateMany: No values to update', { taskIds });
-      return { affected: 0 };
+    const isHighLevel = [MemberRole.ADMIN, MemberRole.OWNER].includes(member.role);
+
+    let cleanDto = { ...updateTaskDto };
+
+    if (!isHighLevel) {
+      delete cleanDto.approvalStatus;
+      delete cleanDto.assigneeIds;
     }
 
-    const result = await this.taskRepository.update(
-      {
-        id: In(taskIds),
-        reporterId: userId
-      },
-      updateTaskDto
-    );
+    if (Object.keys(cleanDto).length === 0) return { affected: 0 };
+    console.log('updateMany called with:', { taskIds, cleanDto, userId, member });
 
-    return result;
+    const queryBuilder = this.taskRepository
+      .createQueryBuilder()
+      .update(Task)
+      .set(cleanDto)
+      .where("id IN (:...ids)", { ids: taskIds });
+
+    if (!isHighLevel) {
+      queryBuilder.andWhere("approvalStatus = :status", { status: 'PENDING' });
+      queryBuilder.andWhere("reporterId = :userId", { userId });
+    }
+
+    console.log('Is High Level User?', isHighLevel);
+    console.log('Check Member Role:', member.role);
+    console.log(queryBuilder.getSql());
+    console.log(queryBuilder.getParameters());
+    const response = await queryBuilder.execute();
+    console.log(response)
+
+
+    return response
   }
 
   async assignLabelsBulk(tasksWithLabels: { taskId: string; labelIds: string[] }[]) {
@@ -257,9 +269,11 @@ export class TasksService {
 
 
   async findAllByProject(userId: string, filters: GetTasksByProjectDto) {
-    const project = await firstValueFrom(
-      this.projectClient.send<Project>(PROJECT_PATTERNS.GET_BY_ID, { id: filters.projectId })
-    );
+    const project = await this.amqpConnection.request<Project>({
+      exchange: PROJECT_EXCHANGE,
+      routingKey: PROJECT_PATTERNS.GET_BY_ID,
+      payload: { id: filters.projectId },
+    })
     if (!project) throw new NotFoundException('Project not found');
 
     await this.verifyPermission(userId, project.teamId);
@@ -278,11 +292,11 @@ export class TasksService {
     return this._getTasksCommon(query, filters, userId, undefined, filters.teamId);
   }
 
-  private async verifyPermission(userId: string, teamId: string) {
+  private async verifyPermission(userId: string, teamId: string, roles: MemberRole[] = [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER]) {
     await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
+      payload: { userId, teamId, roles },
     })
   }
 
@@ -740,11 +754,11 @@ export class TasksService {
   }
 
   async getProjectStats(projectId: string, userId: string) {
-    const lists = await firstValueFrom(
-      this.listClient.send<List[]>(LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID, { projectId })
-    );
-
-    console.log("lists ", lists)
+    const lists = await this.amqpConnection.request<List[]>({
+      exchange: LIST_EXCHANGE,
+      routingKey: LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID,
+      payload: { projectId }
+    });
 
     const doneList = lists.find(l => l.category === ListCategoryEnum.DONE);
     console.log("doneList ", doneList);

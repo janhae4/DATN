@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FileController } from './file.controller';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { ClientConfigModule, ClientConfigService, EVENTS_EXCHANGE, FILE_EXCHANGE, SEARCH_EXCHANGE, TEAM_EXCHANGE } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, FILE_EXCHANGE } from '@app/contracts';
 import { MongooseModule } from '@nestjs/mongoose';
 import { FileSchema } from './schema/file.schema';
 import { FileService } from './file.service';
@@ -13,9 +12,9 @@ import { RmqModule } from '@app/common';
     ClientConfigModule,
     RmqModule.register({
       exchanges: [
-        { name: FILE_EXCHANGE, type: 'topic' },
+        { name: FILE_EXCHANGE, type: 'direct' },
       ],
-    }),
+  }),
     MongooseModule.forRootAsync({
       useFactory: (configService: ClientConfigService) => ({
         uri: configService.getFileDatabaseUrl()

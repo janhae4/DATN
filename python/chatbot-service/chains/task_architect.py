@@ -56,7 +56,7 @@ class TaskArchitect:
                 - TỔNG QUAN: Tự xây dựng lộ trình học tập/làm việc tuần tự cho một người.
             """
         
-        system_prompt = """
+        system_prompt = f"""
             ROLE: Senior Project Manager & System Architect AI.
             
             CONTEXT:

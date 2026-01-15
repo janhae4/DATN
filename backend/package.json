@@ -30,7 +30,6 @@
     "start:dev:video-chat": "nest start video-chat --watch",
     "start:dev:discussion": "nest start discussion --watch",
     "start:dev:ai-discussion": "nest start ai-discussion --watch",
-
     "start:prod:api-gateway": "node dist/apps/api-gateway/main.js",
     "start:prod:project": "node dist/apps/project-service/main.js",
     "start:prod:testing": "node dist/apps/testing-service/main.js",
@@ -52,7 +51,6 @@
     "start:prod:video-chat": "node dist/apps/video-chat/main.js",
     "start:prod:discussion": "node dist/apps/discussion/main.js",
     "start:prod:ai-discussion": "node dist/apps/discussion-ai/main.js",
-
     "start:dev:all": "concurrently -n api,auth,user,task,redis \"npm:start:dev:api-gateway\" \"npm:start:dev:user\" \"npm:start:dev:auth\" \"npm:start:dev:task\" \"npm:start:dev:redis\"",
     "start:dev:ai-discussion:test": "concurrently -n api,auth,user,notification,ai-discussion \"npm:start:dev:api-gateway\" \"npm:start:dev:user\" \"npm:start:dev:auth\" \"npm:start:dev:notification\" \"npm:start:dev:ai-discussion\"",
     "start:dev:discussion:test": "concurrently -n api,auth,user,notification,discussion,team \"npm:start:dev:api-gateway\" \"npm:start:dev:user\" \"npm:start:dev:auth\" \"npm:start:dev:notification\" \"npm:start:dev:discussion\" \"npm:start:dev:team\"",
@@ -86,7 +84,7 @@
     "@golevelup/nestjs-rabbitmq": "^6.0.2",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/axios": "^4.0.1",
-    "@nestjs/common": "^11.1.6",
+    "@nestjs/common": "^11.1.11",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.6",
     "@nestjs/jwt": "^11.0.1",
@@ -97,7 +95,7 @@
     "@nestjs/platform-express": "^11.1.6",
     "@nestjs/swagger": "^11.2.0",
     "@nestjs/typeorm": "^11.0.0",
-    "@prisma/client": "^6.19.0",
+    "@nestjs/websockets": "^11.1.11",
     "@socket.io/redis-adapter": "^8.3.0",
     "@types/multer": "^2.0.0",
     "@types/passport-google-oauth20": "^2.0.16",
@@ -135,7 +133,7 @@
     "@eslint/js": "^9.37.0",
     "@nestjs/cli": "^11.0.10",
     "@nestjs/schematics": "^11.0.9",
-    "@nestjs/testing": "^11.1.6",
+    "@nestjs/testing": "^11.1.11",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie": "^0.6.0",
     "@types/cookie-parser": "^1.4.9",
@@ -158,13 +156,13 @@
     "jest": "^30.2.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.6.2",
-    "prisma": "^6.19.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "turbo": "^2.7.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1"
   },
@@ -191,5 +189,10 @@
     "moduleNameMapper": {
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1"
     }
-  }
+  },
+  "packageManager": "npm@10.8.2",
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ]
 }

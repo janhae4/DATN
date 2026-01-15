@@ -54,22 +54,22 @@ export class TaskService {
     );
   }
 
-  async deleteMany(taskIds: string[], userId: string) {
+  async deleteMany(taskIds: string[], userId: string, teamId: string) {
     return unwrapRpcResult(
       await this.amqp.request({
         exchange: TASK_EXCHANGE,
         routingKey: TASK_PATTERNS.DELETE_MANY,
-        payload: { taskIds, userId },
+        payload: { taskIds, userId, teamId },
       }),
     );
   }
 
-  async updateMany(taskIds: string[], updateTaskDto: UpdateTaskDto, userId: string) {
+  async updateMany(taskIds: string[], updateTaskDto: UpdateTaskDto, userId: string, teamId: string) {
     return unwrapRpcResult(
       await this.amqp.request({
         exchange: TASK_EXCHANGE,
         routingKey: TASK_PATTERNS.UPDATE_MANY,
-        payload: { taskIds, updateTaskDto, userId },
+        payload: { taskIds, updateTaskDto, userId, teamId },
       }),
     );
   }

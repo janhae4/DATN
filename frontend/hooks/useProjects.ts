@@ -11,7 +11,6 @@ export function useProjects(teamId?: string) {
   const queryClient = useQueryClient();
   const queryKey = ["projects", teamId];
 
-  // 1. Fetch Projects
   const {
     data: projects = [],
     isLoading,

@@ -11,6 +11,7 @@ import { TaskRowList } from "./TaskRowList";
 import { UpdateTaskDto } from "@/services/taskService";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
 import { TaskListSkeleton } from "@/components/skeletons/TaskListSkeleton";
+import { useInView } from "react-intersection-observer";
 
 type BacklogTaskListProps = {
   lists?: List[];
@@ -48,7 +49,6 @@ export function BacklogTaskList({
   console.log("Rendering BacklogAccordionItem with", tasks.length, "tasks");
 
   const { isAddingNewRow, setIsAddingNewRow } = useTaskManagementContext();
-
   const [isSelectionDragging, setIsSelectionDragging] = React.useState(false);
 
   React.useEffect(() => {
@@ -61,39 +61,24 @@ export function BacklogTaskList({
     window.addEventListener("pointerup", handleGlobalPointerUp);
     return () => window.removeEventListener("pointerup", handleGlobalPointerUp);
   }, [isSelectionDragging]);
-  const observerTarget = React.useRef<HTMLDivElement>(null);
+
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: "200px",
+  });
 
   React.useEffect(() => {
-    if (!hasNextPage || isFetchingNextPage || !fetchNextPage) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasNextPage) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const currentTarget = observerTarget.current;
-    if (currentTarget) {
-      observer.observe(currentTarget);
+    if (inView && hasNextPage && !isFetchingNextPage && fetchNextPage) {
+      console.log("Loading more tasks...");
+      fetchNextPage();
     }
-
-    return () => {
-      if (currentTarget) {
-        observer.unobserve(currentTarget);
-      }
-    };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const listsList = lists ?? [];
 
   const handleUpdateTask = (taskId: string, updates: UpdateTaskDto) => {
     onUpdateTask(taskId, updates);
   };
-
-  // --- Render ---
 
   if (isLoading) {
     return <TaskListSkeleton />;
@@ -109,7 +94,7 @@ export function BacklogTaskList({
   }
 
   return (
-    <div className="flex flex-col relative">
+    <div className="flex flex-col relative h-[calc(60vh-9rem)] overflow-y-scroll custom-scrollbar">
       <div className="rounded-lg">
         <Table>
           {tasks.length > 0 ? (
@@ -151,7 +136,9 @@ export function BacklogTaskList({
                       }}
                     >
                       <PlusIcon className="h-8 w-8 opacity-50" />
-                      <p className="text-sm font-medium">Your backlog is empty</p>
+                      <p className="text-sm font-medium">
+                        Your backlog is empty
+                      </p>
                       <p className="text-xs opacity-70">
                         Click here to create a new task
                       </p>
@@ -175,7 +162,7 @@ export function BacklogTaskList({
         </Button>
       )}
 
-      <div ref={observerTarget} className="h-4 w-full" />
+      <div ref={ref} className="h-4 w-full" />
 
       {isFetchingNextPage && (
         <div className="flex justify-center p-4">

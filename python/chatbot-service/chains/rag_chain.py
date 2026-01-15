@@ -44,27 +44,21 @@ class RAGChain:
             return
             
         for doc in docs:
-            # print(f"[CONTEXT] Doc: {doc}") # Debug xong có thể comment lại
             content = ""
             meta = {}
 
-            # CASE 1: LangChain Document Object
             if hasattr(doc, 'page_content'):
                 content = doc.page_content
                 meta = doc.metadata if hasattr(doc, 'metadata') else {}
             
-            # CASE 2: Tuple
             elif isinstance(doc, tuple) and len(doc) > 0:
                 content = str(doc[0])
                 meta = doc[1] if len(doc) > 1 and isinstance(doc[1], dict) else {}
             
-            # CASE 3: Dictionary (SỬA Ở ĐÂY)
             elif isinstance(doc, dict):
-                # Thêm check key 'text' và 'meta'
                 content = doc.get('page_content') or doc.get('content') or doc.get('text') or ""
                 meta = doc.get('metadata') or doc.get('meta') or {}
             
-            # CASE 4: String/Other
             else:
                 content = str(doc)
                 meta = {}
@@ -135,7 +129,6 @@ class RAGChain:
         ## Ngữ cảnh:
         {context_str}
         """
-           
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(history_messages)
         messages.append({"role": "user", "content": question}) 

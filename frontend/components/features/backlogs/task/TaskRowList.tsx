@@ -39,13 +39,8 @@ export function TaskRowList({
   onMultiSelectChange,
   onDeleteTask,
 }: TaskRowListProps) {
-  // ...
-  // ...
-
   const [anchorId, setAnchorId] = React.useState<string | null>(null);
   const [initialSnapshot, setInitialSnapshot] = React.useState<string[]>([]);
-  console.log("Rendering BacklogAccordionItem with", tasks.length, "tasks");
-
   const anchorIdRef = React.useRef<string | null>(null);
   const initialSnapshotRef = React.useRef<string[]>([]);
   const isLockedRef = React.useRef(false);
@@ -161,7 +156,6 @@ export function TaskRowList({
     />
   ));
 
-  // 2. Sortable List
   if (isSortable) {
     const taskIds = tasks.map((task) => task.id);
     return (

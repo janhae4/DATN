@@ -18,6 +18,7 @@ export interface CreateTaskDto {
   dueDate?: string | null;
   epicId?: string | null;
   sprintId?: string | null;
+  teamId: string;
 }
 
 export interface UpdateTaskDto extends Partial<Omit<CreateTaskDto, "projectId">> {
@@ -40,7 +41,7 @@ export interface BaseTaskFilterDto {
   page?: number;
   limit?: number;
   projectId?: string;
-  teamId: string;
+  teamId?: string;
 }
 
 // --- Service ---
@@ -101,8 +102,8 @@ export const taskService = {
     return response.data;
   },
 
-  updateTasks: async (taskIds: string[], updates: UpdateTaskDto): Promise<Task[]> => {
-    const response = await apiClient.patch<Task[]>(`/tasks/bulk`, { taskIds, updates });
+  updateTasks: async (taskIds: string[], updates: UpdateTaskDto, teamId: string): Promise<Task[]> => {
+    const response = await apiClient.patch<Task[]>(`/tasks/bulk`, { taskIds, updates, teamId });
     return response.data;
   },
 
@@ -114,8 +115,8 @@ export const taskService = {
     await apiClient.delete(`/tasks/${id}`);
   },
 
-  deleteTasks: async (taskIds: string[]): Promise<void> => {
-    await apiClient.delete(`/tasks/bulk`, { data: { taskIds } });
+  deleteTasks: async (taskIds: string[], teamId: string): Promise<void> => {
+    await apiClient.delete(`/tasks/bulk`, { data: { taskIds, teamId } });
   },
 
   /**

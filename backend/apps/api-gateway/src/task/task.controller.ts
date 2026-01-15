@@ -22,14 +22,11 @@ import {
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
-import { Role, MemberRole, PROJECT_EXCHANGE, PROJECT_PATTERNS } from '@app/contracts';
+import { Role } from '@app/contracts';
 import { TaskService } from './task.service';
-import { map, Observable, firstValueFrom } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import Redis from 'ioredis';
 import { FileService } from '../file/file.service';
-import { TeamService } from '../team/team.service';
-import { ClientProxy } from '@nestjs/microservices';
-import { unwrapRpcResult } from '../common/helper/rpc';
 import { ApiBody } from '@nestjs/swagger';
 import { BaseTaskFilterDto } from './dto/get-task-filter.dto';
 
@@ -68,18 +65,18 @@ export class TaskController {
 
   @Delete('bulk')
   deleteBulk(
-    @Body() data: { taskIds: string[] },
+    @Body() data: { taskIds: string[], teamId: string },
     @CurrentUser('id') id: string
   ) {
-    return this.taskService.deleteMany(data.taskIds, id);
+    return this.taskService.deleteMany(data.taskIds, id, data.teamId);
   }
 
   @Patch('bulk')
   updateBulk(
-    @Body() data: { taskIds: string[], updates: UpdateTaskDto },
+    @Body() data: { taskIds: string[], updates: UpdateTaskDto, teamId: string },
     @CurrentUser('id') id: string
   ) {
-    return this.taskService.updateMany(data.taskIds, data.updates, id);
+    return this.taskService.updateMany(data.taskIds, data.updates, id, data.teamId);
   }
 
   @Get()

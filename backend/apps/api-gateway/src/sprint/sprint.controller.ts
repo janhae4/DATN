@@ -1,16 +1,12 @@
 import { Controller, Post, Body, UseGuards, Get, Param, Delete, Put, Query } from '@nestjs/common';
-import { CreateSprintDto, SprintStatus, UpdateSprintDto } from '@app/contracts';
+import { CreateSprintDto, UpdateSprintDto } from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
-import { Role, MemberRole, PROJECT_EXCHANGE, PROJECT_PATTERNS } from '@app/contracts';
+import { Role} from '@app/contracts';
 import { SprintService } from './sprint.service';
 import { FindAllSprintsDto } from './dto/get-sprint.dto';
 import { TeamService } from '../team/team.service';
-import { Inject } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { unwrapRpcResult } from '../common/helper/rpc';
 
 @Controller('sprints')
 @UseGuards(RoleGuard)
@@ -18,7 +14,6 @@ import { unwrapRpcResult } from '../common/helper/rpc';
 export class SprintController {
   constructor(
     private readonly sprintService: SprintService,
-    private readonly teamService: TeamService,
   ) { }
 
   @Post()
