@@ -237,18 +237,17 @@ export class TasksService {
 
     const response: UpdateResult = await queryBuilder.execute();
 
-    if (response.affected || 0 > 0 && cleanDto.approvalStatus) {
+    if (response.affected || 0 > 0 && cleanDto.approvalStatus !== undefined) {
       const newStatus = cleanDto.approvalStatus;
-
+      console.log("NEW STATUS", newStatus)
       const updatedTasks = await this.taskRepository.find({
         where: { id: In(taskIds) },
         select: ['id', 'title', 'reporterId', 'teamId']
       });
 
-      console.log("UPDATE SUCCESSFULLY")
 
       if (updatedTasks.length > 0) {
-        console.log("FIRE NOTIFICATION")
+        console.log(`📡 Sending update notification for ${updatedTasks.length} task(s)`);
         this._sendTaskNotification({
           action: newStatus === 'APPROVED' ? 'APPROVED' : 'REJECTED',
           taskIds: updatedTasks.map(t => t.id),
