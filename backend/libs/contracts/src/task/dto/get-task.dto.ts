@@ -14,13 +14,6 @@ export class BaseTaskFilterDto {
     sortOrder: 'ASC' | 'DESC';
     page?: number;
     limit?: number;
-}
-
-export class GetTasksByProjectDto extends BaseTaskFilterDto {
     projectId: string;
-}
-
-export class GetTasksByTeamDto extends BaseTaskFilterDto {
-
     teamId: string;
 }

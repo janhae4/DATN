@@ -23,4 +23,5 @@ export const TASK_PATTERNS = {
   GET_STATS: 'task.getStats',
   SUGGEST_TASK: 'task.suggestTask',
   COMPLETE_SPRINT: 'task.completeSprint',
+  SEND_NOTIFICATION: 'task.sendNotification',
 };

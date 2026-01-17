@@ -36,6 +36,7 @@ import {
   NOTIFICATION_EXCHANGE,
   NOTIFICATION_PATTERN,
   NotificationType,
+  MemberDto,
 } from '@app/contracts';
 import { RemoveTeamEventPayload } from '@app/contracts/team/dto/remove-team.dto';
 import { RmqClientService } from '@app/common';
@@ -327,11 +328,41 @@ export class TeamService {
   async acceptInvitation(userId: string, teamId: string, notificationId: string) {
     return await this.dataSource.transaction(async (manager) => {
       const memberRepo = manager.getRepository(TeamMember);
-      const member = await memberRepo.findOne({ where: { teamId, userId } })
+      const team = await this._getTeamForModification(teamId, manager);
+      const member = team.members.find(m => m.userId === userId);
       if (!member) throw new NotFoundException(`You are not invited to this team.`)
       member.status = MemberStatus.ACCEPTED;
-      this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.UPDATE, { notificationId, data: { type: NotificationType.SUCCESS } });
+      this.amqp.publish(
+        NOTIFICATION_EXCHANGE,
+        NOTIFICATION_PATTERN.UPDATE,
+        {
+          notificationId,
+          data: {
+            type: NotificationType.SUCCESS,
+            message: `You have been accepted to the team ${team.name}`
+          }
+        });
       await memberRepo.save(member);
+
+      const users = await this.amqp.request<User[]>({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+        payload: { userIds: [userId] },
+      });
+
+      const user = users && users.length > 0 ? users[0] : null;
+
+      this.amqp.publish(
+        EVENTS_EXCHANGE,
+        EVENTS.JOIN_TEAM,
+        {
+          teamId: teamId,
+          teamName: team.name,
+          user,
+          members: team.members.filter(m => m.status === MemberStatus.ACCEPTED && m.id != member.id).map(m => m.userId),
+          timestamp: new Date()
+        }
+      );
       return { "success": true }
     })
   }
@@ -342,13 +373,22 @@ export class TeamService {
       const member = await memberRepo.findOne({ where: { teamId, userId } })
       if (!member) throw new NotFoundException(`You are not invited to this team.`)
       member.status = MemberStatus.DECLINED;
-      this.amqp.publish(NOTIFICATION_EXCHANGE, NOTIFICATION_PATTERN.UPDATE, { notificationId, data: { type: NotificationType.FAILED } });
+      this.amqp.publish(
+        NOTIFICATION_EXCHANGE,
+        NOTIFICATION_PATTERN.UPDATE,
+        {
+          notificationId,
+          data: {
+            type: NotificationType.FAILED,
+            message: `You have been declined to the team ${member.team.name}`
+          }
+        });
       await memberRepo.save(member);
       return { "success": true }
     })
   }
 
-  async removeMember(payload: RemoveMember & { teamId: string; requesterId: string }): Promise<Team> {
+  async removeMember(payload: RemoveMember): Promise<Team> {
     const { memberIds, teamId, requesterId } = payload;
     this.logger.log(`Removing ${memberIds.length} members from team [${teamId}] by [${requesterId}]...`);
 
@@ -377,19 +417,26 @@ export class TeamService {
 
     this.logger.log(`Members removed from team [${teamId}]. Emitting event.`);
 
-    const userIds = updatedTeam.members.map(m => m.userId);
+    const allRelatedUserIds = [...memberIds, requesterId];
     const members: User[] =
       await this.amqp.request({
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-        payload: { userIds },
+        payload: { userIds: allRelatedUserIds },
       })
+
+
+    console.log(members)
+
+    console.log("Members to notify: ", members.filter(m => m.id !== requesterId).map(m => m.id))
 
     const eventPayload: RemoveMemberEventPayload = {
       teamId,
       teamName: updatedTeam.name,
+
       requesterId,
       requesterName: members.find(m => m.id === requesterId)!.name,
+
       members,
       memberIdsToNotify: members.filter(m => m.id !== requesterId).map(m => m.id),
       metadata: {
@@ -714,12 +761,17 @@ export class TeamService {
     const result = users.map((u) => {
       const member = members.find(m => m.userId === u.id);
       return {
-        ...member,
+        teamId,
+        role: member?.role,
+        isActive: u.isActive,
+        status: member?.status,
+        joinedAt: member?.joinedAt,
+        deletedAt: member?.deletedAt,
         id: u.id,
         name: u.name,
         email: u.email,
         avatar: u.avatar,
-      } as TeamMember | Partial<User>
+      } as MemberDto
     });
     return result;
   }

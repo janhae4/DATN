@@ -82,8 +82,9 @@ export class TaskController {
   @Get()
   findAllByProjectId(
     @CurrentUser('id') userId: string,
-    @Query() filters: BaseTaskFilterDto
+    @Query() filters: BaseTaskFilterDto,
   ) {
+    console.log('filters', filters)
     return this.taskService.findAllByProjectId(userId, filters);
   }
 

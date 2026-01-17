@@ -2,11 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
-  NotificationEventDto,
+  CreateNotificationDto,
   NotificationUpdateDto,
 } from '@app/contracts';
 import { Notification } from './entity/notification.entity';
-import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class NotificationService {
@@ -14,7 +13,6 @@ export class NotificationService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
-    private readonly amqp: RmqClientService
   ) { }
 
   // async handleTeamAddMember(payload: AddMemberEventPayload) {
@@ -27,14 +25,10 @@ export class NotificationService {
   //   })))
   // }
 
-  async addNotification(notification: NotificationEventDto) {
+  async addNotification(notification: CreateNotificationDto) {
     console.log("Notification: ", notification);
     const newNotification = this.notificationRepository.create({
-      userId: notification.userId,
-      title: notification.title,
-      message: notification.message,
-      type: notification.type as any,
-      metadata: notification.metadata
+      ...notification,
     });
     const notificationCreated = await this.notificationRepository.save(newNotification);
     console.log("New notification: ", notificationCreated);
@@ -76,14 +70,14 @@ export class NotificationService {
   }
 
   async markAllNotificationsAsRead(userId: string) {
-    await this.notificationRepository.update({ userId }, {
+    await this.notificationRepository.update({ targetId: userId }, {
       isRead: true,
     });
     this.logger.log(`All notifications marked as read: ${userId}`);
   }
 
   async markAllNotificationsAsUnread(userId: string) {
-    await this.notificationRepository.update({ userId }, {
+    await this.notificationRepository.update({ targetId: userId }, {
       isRead: false,
     });
     this.logger.log(`All notifications marked as unread: ${userId}`);
@@ -93,7 +87,7 @@ export class NotificationService {
     this.logger.log(`Fetching notifications for user: ${userId}`);
     const not = await this.notificationRepository.find({
       where: {
-        userId,
+        targetId: userId
       },
       order: {
         createdAt: 'DESC',

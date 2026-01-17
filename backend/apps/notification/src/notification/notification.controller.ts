@@ -1,10 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import {
-  NotificationEventDto,
   NotificationUpdateDto,
   NOTIFICATION_PATTERN,
   NOTIFICATION_EXCHANGE,
+  CreateNotificationDto,
 } from '@app/contracts';
 import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 
@@ -17,7 +17,7 @@ export class NotificationController {
     routingKey: NOTIFICATION_PATTERN.CREATE,
     queue: NOTIFICATION_PATTERN.CREATE
   })
-  handleNotification(event: NotificationEventDto) {
+  handleNotification(event: CreateNotificationDto) {
     this.notificationService.addNotification(event);
   }
 

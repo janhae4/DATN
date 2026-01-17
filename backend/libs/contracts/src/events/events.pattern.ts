@@ -5,6 +5,7 @@ export const EVENTS = {
   CREATE_TEAM: 'events.create.team',
   CREATE_CONVERSATION:'events.create.conversation',
   ADD_MEMBER: 'events.add.member',
+  JOIN_TEAM: 'events.join.team',
   REMOVE_MEMBER: 'events.remove.member',
   LEAVE_TEAM: 'events.leave.team',
   REMOVE_TEAM: 'events.remove.team',

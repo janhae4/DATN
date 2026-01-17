@@ -1,19 +1,15 @@
 import { MemberRole } from '@app/contracts/enums/member-role.enum';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-
-
+import { MemberStatus } from '../entity/team-member.entity';
 
 export class MemberDto {
-  @IsString()
   id: string;
-
-  @IsString()
-  name: string;
-
-  @IsString()
-  @IsOptional()
-  avatar?: string;
-
-  @IsEnum(MemberRole)
+  teamId: string;
   role: MemberRole;
+  isActive: boolean;
+  status: MemberStatus;
+  joinedAt?: Date;
+  deletedAt?: Date | null;
+  name: string;
+  email: string;
+  avatar: string;
 }

@@ -1,13 +1,21 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 import { NotificationType } from '@app/contracts/enums/notification-type.enum';
+import { NotificationTargetType } from '@app/contracts';
+
+export enum NotificationResource {
+    TASK = 'TASK',
+    COMMENT = 'COMMENT',
+    TEAM = 'TEAM',
+    SYSTEM = 'SYSTEM'
+}
 
 @Entity()
 export class Notification {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column()
-    userId: string;
+    @Column({ nullable: true })
+    actorId: string;
 
     @Column()
     message: string;
@@ -18,8 +26,6 @@ export class Notification {
     @Column({ default: false })
     isRead: boolean;
 
-    @Column({ nullable: true })
-    link: string;
 
     @Column({
         type: 'enum',
@@ -27,11 +33,27 @@ export class Notification {
     })
     type: NotificationType;
 
-    @Column({ type: 'jsonb', nullable: true })
-    metadata: Record<string, any>;
+    @Column({
+        type: 'enum',
+        enum: NotificationResource,
+        default: NotificationResource.SYSTEM
+    })
+    resourceType: NotificationResource;
 
     @Column({ nullable: true })
-    actionUrl: string;
+    resourceId: string;
+
+    @Column({
+        type: 'enum',
+        enum: NotificationTargetType,
+    })
+    targetType: NotificationTargetType;
+
+    @Column({ nullable: true })
+    targetId: string;
+
+    @Column({ type: 'jsonb', nullable: true })
+    metadata: Record<string, any>;
 
     @CreateDateColumn()
     createdAt: Date;

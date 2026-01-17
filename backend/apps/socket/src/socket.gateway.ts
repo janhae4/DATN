@@ -16,24 +16,25 @@ import {
   AUTH_PATTERN,
   CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
+  CreateNotificationDto,
   FileStatus,
   JwtDto,
   MeetingSummaryResponseDto,
   MessageSnapshot,
   NOTIFICATION_EXCHANGE,
   NOTIFICATION_PATTERN,
-  NotificationEventDto,
+  NotificationResource,
+  NotificationTargetType,
   ResponseMessageDto,
   ResponseStreamDto,
-  RPC_TIMEOUT,
   SendMessageEventPayload,
+  SendTaskNotificationDto,
   SummarizeDocumentDto,
   User,
   VIDEO_CHAT_EXCHANGE,
   VIDEO_CHAT_PATTERN,
 } from '@app/contracts';
 import * as cookie from 'cookie';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { RmqClientService } from '@app/common';
 
 interface AuthenticatedSocket extends Socket {
@@ -109,6 +110,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+
   handleDisconnect(client: AuthenticatedSocket) {
     const user = client.data.user as JwtDto;
     if (user) {
@@ -174,6 +176,72 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const currentRooms = rooms.filter(r => r !== user.id);
     currentRooms.forEach(r => client.leave(r));
     client.join(payload.roomId);
+  }
+
+  @SubscribeMessage('leave_room')
+  async handleRoomDisconnect(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { roomId: string }
+  ) {
+    await client.leave(payload.roomId);
+    this.logger.log(`Client ${client.id} left room ${payload.roomId}`);
+  }
+
+  async notifyTaskUpdate(payload: SendTaskNotificationDto) {
+    this.server.to(payload.teamId).emit('task_update', payload);
+    this.logger.log(`Emitted task_update to room ${payload.teamId}`);
+
+    const { action, actor, details } = payload;
+
+    let messageContent = '';
+    let notificationType = 'INFO';
+
+    const taskName = details?.taskTitle ? `"${details.taskTitle}"` : 'a task';
+    const actorName = actor.name
+
+    switch (action) {
+      case 'APPROVED':
+        messageContent = `${actorName} approved task ${taskName}`;
+        notificationType = 'SUCCESS';
+        break;
+      case 'REJECTED':
+        messageContent = `${actorName} rejected task ${taskName}`;
+        notificationType = 'ERROR';
+        break;
+      case 'CREATE':
+        messageContent = `${actorName} created new task ${taskName}`;
+        notificationType = 'INFO';
+        break;
+      case 'DELETE':
+        messageContent = `${actorName} deleted task ${taskName}`;
+        notificationType = 'WARNING';
+        break;
+      default:
+        messageContent = `${actorName} updated task ${taskName}`;
+        notificationType = 'INFO';
+    }
+
+    await this.amqpConnection.request({
+      exchange: NOTIFICATION_EXCHANGE,
+      routingKey: NOTIFICATION_PATTERN.CREATE,
+      payload: {
+        title: 'Task Update',
+        message: messageContent,
+        type: notificationType,
+
+        targetType: NotificationTargetType.TEAM,
+        targetId: payload.teamId,
+
+        resourceType: NotificationResource.TASK,
+        resourceId: payload.taskIds[0],
+        actorId: actor.id,
+
+        metadata: {
+          action: payload.action,
+          originalUrl: ""
+        }
+      } as CreateNotificationDto
+    });
   }
 
   @SubscribeMessage('join_video_room')
@@ -470,24 +538,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.summaryBuffer.delete(roomId);
     }
 
-
     this.server.to(roomId).emit(event, data);
   }
 
-
-  sendNotificationToUser(event: NotificationEventDto) {
-    this.server.to(event.userId).emit('notification', {
-      title: event.title,
-      message: event.message,
-      type: event.type,
-      metadata: event.metadata
-    });
-
-    this.amqpConnection.publish(
-      NOTIFICATION_EXCHANGE,
-      NOTIFICATION_PATTERN.CREATE,
-      event
-    );
+  async publishNotification(dto: CreateNotificationDto) {
+    this.logger.log(`Publishing notification: ${dto.metadata}`);
+    this.server.to(dto.targetId).emit('notification', dto);
+    return await this.amqpConnection.request({
+      exchange: NOTIFICATION_EXCHANGE,
+      routingKey: NOTIFICATION_PATTERN.CREATE,
+      payload: dto
+    }); 
   }
 
   handleNewMessage(payload: SendMessageEventPayload) {

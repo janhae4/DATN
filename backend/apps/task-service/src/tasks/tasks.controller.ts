@@ -1,7 +1,7 @@
-import { Body, Controller, Inject, Query, Req, Sse } from '@nestjs/common';
+import { Body, Controller} from '@nestjs/common';
 import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, TEAM_EXCHANGE, GetTasksByProjectDto, GetTasksByTeamDto } from '@app/contracts';
+import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, BaseTaskFilterDto } from '@app/contracts';
 import { customErrorHandler } from '@app/common';
 import { LabelEvent } from '@app/contracts/events/label.event';
 import { AiStreamService } from './ai-stream.service';
@@ -9,7 +9,6 @@ import { AiStreamService } from './ai-stream.service';
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService,
-    private readonly streamService: AiStreamService
   ) { }
 
   @RabbitRPC({
@@ -39,7 +38,7 @@ export class TasksController {
     errorHandler: customErrorHandler,
   })
   findAll(body: { taskIds: string[]; userId: string, teamId: string }) {
-    return this.tasksService.deleteMany(body.taskIds, body.userId, body.teamId);
+    return this.tasksService.deleteMany(body.taskIds, body.teamId, body.userId);
   }
 
   @RabbitRPC({
@@ -48,7 +47,7 @@ export class TasksController {
     queue: TASK_PATTERNS.FIND_ALL,
     errorHandler: customErrorHandler,
   })
-  findAllByProject(payload: { userId: string, filters: GetTasksByProjectDto }) {
+  findAllByProject(payload: { userId: string, filters: BaseTaskFilterDto }) {
     return this.tasksService.findAllByProject(payload.userId, payload.filters);
   }
 
@@ -58,7 +57,7 @@ export class TasksController {
     queue: TASK_PATTERNS.FIND_ALL_BY_TEAM_ID,
     errorHandler: customErrorHandler,
   })
-  findAllByTeam(payload: { userId: string, filters: GetTasksByTeamDto }) {
+  findAllByTeam(payload: { userId: string, filters: BaseTaskFilterDto }) {
     return this.tasksService.findAllByTeam(payload.userId, payload.filters);
   }
 

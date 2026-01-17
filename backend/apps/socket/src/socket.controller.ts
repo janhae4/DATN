@@ -7,49 +7,54 @@ import {
   NOTIFICATION_PATTERN,
   CHATBOT_PATTERN,
   ResponseStreamDto,
-  NotificationEventDto,
-  User,
-  NotificationType,
   SOCKET_EXCHANGE,
   CHATBOT_EXCHANGE,
-  TEAM_PATTERN,
   FILE_PATTERN,
+  TASK_PATTERNS,
+  NotificationTargetType,
+  NotificationType,
+  NotificationResource,
 } from '@app/contracts';
 
 import type {
   AddMemberEventPayload,
   ChangeRoleMember,
+  CreateNotificationDto,
   CreateTeamEventPayload,
   FileStatus,
   LeaveMemberEventPayload,
   MeetingSummaryResponseDto,
   RemoveMemberEventPayload,
-  RemoveTeamEventPayload,
   SendMessageEventPayload,
-  SendTeamNotificationDto
+  SendTaskNotificationDto,
+  User,
 } from '@app/contracts';
 
 import { SocketGateway } from './socket.gateway';
 import { customErrorHandler } from '@app/common';
+import { NotificationMapper } from '@app/contracts/notification/notification.mapper';
 
 @Controller()
 export class SocketController {
   constructor(private readonly socketGateway: SocketGateway) { }
 
-  @RabbitSubscribe({
-    exchange: EVENTS_EXCHANGE,
-    routingKey: EVENTS.LOGIN,
-    queue: EVENTS.LOGIN,
-    errorHandler: customErrorHandler
-  })
-  handleLogin(payload: Partial<User>) {
-    this.socketGateway.sendNotificationToUser({
-      userId: payload.id ?? '',
-      title: 'Login Notification',
-      message: 'Logged in successfully',
-      type: NotificationType.SUCCESS,
-    });
-  }
+  // @RabbitSubscribe({
+  //   exchange: EVENTS_EXCHANGE,
+  //   routingKey: EVENTS.LOGIN,
+  //   queue: EVENTS.LOGIN,
+  //   errorHandler: customErrorHandler
+  // })
+  // handleLogin(payload: Partial<User>) {
+  //   this.socketGateway.publishNotification({
+  //     type: NotificationType.LOGIN,
+  //     title: 'Login Notification',
+  //     message: `You have been logged in successfully`,
+  //     targetType: NotificationTargetType.USER,
+  //     targetId: payload.id, 
+  //     actorId: payload.id,
+
+  //   });
+  // }
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
@@ -64,162 +69,106 @@ export class SocketController {
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.CREATE_TEAM,
-    queue: "events.create.team.socket",
+    queue: "events.create.team.notification",
     errorHandler: customErrorHandler
   })
-  handleCreateTeam(payload: CreateTeamEventPayload) {
-    const { membersToNotify, createdAt, owner, teamSnapshot } = payload;
-    const createAtDate = new Date(createdAt);
-    membersToNotify.map((m) =>
-      this.socketGateway.sendNotificationToUser({
-        userId: m,
-        title: `You have been added to team ${teamSnapshot.name}`,
-        message: `User ${owner.name} created team ${teamSnapshot.name} at ${createAtDate.toISOString()}`,
-        type: NotificationType.SUCCESS,
-      }),
-    );
+  async handleCreateTeam(payload: CreateTeamEventPayload) {
+    const notificationDto = NotificationMapper.fromCreateTeam(payload);
+    await this.socketGateway.publishNotification(notificationDto);
   }
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.ADD_MEMBER,
-    queue: "events_socket_add_member",
+    queue: "events.add.member.notification",
     errorHandler: customErrorHandler
   })
-  handleAddMember(payload: AddMemberEventPayload) {
-    const { members, requesterName, teamName, requesterId, metadata } = payload;
-    console.log("Metadata: ", metadata);
-    members
-      .filter((m) => m.id !== requesterId)
-      .forEach((m) => {
-        this.socketGateway.sendNotificationToUser({
-          userId: m.id,
-          title: `You have been added to team ${teamName}`,
-          message: `User ${requesterName} invited you to join team ${teamName}`,
-          type: NotificationType.PENDING,
-          metadata: metadata
-        });
+  async handleAddMember(payload: AddMemberEventPayload) {
+    const notificationDtos = NotificationMapper.fromAddMember(payload);
+    await Promise.all(
+      notificationDtos.map(dto => this.socketGateway.publishNotification(dto))
+    );
+  }
+
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.JOIN_TEAM,
+    queue: "events.join.team.notification",
+    errorHandler: customErrorHandler
+  })
+  async handleJoinTeam(payload: {
+    teamId: string;
+    teamName: string;
+    user: User;
+    members: string[];
+    timeStamp: string;
+  }) {
+    payload.members.map(async (memberId) => {
+      await this.socketGateway.publishNotification({
+        type: NotificationType.SUCCESS,
+        title: 'Join Team Notification',
+        message: `${payload.user.name} has joined the team ${payload.teamName}`,
+        targetType: NotificationTargetType.USER,
+        targetId: memberId,
+
+        actorId: payload.user.id,
+        metadata: {
+          action: 'MEMBER_JOINED',
+          teamId: payload.teamId
+        },
+        resourceId: payload.teamId,
+        resourceType: NotificationResource.TEAM
       });
+    })
   }
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.MEMBER_ROLE_CHANGED,
-    queue: "events_socket_member_role_changed",
+    queue: "events.role.changed.notification",
     errorHandler: customErrorHandler
   })
-  handleMemberRoleChanged(payload: ChangeRoleMember) {
-    const { requesterId, teamName, requesterName, newRole, teamId } = payload;
-    this.socketGateway.sendNotificationToUser({
-      userId: requesterId,
-      title: `Your role in team ${teamName} has been changed`,
-      message: `${requesterName} changed your role in team ${teamName} to ${newRole}`,
-      type: NotificationType.SUCCESS,
-    });
+  async handleMemberRoleChanged(payload: ChangeRoleMember) {
+    const notificationDto = NotificationMapper.fromChangeRole(payload);
+    await this.socketGateway.publishNotification(notificationDto);
   }
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.REMOVE_MEMBER,
-    queue: "events_socket_remove_member",
+    queue: "events.remove.member.notification",
     errorHandler: customErrorHandler
   })
-  handleRemoveMember(payload: RemoveMemberEventPayload) {
-    console.log('RemoveMember payload:', payload);
-    const { requesterName, teamName, memberIdsToNotify: memberIds = [], metadata } = payload;
-    memberIds.map((m) =>
-      this.socketGateway.sendNotificationToUser({
-        userId: m,
-        title: `${m === requesterName ? 'You' : requesterName} have been removed from team ${teamName}`,
-        message: `${requesterName} removed you from team ${teamName}`,
-        type: NotificationType.WARNING,
-        metadata
-      }),
-    );
-  }
-
-  @RabbitSubscribe({
-    exchange: EVENTS_EXCHANGE,
-    routingKey: EVENTS.REMOVE_MEMBER,
-    queue: "events_socket_team_deleted",
-    errorHandler: customErrorHandler
-  })
-  handleTeamDeleted(payload: RemoveTeamEventPayload) {
-    const { requesterName, requesterId, teamName, teamId, memberIdsToNotify: memberIds } = payload;
-    memberIds.map((m) =>
-      this.socketGateway.sendNotificationToUser({
-        userId: m,
-        title: `Team ${teamName} has been deleted`,
-        message: `${m === requesterId ? 'You' : requesterName} deleted team ${teamName}`,
-        type: NotificationType.SUCCESS,
-      }),
-    );
+  async handleRemoveMember(payload: RemoveMemberEventPayload) {
+    console.log(payload.memberIdsToNotify)
+    const notificationDtos = NotificationMapper.fromRemoveMember(payload);
+    console.log(notificationDtos)
+    await Promise.all(
+      notificationDtos.map(dto => this.socketGateway.publishNotification(dto))
+    );;
   }
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.LEAVE_TEAM,
-    queue: "events_socket_leave_team",
+    queue: "events.leave.team.notification",
     errorHandler: customErrorHandler
   })
-  handleLeaveTeam(payload: LeaveMemberEventPayload) {
-    const { requester, memberIdsToNotify: memberIds = [], teamName } = payload;
-    memberIds.map((m) =>
-      this.socketGateway.sendNotificationToUser({
-        userId: m,
-        title: `A member has left team ${teamName}`,
-        message: `${requester.name} left`,
-        type: NotificationType.SUCCESS,
-      }),
-    );
-  }
-
-  @RabbitSubscribe({
-    exchange: EVENTS_EXCHANGE,
-    routingKey: EVENTS.REMOVE_TEAM,
-    queue: "events_socket_remove_team",
-    errorHandler: customErrorHandler
-  })
-  handleRemoveTeam(payload: RemoveTeamEventPayload) {
-    const { requesterName, teamName, memberIdsToNotify: memberIds } = payload;
-    memberIds.map((m) =>
-      this.socketGateway.sendNotificationToUser({
-        userId: m,
-        title: `Team ${teamName} has been deleted`,
-        message: `${m === requesterName ? 'You' : requesterName} deleted team ${teamName}`,
-        type: NotificationType.FAILED,
-      }),
-    );
+  async handleLeaveTeam(payload: LeaveMemberEventPayload) {
+    const notificationDto = NotificationMapper.fromLeaveTeam(payload);
+    await this.socketGateway.publishNotification(notificationDto);
   }
 
   @RabbitSubscribe({
     exchange: SOCKET_EXCHANGE,
-    routingKey: NOTIFICATION_PATTERN.SEND,
-    queue: "events_socket_send_notification",
+    routingKey: TASK_PATTERNS.SEND_NOTIFICATION,
+    queue: TASK_PATTERNS.SEND_NOTIFICATION,
     errorHandler: customErrorHandler
   })
-  handleSendNotification(event: NotificationEventDto) {
-    this.socketGateway.sendNotificationToUser(event);
+  async notifyTaskUpdate(payload: SendTaskNotificationDto) {
+    await this.socketGateway.notifyTaskUpdate(payload);
   }
 
-  @RabbitSubscribe({
-    exchange: SOCKET_EXCHANGE,
-    routingKey: TEAM_PATTERN.SEND_NOTIFICATION,
-    queue: TEAM_PATTERN.SEND_NOTIFICATION,
-    errorHandler: customErrorHandler
-  })
-  handleTeamSendNotification(event: SendTeamNotificationDto) {
-    const { members, message } = event;
-
-    members.map((m) =>
-      this.socketGateway.sendNotificationToUser({
-        userId: m,
-        title: message.title,
-        message: message.message,
-        type: message.type,
-      }),
-    );
-  }
 
   @RabbitSubscribe({
     exchange: CHATBOT_EXCHANGE,
@@ -227,8 +176,8 @@ export class SocketController {
     queue: NOTIFICATION_PATTERN.PROCESS_DOCUMENT,
     errorHandler: customErrorHandler
   })
-  handleGetProcessDocument(event: NotificationEventDto) {
-    this.socketGateway.sendNotificationToUser(event);
+  handleGetProcessDocument(event: CreateNotificationDto) {
+    this.socketGateway.publishNotification(event);
   }
 
   @RabbitSubscribe({
