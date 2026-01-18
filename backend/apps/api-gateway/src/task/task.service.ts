@@ -166,7 +166,15 @@ export class TaskService {
   async findAllByTeamId(userId: string, filters: BaseTaskFilterDto) {
     return unwrapRpcResult(await this.amqp.request({
       exchange: TASK_EXCHANGE,
-      routingKey: TASK_PATTERNS.FIND_ALL,
+      routingKey: TASK_PATTERNS.FIND_ALL_BY_TEAM_ID,
+      payload: { userId, filters },
+    }));
+  }
+
+  async findAllAssignToMe(userId: string, filters: BaseTaskFilterDto) {
+    return unwrapRpcResult(await this.amqp.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.FIND_ALL_ASSIGN_TO_ME,
       payload: { userId, filters },
     }));
   }

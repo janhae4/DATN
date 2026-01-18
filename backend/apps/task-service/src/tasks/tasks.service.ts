@@ -359,9 +359,22 @@ export class TasksService {
     await this.verifyPermission(userId, filters.teamId);
     console.log('filters', filters)
     const query = this.taskRepository.createQueryBuilder('task');
+    query.where('task.teamId = :teamId ', { teamId: filters.teamId });
+    return this._getTasksCommon(query, filters, userId, undefined, filters.teamId);
+  }
+
+  async findAllTaskAssignToMeInATeam(userId: string, filters: BaseTaskFilterDto) {
+    await this.verifyPermission(userId, filters.teamId);
+    console.log(`[findAllTaskAssignToMeInATeam] userId: ${userId}, teamId: ${filters.teamId}`);
+
+    const query = this.taskRepository.createQueryBuilder('task');
     query.where('task.teamId = :teamId', { teamId: filters.teamId });
 
-    return this._getTasksCommon(query, filters, userId, undefined, filters.teamId);
+    query.andWhere('task.assigneeIds @> ARRAY[:userId]::uuid[]', { userId });
+
+    const result = await this._getTasksCommon(query, filters, userId, undefined, filters.teamId);
+    console.log(`[findAllTaskAssignToMeInATeam] found: ${result.data.length} tasks`);
+    return result;
   }
 
   private async verifyPermission(userId: string, teamId: string, roles: MemberRole[] = [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER]) {

@@ -1,11 +1,11 @@
 import { Controller } from '@nestjs/common';
 import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import { EpicsService } from './epics.service';
-import { 
-  CreateEpicDto, 
-  EPIC_EXCHANGE, 
-  EPIC_PATTERNS, 
-  UpdateEpicDto 
+import {
+  CreateEpicDto,
+  EPIC_EXCHANGE,
+  EPIC_PATTERNS,
+  UpdateEpicDto
 } from '@app/contracts';
 
 @Controller()
@@ -19,7 +19,7 @@ export class EpicsController {
   })
   create(payload: { createEpicDto: CreateEpicDto, userId: string }) {
     console.log("create epic request:", payload.createEpicDto);
-    return this.epicsService.create(payload.createEpicDto, payload.userId); 
+    return this.epicsService.create(payload.createEpicDto, payload.userId);
   }
 
   @RabbitRPC({
@@ -27,8 +27,8 @@ export class EpicsController {
     routingKey: EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID,
     queue: EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID,
   })
-  findAllByProject(payload: { projectId: string }) {
-    return this.epicsService.findAllByProject(payload.projectId);
+  findAllByProject(payload: { projectId: string; userId: string }) {
+    return this.epicsService.findAllByProject(payload.projectId, payload.userId);
   }
 
   @RabbitRPC({

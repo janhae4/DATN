@@ -18,15 +18,15 @@ export class EpicService {
     return this.rmqClient.request({
       exchange: EPIC_EXCHANGE,
       routingKey: EPIC_PATTERNS.CREATE,
-      payload: {createEpicDto, userId},
+      payload: { createEpicDto, userId },
     });
   }
 
-  async findAllByProjectId(projectId: string) {
+  async findAllByProjectId(projectId: string, userId: string) {
     return this.rmqClient.request({
       exchange: EPIC_EXCHANGE,
       routingKey: EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID,
-      payload: { projectId },
+      payload: { projectId, userId },
     });
   }
 

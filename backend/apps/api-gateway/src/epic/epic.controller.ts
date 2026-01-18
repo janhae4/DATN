@@ -4,7 +4,7 @@ import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { EpicService } from './epic.service';
 import { CurrentUser } from '../common/role/current-user.decorator';
-import {  Role } from '@app/contracts';
+import { Role } from '@app/contracts';
 import { TeamService } from '../team/team.service';
 
 @Controller('epics')
@@ -28,8 +28,9 @@ export class EpicController {
   @Roles(Role.USER)
   findAllByProjectId(
     @Param('projectId') projectId: string,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.epicService.findAllByProjectId(projectId);
+    return this.epicService.findAllByProjectId(projectId, userId);
   }
 
   @Get(':id')

@@ -14,6 +14,6 @@ export class BaseTaskFilterDto {
     sortOrder: 'ASC' | 'DESC';
     page?: number;
     limit?: number;
-    projectId: string;
+    projectId?: string;
     teamId: string;
 }

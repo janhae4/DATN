@@ -104,6 +104,14 @@ export class TaskController {
     return this.taskService.findAllByTeamId(userId, filters);
   }
 
+  @Get('assign-to-me')
+  findAllAssignToMe(
+    @Query() filters: BaseTaskFilterDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.findAllAssignToMe(userId, filters);
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,
