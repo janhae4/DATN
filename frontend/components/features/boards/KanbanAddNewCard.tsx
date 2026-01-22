@@ -29,9 +29,8 @@ export function KanbanAddNewCard({
     handleAddNewRow,
     setNewTaskListId,
     handleInputKeyDown,
+    createTask,
   } = useTaskManagementContext();
-
-  const { createTask } = useTasks({ projectId, teamId });
 
   React.useEffect(() => {
     setNewTaskListId(listId);
@@ -45,6 +44,7 @@ export function KanbanAddNewCard({
         listId: listId,
         sprintId: sprintId || undefined,
         projectId: projectId,
+        teamId: teamId,
       };
       createTask(newTask);
       setNewRowTitle("");

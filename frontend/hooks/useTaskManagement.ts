@@ -8,6 +8,7 @@ import { useLabels } from "@/hooks/useLabels"
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { SprintStatus } from "@/types/common/enums"
+import { BaseTaskFilterDto } from "@/services/taskService"
 
 export interface TaskFilters {
   searchText: string
@@ -19,20 +20,29 @@ export interface TaskFilters {
   sprintIds: string[]
 }
 
-const INITIAL_FILTERS: TaskFilters = {
-  searchText: "",
+const INITIAL_FILTERS: BaseTaskFilterDto = {
+  search: "",
   assigneeIds: [],
-  priorities: [],
-  listIds: [],
-  epicIds: [],
+  priority: [],
+  statusId: [],
+  epicId: [],
   labelIds: [],
-  sprintIds: [],
+  sprintId: [],
+  isCompleted: false,
+  sortBy: [],
+  sortOrder: "ASC",
+  page: 1,
+  limit: 10,
 }
 
 export const useTaskManagement = (projectId: string = "project-phoenix-1", teamId: string = "team-1") => {
-  const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask } = useTasks({ projectId, teamId })
+  const { tasks: serverTasks, createTask: serverCreateTask, updateTask: serverUpdateTask, isLoading: isTaskLoading } = useTasks({
+    ...INITIAL_FILTERS,
+    projectId,
+    teamId
+  })
   const { sprints: serverSprints, updateSprint: serverUpdateSprint } = useSprints(projectId, teamId);
-  const { epics: serverEpics } = useEpics(projectId)
+  const { epics: serverEpics, updateEpic } = useEpics(projectId)
   const { labels: serverLabels } = useLabels(projectId)
 
   const [data, setData] = React.useState<Task[]>([])
@@ -40,17 +50,11 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
   const [epics, setEpics] = React.useState<Epic[]>([])
   const [labels, setLabels] = React.useState<Label[]>([])
 
-  // --- BUG FIX: STABILIZE DEPENDENCIES ---
-  // Sử dụng useMemo với JSON.stringify để tạo ra một reference ổn định. 
-  // Chỉ khi nội dung data thay đổi thì reference mới thay đổi.
-
   const stableServerTasks = React.useMemo(() => serverTasks, [JSON.stringify(serverTasks)])
   const stableServerSprints = React.useMemo(() => serverSprints, [JSON.stringify(serverSprints)])
   const stableServerEpics = React.useMemo(() => serverEpics, [JSON.stringify(serverEpics)])
   const stableServerLabels = React.useMemo(() => serverLabels, [JSON.stringify(serverLabels)])
 
-  // Sync data from server
-  // Bây giờ chúng ta dùng các biến "stable" làm dependency
   React.useEffect(() => {
     setData(stableServerTasks || [])
   }, [stableServerTasks])
@@ -66,7 +70,6 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
   React.useEffect(() => {
     setLabels(stableServerLabels || [])
   }, [stableServerLabels])
-  // --- END FIX ---
 
   const activeSprint = React.useMemo(() => {
     return sprints.find(s => s.status === SprintStatus.ACTIVE) || null
@@ -82,7 +85,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
   }, [sprints, serverUpdateSprint])
 
   const [selectedTask, setSelectedTask] = React.useState<Task | null>(null)
-  const [filters, setFilters] = React.useState<TaskFilters>(INITIAL_FILTERS)
+  const [filters, setFilters] = React.useState<BaseTaskFilterDto>(INITIAL_FILTERS)
   const [isAddingNewRow, setIsAddingNewRow] = React.useState(false)
   const [newRowTitle, setNewRowTitle] = React.useState("")
   const [newTaskPriority, setNewTaskPriority] = React.useState<Task["priority"]>(null)
@@ -177,16 +180,12 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       teamId: teamId,
-      labelIds: [], // Added missing required field init
+      labelIds: [],
     }
 
-    // Optimistic update
     setData((prev) => [...prev, newTask])
 
-    // Server update
-    // serverCreateTask(newTask)
 
-    // Reset fields
     setNewRowTitle("")
     setNewTaskPriority(null)
     setNewTaskDueDate(null)
@@ -232,58 +231,19 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
     setData((prev) => prev.filter((task) => task.id !== taskId));
   }, []);
 
-  const filteredData = React.useMemo(() => {
-    const { searchText, assigneeIds, priorities, listIds } = filters
-    const lowerSearchText = searchText.toLowerCase()
-
-    return data.filter((task) => {
-      if (lowerSearchText) {
-        const titleMatch = task.title.toLowerCase().includes(lowerSearchText)
-        const idMatch = task.id.toLowerCase().includes(lowerSearchText)
-        if (!titleMatch && !idMatch) return false
-      }
-
-      if (assigneeIds.length > 0) {
-        const hasAssignee = task.assigneeIds?.some((id) =>
-          assigneeIds.includes(id)
-        ) ?? false
-        const isUnassigned = (!task.assigneeIds || task.assigneeIds.length === 0) && assigneeIds.includes("unassigned")
-        if (!hasAssignee && !isUnassigned) return false
-      }
-
-      if (priorities.length > 0 && task.priority) {
-        if (!priorities.includes(task.priority)) return false
-      }
-
-      if (listIds.length > 0 && task.listId) {
-        if (!listIds.includes(task.listId)) return false
-      }
-
-      if (filters.epicIds.length > 0) {
-        if (!task.epicId || !filters.epicIds.includes(task.epicId)) return false
-      }
-
-      if (filters.labelIds.length > 0) {
-        if (!task.labelIds || !task.labelIds.some(id => filters.labelIds.includes(id))) return false
-      }
-
-      if (filters.sprintIds.length > 0) {
-        if (!task.sprintId || !filters.sprintIds.includes(task.sprintId)) return false
-      }
-
-      return true
-    })
-  }, [data, filters])
 
   return {
-    data: filteredData,
+    data,
     allData: data,
     sprints,
+    isTaskLoading,
     epics,
+    updateEpic,
     labels,
     filters,
     teamId,
     setFilters,
+    createTask: serverCreateTask,
     selectedTask,
     setSelectedTask,
     isAddingNewRow,
@@ -298,7 +258,7 @@ export const useTaskManagement = (projectId: string = "project-phoenix-1", teamI
     setNewTaskAssignees,
     newTaskListId,
     setNewTaskListId,
-    dataIds: filteredData.map((t) => t.id),
+    dataIds: data.map((t) => t.id),
     projectId,
     activeSprint,
     startSprint,

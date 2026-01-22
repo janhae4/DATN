@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useParams } from "next/navigation";
 import { Loader2, CornerDownRight } from "lucide-react"; // Import icon mới
 
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -9,10 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { List } from "@/types";
 import { ListCategoryEnum } from "@/types/common/enums";
-import { useTasks } from "@/hooks/useTasks";
 import { CreateTaskDto } from "@/services/taskService";
-import { useLists } from "@/hooks/useList";
 import { cn } from "@/lib/utils";
+import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
 
 interface AddNewTaskRowProps {
   lists: List[];
@@ -31,11 +29,12 @@ export function AddNewTaskRow({
   onCancel,
   isSubtask = false,
 }: AddNewTaskRowProps) {
-  const params = useParams();
-  const projectId = params.projectId as string;
-  const teamId = params.teamId as string;
-
-  const { createTask, isLoading } = useTasks({ projectId, teamId });
+  const {
+    createTask,
+    isTaskLoading: isLoading,
+    projectId,
+    teamId,
+  } = useTaskManagementContext();
 
   React.useEffect(() => {
     console.log("🟢 MOUNT AddNewTaskRow");

@@ -71,8 +71,6 @@ export function useTasks(
     enabled: !!projectId || !!teamId,
   });
 
-  // --- MUTATIONS ---
-
   const suggestTaskByAiMutation = useMutation({
     mutationFn: ({ data, onChunk }: { data: { query: string; projectId: string; teamId: string, sprintId: string }, onChunk: (chunk: string) => void }) => streamHelper('/tasks/suggest-stream', data, onChunk),
     onSuccess: () => {
@@ -83,23 +81,35 @@ export function useTasks(
   const createTaskMutation = useMutation({
     mutationFn: (newTask: CreateTaskDto) => taskService.createTask(newTask),
     onSuccess: (data, variables) => {
-      if (variables.sprintId) {
-        console.log("Refreshing specific Sprint...");
-        queryClient.invalidateQueries({
-          queryKey: ["tasks", { teamId, projectId, sprintId: [variables.sprintId] }]
-        });
-      } else {
-        console.log("Refreshing Backlog...");
-        queryClient.invalidateQueries({
+      queryClient.setQueriesData<InfiniteData<Pagination<Task>>>(
+        {
+          queryKey: ["tasks"],
           predicate: (query) => {
-            const key = query.queryKey as any[];
-            return key[0] === 'tasks' && key[1]?.sprintId === "null";
+            const filters = query.queryKey[1] as any;
+            if (variables.sprintId) {
+              return filters?.sprintId?.includes(variables.sprintId);
+            }
+            return !filters?.sprintId || filters.sprintId === "null";
           }
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        },
+        (oldData) => {
+          if (!oldData || !oldData.pages) return oldData;
+          const newPages = [...oldData.pages];
+          const lastPageIndex = newPages.length - 1;
+          const lastPage = { ...newPages[lastPageIndex] };
+          lastPage.data = [...lastPage.data, data];
+          lastPage.total = (lastPage.total || 0) + 1;
+          newPages[lastPageIndex] = lastPage;
+          return {
+            ...oldData,
+            pages: newPages,
+          };
+        }
+      );
+      toast.success("Task created");
     },
     onError: (error) => {
+      toast.error("Failed to create task");
       console.error(error);
     }
   });
@@ -232,34 +242,31 @@ export function useTasks(
     },
 
     onSuccess: (updatedTasks, variables: any) => {
-      const requestedIds = variables.ids;
-      const successIds = Array.isArray(updatedTasks)
-        ? updatedTasks.map((t: any) => t.id)
-        : [];
+      // const isMovingToSprint = variables.updates.sprintId !== undefined;
+      // const isMovingToBacklog = variables.updates.sprintId === null;
 
-      const skippedIds = (requestedIds as string[]).filter(id => !successIds.includes(id));
+      // if (isMovingToSprint || isMovingToBacklog) {
+      //   queryClient.invalidateQueries({
+      //     predicate: (query) => {
+      //       const key = query.queryKey as any[];
+      //       return key[0] === 'tasks' &&
+      //         key[1]?.teamId === teamId &&
+      //         (key[1]?.sprintId === "null" || key[1]?.sprintId === null);
+      //     }
+      //   });
 
-      if (skippedIds.length > 0) {
-        if (!Array.isArray(updatedTasks) && (updatedTasks as any).affected !== undefined) {
-          const affected = (updatedTasks as any).affected;
-          const failedCount = requestedIds.length - affected;
-          if (failedCount > 0) {
-            toast.warning(`${failedCount} task${failedCount > 1 ? "s" : ""} failed.`);
-          } else {
-            toast.success("Update successfully");
-          }
-          return;
-        }
-
-        toast.warning(`${skippedIds.length} task(${skippedIds.length > 1 ? "s" : ""}) failed.`);
-      } else {
-        toast.success("Update successfully");
-      }
-    },
-
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    },
+      //   if (variables.updates.sprintId) {
+      //     queryClient.invalidateQueries({
+      //       queryKey: ["tasks", { teamId, sprintId: [variables.updates.sprintId] }]
+      //     })
+      //   }
+      // }
+      toast.success("Tasks moved successfully");
+      queryClient.invalidateQueries({
+        queryKey: ["tasks"],
+        refetchType: 'none'
+      });
+    }
   });
 
   // Delete Task

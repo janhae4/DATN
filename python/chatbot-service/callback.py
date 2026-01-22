@@ -21,6 +21,12 @@ from config import (
 
 redis_client = redis.Redis(host=REDIS_HOST, port=6379, db=0)
 
+class NotificationType:
+    SUCCESS = "SUCCESS"
+    ERROR = "ERROR"
+    INFO = "INFO"
+    WARNING = "WARNING"
+
 async def publish_to_redis(discussion_id: str, content: str, is_completed: bool = False, metadata: dict = None):
     """
     Gửi dữ liệu trực tiếp vào Redis Channel để SSE Gateway ở NestJS nhận được.
@@ -80,26 +86,51 @@ async def publish_suggest_task_response(user_id: str, content: dict):
     await redis_client.publish(f"task_suggest:{user_id}", message_json)
     print(f"--> [Py->SSE] Gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
 
-async def send_notification(channel: Channel, user_id, file_name, status, message):
-    """
-    Hàm trợ giúp để gửi tin nhắn thông báo (thành công/thất bại) về NestJS.
-    """
+async def send_notification(channel: Channel, user_id, file_id, original_name, status, message, team_id=None):
+
     try:
-        title = f"Process document {status}"
-        notification_body = { 
-            "userId": user_id, 
-            "title": title, 
-            "message": message, 
-            "type": "SUCCESS" if status == "success" else "FAILED" 
+        noti_type = NotificationType.INFO
+        title = "Processing Document"
+        
+        if status == "success":
+            noti_type = NotificationType.SUCCESS
+            title = "Document Processed"
+        elif status == "failed":
+            noti_type = NotificationType.ERROR
+            title = "Processing Failed"
+        elif status == "processing":
+            noti_type = NotificationType.INFO
+            title = "Processing Started"
+
+        notification_body = {
+            "title": title,
+            "message": message,
+            "type": noti_type,
+
+            "targetType": "USER", 
+            "targetId": user_id,
+
+            "resourceType": "FILE", 
+            "resourceId": file_id,
+            "actorId": user_id, 
+            "metadata": {
+                "originalName": original_name,
+                "teamId": team_id,
+                "status": status
+            }
         }
+
         socket = await channel.get_exchange(SOCKET_EXCHANGE)
         await socket.publish(
-            message=Message(json.dumps(notification_body).encode()),
+            message=Message(
+                json.dumps(notification_body).encode(),
+            ),
             routing_key=SEND_NOTIFICATION_ROUTING_KEY
         )
-        print(f"--> Đã gửi thông báo '{status}' cho file: {file_name}")
+        print(f"--> [Notification] Sent '{status}' for file: {original_name}")
+
     except Exception as e:
-        print(f"Lỗi khi gửi thông báo: {e}")
+        print(f"Lỗi khi gửi thông báo Python: {e}")
 
 async def send_status_file(channel: Channel, user_id, file_id, fileName,status, teamId: str = None):
     try:

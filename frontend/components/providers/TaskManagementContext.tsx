@@ -3,16 +3,19 @@
 import * as React from "react";
 import { Task, Sprint, Epic, Label } from "@/types";
 import { DragEndEvent } from "@dnd-kit/core";
-import { TaskFilters, useTaskManagement } from "@/hooks/useTaskManagement";
+import { useTaskManagement } from "@/hooks/useTaskManagement";
+import { BaseTaskFilterDto } from "@/services/taskService";
+import { UpdateEpicDto } from "@/services/epicService";
 
 interface TaskManagementContextType {
   data: Task[];
   allData: Task[];
+  isTaskLoading: boolean;
   sprints: Sprint[];
   epics: Epic[];
   labels: Label[];
-  filters: TaskFilters;
-  setFilters: (filters: TaskFilters) => void;
+  filters: BaseTaskFilterDto;
+  setFilters: (filters: BaseTaskFilterDto) => void;
   selectedTask: Task | null;
   isAddingNewRow: boolean;
   newRowTitle: string;
@@ -26,6 +29,9 @@ interface TaskManagementContextType {
 
   activeSprint: Sprint | null;
   startSprint: (sprintId: string) => Promise<void>;
+
+  createTask: (task: Omit<Task, "id">) => Promise<Task>;
+  updateEpic: (id: string, updates: UpdateEpicDto) => Promise<Epic>;
 
   handleUpdateCell: (taskId: string, columnId: "title", value: string) => void;
   handleDescriptionChange: (taskId: string, description: string) => void;
@@ -51,7 +57,6 @@ interface TaskManagementContextType {
   handleDeleteTask: (taskId: string) => void;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
 
-  // Setters
   setNewRowTitle: (title: string) => void;
   setIsAddingNewRow: (isAdding: boolean) => void;
   setSelectedTask: (task: Task | null) => void;
@@ -61,12 +66,10 @@ interface TaskManagementContextType {
   setNewTaskListId: (listId: string) => void;
 }
 
-// Create context
 const TaskManagementContext = React.createContext<
   TaskManagementContextType | undefined
 >(undefined);
 
-// Provider component
 export function TaskManagementProvider({
   children,
   projectId,
@@ -85,7 +88,6 @@ export function TaskManagementProvider({
   );
 }
 
-// Custom hook to use context
 export function useTaskManagementContext(): TaskManagementContextType {
   const context = React.useContext(TaskManagementContext);
 

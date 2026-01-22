@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { notificationService, Notification } from '../services/notificationService';
 import { useSocket } from '@/contexts/SocketContext';
 import { toast } from 'sonner';
-import apiClient from '@/services/apiClient';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const useNotifications = () => {
+    const queryClient = useQueryClient();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -37,6 +38,32 @@ export const useNotifications = () => {
         const handleNewNotification = (data: any) => {
             console.log("🔔 New notification received:", data);
             toast.info(data.title || "New notification");
+
+            const resourceType = data.resourceType;
+            const resourceId = data.resourceId;
+            const action = data.metadata?.action;
+
+            if (resourceType === 'TEAM') {
+
+                queryClient.invalidateQueries({
+                    queryKey: ['teamMembers', resourceId]
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: ['team', resourceId]
+                });
+
+                if (action === 'REMOVE_MEMBER_TARGET' || action === 'LEAVE_TEAM') {
+                    queryClient.invalidateQueries({
+                        queryKey: ['teams']
+                    });
+                }
+
+                if (action === 'ADD_MEMBER_TARGET') {
+                    queryClient.invalidateQueries({ queryKey: ['teams'] });
+                }
+            }
+
             fetchNotifications(true);
         };
 

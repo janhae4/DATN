@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   teamService,
-  CreateTeamDto,
   UpdateTeamDto,
   LeaveMemberDto,
   RemoveMemberDto,
@@ -40,6 +39,7 @@ export const useTeams = () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["team", variables.teamId] });
+      queryClient.invalidateQueries({ queryKey: ["teamMembers", variables.teamId] });
     },
   });
 
@@ -51,6 +51,8 @@ export const useTeams = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["teamMembers"] });
     }
   });
 

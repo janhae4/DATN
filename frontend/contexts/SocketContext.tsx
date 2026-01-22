@@ -8,9 +8,8 @@ import React, {
   ReactNode,
 } from "react";
 import { io, Socket } from "socket.io-client";
-import { useAuth } from "@/contexts/AuthContext"; // Import AuthContext của bạn
+import { useAuth } from "@/contexts/AuthContext"; 
 
-// Định nghĩa URL của Server NestJS (nên để trong .env)
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4001";
 
 interface SocketContextType {

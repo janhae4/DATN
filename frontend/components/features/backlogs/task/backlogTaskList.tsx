@@ -12,6 +12,7 @@ import { UpdateTaskDto } from "@/services/taskService";
 import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
 import { TaskListSkeleton } from "@/components/skeletons/TaskListSkeleton";
 import { useInView } from "react-intersection-observer";
+import { cn } from "@/lib/utils";
 
 type BacklogTaskListProps = {
   lists?: List[];
@@ -46,8 +47,6 @@ export function BacklogTaskList({
   hasNextPage,
   isFetchingNextPage,
 }: BacklogTaskListProps) {
-  console.log("Rendering BacklogAccordionItem with", tasks.length, "tasks");
-
   const { isAddingNewRow, setIsAddingNewRow } = useTaskManagementContext();
   const [isSelectionDragging, setIsSelectionDragging] = React.useState(false);
 
@@ -69,7 +68,6 @@ export function BacklogTaskList({
 
   React.useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage && fetchNextPage) {
-      console.log("Loading more tasks...");
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -94,10 +92,10 @@ export function BacklogTaskList({
   }
 
   return (
-    <div className="flex flex-col relative h-[calc(60vh-9rem)] overflow-y-scroll custom-scrollbar">
-      <div className="rounded-lg">
+    <div className="flex flex-col relative max-h-[calc(60vh-9rem)] bg-background rounded-lg">
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
         <Table>
-          {tasks.length > 0 ? (
+          {(tasks.length > 0 || isFetchingNextPage) && (
             <TaskRowList
               key="backlog-task-row-list"
               tasks={tasks}
@@ -111,64 +109,47 @@ export function BacklogTaskList({
               onSelect={onSelect}
               onMultiSelectChange={onMultiSelectChange}
             >
-              {isAddingNewRow && (
-                <AddNewTaskRow
-                  lists={listsList}
-                  onCancel={() => setIsAddingNewRow(false)}
-                />
-              )}
-            </TaskRowList>
-          ) : (
-            <TableBody>
-              {isAddingNewRow ? (
-                <AddNewTaskRow
-                  lists={listsList}
-                  onCancel={() => setIsAddingNewRow(false)}
-                />
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="p-0 border-none">
-                    <div
-                      className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed text-muted-foreground hover:bg-muted/50 hover:border-primary/50 hover:text-primary transition-all"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsAddingNewRow(true);
-                      }}
-                    >
-                      <PlusIcon className="h-8 w-8 opacity-50" />
-                      <p className="text-sm font-medium">
-                        Your backlog is empty
-                      </p>
-                      <p className="text-xs opacity-70">
-                        Click here to create a new task
-                      </p>
+              <TableRow className="hover:bg-transparent border-none">
+                <TableCell colSpan={5} className="p-0 border-none">
+                  <div ref={ref} className="h-4 w-full" />
+                  {isFetchingNextPage && (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
+                  )}
+                </TableCell>
+              </TableRow>
+            </TaskRowList>
           )}
         </Table>
+
+        {!tasks.length && !isFetchingNextPage && (
+          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+            <p>No tasks in Backlog</p>
+          </div>
+        )}
       </div>
 
-      {!isAddingNewRow && tasks.length > 0 && (
-        <Button
-          variant="ghost"
-          className="w-fit justify-start gap-2 bg-primary/5 hover:bg-primary/10 p-4 text-muted-foreground mt-2 ml-2"
-          onClick={() => setIsAddingNewRow(true)}
-        >
-          <PlusIcon className="h-4 w-4" />
-          Create Task
-        </Button>
-      )}
-
-      <div ref={ref} className="h-4 w-full" />
-
-      {isFetchingNextPage && (
-        <div className="flex justify-center p-4">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      )}
+      <div className="shrink-0 z-10 bg-card sticky bottom-2">
+        {isAddingNewRow ? (
+          <AddNewTaskRow
+            lists={listsList}
+            sprintId={""}
+            onCancel={() => setIsAddingNewRow(false)}
+          />
+        ) : (
+          <div className="flex items-center gap-4 p-4">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-4 p-2 text-zinc-500 bg-zinc-50 cursor-pointer"
+              onClick={() => setIsAddingNewRow(true)}
+            >
+              <PlusIcon className="h-5 w-5" />
+              <span className="text-sm font-medium">Create Task</span>
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

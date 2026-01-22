@@ -56,10 +56,10 @@ export const taskService = {
     return response.data;
   },
 
-  getTasksByTeam: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
-    const response = await apiClient.get(`/tasks/by-team`, { data: { teamId: params.teamId } });
-    return response.data;
-  },
+  // getTasksByTeam: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
+  //   const response = await apiClient.get(`/tasks/by-team`, { data: { teamId: params.teamId } });
+  //   return response.data;
+  // },
 
   /**
    * Lấy chi tiết Task
@@ -130,7 +130,12 @@ export const taskService = {
 
 
   getAllTaskLabelByProjectId: async (projectId: string, teamId: string): Promise<TaskLabel[]> => {
-    const response = await apiClient.get<TaskLabel[]>(`/tasks/${teamId}/tasklabel?projectId=${projectId}`);
+    const params = projectId ? { projectId } : {};
+
+    const response = await apiClient.get<TaskLabel[]>(`/tasks/${teamId}/tasklabel`, {
+      params: params
+    });
+
     return response.data;
   },
 

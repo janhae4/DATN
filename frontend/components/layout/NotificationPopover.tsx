@@ -24,8 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useTeams } from "@/hooks/useTeam";
 
-// Import hoặc define Type nếu cần thiết để TS không báo lỗi
-// import { NotificationType } from "@/types";
 
 export function NotificationPopover() {
   const {
@@ -69,13 +67,14 @@ export function NotificationPopover() {
 
     try {
       switch (metadata.action) {
-        case "MEMBER_INVITED":
+        case "ADD_MEMBER_TARGET":
           if (actionType === "ACCEPT") {
+            console.log("Accept invite");
             await acceptInvite({
               teamId: metadata.teamId,
               notificationId: id,
             });
-            await toast.success("Joined team successfully");
+            toast.success("Joined team successfully");
           } else {
             await declineInvite({
               teamId: metadata.teamId,

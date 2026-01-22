@@ -1,9 +1,16 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
 import { useTeams } from "@/hooks/useTeam";
 import { Team } from "@/types/social";
 import { useParams } from "next/navigation";
+import { useTaskSocket } from "@/hooks/useTaskSocket";
 
 interface TeamContextType {
   teams: (Team & { role: string })[] | undefined;
@@ -18,13 +25,15 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const { data: teams, isLoading } = useTeams();
   const params = useParams();
   const teamId = params?.teamId as string;
-  const [activeTeam, setActiveTeam] = useState<(Team & { role: string }) | undefined>(undefined);
+  useTaskSocket(teamId);
+  const [activeTeam, setActiveTeam] = useState<
+    (Team & { role: string }) | undefined
+  >(undefined);
 
-  // Sync activeTeam with URL teamId or auto-select first team
   useEffect(() => {
     if (teams && teams.length > 0) {
       if (teamId) {
-        const teamFromUrl = teams.find(t => t.id === teamId);
+        const teamFromUrl = teams.find((t) => t.id === teamId);
         if (teamFromUrl) {
           setActiveTeam(teamFromUrl);
         } else if (!activeTeam) {
@@ -36,18 +45,17 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     }
   }, [teams, teamId, activeTeam]);
 
-  const value = useMemo(() => ({
-    teams,
-    activeTeam,
-    setActiveTeam,
-    isLoading
-  }), [teams, activeTeam, isLoading]);
-
-  return (
-    <TeamContext.Provider value={value}>
-      {children}
-    </TeamContext.Provider>
+  const value = useMemo(
+    () => ({
+      teams,
+      activeTeam,
+      setActiveTeam,
+      isLoading,
+    }),
+    [teams, activeTeam, isLoading]
   );
+
+  return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>;
 }
 
 export function useTeamContext() {

@@ -227,15 +227,6 @@ services:
           APP_NAME: user
     container_name: user_service
 
-  redis_service:
-    <<: *nest-service
-    container_name: redis_service_app
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: redis
-
   project_service:
     <<: *nest-service
     container_name: project_service

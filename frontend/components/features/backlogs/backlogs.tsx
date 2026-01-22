@@ -27,19 +27,13 @@ import { useSprints } from "@/hooks/useSprints";
 import { useLists } from "@/hooks/useList";
 import { useBacklogTour } from "@/hooks/touring/useBacklogTour";
 import { calculateNewPositionForTask } from "@/lib/position-utils";
-import { Button } from "@/components/ui/button";
-import { Ban, CheckCircle2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BaseTaskFilterDto } from "@/services/taskService";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import FloatButtonAction from "./FloatButtonAction";
 
 export default function Backlogs() {
   const params = useParams();
@@ -82,7 +76,6 @@ export default function Backlogs() {
 
   const { lists, error: listError } = useLists(projectId);
 
-  console.log("Sprints loaded in Backlogs:", sprints.length);
   const shouldFetchSprintTasks =
     !isSprintsLoading && sprints && sprints.length > 0;
 
@@ -103,7 +96,7 @@ export default function Backlogs() {
       epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
       sprintId: targetSprintIds,
-      limit: 50,
+      limit: 10,
       page: sprintPage,
     };
   }, [projectId, debouncedSearch, filters, sprintPage, visibleSprints]);
@@ -151,7 +144,6 @@ export default function Backlogs() {
 
   const tasksInSprints = sprintTasks;
   const tasksInBacklog = backlogTasks;
-  console.log("Tasks in Backlog:", tasksInBacklog.length);
 
   const [selectedTask, setSelectedTask] = React.useState<Task | null>(null);
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
@@ -271,7 +263,6 @@ export default function Backlogs() {
 
     if (dropType === "sprint-drop-area") {
       const sprint = over.data.current?.sprint as Sprint | undefined;
-      console.log("Dropped into sprint:", sprint);
       if (sprint) {
         const idsNeedUpdate = tasksToMoveIds.filter((id) => {
           const t = allVisibleTasks.find((x) => x.id === id);
@@ -292,7 +283,6 @@ export default function Backlogs() {
               idsNeedUpdate.includes(t.id)
             );
             const newSprintTasks = [...currentTasksInSprint, ...movedTasks];
-            console.log(`Tasks in Sprint [${sprint.title}]:`, newSprintTasks);
 
             setSelectedIds([]);
           } catch (error) {
@@ -415,101 +405,15 @@ export default function Backlogs() {
         ) : null}
       </DragOverlay>
 
-      <div className="flex flex-col gap-8 py-4 relative">
+      <div className="flex flex-col gap-8 py-4 relative overflow-auto">
         {selectedIds.length > 0 && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-10 duration-300">
-            <div className="flex items-center gap-1 p-2 pl-4 pr-2 dark:bg-zinc-900 dark:text-zinc-50 bg-zinc-50 text-zinc-900 rounded-full shadow-2xl border border-zinc-200/20 ring-1 ring-black/5">
-              {/* 1. Counter Section */}
-              <div className="flex items-center gap-2 mr-2">
-                <span className="flex items-center justify-center w-5 h-5 dark:bg-zinc-700 bg-zinc-200 rounded-full text-[10px] font-bold">
-                  {selectedIds.length}
-                </span>
-                <span className="text-sm font-medium text-zinc-400 dark:text-zinc-500 hidden sm:inline-block">
-                  selected
-                </span>
-              </div>
-
-              <div className="h-6 w-[1px] bg-zinc-700 dark:bg-zinc-300 mx-1" />
-              <div className="flex items-center gap-1">
-                {pendingSelectedIds.length > 0 && (
-                  <>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleBulkStatusChange("APPROVED")} // Bạn cần hàm này
-                          className="h-9 w-9 rounded-full hover:bg-emerald-500/20 hover:text-emerald-500 text-zinc-400 dark:text-zinc-600 transition-colors"
-                        >
-                          <CheckCircle2 className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
-                        className="bg-emerald-600 border-emerald-600 text-white"
-                      >
-                        <p>Approve selected</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleBulkStatusChange("REJECTED")}
-                          className="h-9 w-9 rounded-full hover:bg-orange-500/20 hover:text-orange-500 text-zinc-400 dark:text-zinc-600 transition-colors"
-                        >
-                          <Ban className="h-4.5 w-4.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
-                        className="bg-orange-600 border-orange-600 text-white"
-                      >
-                        <p>Reject selected</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleDeleteSelected}
-                      className="h-9 w-9 rounded-full hover:bg-red-500/20 hover:text-red-500 text-zinc-400 dark:text-zinc-600 transition-colors"
-                    >
-                      <Trash2 className="h-4.5 w-4.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    className="bg-red-600 border-red-600 text-white"
-                  >
-                    <p>Delete selected</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="h-6 w-[1px] bg-zinc-700 dark:bg-zinc-300 mx-1" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleClearSelection}
-                    className="h-9 w-9 rounded-full dark:hover:bg-zinc-800 hover:bg-zinc-200 text-zinc-500 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>Clear selection</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+          <FloatButtonAction
+            selectedIds={selectedIds}
+            pendingSelectedIds={pendingSelectedIds}
+            handleBulkStatusChange={handleBulkStatusChange}
+            handleDeleteSelected={handleDeleteSelected}
+            handleClearSelection={handleClearSelection}
+          />
         )}
         {/* Task Detail Modal */}
         <TaskDetailModal
@@ -584,7 +488,7 @@ export default function Backlogs() {
               </div>
             </>
           ) : (
-            <div className="flex flex-row gap-6 h-[calc(80vh-190px)] overflow-hidden">
+            <div className="flex flex-row gap-6 h-fit max-h-[calc(80vh-190px)] overflow-hidden">
               <div
                 id="backlog-list-section"
                 className="flex-1 flex flex-col min-w-[450px] h-full overflow-hidden"
@@ -602,7 +506,7 @@ export default function Backlogs() {
                   </Badge>
                 </div>
 
-                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-6">
+                <div className="flex-1 pr-2 custom-scrollbar pb-6">
                   <BacklogAccordionItem
                     key="backlog-item-split"
                     lists={lists}
@@ -639,7 +543,7 @@ export default function Backlogs() {
                     Active Sprints
                   </h3>
                 </div>
-                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-6">
+                <div className="flex-1 pr-2 custom-scrollbar pb-6">
                   <SprintList
                     key="sprint-list-split"
                     sprints={visibleSprints}

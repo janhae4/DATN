@@ -65,11 +65,10 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
     });
     const { updateEpic } = useEpics(projectId);
 
-    // Fetch lists to identify which list is "TODO"
     const { data: lists } = useQuery({
         queryKey: ['lists', projectId],
         queryFn: () => listService.getLists(projectId),
-        enabled: !!projectId && open, // Only fetch when dialog is open
+        enabled: !!projectId && open,
     });
 
     // Form States
@@ -120,6 +119,7 @@ export function EpicDetailDialog({ epic, open, onOpenChange }: EpicDetailDialogP
         try {
             await createTask({
                 projectId,
+                teamId,
                 title: newTaskTitle.trim(),
                 epicId: epic.id,
                 priority: Priority.MEDIUM,

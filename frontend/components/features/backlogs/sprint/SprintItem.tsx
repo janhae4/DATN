@@ -6,7 +6,7 @@ import { AccordionContent, AccordionItem } from "@/components/ui/accordion";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Table, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Rocket, PlusIcon, ChevronDown, Trash2 } from "lucide-react";
+import { Rocket, PlusIcon, ChevronDown, Trash2, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/backlog-utils";
 import { useDroppable, useDndContext } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ import { SprintStatus } from "@/types/common/enums";
 import { useParams } from "next/navigation";
 import { useSprints } from "@/hooks/useSprints";
 import { toast } from "sonner";
+import { useInView } from "react-intersection-observer";
 
 interface SprintItemProps {
   sprint: Sprint;
@@ -31,6 +32,9 @@ interface SprintItemProps {
   onSelect: (taskId: string, checked: boolean) => void;
   onUpdateTask: (taskId: string, updates: any) => void;
   onMultiSelectChange: (ids: string[]) => void;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
 }
 
 export function SprintItem({
@@ -43,6 +47,9 @@ export function SprintItem({
   selectedIds,
   onSelect,
   onMultiSelectChange,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
 }: SprintItemProps) {
   const params = useParams();
   const projectId = params.projectId as string;
@@ -50,7 +57,7 @@ export function SprintItem({
   const { deleteSprint } = useSprints(projectId, teamId);
 
   const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id);
-  const totalTasks = sprintTasks.length;
+  const totalTasks = tasks.length;
 
   const [addingNewRowToSprint, setAddingNewRowToSprint] = React.useState<
     string | null
@@ -64,15 +71,23 @@ export function SprintItem({
     },
   });
 
-  // --- VISUAL FEEDBACK FIX ---
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: "200px",
+  });
+
+  React.useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage && fetchNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const { over } = useDndContext();
   const isOverSprint = isOver;
   const isOverTaskInSprint = over?.data?.current?.task?.sprintId === sprint.id;
   const shouldHighlight = isOverSprint || isOverTaskInSprint;
   const shouldShowTaskList =
     sprintTasks.length > 0 || addingNewRowToSprint === sprint.id;
-
-  console.log("should show task list:", shouldShowTaskList);
 
   return (
     <div
@@ -141,70 +156,38 @@ export function SprintItem({
           </div>
         </AccordionPrimitive.Header>
 
-        <AccordionContent className="border-t bg-background/50 p-0 data-[state=closed]:animate-none">
-          <div className="p-1">
-            {shouldShowTaskList ? (
+        <AccordionContent className="border-t bg-background/50 p-0 data-[state=closed]:animate-none flex flex-col max-h-[calc(60vh-9rem)]">
+          <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
+            {sprintTasks.length > 0 || isFetchingNextPage ? (
               <Table>
-                {sprintTasks.length > 0 ? (
-                  <TaskRowList
-                    onUpdateTask={onUpdateTask}
-                    allTasks={allTasks}
-                    tasks={sprintTasks}
-                    lists={statusesList}
-                    isDraggable={true}
-                    isSortable={true}
-                    onRowClick={handleRowClick}
-                    selectedIds={selectedIds}
-                    onSelect={onSelect}
-                    onMultiSelectChange={onMultiSelectChange}
-                  >
-                    {addingNewRowToSprint === sprint.id ? (
-                      <AddNewTaskRow
-                        lists={statusesList}
-                        sprintId={sprint.id}
-                        onCancel={() => setAddingNewRowToSprint(null)}
-                      />
-                    ) : (
-                      <TableRow className="group hover:bg-transparent">
-                        <TableCell colSpan={5} className="p-0">
-                          <div className="flex items-center gap-1 pl-10 py-1.5">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 px-3 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                console.log(
-                                  "Adding new row to sprint:",
-                                  sprint.id
-                                );
-                                setAddingNewRowToSprint(sprint.id);
-                              }}
-                            >
-                              <PlusIcon className="mr-2 h-4 w-4" />
-                              Create Task
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TaskRowList>
-                ) : (
-                  <tbody className="w-full">
-                    {addingNewRowToSprint === sprint.id && (
-                      <AddNewTaskRow
-                        lists={statusesList}
-                        sprintId={sprint.id}
-                        onCancel={() => setAddingNewRowToSprint(null)}
-                      />
-                    )}
-                  </tbody>
-                )}
+                <TaskRowList
+                  onUpdateTask={onUpdateTask}
+                  allTasks={allTasks}
+                  tasks={sprintTasks}
+                  lists={statusesList}
+                  isDraggable={true}
+                  isSortable={true}
+                  onRowClick={handleRowClick}
+                  selectedIds={selectedIds}
+                  onSelect={onSelect}
+                  onMultiSelectChange={onMultiSelectChange}
+                >
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableCell colSpan={5} className="p-0 border-none">
+                      <div ref={ref} className="h-4 w-full" />
+                      {isFetchingNextPage && (
+                        <div className="flex justify-center p-4">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                </TaskRowList>
               </Table>
             ) : (
               <div
                 className={cn(
-                  "flex flex-col items-center justify-center border-2 border-dashed rounded-lg text-center p-4",
+                  "flex flex-col items-center justify-center h-32 m-4 border-2 border-dashed rounded-lg text-center",
                   isOver
                     ? "border-primary/20 bg-primary/10"
                     : "border-muted-foreground/30"
@@ -214,24 +197,29 @@ export function SprintItem({
                 <p className="text-sm text-muted-foreground mb-2">
                   No tasks in this sprint yet
                 </p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Drag tasks here or create a new one
+                <p className="text-xs text-muted-foreground">
+                  Drag tasks here or create a new one below
                 </p>
+              </div>
+            )}
+          </div>
+
+          <div className="shrink-0 z-10 bg-card rounded-lg sticky bottom-2">
+            {addingNewRowToSprint === sprint.id ? (
+              <AddNewTaskRow
+                lists={statusesList}
+                sprintId={sprint.id}
+                onCancel={() => setAddingNewRowToSprint(null)}
+              />
+            ) : (
+              <div className="flex items-center gap-4 p-2">
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    console.log(
-                      "Adding new row to sprint for no task:",
-                      sprint.id
-                    );
-                    setAddingNewRowToSprint(sprint.id);
-                  }}
-                  className="gap-2"
+                  variant="ghost"
+                  className="flex items-center gap-4 p-2 text-zinc-500 bg-zinc-50 cursor-pointer"
+                  onClick={() => setAddingNewRowToSprint(sprint.id)}
                 >
-                  <PlusIcon className="h-4 w-4" />
-                  Create Task
+                  <PlusIcon className="h-5 w-5" />
+                  <span className="text-sm font-medium">Create Task</span>
                 </Button>
               </div>
             )}

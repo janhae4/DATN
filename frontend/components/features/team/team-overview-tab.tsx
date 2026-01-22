@@ -60,7 +60,7 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
   console.log("TeamOverviewTab rendered", teamId);
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    null
+    null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -98,7 +98,7 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
     let overdue = 0;
     let soon = 0;
 
-    myTasks.forEach(task => {
+    myTasks.forEach((task) => {
       if (!task.dueDate) return;
       const dueDate = new Date(task.dueDate);
       if (dueDate < now) {
@@ -137,15 +137,18 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
 
       if (node) observer.current.observe(node);
     },
-    [isLoadingTasks, hasNextPage, isFetchingNextPage, fetchNextPage]
+    [isLoadingTasks, hasNextPage, isFetchingNextPage, fetchNextPage],
   );
 
   const projectLookup = useMemo(() => {
     if (!projects) return {};
-    return projects.reduce((acc, project) => {
-      acc[project.id] = project.name;
-      return acc;
-    }, {} as Record<string, string>);
+    return projects.reduce(
+      (acc, project) => {
+        acc[project.id] = project.name;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
   }, [projects]);
 
   const activeProjectsCount = projects?.length || 0;
@@ -168,7 +171,10 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
 
   return (
     <>
-      <div id="team-stats" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+      <div
+        id="team-stats"
+        className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10"
+      >
         {/* SECTION 2: ENHANCED STATS CARDS */}
         <div className="grid gap-4 md:grid-cols-3">
           <StatsCard
@@ -193,7 +199,11 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
             title="Active Tasks"
             value={activeTasksCount}
             icon={CheckCircle2}
-            trend={overdueCount > 0 ? `${overdueCount} overdue` : `${dueSoonCount} due soon`}
+            trend={
+              overdueCount > 0
+                ? `${overdueCount} overdue`
+                : `${dueSoonCount} due soon`
+            }
             trendUp={overdueCount > 0 ? false : true}
             description="Assigned to you"
             loading={isLoadingTasks}
@@ -265,7 +275,10 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
 
           {/* ACTIVE DISCUSSIONS */}
           {/* UPCOMING TASKS */}
-          <Card id="my-tasks" className="h-full flex flex-col shadow-sm border-muted/60">
+          <Card
+            id="my-tasks"
+            className="h-full flex flex-col shadow-sm border-muted/60"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
                 <CardTitle className="text-xl flex items-center gap-2">
@@ -306,7 +319,9 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
                         {myTasks.map((task, index) => (
                           <div
                             key={task.id}
-                            ref={index === myTasks.length - 1 ? lastTaskRef : null}
+                            ref={
+                              index === myTasks.length - 1 ? lastTaskRef : null
+                            }
                             onClick={() => setSelectedTask(task as Task)}
                             className="group p-3 rounded-lg hover:bg-muted/50 transition-all border border-transparent hover:border-border/50 flex items-start gap-3 cursor-pointer"
                           >
@@ -319,19 +334,23 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <p
-                                  className={`text-sm font-medium truncate ${task.priority === "high" ? "text-red-600" : ""
-                                    }`}
+                                  className={`text-sm font-medium truncate ${
+                                    task.priority === "high"
+                                      ? "text-red-600"
+                                      : ""
+                                  }`}
                                 >
                                   {task.title}
                                 </p>
                                 <Badge
                                   variant="outline"
-                                  className={`text-[10px] h-5 px-1.5 border-0 capitalize ${task.priority === "high"
-                                    ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
-                                    : task.priority === "medium"
-                                      ? "bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
-                                      : "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                                    }`}
+                                  className={`text-[10px] h-5 px-1.5 border-0 capitalize ${
+                                    task.priority === "high"
+                                      ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+                                      : task.priority === "medium"
+                                        ? "bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
+                                        : "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                                  }`}
                                 >
                                   {task.priority}
                                 </Badge>
@@ -344,10 +363,12 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
                                 </span>
                                 <span className="w-1 h-1 rounded-full bg-border" />
                                 <span
-                                  className={`flex items-center gap-1 ${task.dueDate && new Date(task.dueDate) < new Date()
-                                    ? "text-red-500 font-medium"
-                                    : ""
-                                    }`}
+                                  className={`flex items-center gap-1 ${
+                                    task.dueDate &&
+                                    new Date(task.dueDate) < new Date()
+                                      ? "text-red-500 font-medium"
+                                      : ""
+                                  }`}
                                 >
                                   <Clock className="h-3 w-3" />
                                   {task.dueDate
@@ -374,7 +395,6 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
 
         <Separator />
 
-
         <div id="team-members">
           <TeamMembersList members={members} teamId={teamId} />
         </div>
@@ -395,12 +415,20 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
         onOpenChange={(open) => !open && setSelectedTask(null)}
         lists={projectLists || []}
         onListChange={(id, listId) => handleUpdateTask(id, { listId })}
-        onDateChange={(id, date) => handleUpdateTask(id, { dueDate: date?.toISOString() })}
+        onDateChange={(id, date) =>
+          handleUpdateTask(id, { dueDate: date?.toISOString() })
+        }
         onPriorityChange={(id, p) => handleUpdateTask(id, { priority: p })}
-        onAssigneeChange={(id, assigneeIds) => handleUpdateTask(id, { assigneeIds })}
+        onAssigneeChange={(id, assigneeIds) =>
+          handleUpdateTask(id, { assigneeIds })
+        }
         onTitleChange={(id, _, value) => handleUpdateTask(id, { title: value })}
-        onDescriptionChange={(id, desc) => handleUpdateTask(id, { description: desc })}
-        onLabelsChange={(id, labels) => handleUpdateTask(id, { labelIds: labels })}
+        onDescriptionChange={(id, desc) =>
+          handleUpdateTask(id, { description: desc })
+        }
+        onLabelsChange={(id, labels) =>
+          handleUpdateTask(id, { labelIds: labels })
+        }
         updateTask={handleUpdateTask}
       />
     </>
