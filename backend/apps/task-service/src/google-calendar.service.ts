@@ -1,15 +1,15 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { calendar_v3, google } from 'googleapis';
-import { ClientProxy } from '@nestjs/microservices';
-import { REDIS_CLIENT, REDIS_EXCHANGE, REDIS_PATTERN } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
 import { RmqClientService } from '@app/common';
+import { AuthCacheService } from '@app/redis-service';
 @Injectable()
 export class GoogleCalendarService {
   private readonly logger = new Logger(GoogleCalendarService.name);
 
   constructor(
-    private readonly amqp: RmqClientService
+    private readonly amqp: RmqClientService,
+    private readonly authCacheService: AuthCacheService
   ) { }
 
   private async getCalendarClient(
@@ -33,12 +33,7 @@ export class GoogleCalendarService {
       Date.now() > oAuth2Client.credentials.expiry_date
     ) {
       const { credentials } = await oAuth2Client.refreshAccessToken();
-
-      this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
-        userId,
-        accessToken: credentials.access_token,
-        refreshToken: credentials.refresh_token,
-      });
+      await this.authCacheService.storeGoogleToken(userId, credentials.access_token as string, credentials.refresh_token as string);
     }
 
     return google.calendar({ version: 'v3', auth: oAuth2Client });

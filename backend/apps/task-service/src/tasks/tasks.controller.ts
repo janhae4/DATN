@@ -1,4 +1,4 @@
-import { Body, Controller} from '@nestjs/common';
+import { Body, Controller } from '@nestjs/common';
 import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto, UpdateTaskDto, TASK_PATTERNS, EVENTS_EXCHANGE, Label, TASK_EXCHANGE, BaseTaskFilterDto } from '@app/contracts';
@@ -48,7 +48,8 @@ export class TasksController {
     errorHandler: customErrorHandler,
   })
   findAllByProject(payload: { userId: string, filters: BaseTaskFilterDto }) {
-    return this.tasksService.findAllByProject(payload.userId, payload.filters);
+    if (payload.filters.projectId) return this.tasksService.findAllByProject(payload.userId, payload.filters);
+    return this.tasksService.findAllByTeam(payload.userId, payload.filters);
   }
 
   @RabbitRPC({

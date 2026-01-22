@@ -1,24 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { CreateEpicDto, Epic, MemberRole, TEAM_EXCHANGE, TEAM_PATTERN, UpdateEpicDto } from '@app/contracts';
+import { CreateEpicDto, Epic, MemberRole, UpdateEpicDto } from '@app/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
-import { RmqClientService } from '@app/common';
+import { TeamCacheService } from '@app/redis-service';
 
 @Injectable()
 export class EpicsService {
   constructor(
     @InjectRepository(Epic)
     private readonly epicRepository: Repository<Epic>,
-    private readonly amqp: RmqClientService
+    private readonly teamCache: TeamCacheService
   ) { }
 
   async create(createEpicDto: CreateEpicDto, userId: string) {
-    await this.amqp.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId: createEpicDto.projectId, roles: [MemberRole.MEMBER, MemberRole.ADMIN, MemberRole.OWNER] },
-    })
-    
+    await this.teamCache.checkPermission(createEpicDto.teamId, userId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER]);
     const existingEpic = await this.epicRepository.findOne({
       where: {
         projectId: createEpicDto.projectId,

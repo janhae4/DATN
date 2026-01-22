@@ -15,7 +15,6 @@ import {
 } from '@nestjs/common';
 import {
   CreateTaskDto,
-  REDIS_CLIENT,
   UpdateTaskDto,
   ApprovalStatus,
 } from '@app/contracts';
@@ -29,6 +28,7 @@ import Redis from 'ioredis';
 import { FileService } from '../file/file.service';
 import { ApiBody } from '@nestjs/swagger';
 import { BaseTaskFilterDto } from './dto/get-task-filter.dto';
+import { REDIS_CLIENT } from '@app/redis-service/redis.constant';
 
 @Controller('tasks')
 @UseGuards(RoleGuard)

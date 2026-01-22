@@ -19,6 +19,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
 import { AiStreamService } from './ai-stream.service';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import { RmqModule } from '@app/common';
     }),
 
     TypeOrmModule.forFeature([Task, TaskLabel]),
-
+    RedisServiceModule,
     ClientConfigModule,
     RmqModule.register({
       exchanges: [

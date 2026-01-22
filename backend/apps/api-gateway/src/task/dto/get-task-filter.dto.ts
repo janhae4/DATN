@@ -89,6 +89,6 @@ export class BaseTaskFilterDto {
     teamId: string;
 
     @IsUUID()
-    @IsNotEmpty()
-    projectId: string;
+    @IsOptional()
+    projectId?: string;
 }

@@ -33,6 +33,18 @@
       ],
       "@app/contracts/*": [
         "libs/contracts/src/*"
+      ],
+      "@app/proto": [
+        "libs/proto/src"
+      ],
+      "@app/proto/*": [
+        "libs/proto/src/*"
+      ],
+      "@app/redis-service": [
+        "libs/redis-service/src"
+      ],
+      "@app/redis-service/*": [
+        "libs/redis-service/src/*"
       ]
     }
   }

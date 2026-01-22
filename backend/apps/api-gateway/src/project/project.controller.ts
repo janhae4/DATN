@@ -6,14 +6,12 @@ import {
   Delete,
   Body,
   Param,
-  UseFilters,
   UseGuards,
   Query,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import {
   CreateProjectDto,
-  JwtDto,
   Role,
   UpdateProjectDto,
 } from '@app/contracts';
@@ -21,7 +19,6 @@ import { CurrentUser } from '../common/role/current-user.decorator';
 import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { TeamService } from '../team/team.service';
-import { MemberRole } from '@app/contracts';
 
 @Controller('project')
 @UseGuards(RoleGuard)
@@ -37,13 +34,7 @@ export class ProjectController {
     @Body() createProjectDto: CreateProjectDto,
     @CurrentUser('id') id: string,
   ) {
-    if (createProjectDto.teamId) {
-      await this.teamService.verifyPermission(id, createProjectDto.teamId, [
-        MemberRole.OWNER,
-        MemberRole.ADMIN,
-      ]);
-    }
-    return this.projectService.create({ ...createProjectDto, ownerId: id });
+    return await this.projectService.create({ ...createProjectDto, ownerId: id });
   }
 
   @Get(':id')

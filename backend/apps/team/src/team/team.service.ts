@@ -29,8 +29,6 @@ import {
   EventUserSnapshot,
   TeamSnapshot,
   LeaveMemberEventPayload,
-  REDIS_EXCHANGE,
-  REDIS_PATTERN,
   MemberStatus,
   TeamAction,
   NOTIFICATION_EXCHANGE,
@@ -40,6 +38,7 @@ import {
 } from '@app/contracts';
 import { RemoveTeamEventPayload } from '@app/contracts/team/dto/remove-team.dto';
 import { RmqClientService } from '@app/common';
+import { CachedMemberState, TeamCacheService, UserCacheService } from '@app/redis-service';
 
 @Injectable()
 export class TeamService {
@@ -53,6 +52,8 @@ export class TeamService {
     private readonly amqp: RmqClientService,
     @InjectDataSource()
     private readonly dataSource: DataSource,
+    private readonly userCacheService: UserCacheService,
+    private readonly teamCache: TeamCacheService
   ) { }
 
   private async _getUserProfiles(
@@ -62,11 +63,7 @@ export class TeamService {
       return new Map();
     }
     try {
-      const profiles = await this.amqp.request<EventUserSnapshot[]>({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
-        payload: userIds,
-      });
+      const profiles = await this.userCacheService.getManyUserInfo(userIds);
       return new Map(profiles.map((p) => [p.id, p]));
     } catch (error) {
       this.logger.warn(`Failed to fetch user profiles from cache: ${error.message}`);
@@ -719,152 +716,110 @@ export class TeamService {
     return updatedTeam!;
   }
 
-  async getTeamMembers(requesterId: string, teamId: string) {
-    const requester = await this.memberRepo.findOne({
-      where: { userId: requesterId, teamId }
-    });
-
-    if (!requester) {
-      throw new ForbiddenException("You are not a member of this team.");
-    }
-
-    if (requester.status !== MemberStatus.ACCEPTED) {
-      throw new ForbiddenException("You are not a member of this team.");
-    }
-
-    const whereCondition: FindOptionsWhere<TeamMember> = {
-      teamId: teamId,
-    };
-
+  async getTeamMembers(requesterId: string, teamId: string): Promise<MemberDto[]> {
+    const requester = await this.validateRequester(requesterId, teamId);
+    const membersRolesMap = await this.getMembersRolesMap(teamId);
     const isManager = [MemberRole.ADMIN, MemberRole.OWNER].includes(requester.role);
-
-    if (!isManager) {
-      whereCondition.status = MemberStatus.ACCEPTED;
-    }
-
-    const members = await this.memberRepo.find({
-      where: whereCondition,
-      order: {
-        role: 'ASC',
-        joinedAt: 'ASC'
-      }
+    const visibleUserIds = Object.keys(membersRolesMap).filter(userId => {
+      if (isManager) return true;
+      return membersRolesMap[userId].status === MemberStatus.ACCEPTED;
     });
-    console.log("Members length", members.length);
-    const userIds = members.map(m => m.userId);
-    console.log("UserIds", userIds.length);
-    const users: User[] = await this.amqp.request({
-      exchange: USER_EXCHANGE,
-      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-      payload: { userIds }
-    });
-
-    const result = users.map((u) => {
-      const member = members.find(m => m.userId === u.id);
-      return {
-        teamId,
-        role: member?.role,
-        isActive: u.isActive,
-        status: member?.status,
-        joinedAt: member?.joinedAt,
-        deletedAt: member?.deletedAt,
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        avatar: u.avatar,
-      } as MemberDto
-    });
-    return result;
+    if (visibleUserIds.length === 0) return [];
+    const userProfiles = await this.fetchUserProfiles(visibleUserIds);
+    return userProfiles.map(user =>
+      this.mergeToMemberDto(teamId, user.id, membersRolesMap[user.id], user)
+    );
   }
 
-  async getMembersWithProfiles(teamId: string) {
-    this.logger.log(`Getting members and profiles for team ${teamId}`);
+  async getTeamMember(userId: string, teamId: string): Promise<MemberDto> {
+    await this.validateRequester(userId, teamId);
+    const roleState = await this.teamCache.getTeamMember(
+      teamId,
+      userId,
+      () => this.fetchOneMemberRoleFromDb(teamId, userId)
+    );
+    if (!roleState) {
+      throw new NotFoundException(`User ${userId} is not in team ${teamId}`);
+    }
+    const [userProfile] = await this.fetchUserProfiles([userId]);
+    return this.mergeToMemberDto(teamId, userId, roleState, userProfile);
+  }
 
-    let membersFromDb: TeamMember[];
-    try {
-      membersFromDb = await this.memberRepo.find({
-        where: { team: { id: teamId } },
-        select: ['id', 'userId', 'role', 'joinedAt'],
+  async validateRequester(requesterId: string, teamId: string): Promise<CachedMemberState> {
+    const memberState = await this.teamCache.getTeamMember(
+      teamId,
+      requesterId,
+      () => this.fetchOneMemberRoleFromDb(teamId, requesterId)
+    );
+    if (!memberState) {
+      throw new ForbiddenException("Access Denied: You are not a member of this team.");
+    }
+    if (memberState.status !== MemberStatus.ACCEPTED) {
+      throw new ForbiddenException("Access Denied: Your membership is not active.");
+    }
+    return memberState;
+  }
+
+  private async getMembersRolesMap(teamId: string) {
+    let map = await this.teamCache.getAllTeamRoles(teamId);
+
+    if (Object.keys(map).length === 0) {
+      const dbMembers = await this.memberRepo.find({
+        where: { teamId }, order: { role: 'ASC', joinedAt: 'ASC' }
       });
-    } catch (dbError) {
-      this.logger.error(`Failed to fetch members from DB for ${teamId}`, dbError);
-      throw new BadRequestException('Could not retrieve team members.');
-    }
 
-    if (membersFromDb.length === 0) {
-      return [];
-    }
-
-    const memberIds = membersFromDb.map((m) => m.userId);
-
-    let usersFromCache: EventUserSnapshot[] = [];
-    try {
-      usersFromCache = await this.amqp.request<EventUserSnapshot[]>({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.GET_MANY_USERS_INFO,
-        payload: memberIds,
+      map = {};
+      dbMembers.forEach(m => {
+        map[m.userId] = {
+          role: m.role, status: m.status, isActive: true, joinedAt: m.joinedAt
+        } as CachedMemberState;
       });
-    } catch (cacheError) {
-      this.logger.warn(
-        `Failed to get profiles from cache for ${teamId}.`,
-        cacheError,
-      );
-    }
 
-    const foundInCacheIds = new Set(usersFromCache.map((u) => u.id));
-    const missingIds = memberIds.filter((id) => !foundInCacheIds.has(id));
-
-    let usersFromDb: User[] = [];
-
-    if (missingIds.length > 0) {
-      this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from User Service...`);
-      try {
-        const result = await this.amqp.request<User[]>({
-          exchange: USER_EXCHANGE,
-          routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-          payload: { userIds: missingIds },
-        });
-        usersFromDb = Array.isArray(result) ? result : (result ? [result] : []);
-
-        if (usersFromDb.length > 0) {
-          this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.SET_MANY_USERS_INFO, {
-            users: usersFromDb,
-          });
-        }
-      } catch (rpcError) {
-        this.logger.error(`Failed to fetch users from User Service`, rpcError);
+      if (Object.keys(map).length > 0) {
+        await this.teamCache.setManyTeamMembers(teamId, map);
       }
     }
+    return map;
+  }
 
-    const allFoundUsers: EventUserSnapshot[] = [
-      ...usersFromCache,
-      ...usersFromDb.map((u) => ({
-        id: u.id,
-        name: u.name,
-        avatar: u.avatar,
-        email: u.email,
-      })),
-    ];
+  private async fetchUserProfiles(userIds: string[]): Promise<User[]> {
+    return await this.userCacheService.getManyUserInfo(
+      userIds,
+      async (missingIds) => {
+        return await this.amqp.request<User[]>({
+          exchange: USER_EXCHANGE,
+          routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+          payload: { userIds: missingIds }
+        });
+      }
+    );
+  }
 
-    const profileMap = new Map(allFoundUsers.map((p) => [p.id, p]));
+  private async fetchOneMemberRoleFromDb(teamId: string, userId: string): Promise<CachedMemberState | null> {
+    const entity = await this.memberRepo.findOne({ where: { teamId, userId } });
+    return entity ? {
+      role: entity.role, status: entity.status, joinedAt: entity.joinedAt!, isActive: true
+    } : null;
+  }
 
-    const combinedMembers = membersFromDb.map((member) => {
-      const profile = profileMap.get(member.userId);
-
-      return {
-        id: member.userId,
-        name: profile?.name || 'Unknown',
-        avatar: profile?.avatar || '',
-        bio: '',
-        role: member.role,
-        email: profile?.email || '',
-        skills: [],
-        joinedAt: member.joinedAt,
-        isActive: false,
-        teamId: teamId,
-      };
-    });
-
-    return combinedMembers;
+  private mergeToMemberDto(
+    teamId: string,
+    userId: string,
+    roleData: CachedMemberState,
+    userProfile?: User
+  ): MemberDto {
+    return {
+      id: userId,
+      teamId,
+      role: roleData?.role,
+      status: roleData?.status,
+      joinedAt: roleData?.joinedAt,
+      deletedAt: null,
+      name: userProfile?.name || 'Unknown User',
+      email: userProfile?.email || '',
+      avatar: userProfile?.avatar || '',
+      isActive: userProfile ? userProfile.isActive : roleData?.isActive
+    };
   }
 
   async findAll() {
@@ -919,18 +874,6 @@ export class TeamService {
     return teams.map((t) => t.id);
   }
 
-  async findParticipantRoles(userId: string, teamId: string) {
-    return await this.memberRepo.findOne(
-      {
-        where: {
-          teamId,
-          userId,
-          status: MemberStatus.ACCEPTED
-        }
-      }
-    );
-  }
-
   async sendNotification(userId: string, teamId: string, message: NotificationEventDto) {
     const team = await this.teamRepo.findOne({
       where: { id: teamId, members: { id: userId } },
@@ -940,21 +883,5 @@ export class TeamService {
     }
     const members = team.members.map((member) => member.id)
     this.amqp.publish(SOCKET_EXCHANGE, TEAM_PATTERN.SEND_NOTIFICATION, { members, message });
-  }
-
-  async verifyPermission(userId: string, teamId: string, roles: MemberRole[]) {
-    const team = await this.teamRepo.findOne({
-      where: { id: teamId, members: { userId, status: MemberStatus.ACCEPTED } },
-      relations: ['members'],
-    })
-    if (!team) {
-      throw new ForbiddenException(`You are not a member of this team.`);
-    }
-    const requester = team.members.find((m) => m.userId === userId);
-    if (!requester || !roles.includes(requester.role)) {
-      throw new ForbiddenException(
-        'You do not have permission to perform this action.',
-      );
-    }
   }
 }

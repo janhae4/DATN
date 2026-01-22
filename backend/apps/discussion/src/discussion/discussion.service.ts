@@ -35,9 +35,7 @@ import {
   MessageSnapshot,
   ResponsePaginationDto,
   RequestPaginationDto,
-  SearchMessageDto,
-  REDIS_EXCHANGE,
-  REDIS_PATTERN,
+  SearchMessageDto
 } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Discussion, DiscussionDocument, LatestMessageSnapshot, ParticipantRef } from './schema/discussion.schema';

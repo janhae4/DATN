@@ -25,6 +25,7 @@ export class RmqClientService {
             });
 
             if (response && response.error) {
+                console.log(response);  
                 console.error(`RPC Error [${routingKey}]:`, response.message);
 
                 throw new HttpException(

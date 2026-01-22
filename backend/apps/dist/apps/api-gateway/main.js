@@ -2477,7 +2477,7 @@ let FileService = class FileService {
         });
     }
     async deleteFile(fileId, userId, teamId) {
-        return this.sendRpcRequest(contracts_1.FILE_PATTERN.DELETE_FILE, {
+        return this.sendRpcRequest(contracts_1.FILE_PATTERN.DELETE_ITEM, {
             fileId,
             userId,
             teamId,

@@ -10,6 +10,7 @@ import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
 import { RmqClientService, } from '@app/common';
 import { List } from '@app/contracts/list/list/list.entity';
 import { UpdateResult } from 'typeorm/browser';
+import { TeamCacheService } from '@app/redis-service';
 
 @Injectable()
 export class TasksService {
@@ -20,6 +21,7 @@ export class TasksService {
     @InjectRepository(TaskLabel)
     private readonly taskLabelRepository: Repository<TaskLabel>,
     private readonly amqpConnection: RmqClientService,
+    private readonly teamCache: TeamCacheService
   ) { }
 
   private async _sendTaskNotification(payload: SendTaskNotificationDto) {
@@ -39,6 +41,16 @@ export class TasksService {
     return response.id;
   }
 
+  async getMember(teamId: string, userId: string) {
+    return await this.teamCache.getTeamMember(teamId, userId,
+      async () => await this.amqpConnection.request<MemberDto>({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANT,
+        payload: { teamId, userId },
+      })
+    );
+  }
+
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
     const { listId, position, labelIds, reporterId, teamId, ...rest } = createTaskDto;
 
@@ -53,12 +65,7 @@ export class TasksService {
     }
 
     let approvalStatus = ApprovalStatus.PENDING;
-    const reporter = await this.amqpConnection.request<MemberDto>({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-      payload: { userId: reporterId, teamId }
-    })
-
+    const reporter = await this.teamCache.getTeamMember(teamId, reporterId || '');
     if (!reporter) throw new NotFoundException('Reporter not found');
 
     if ([MemberRole.ADMIN, MemberRole.OWNER].includes(reporter.role as MemberRole)) approvalStatus = ApprovalStatus.APPROVED;
@@ -103,11 +110,7 @@ export class TasksService {
     let currentPosition = lastTask ? lastTask.position : 0;
 
     let approvalStatus = ApprovalStatus.PENDING;
-    const reporter = await this.amqpConnection.request<MemberDto>({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-      payload: { userId: createTaskDtos[0].reporterId, teamId: createTaskDtos[0].teamId }
-    })
+    const reporter = await this.teamCache.getTeamMember(createTaskDtos[0].teamId, createTaskDtos[0].reporterId || '');
     if (!reporter) throw new NotFoundException('Reporter not found');
     if ([MemberRole.ADMIN, MemberRole.OWNER].includes(reporter.role as MemberRole)) approvalStatus = ApprovalStatus.APPROVED;
     else approvalStatus = ApprovalStatus.PENDING
@@ -141,7 +144,6 @@ export class TasksService {
       teamId: savedTasks[0].teamId || '',
       actor: {
         ...reporter,
-        id: reporter.id || ''
       },
       details: {
         taskTitle: summaryTitle,
@@ -165,11 +167,7 @@ export class TasksService {
   async deleteMany(taskIds: string[], teamId: string, userId: string) {
     if (!taskIds || !taskIds.length) return { success: true, deleted: 0 };
 
-    const member = await this.amqpConnection.request<MemberDto>({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-      payload: { teamId, userId },
-    });
+    const member = await this.teamCache.getTeamMember(teamId, userId);
     if (!member) throw new NotFoundException(`You are not a member of this team.`);
 
     const queryFind = this.taskRepository.createQueryBuilder('task')
@@ -192,7 +190,7 @@ export class TasksService {
       action: 'DELETE',
       taskIds: idsToDelete,
       teamId: teamId,
-      actor: member,
+      actor: { ...member },
       details: {
         taskTitle: tasksToDelete.length === 1 ? tasksToDelete[0].title : `${tasksToDelete.length} tasks`,
       },
@@ -206,11 +204,8 @@ export class TasksService {
     if (!taskIds?.length || !updateTaskDto || Object.keys(updateTaskDto).length === 0) {
       return { affected: 0 };
     }
-    const member = await this.amqpConnection.request<MemberDto>({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-      payload: { teamId, userId },
-    })
+
+    const member = await this.teamCache.getTeamMember(teamId, userId);
     if (!member) throw new BadRequestException('User not in team');
 
     const isHighLevel = [MemberRole.ADMIN, MemberRole.OWNER].includes(member.role as MemberRole);
@@ -252,7 +247,7 @@ export class TasksService {
           action: newStatus === 'APPROVED' ? 'APPROVED' : 'REJECTED',
           taskIds: updatedTasks.map(t => t.id),
           teamId: teamId,
-          actor: member,
+          actor: { ...member },
           details: {
             taskTitle: updatedTasks.length === 1 ? updatedTasks[0].title : `${updatedTasks.length} tasks`,
             newStatus: newStatus
@@ -311,17 +306,17 @@ export class TasksService {
   }
 
   async suggestTask(userId: string, objective: string, projectId: string, sprintId: string, teamId: string) {
-    await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
-    })
+    await this.teamCache.checkPermission(
+      teamId,
+      userId,
+      [MemberRole.ADMIN, MemberRole.OWNER]
+    )
 
     let members = [];
     if (sprintId) {
       const memberIds = await this.amqpConnection.request<MemberDto[]>({
         exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANT,
         payload: teamId,
       });
 
@@ -348,7 +343,7 @@ export class TasksService {
     })
     if (!project) throw new NotFoundException('Project not found');
 
-    await this.verifyPermission(userId, project.teamId);
+    await this.teamCache.checkPermission(project.teamId, userId);
 
     const query = this.taskRepository.createQueryBuilder('task');
     query.where('task.projectId = :projectId', { projectId: filters.projectId });
@@ -356,20 +351,12 @@ export class TasksService {
   }
 
   async findAllByTeam(userId: string, filters: BaseTaskFilterDto) {
-    await this.verifyPermission(userId, filters.teamId);
+    await this.teamCache.checkPermission(filters.teamId, userId);
     console.log('filters', filters)
     const query = this.taskRepository.createQueryBuilder('task');
     query.where('task.teamId = :teamId', { teamId: filters.teamId });
 
     return this._getTasksCommon(query, filters, userId, undefined, filters.teamId);
-  }
-
-  private async verifyPermission(userId: string, teamId: string, roles: MemberRole[] = [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER]) {
-    await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId, roles },
-    })
   }
 
   private async _getTasksCommon(query: SelectQueryBuilder<Task>, filters: BaseTaskFilterDto, userId: string, projectId?: string, teamId?: string) {
@@ -393,11 +380,7 @@ export class TasksService {
 
     let member: MemberDto | null = null;
     if (teamId) {
-      member = await this.amqpConnection.request({
-        exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-        payload: { teamId, userId },
-      })
+      member = await this.teamCache.getTeamMember(teamId, userId);
     }
 
     if (!member) throw new NotFoundException('Member not found');
@@ -571,11 +554,7 @@ export class TasksService {
     const task = await this.taskRepository.findOne({ where: { id } });
     if (!task) throw new NotFoundException(`Task not found in this team`);
 
-    const member = await this.amqpConnection.request<MemberDto>({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-      payload: { userId, teamId: task.teamId }
-    });
+    const member = await this.teamCache.getTeamMember(task.teamId as string, userId);
     if (!member) throw new ForbiddenException("Member not found");
 
     const isAdminOrOwner = [MemberRole.ADMIN, MemberRole.OWNER].includes(member.role as MemberRole);
@@ -625,11 +604,7 @@ export class TasksService {
   }
 
   async remove(id: string, teamId: string, userId: string): Promise<{ success: boolean }> {
-    const member = await this.amqpConnection.request<MemberDto>({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-      payload: { userId, teamId }
-    });
+    const member = await this.teamCache.getTeamMember(teamId, userId);
     if (!member) throw new ForbiddenException("Member not found");
 
     const isAdminOrOwner = [MemberRole.ADMIN, MemberRole.OWNER].includes(member.role as MemberRole);
@@ -664,15 +639,6 @@ export class TasksService {
     });
 
     return { success: true };
-  }
-
-  private async _isAdminOrOwner(teamId: string, userId: string): Promise<boolean> {
-    const checkRole: Error = await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { teamId, userId, roles: [MemberRole.ADMIN, MemberRole.OWNER] },
-    });
-    return !checkRole?.error;
   }
 
   private async assignLabels(taskId: string, labelIds: string[]) {
@@ -794,7 +760,7 @@ export class TasksService {
       console.log(`Deleted relations for label ${payload.id}`);
     } catch (error) {
       console.error('Error handling label deleted:', error);
-      return new Nack(true);
+      throw new BadRequestException();
     }
   }
 
@@ -805,25 +771,20 @@ export class TasksService {
         { name: label.name, color: label.color },
       );
     } catch (error) {
-      return new Nack(true);
+      throw new BadRequestException();
     }
   }
 
   async getAllTaskLabel(projectId: string, teamId: string, userId: string) {
-    await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { teamId, userId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
-    })
-
     try {
-      return this.taskLabelRepository.find({
+      await this.teamCache.checkPermission(teamId, userId);
+      return await this.taskLabelRepository.find({
         where: { projectId },
       });
     }
     catch (error) {
       console.error('Error handling label deleted:', error);
-      return new Nack(true);
+      throw new BadRequestException();
     }
   }
 

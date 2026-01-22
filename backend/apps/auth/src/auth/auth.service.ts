@@ -8,18 +8,15 @@ import { RpcException } from '@nestjs/microservices';
 import {
   USER_PATTERNS,
   GMAIL_PATTERNS,
-  REDIS_PATTERN,
   User,
   CreateAuthDto,
   LoginDto,
   GoogleAccountDto,
   SendEmailVerificationDto,
   JwtDto,
-  REFRESH_TTL,
   Account,
   BadRequestException,
   RefreshTokenDto,
-  StoredRefreshTokenDto,
   ChangePasswordDto,
   ForgotPasswordDto,
   NotFoundException,
@@ -28,7 +25,6 @@ import {
   USER_EXCHANGE,
   EVENTS_EXCHANGE,
   GMAIL_EXCHANGE,
-  REDIS_EXCHANGE,
   UnauthorizedException,
 } from '@app/contracts';
 import { randomUUID } from 'crypto';
@@ -36,6 +32,7 @@ import * as bcrypt from 'bcrypt';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { ResetCodeDto } from './dto/reset-code.dto';
 import { RmqClientService } from '@app/common/rabbitmq/rmq.service';
+import { AuthCacheService, UserCacheService } from '@app/redis-service';
 
 @Injectable()
 export class AuthService {
@@ -43,7 +40,9 @@ export class AuthService {
 
   constructor(
     private jwtService: JwtService,
-    private readonly amqp: RmqClientService
+    private readonly amqp: RmqClientService,
+    private readonly authCacheService: AuthCacheService,
+    private readonly userCacheService: UserCacheService
   ) { }
 
   async register(createAuthDto: CreateAuthDto) {
@@ -210,13 +209,6 @@ export class AuthService {
     };
   }
 
-
-
-  private _handlePostLoginTasks(user: User) {
-    this.logger.log(`Emitting post-login events for user ${user.id}.`);
-    this.amqp.publish(EVENTS_EXCHANGE, EVENTS.LOGIN, user);
-  }
-
   async login(loginDto: LoginDto) {
     this.logger.log(`Login attempt for ${loginDto.username}...`);
     const user: User = await this.amqp.request<User>({
@@ -234,7 +226,7 @@ export class AuthService {
       `User ${loginDto.username} validated. Generating session...`,
     );
     const token = await this._generateTokensAndSession(user);
-    this._handlePostLoginTasks(user);
+    await this.amqp.publish(EVENTS_EXCHANGE, EVENTS.LOGIN, user);
     return {
       ...token,
       isFirstLogin: user.lastLogin === null
@@ -247,17 +239,10 @@ export class AuthService {
     if (!payload) throw new UnauthorizedException('Invalid refresh token');
 
     try {
-      const stored = await this.amqp.request<StoredRefreshTokenDto>({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.GET_STORED_REFRESH_TOKEN,
-        payload: { userId: payload.id, sessionId: payload.sessionId },
-      });
+      const stored = await this.authCacheService.getStoredRefreshToken(payload.id as string, payload.sessionId);
 
       if (!stored) {
-        this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
-          userId: payload.id,
-          sessionId: payload.sessionId
-        })
+        await this.authCacheService.deleteRefreshToken(payload.id as string, payload.sessionId);
         throw new UnauthorizedException('Invalid refresh token');
       }
 
@@ -265,25 +250,14 @@ export class AuthService {
       const matches = await bcrypt.compare(tokenDigest, stored.token);
 
       if (!matches) {
-        await this.amqp.request<void>({
-          exchange: REDIS_EXCHANGE,
-          routingKey: REDIS_PATTERN.DELETE_REFRESH_TOKEN,
-          payload: { userId: payload.id, sessionId: payload.sessionId }
-        });
-
+        await this.authCacheService.deleteRefreshToken(payload.id as string, payload.sessionId);
         throw new UnauthorizedException('Invalid refresh token (Reuse Detected)');
       }
 
-      const lockKey = await this.amqp.request<string>({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.SET_LOCK_KEY,
-        payload: { userId: payload.id, sessionId: payload.sessionId },
-      });
-
+      const lockKey = await this.authCacheService.setLockKey(payload.id as string, payload.sessionId);
       if (!lockKey) {
         throw new RpcException({ statusCode: 429, message: 'Refresh in progress' });
       }
-
 
       return await this._generateTokensAndSession(
         { id: payload.id, role: payload.role } as JwtDto,
@@ -293,11 +267,7 @@ export class AuthService {
     } catch (error) {
       throw error;
     } finally {
-      await this.amqp.request({
-        exchange: REDIS_EXCHANGE,
-        routingKey: REDIS_PATTERN.DELETE_LOCK_KEY,
-        payload: { userId: payload.id, sessionId: payload.sessionId },
-      });
+      await this.authCacheService.deleteLockKey(payload.id as string, payload.sessionId);
     }
   }
 
@@ -329,28 +299,18 @@ export class AuthService {
     const tokenDigest = this.hashToken(refreshToken);
     const hashedRefresh = await bcrypt.hash(tokenDigest, 10);
 
-    await this.amqp.request({
-      exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.STORE_REFRESH_TOKEN,
-      payload: {
-        userId: user.id,
-        sessionId,
-        hashedRefresh,
-        exp: REFRESH_TTL,
-      }
-    })
-
+    await this.authCacheService.storeRefreshToken(user.id, sessionId, hashedRefresh, 60 * 60 * 24 * 14);
+    if (user instanceof User) {
+      await this.userCacheService.cacheUserProfile(user)
+    }
+    
     if (!accessToken || !refreshToken) throw new NotFoundException('Failed to generate tokens');
 
     return { accessToken, refreshToken };
   }
 
   async getGoogleTokens(userId: string) {
-    return await this.amqp.request({
-      exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.GET_GOOGLE_TOKEN,
-      payload: userId,
-    });
+    return await this.authCacheService.getGoogleToken(userId);
   }
   private async handleLinking(data: GoogleAccountDto, account: Account) {
     const {
@@ -391,11 +351,7 @@ export class AuthService {
 
     this.logger.log(`Storing Google tokens for user ${user.id}.`);
     console.log("access token when linking: ", accessToken)
-    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
-      userId: user.id,
-      accessToken,
-      refreshToken,
-    });
+    await this.authCacheService.storeGoogleToken(user.id, accessToken, refreshToken);
 
     console.log("user.id in handleLinking", user.id);
 
@@ -424,14 +380,7 @@ export class AuthService {
       `Handling Google login for existing user ${account.user.id} (Email: ${data.email}).`,
     );
     const { accessToken, refreshToken } = data;
-    console.log("data from handleLoginGoogle: ", data)
-
-    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
-      userId: account.user.id,
-      accessToken,
-      refreshToken,
-    });
-
+    await this.authCacheService.storeGoogleToken(account.user.id, accessToken, refreshToken);
     return await this._generateTokensAndSession(account.user);
   }
 
@@ -464,13 +413,7 @@ export class AuthService {
     })
 
     this.logger.log(`New user ${user.id} created via Google registration.`);
-
-    this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.STORE_GOOGLE_TOKEN, {
-      userId: user.id,
-      accessToken,
-      refreshToken,
-    });
-
+    await this.authCacheService.storeGoogleToken(user.id, accessToken, refreshToken);
     return await this._generateTokensAndSession(user);
   }
 
@@ -580,9 +523,7 @@ export class AuthService {
 
   logoutAll(userId: string) {
     this.logger.log(`Logging out all sessions for user ${userId}...`);
-    return this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.CLEAR_REFRESH_TOKENS, {
-      userId,
-    });
+    return this.authCacheService.clearRefreshTokens(userId);
   }
 
   async logout(token: string) {
@@ -592,10 +533,7 @@ export class AuthService {
     this.logger.log(
       `Deleting refresh token for user ${userId}, session ${sessionId}.`,
     );
-    return this.amqp.publish(REDIS_EXCHANGE, REDIS_PATTERN.DELETE_REFRESH_TOKEN, {
-      userId,
-      sessionId,
-    });
+    return await this.authCacheService.deleteRefreshToken(userId as string, sessionId);
   }
 
   async verifyToken<T extends object>(token: string): Promise<T> {

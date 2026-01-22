@@ -15,16 +15,7 @@ import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class TeamService {
-  private logger = new Logger(TeamService.name);
   constructor(private readonly amqpConnection: RmqClientService) { }
-
-  async findAll() {
-    return unwrapRpcResult(await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.FIND_ALL,
-      payload: {},
-    }))
-  }
 
   async findByUserId(id: string) {
     return unwrapRpcResult(await this.amqpConnection.request({
@@ -42,12 +33,11 @@ export class TeamService {
     }));
   }
 
-  async findParticipants(userId: string, teamId: string) {
-    this.logger.log('Finding participants for team:', teamId, 'by user:', userId);
+  async findParticipants(requesterId: string, teamId: string) {
     return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
-      payload: { userId, teamId },
+      payload: { requesterId, teamId },
     }));
   }
 
@@ -112,7 +102,7 @@ export class TeamService {
   async kickMember(requesterId: string, targetId: string, teamId: string) {
     return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.KICK_MEMBER, // Giả sử PATTERN này tồn tại
+      routingKey: TEAM_PATTERN.KICK_MEMBER, 
       payload: {
         requesterId,
         targetId,
@@ -137,22 +127,6 @@ export class TeamService {
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.CHANGE_ROLE,
       payload: payload,
-    }));
-  }
-
-  async verifyPermission(userId: string, teamId: string, allowedRoles: MemberRole[]) {
-    return unwrapRpcResult(await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId, roles: allowedRoles },
-    }));
-  }
-
-  async verifyMemberPermission(userId: string, teamId: string, allowedRoles: MemberRole[]) {
-    return unwrapRpcResult(await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId, roles: allowedRoles },
     }));
   }
 }

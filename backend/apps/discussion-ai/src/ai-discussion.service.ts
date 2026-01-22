@@ -25,6 +25,7 @@ import {
 import { AiDiscussion, TeamSnapshot } from './schema/ai-discussion.schema';
 import { AiMessage } from './schema/message.schema';
 import { RmqClientService } from '@app/common';
+import { TeamCacheService } from '@app/redis-service';
 
 @Injectable()
 export class AiDiscussionService {
@@ -38,6 +39,7 @@ export class AiDiscussionService {
     @InjectConnection()
     private readonly connection: mongoose.Connection,
     private readonly amqp: RmqClientService,
+    private readonly teamCache: TeamCacheService
   ) { }
 
   private createLatestMessageSnapshot(messageDoc: AiMessage): AiMessageSnapshot {
@@ -104,11 +106,7 @@ export class AiDiscussionService {
 
     if (discussion.teamId) {
       try {
-        const role = await this.amqp.request({
-          exchange: TEAM_EXCHANGE,
-          routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-          payload: { userId, teamId: discussion.teamId },
-        })
+        const role = await this.teamCache.getTeamMember(discussion.teamId, userId);
 
         if (role) {
           return discussion;
@@ -172,7 +170,7 @@ export class AiDiscussionService {
       try {
         const memberIds = await this.amqp.request<string[]>({
           exchange: TEAM_EXCHANGE,
-          routingKey: TEAM_PATTERN.FIND_PARTICIPANTS_IDS,
+          routingKey: TEAM_PATTERN.FIND_PARTICIPANT,
           payload: { teamId: discussion.teamId },
         });
         return memberIds || [];

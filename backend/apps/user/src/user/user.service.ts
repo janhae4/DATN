@@ -21,14 +21,13 @@ import {
   TEAM_PATTERN,
   Team,
   TeamMember,
-  REDIS_EXCHANGE,
-  REDIS_PATTERN,
   UserSkill,
   UserOnboardingDto,
   EVENTS,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { RmqClientService } from '@app/common';
+import { UserCacheService } from '@app/redis-service';
 
 @Injectable()
 export class UserService {
@@ -44,7 +43,8 @@ export class UserService {
     private readonly followRepo: Repository<Follow>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly amqp: RmqClientService
+    private readonly amqp: RmqClientService,
+    private readonly userCache: UserCacheService
   ) { }
 
   private async create(createUserDto: Partial<User>) {
@@ -321,10 +321,29 @@ export class UserService {
   }
 
   async findOne(id: string): Promise<User | null> {
-    this.logger.log(`Finding user by ID: ${id}`);
-    return await this.userRepo.findOne({
-      where: { id },
-      relations: ['accounts', 'skills'],
+    return await this.userCache.getUserInfo(id, async () => {
+      return await this.userRepo.findOne({
+        where: { id, isBan: false },
+        relations: ['accounts', 'skills'],
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatar: true,
+          role: true,
+          bio: true,
+          createdAt: true,
+          isVerified: true,
+          jobTitle: true,
+          phone: true,
+          accounts: {
+            id: true,
+            provider: true,
+            email: true,
+          },
+          skills: true
+        }
+      });
     });
   }
 
@@ -379,48 +398,9 @@ export class UserService {
   }
 
   async findManyByIds(ids: string[], forDiscussion?: boolean) {
-    const cachedUsers = await this.amqp.request<Partial<User>[]>({
-      exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.GET_USER_INFO,
-      payload: ids,
-    })
-
-    const cachedIds = new Set(cachedUsers.map(u => u.id));
-    const missingIds = ids.filter(id => !cachedIds.has(id));
-    let missingUsers: Partial<User>[] = [];
-
-    if (missingIds.length > 0) {
-      this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from DB...`);
-      missingUsers = await this.userRepo.find({
-        where: {
-          id: In(ids)
-        },
-        relations: {
-          skills: true
-        }
-      });
-      if (missingUsers.length > 0) {
-        await this.amqp.publish(
-          REDIS_EXCHANGE,
-          REDIS_PATTERN.SET_MANY_USERS_INFO,
-          missingUsers,
-        )
-      }
-    }
-
-    const allUsers = [...cachedUsers, ...missingUsers];
-    this.logger.log(`Returning ${allUsers.length} users`);
-    if (forDiscussion) {
-      allUsers.forEach(user => {
-        if (user.id !== undefined) {
-          (user as any)._id = user.id;
-          delete user.id;
-        }
-      })
-      this.logger.log(`Returning ${allUsers.length} users for discussion`);
-    }
-
-    return allUsers;
+    return await this.userCache.getManyUserInfo(
+      ids,
+      async (missingIds) => await this.userRepo.find({ where: { id: In(missingIds) } }))
   }
 
   async validate(loginDto: LoginDto) {
@@ -636,6 +616,7 @@ export class UserService {
     this.logger.log(`Successfully updated user ${id}.`);
     if (user && isPublish) {
       const userUpdated = { id, name: user.name, avatar: user.avatar };
+      await this.userCache.cacheUserProfile(user);
       this.amqp.publish(EVENTS_EXCHANGE, EVENTS.USER_UPDATED, userUpdated);
     } else {
       this.logger.warn(

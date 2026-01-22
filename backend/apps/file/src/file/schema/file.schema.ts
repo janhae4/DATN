@@ -1,4 +1,4 @@
-import { FileStatus } from '@app/contracts';
+import { FileStatus, FileType } from '@app/contracts';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
@@ -9,11 +9,17 @@ export class File {
     @Prop({ type: String, required: true })
     _id: string;
 
-    @Prop({ required: true, index: true })
+    @Prop({ index: true })
     storageKey: string;
 
     @Prop({ required: true })
     originalName: string;
+
+    @Prop({ type: String, enum: FileType, default: FileType.FILE, index: true })
+    type: FileType;
+
+    @Prop({ type: String, ref: 'File', default: null, index: true })
+    parentId: string | null;
 
     @Prop({ required: true, index: true })
     userId: string;
@@ -35,3 +41,5 @@ export class File {
 }
 
 export const FileSchema = SchemaFactory.createForClass(File);
+
+FileSchema.index({ userId: 1, parentId: 1, type: 1 });

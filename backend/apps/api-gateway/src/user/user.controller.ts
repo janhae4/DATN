@@ -16,17 +16,14 @@ import { Roles } from '../common/role/role.decorator';
 import { CurrentUser } from '../common/role/current-user.decorator';
 
 @Controller('user')
+@UseGuards(RoleGuard)
+@Roles(Role.ADMIN, Role.USER)
 export class UserController {
   constructor(private readonly userService: UserService) { }
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.userService.findAll();
   }
 
   @Get('/search')
