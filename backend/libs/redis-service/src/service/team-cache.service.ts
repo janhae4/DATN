@@ -56,73 +56,47 @@ export class TeamCacheService {
         }
     }
 
-    async addMember(payload: AddMemberEventPayload) {
-        const { teamId, members } = payload;
-        if (!teamId || !members || members.length === 0) return;
+    async addMember(teamId: string, userId: string) {
+        if (!teamId || !userId) return;
 
         const teamRolesKey = this.getTeamRolesKey(teamId);
-        const pipe = this.redisService.getClient().pipeline();
-
-        const newMembersMap: Record<string, string> = {};
-
-        for (const member of members) {
-            newMembersMap[member.id] = MemberRole.MEMBER;
-        }
-
-        pipe.hset(teamRolesKey, newMembersMap);
-        pipe.expire(teamRolesKey, TTL_24_HOURS);
-
-        await pipe.exec();
-        this.logger.log(`Added ${members.length} members to team cache: ${teamId}`);
+        await this.redisService.getClient().hset(teamRolesKey, userId, MemberRole.MEMBER);
+        this.logger.log(`Added 1 members to team cache: ${teamId}`);
     }
 
-    async removeMember(payload: RemoveMemberEventPayload) {
-        const { teamId, members } = payload;
-        if (!teamId || !members || members.length === 0) return;
-
+    async removeMember(teamId: string, memberIds: string[]) {
+        if (!teamId || !memberIds) return;
         const teamRolesKey = this.getTeamRolesKey(teamId);
-        const memberIds = members.map(m => m.id);
-
         await this.redisService.getClient().hdel(teamRolesKey, ...memberIds);
-
-        this.logger.log(`Removed ${members.length} members from team cache: ${teamId}`);
+        this.logger.log(`Removed ${memberIds.length} members from team cache: ${teamId}`);
     }
 
-    async changeRoleTeam(payload: ChangeRoleMember) {
-        const { teamId, targetId, newRole } = payload;
-        if (!teamId || !targetId || !newRole) return;
+    async changeRoleTeam(teamId: string, userId: string, newRole: MemberRole) {
+        if (!teamId || !userId || !newRole) return;
 
         const teamRolesKey = this.getTeamRolesKey(teamId);
-
         const pipe = this.redisService.getClient().pipeline();
-        pipe.hset(teamRolesKey, targetId, newRole);
+        pipe.hset(teamRolesKey, userId, newRole);
         pipe.expire(teamRolesKey, TTL_24_HOURS);
 
         await pipe.exec();
-        this.logger.log(`Changed role for ${targetId} in team ${teamId} to ${newRole}`);
+        this.logger.log(`Changed role for ${userId} in team ${teamId} to ${newRole}`);
     }
 
-    async leaveTeam(payload: LeaveMemberEventPayload) {
-        const { teamId, requester } = payload;
-        if (!teamId || !requester?.id) return;
-
+    async leaveTeam(teamId: string, userId: string) {
+        if (!teamId || !userId) return;
         const teamRolesKey = this.getTeamRolesKey(teamId);
-
-        await this.redisService.getClient().hdel(teamRolesKey, requester.id);
+        await this.redisService.getClient().hdel(teamRolesKey, userId);
     }
 
-    async removeTeam(payload: RemoveTeamEventPayload) {
-        const { teamId } = payload;
+    async removeTeam(teamId: string) {
         if (!teamId) return;
-
         const teamRolesKey = this.getTeamRolesKey(teamId);
-
         await this.redisService.getClient().del(teamRolesKey);
         this.logger.log(`Removed team cache ${teamId}`);
     }
 
-    async ownershipTransferred(payload: TransferOwnershipEventPayload) {
-        const { newOwnerId, teamId, requesterId } = payload;
+    async ownershipTransferred(teamId: string, newOwnerId: string, requesterId: string) {
         if (!teamId) return;
 
         const teamRolesKey = this.getTeamRolesKey(teamId);
@@ -181,30 +155,30 @@ export class TeamCacheService {
         return freshData || null;
     }
 
-    async getAllTeamRoles(teamId: string): Promise < Record < string, CachedMemberState >> {
-    const key = this.getTeamMembersKey(teamId);
-    const all = await this.redisService.getClient().hgetall(key);
+    async getAllTeamRoles(teamId: string): Promise<Record<string, CachedMemberState>> {
+        const key = this.getTeamMembersKey(teamId);
+        const all = await this.redisService.getClient().hgetall(key);
 
-    const result: Record<string, CachedMemberState> = { };
-Object.keys(all).forEach((userId) => {
-    result[userId] = JSON.parse(all[userId]);
-});
-return result;
+        const result: Record<string, CachedMemberState> = {};
+        Object.keys(all).forEach((userId) => {
+            result[userId] = JSON.parse(all[userId]);
+        });
+        return result;
     }
 
     async checkPermission(
-    teamId: string,
-    userId: string,
-    allowedRoles: MemberRole[] = [MemberRole.MEMBER, MemberRole.OWNER, MemberRole.ADMIN],
-): Promise < void> {
-    const memberState = await this.getTeamMember(teamId, userId);
-    console.log(memberState);
-    if(!memberState || memberState.status !== MemberStatus.ACCEPTED) {
-    throw new ForbiddenException('You are not a member of this team.');
-}
+        teamId: string,
+        userId: string,
+        allowedRoles: MemberRole[] = [MemberRole.MEMBER, MemberRole.OWNER, MemberRole.ADMIN],
+    ): Promise<void> {
+        const memberState = await this.getTeamMember(teamId, userId);
+        console.log(memberState);
+        if (!memberState || memberState.status !== MemberStatus.ACCEPTED) {
+            throw new ForbiddenException('You are not a member of this team.');
+        }
 
-if (!allowedRoles.includes(memberState.role as MemberRole)) {
-    throw new ForbiddenException('You do not have permission to view this team.');
-}
+        if (!allowedRoles.includes(memberState.role as MemberRole)) {
+            throw new ForbiddenException('You do not have permission to view this team.');
+        }
     }
 }

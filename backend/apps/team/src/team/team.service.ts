@@ -348,7 +348,7 @@ export class TeamService {
       });
 
       const user = users && users.length > 0 ? users[0] : null;
-
+      await this.teamCache.addMember(teamId, userId);
       this.amqp.publish(
         EVENTS_EXCHANGE,
         EVENTS.JOIN_TEAM,
@@ -442,6 +442,7 @@ export class TeamService {
       }
     };
 
+    await this.teamCache.removeMember(teamId, memberIds);
     this.amqp.publish(EVENTS_EXCHANGE, EVENTS.REMOVE_MEMBER, eventPayload);
 
     return updatedTeam;
@@ -482,16 +483,19 @@ export class TeamService {
       removedTeam = await teamRepo.remove(team);
     });
 
+    const payload = {
+      requesterId: userId,
+      requesterName,
+      teamId,
+      teamName: teamName!,
+      memberIdsToNotify: memberIdsToNotify!,
+    } as RemoveTeamEventPayload
+
+    await this.teamCache.removeTeam(teamId);
     this.amqp.publish(
       EVENTS_EXCHANGE,
       EVENTS.REMOVE_TEAM,
-      {
-        requesterId: userId,
-        requesterName,
-        teamId,
-        teamName: teamName!,
-        memberIdsToNotify: memberIdsToNotify!,
-      } as RemoveTeamEventPayload,
+      payload
     );
 
     return removedTeam!;
@@ -570,6 +574,7 @@ export class TeamService {
     });
 
     try {
+      await this.teamCache.changeRoleTeam(teamId, targetId, newRole)
       this.amqp.publish(
         EVENTS_EXCHANGE,
         EVENTS.MEMBER_ROLE_CHANGED,
@@ -637,7 +642,9 @@ export class TeamService {
       finalTeamState = team;
     });
 
+    await this.teamCache.leaveTeam(teamId, requesterId);
     this.amqp.publish(EVENTS_EXCHANGE, EVENTS.LEAVE_TEAM, eventPayload!);
+
     return finalTeamState!;
   }
 
@@ -707,6 +714,7 @@ export class TeamService {
     this.logger.log(
       `Ownership of team [${teamId}] successfully transferred to [${newOwnerId}]. Emitting event.`,
     );
+    await this.teamCache.ownershipTransferred(teamId, newOwnerId, requesterId);
     this.amqp.publish(
       EVENTS_EXCHANGE,
       EVENTS.OWNERSHIP_TRANSFERRED,

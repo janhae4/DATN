@@ -20,8 +20,8 @@ export interface AddMemberEventPayload {
   requesterId: string;
   requesterName?: string;
   teamId: string;
-  teamName: string;
+  teamName?: string;
   members: User[];
-  memberIdsToNotify: string[]
-  metadata: Record<string, any>;
+  memberIdsToNotify?: string[]
+  metadata?: Record<string, any>;
 }
