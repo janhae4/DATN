@@ -98,8 +98,8 @@ export * from './notification/dto/notification-update.dto';
 /*----
 REDIS
 -----*/
-export * from './redis/redis.pattern';
-export * from './redis/store-refreshtoken.dto';
+export * from './redis-service/redis.pattern';
+export * from './redis-service/store-refreshtoken.dto';
 
 /*----
 TASK
@@ -211,7 +211,7 @@ export * from './file/file.pattern';
 export * from './file/dto/delete-file.dto';
 export * from './file/dto/update-file.dto';
 export * from './file/dto/upload-file.dto';
-
+export * from './file/file.enum'
 
 
 

@@ -14,6 +14,7 @@ import { AiDiscussionService } from './ai-discussion.service';
 import { AiMessage, AiMessageSchema } from './schema/message.schema';
 import Redis from 'ioredis';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
 @Module({
   imports: [
     ClientConfigModule,
@@ -40,7 +41,8 @@ import { RmqModule } from '@app/common';
           type: 'direct',
         }
       ]
-    })
+    }),
+    RedisServiceModule
   ],
   providers: [
     AiDiscussionController,

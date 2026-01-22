@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery, UpdateQuery } from 'mongoose';
-import { BadRequestException, Error as RpcError, MemberRole, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS } from '@app/contracts';
+import { BadRequestException, Error as RpcError, MemberRole, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS, FileType } from '@app/contracts';
 import { FileDocument } from './schema/file.schema';
 import { MinioService } from './minio.service';
 import { randomUUID } from 'crypto';
@@ -24,6 +24,27 @@ export class FileService {
             throw new BadRequestException(e)
         }
 
+    }
+
+    async createFolder(name: string, parentId: string | null, userId: string, projectId?: string) {
+        if (parentId) {
+            const parent = await this.fileModel.findOne({ _id: parentId, type: 'FOLDER' });
+            if (!parent) throw new NotFoundException('Parent folder not found');
+        }
+
+        const newFolder = await this.fileModel.create({
+            _id: randomUUID(),
+            originalName: name,
+            userId,
+            projectId,
+            type: FileType.FOLDER,
+            parentId: parentId || null,
+            status: FileStatus.UPLOADED,
+            size: 0,
+            createdAt: new Date(),
+        });
+
+        return newFolder;
     }
 
     async updateOne(
@@ -57,12 +78,17 @@ export class FileService {
         return file
     }
 
-    async createPreSignedUrl(originalName: string, userId: string, projectId?: string) {
+    async createPreSignedUrl(originalName: string, userId: string, projectId?: string, parentId?: string) {
         this.logger.log(`Start Pre-signed URL: ${originalName}`);
 
         const fileId = randomUUID();
         const extension = path.extname(originalName);
         const storageKey = `${fileId}${extension}`;
+
+        if (parentId) {
+            const parent = await this.fileModel.findOne({ _id: parentId, type: FileType.FOLDER });
+            if (!parent) throw new NotFoundException('Folder not found');
+        }
 
         try {
             await this.fileModel.create({
@@ -71,6 +97,8 @@ export class FileService {
                 originalName,
                 userId,
                 projectId,
+                parentId: parentId || null,
+                type: FileType.FILE,
                 status: FileStatus.PENDING,
                 createdAt: new Date(),
             });
@@ -111,25 +139,42 @@ export class FileService {
         };
     }
 
-    async deleteFile(fileId: string, userId: string, projectId?: string) {
-        console.log(fileId, userId)
-        const file = await this._verifyPermission(fileId, [MemberRole.ADMIN, MemberRole.OWNER], userId, projectId);
-        try {
-            await Promise.all([
-                this.fileModel.deleteOne({ _id: fileId }).exec(),
+    async deleteItem(id: string, userId: string, projectId?: string) {
+        const item = await this._verifyPermission(id, [MemberRole.ADMIN, MemberRole.OWNER], userId, projectId);
 
-                this.minioService.delete(file.storageKey),
-
-                this.amqp.publish(
-                    EVENTS_EXCHANGE,
-                    EVENTS.DELETE_DOCUMENT,
-                    { fileId: file._id, userId: file.userId, projectId: file.projectId }
-                )
-            ]);
-        } catch (error) {
-            this.logger.error(`Failed to delete file ${fileId}: ${error.message}`);
-            throw new BadRequestException('Failed to delete file');
+        if (item.type === 'FOLDER') {
+            await this.deleteFolder(id, userId, projectId);
+        } else {
+            await this.deleteSingleFile(item);
         }
+    }
+
+    private async deleteFolder(
+        folderId: string,
+        userId: string,
+        projectId?: string
+    ) {
+        const children = await this.fileModel.find({ parentId: folderId });
+
+        for (const child of children) {
+            if (child.type === 'FOLDER') {
+                await this.deleteFolder(child._id, userId, projectId); // Đệ quy
+            } else {
+                await this.deleteSingleFile(child);
+            }
+        }
+
+        await this.fileModel.deleteOne({ _id: folderId }).exec();
+    }
+
+    private async deleteSingleFile(file: FileDocument) {
+        await Promise.all([
+            this.fileModel.deleteOne({ _id: file._id }).exec(),
+            this.minioService.delete(file.storageKey),
+            this.amqp.publish(EVENTS_EXCHANGE, EVENTS.DELETE_DOCUMENT, {
+                fileId: file._id, userId: file.userId, projectId: file.projectId
+            })
+        ]);
     }
 
     async renameFile(fileId: string, newFileName: string, userId: string, projectId?: string) {
@@ -212,6 +257,7 @@ export class FileService {
     async getFiles(
         userId: string,
         projectId?: string,
+        parentId: string | null = null,
         page: number = 1,
         limit: number = 10,
     ) {
@@ -222,31 +268,17 @@ export class FileService {
         const skip = (safePage - 1) * safeLimit;
 
         if (projectId) {
-            /* 
-            // Permission check can be reinstated when project microservice is integrated
-            const permissionTeam = await this.amqp.request<Team & RpcError>({
-                exchange: TEAM_EXCHANGE,
-                routingKey: TEAM_PATTERN.FIND_BY_ID,
-                payload: { id: teamId, userId }
-            })
-
-            if (permissionTeam.error) {
-                throw new ForbiddenException(permissionTeam.message);
-            }
-            */
-            query = { projectId: projectId };
+            query = { projectId };
         } else {
-            query = {
-                userId: userId,
-                projectId: { $in: [null, undefined] },
-            };
+            query = { userId, projectId: { $in: [null, undefined] } };
         }
+        query.parentId = parentId;
 
         const [files, totalItems] = await Promise.all([
             this.fileModel
                 .find(query)
                 .select('_id originalName createdAt status size mimetype')
-                .sort({ createdAt: -1 })
+                .sort({ type: -1, createdAt: -1 })
                 .skip(skip)
                 .limit(safeLimit)
                 .exec(),

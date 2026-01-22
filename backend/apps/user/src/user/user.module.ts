@@ -14,6 +14,7 @@ import {
   UserSkill,
 } from '@app/contracts';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { RmqModule } from '@app/common';
       exchanges: [
         { name: USER_EXCHANGE, type: 'direct' },
       ]
-    })
+    }),
+    RedisServiceModule
   ],
   controllers: [UserController],
   providers: [UserService, UserController],

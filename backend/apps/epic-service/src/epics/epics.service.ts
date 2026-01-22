@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CreateEpicDto,
@@ -10,19 +11,24 @@ import {
   TEAM_PATTERN,
   UpdateEpicDto
 } from '@app/contracts';
+=======
+import { Injectable } from '@nestjs/common';
+import { CreateEpicDto, Epic, MemberRole, UpdateEpicDto } from '@app/contracts';
+>>>>>>> backend/v2/team-service
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
-import { RmqClientService } from '@app/common';
+import { TeamCacheService } from '@app/redis-service';
 
 @Injectable()
 export class EpicsService {
   constructor(
     @InjectRepository(Epic)
     private readonly epicRepository: Repository<Epic>,
-    private readonly amqp: RmqClientService
+    private readonly teamCache: TeamCacheService
   ) { }
 
   async create(createEpicDto: CreateEpicDto, userId: string) {
+<<<<<<< HEAD
       const project = await this.amqp.request<Project>({
       exchange: PROJECT_EXCHANGE,
       routingKey: PROJECT_PATTERNS.GET_BY_ID,
@@ -46,6 +52,9 @@ export class EpicsService {
       },
     });
 
+=======
+    await this.teamCache.checkPermission(createEpicDto.teamId, userId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER]);
+>>>>>>> backend/v2/team-service
     const existingEpic = await this.epicRepository.findOne({
       where: {
         projectId: createEpicDto.projectId,

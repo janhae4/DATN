@@ -55,7 +55,7 @@ export class FileService {
     }
 
     async deleteFile(fileId: string, userId: string, projectId?: string) {
-        return this.sendRpcRequest(FILE_PATTERN.DELETE_FILE, {
+        return this.sendRpcRequest(FILE_PATTERN.DELETE_ITEM, {
             fileId,
             userId,
             projectId,

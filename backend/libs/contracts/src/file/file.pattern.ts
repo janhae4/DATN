@@ -1,7 +1,7 @@
 export const FILE_PATTERN = {
     CREATE_FILE: 'file.create',
     UPDATE_FILE: 'file.update',
-    DELETE_FILE: 'file.delete',
+    DELETE_ITEM: 'file.delete',
     UPLOAD_FILE: 'file.upload',
     DOWNLOAD_FILE: 'file.download',
     RENAME: 'file.rename',

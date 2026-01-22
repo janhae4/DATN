@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import {
   CreateSprintDto,
@@ -12,11 +11,13 @@ import {
   TEAM_EXCHANGE,
   TEAM_PATTERN,
   MemberRole,
+  BadRequestException,
 } from '@app/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { Sprint } from '@app/contracts/sprint/entity/sprint.entity';
 import { RmqClientService } from '@app/common';
+import { TeamCacheService } from '@app/redis-service';
 
 @Injectable()
 export class SprintsService {
@@ -24,19 +25,19 @@ export class SprintsService {
     @InjectRepository(Sprint)
     private readonly sprintRepository: Repository<Sprint>,
     private readonly amqpConnection: RmqClientService,
+    private readonly teamCache: TeamCacheService
   ) { }
 
   async create(createSprintDto: CreateSprintDto) {
-    await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: {
-        userId: createSprintDto.userId,
-        teamId: createSprintDto.teamId,
-        roles: [MemberRole.ADMIN, MemberRole.OWNER],
-      }
-    })
-    
+    if (!createSprintDto.teamId || !createSprintDto.userId) {
+      throw new BadRequestException('Team ID and User ID is required');
+    }
+
+    await this.teamCache.checkPermission(
+      createSprintDto.teamId,
+      createSprintDto.userId,
+    )
+
     const sprintData: Partial<Sprint> = {
       title: createSprintDto.title,
       goal: createSprintDto.goal,
@@ -144,11 +145,7 @@ export class SprintsService {
       throw new BadRequestException('Project ID and Team ID are required');
     }
 
-    await this.amqpConnection.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { userId, teamId, roles: [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER] },
-    })
+    await this.teamCache.checkPermission(teamId, userId);
 
     const query = this.sprintRepository.createQueryBuilder('sprint')
       .where('sprint.projectId = :projectId', { projectId })

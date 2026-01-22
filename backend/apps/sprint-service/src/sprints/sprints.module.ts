@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Sprint } from '@app/contracts/sprint/entity/sprint.entity';
 import { ClientConfigModule, ClientConfigService, SPRINT_EXCHANGE } from '@app/contracts';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sprint]),
@@ -25,7 +26,8 @@ import { RmqModule } from '@app/common';
           type: 'direct'
         }
       ]
-    })
+    }),
+    RedisServiceModule
   ],
   controllers: [SprintsController],
   providers: [SprintsService],

@@ -15,7 +15,7 @@ export class EpicService {
 
   async create(createEpicDto: CreateEpicDto, userId: string) {
     console.log("create epic in gateway: ", createEpicDto);
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: EPIC_EXCHANGE,
       routingKey: EPIC_PATTERNS.CREATE,
       payload: { createEpicDto, userId },
@@ -23,7 +23,7 @@ export class EpicService {
   }
 
   async findAllByProjectId(projectId: string, userId: string) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: EPIC_EXCHANGE,
       routingKey: EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID,
       payload: { projectId, userId },
@@ -31,7 +31,7 @@ export class EpicService {
   }
 
   async findOne(id: string) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: EPIC_EXCHANGE,
       routingKey: EPIC_PATTERNS.FIND_ONE_BY_ID,
       payload: { epicId: id },
@@ -39,7 +39,7 @@ export class EpicService {
   }
 
   async update(id: string, updateEpicDto: UpdateEpicDto) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: EPIC_EXCHANGE,
       routingKey: EPIC_PATTERNS.UPDATE,
       payload: { epicId: id, updateEpicDto },
@@ -47,7 +47,7 @@ export class EpicService {
   }
 
   async remove(id: string) {
-    return this.rmqClient.request({
+    return await this.rmqClient.request({
       exchange: EPIC_EXCHANGE,
       routingKey: EPIC_PATTERNS.REMOVE,
       payload: { epicId: id },

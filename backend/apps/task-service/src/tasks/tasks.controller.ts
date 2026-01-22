@@ -48,7 +48,8 @@ export class TasksController {
     errorHandler: customErrorHandler,
   })
   findAllByProject(payload: { userId: string, filters: BaseTaskFilterDto }) {
-    return this.tasksService.findAllByProject(payload.userId, payload.filters);
+    if (payload.filters.projectId) return this.tasksService.findAllByProject(payload.userId, payload.filters);
+    return this.tasksService.findAllByTeam(payload.userId, payload.filters);
   }
 
   @RabbitRPC({

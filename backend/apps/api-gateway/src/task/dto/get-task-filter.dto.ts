@@ -90,5 +90,6 @@ export class BaseTaskFilterDto {
 
     @IsOptional()
     @IsUUID()
+    @IsOptional()
     projectId?: string;
 }

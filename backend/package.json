@@ -82,6 +82,8 @@
   },
   "dependencies": {
     "@golevelup/nestjs-rabbitmq": "^6.0.2",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.1.11",
@@ -188,12 +190,18 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
-      "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1"
+      "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
+      "^@app/proto(|/.*)$": "<rootDir>/libs/proto/src/$1",
+      "^@app/redis-service(|/.*)$": "<rootDir>/libs/redis-service/src/$1"
     }
   },
   "packageManager": "npm@10.8.2",
   "workspaces": [
     "apps/*",
     "libs/*"
-  ]
+  ],
+  "overrides": {
+    "glob": "^10.4.5",
+    "html-minifier": "^4.0.0"
+  }
 }

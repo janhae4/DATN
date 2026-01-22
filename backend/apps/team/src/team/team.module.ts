@@ -14,6 +14,7 @@ import {
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { RmqModule } from '@app/common';
           type: 'direct'
         }
       ]
-    })
+    }),
+    RedisServiceModule
   ],
   controllers: [TeamController],
   providers: [TeamService, TeamController],

@@ -32,12 +32,6 @@ import { TransferOwnership } from './dto/transfer-owner.dto';
 export class TeamController {
   constructor(private readonly teamService: TeamService) { }
 
-  @Get()
-  @ApiOperation({ summary: 'Get all teams' })
-  findAll() {
-    return this.teamService.findAll();
-  }
-
   @Get('me')
   @ApiOperation({ summary: 'Get all teams by user id' })
   @ApiBearerAuth()
@@ -46,8 +40,6 @@ export class TeamController {
     return this.teamService.findByUserId(id);
 
   }
-
-
 
   @Get(':teamId/members')
   @ApiBearerAuth()

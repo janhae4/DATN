@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { FileController } from './file.controller';
 import { ClientConfigModule, ClientConfigService, FILE_EXCHANGE } from '@app/contracts';
 import { MongooseModule } from '@nestjs/mongoose';
-import { FileSchema } from './schema/file.schema';
+import { FileSchema, File } from './schema/file.schema';
 import { FileService } from './file.service';
 import { MinioService } from './minio.service';
 import { RmqModule } from '@app/common';

@@ -10,6 +10,7 @@ import {
 } from '@app/contracts';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RmqModule } from '@app/common';
         synchronize: true,
       }),
     }),
+    RedisServiceModule,
     TypeOrmModule.forFeature([Epic]),
     RmqModule.register({ exchanges: [{ name: EPIC_EXCHANGE, type: 'direct' }] }),
   ],

@@ -41,12 +41,12 @@ export class FileController {
 
   @RabbitRPC({
     exchange: FILE_EXCHANGE,
-    routingKey: FILE_PATTERN.DELETE_FILE,
-    queue: FILE_PATTERN.DELETE_FILE,
+    routingKey: FILE_PATTERN.DELETE_ITEM,
+    queue: FILE_PATTERN.DELETE_ITEM,
     errorHandler: customErrorHandler
   })
   async handleDeleteFile(payload: DeleteFilePayload) {
-    return await this.fileService.deleteFile(
+    return await this.fileService.deleteItem(
       payload.fileId,
       payload.userId,
       payload.projectId,
@@ -62,12 +62,14 @@ export class FileController {
   async getFiles(payload: {
     userId: string,
     projectId?: string,
+    parentId: string | null,
     page?: number,
     limit?: number
   }) {
     return await this.fileService.getFiles(
       payload.userId,
       payload.projectId,
+      payload.parentId,
       payload.page,
       payload.limit
     );

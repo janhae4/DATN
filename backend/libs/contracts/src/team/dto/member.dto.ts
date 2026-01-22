@@ -7,7 +7,7 @@ export class MemberDto {
   role: MemberRole;
   isActive: boolean;
   status: MemberStatus;
-  joinedAt?: Date;
+  joinedAt: Date;
   deletedAt?: Date | null;
   name: string;
   email: string;

@@ -23,7 +23,7 @@ import { RmqClientService } from '@app/common';
 @Injectable()
 export class AuthService {
   logger: any;
-  constructor(private readonly amqp: RmqClientService, 
+  constructor(private readonly amqp: RmqClientService,
     private readonly userService: UserService
   ) { }
 
@@ -145,19 +145,20 @@ export class AuthService {
   async refresh(request: Request, response: Response) {
     const refreshToken = request.cookies?.refreshToken as string | undefined;
     if (!refreshToken) throw new UnauthorizedException('Invalid refresh token');
+    try {
 
-    const token: LoginResponseDto = await this.amqp.request({
-      exchange: AUTH_EXCHANGE,
-      routingKey: AUTH_PATTERN.REFRESH,
-      payload: refreshToken
-    })
+      const token: LoginResponseDto = await this.amqp.request({
+        exchange: AUTH_EXCHANGE,
+        routingKey: AUTH_PATTERN.REFRESH,
+        payload: refreshToken
+      })
 
-    if (!token.accessToken || !token.refreshToken) {
+      this.setCookies(token.accessToken, token.refreshToken, response);
+      return { message: "Refresh token successfully" };
+    } catch (error) {
       this.clearCookies(response);
       throw new UnauthorizedException('Invalid refresh token');
     }
-    this.setCookies(token.accessToken, token.refreshToken, response);
-    return { message: "Refresh token successfully" };
   }
 
   logout(request: Request, response: Response) {
@@ -175,7 +176,7 @@ export class AuthService {
   }
 
   async validateToken(token: string): Promise<JwtDto> {
-    return this.amqp.request({
+    return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
       payload: token

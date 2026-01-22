@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { AUTH_EXCHANGE, ClientConfigModule, ClientConfigService, EVENTS_EXCHANGE, GMAIL_EXCHANGE, NOTIFICATION_EXCHANGE, REDIS_EXCHANGE, USER_EXCHANGE } from '@app/contracts';
 import { JwtModule } from '@nestjs/jwt';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { RmqModule } from '@app/common';
       exchanges: [
         { name: AUTH_EXCHANGE, type: 'direct' },
       ]
-    })
+    }),
+    RedisServiceModule
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthController],

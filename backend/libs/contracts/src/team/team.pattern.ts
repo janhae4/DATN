@@ -9,7 +9,7 @@ export const TEAM_PATTERN = {
   FIND_ROOMS_BY_USER_ID: 'team.findRoomsByUserId',
   FIND_PARTICIPANT_ROLES: 'team.findParticipantRoles',
   FIND_PARTICIPANTS: 'team.findParticipants',
-  FIND_PARTICIPANTS_IDS: 'team.findParticipantsIds',
+  FIND_PARTICIPANT: 'team.findParticipant',
   UPDATE: 'team.update',
   REMOVE: 'team.remove',
   ADD_MEMBER: 'team.addMember',
@@ -23,7 +23,6 @@ export const TEAM_PATTERN = {
   JOIN_TEAM: 'team.joinTeam',
   KICK_MEMBER: 'team.kickMember',
   SEND_NOTIFICATION: 'team.sendNotification',
-  VERIFY_PERMISSION: 'team.verifyPermission',
   ACCEPT_INVITATION: 'team.acceptInvitation',
   DECLINE_INVITATION: 'team.declineInvitation',
 };
