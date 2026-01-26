@@ -1,5 +1,6 @@
 import axios from "axios";
 import apiClient from "./apiClient";
+import { Attachment, AttachmentType, FileVisibility } from "@/types";
 
 // --- 1. DEFINITIONS (Type chuẩn hóa) ---
 
@@ -8,11 +9,16 @@ export interface IFile {
   _id: string;
   originalName: string;
   status: string;
+  type: AttachmentType;
   createdAt: string; // ISO String
   mimetype: string;  // QUAN TRỌNG: JSON trả về key thường, không phải camelCase
   size: number;      // File luôn có size, không nên để optional
   userId?: string;   // Optional (nếu backend có trả về field này)
+  visibility: FileVisibility,
+  allowedUserIds?: string[];
+  parentId?: string;
 }
+
 
 export interface PaginationMeta {
   totalItems: number;
@@ -32,49 +38,68 @@ export interface PresignedUrlResponse {
   uploadUrl: string;
 }
 
-// --- 2. SERVICE IMPLEMENTATION ---
 
 export const fileService = {
-  // Lấy danh sách file
   getFiles: async (
     projectId?: string,
-    page: number = 1,     // Mặc định trang 1
-    limit: number = 10    // Mặc định 10 dòng/trang
+    teamId?: string,
+    page: number = 1,
+    limit: number = 10
   ): Promise<GetFilesResponse> => {
     const response = await apiClient.get<GetFilesResponse>("/files", {
       params: {
         projectId,
-        page,   // Gửi page lên backend
-        limit   // Gửi limit lên backend
+        teamId,
+        page,
+        limit
       },
     });
     return response.data;
   },
 
-  // Xin URL để upload
-  // QUAN TRỌNG: Cần gửi cả fileType để Backend ký signature đúng với Content-Type
   initiateUpload: async (
-    data: { fileName: string; fileType: string },
-    projectId?: string
+    data: { fileName: string; fileType: string, parentId: string | null },
+    projectId?: string,
+    teamId?: string
   ): Promise<PresignedUrlResponse> => {
+    const payload: any = { ...data };
+    if (projectId) payload.projectId = projectId;
+    if (teamId) payload.teamId = teamId;
     const response = await apiClient.post<PresignedUrlResponse>(
       "/files/initiate-upload",
-      data,
-      { params: { projectId } }
+      payload
     );
     return response.data;
   },
 
-  // Lấy URL download
   getDownloadUrl: async (fileId: string, projectId?: string): Promise<{ downloadUrl: string }> => {
-    const response = await apiClient.get<{ downloadUrl: string }>(
+    const response = await apiClient.get(
       `/files/${fileId}/download`,
       { params: { projectId } }
     );
     return response.data;
   },
 
-  // Lấy URL preview
+  downloadFiles: async (fileIds: string[], projectId?: string, teamId?: string) => {
+    const response = await apiClient.post(
+      `/files/download/bulk`,
+      { fileIds, projectId, teamId }
+    );
+
+    if (response.data.type === 'application/json') {
+      const text = await response.data.text();
+      const json = JSON.parse(text);
+      if (json.url) window.location.href = json.url;
+    } else {
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'files.zip');
+      document.body.appendChild(link);
+      link.click();
+    }
+  },
+
   getPreviewUrl: async (fileId: string, projectId?: string): Promise<{ viewUrl: string }> => {
     const response = await apiClient.get<{ viewUrl: string }>(
       `/files/${fileId}/preview`,
@@ -83,8 +108,8 @@ export const fileService = {
     return response.data;
   },
 
-  // Xóa file
   deleteFile: async (fileId: string, projectId?: string): Promise<void> => {
+    console.log("FileId, projectId", fileId, projectId);
     await apiClient.delete(`/files/${fileId}`, { params: { projectId } });
   },
 
@@ -92,17 +117,18 @@ export const fileService = {
     await apiClient.post(`/files/${fileId}/confirm`);
   },
 
-  // Upload trực tiếp lên MinIO/S3
   uploadFileToMinIO: async (
     presignedUrl: string,
     file: File,
-    onProgress?: (percentage: number) => void
+    onProgress?: (percentage: number) => void,
+    signal?: AbortSignal
   ): Promise<void> => {
     try {
-      await axios.put(presignedUrl, file, {
+      return await axios.put(presignedUrl, file, {
         headers: {
           'Content-Type': file.type,
         },
+        signal: signal,
         transformRequest: [(data, headers) => {
           delete headers['Authorization'];
           return data;
@@ -123,7 +149,42 @@ export const fileService = {
           throw new Error("Upload thất bại: MinIO từ chối quyền (Có thể do sai Content-Type hoặc Link hết hạn).");
         }
       }
-      throw error;
     }
-  }
+  },
+
+  createFolder: async (fileName: string, parentId: string | null, projectId?: string, teamId?: string) => {
+    await apiClient.post('/files/folder', { fileName, parentId, projectId, teamId });
+  },
+
+  getFolder: async (folderId: string) => {
+    const response = await apiClient.get(`/files/folder/${folderId}`);
+    return response.data;
+  },
+
+  moveFileToFolder: async (fileId: string, parentId: string, projectId?: string, teamId?: string) => {
+    await apiClient.patch(`/files/${fileId}/move`, { parentId, teamId, projectId });
+  },
+
+  moveFilesToFolder: async (fileIds: string[], parentId: string, projectId?: string, teamId?: string) => {
+    const payload: any = { fileIds, parentId, teamId };
+    if (projectId) payload.projectId = projectId;
+    await apiClient.patch(`/files/move/bulk`, payload);
+  },
+
+  deleteFiles: async (
+    fileIds: string[],
+    projectId?: string,
+    teamId?: string
+  ) => {
+    const payload: any = { fileIds };
+
+    if (projectId) payload.projectId = projectId;
+    if (teamId) payload.teamId = teamId;
+
+    await apiClient.delete("/files/bulk", { data: payload });
+  },
+
+  changeVisibility: async (fileIds: string[], visibility: FileVisibility, allowedUserIds?: string[], projectId?: string, teamId?: string) => {
+    await apiClient.patch(`/files/visibility/bulk`, { fileIds, visibility, allowedUserIds, projectId, teamId });
+  },
 };

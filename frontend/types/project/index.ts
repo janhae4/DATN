@@ -7,3 +7,4 @@ export * from "./label.interface";
 export * from "./attachment.interface";
 export * from "./sprint.type";
 export * from "./epic.type";
+export * from "./upload-attachment";

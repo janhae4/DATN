@@ -1,14 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
-  ColumnDef,
   flexRender,
   getCoreRowModel,
+  RowSelectionState,
   useReactTable,
-  // Bỏ getPaginationRowModel vì ta tự quản lý
-} from "@tanstack/react-table"
-import { Button } from "@/components/ui/button"
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -16,54 +14,64 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  pageCount: number;   
-  pageIndex: number;      // Trang hiện tại (Lưu ý: Backend thường là 1, nhưng Table này dùng 0-index)
-  onPageChange: (page: number) => void; // Hàm callback khi đổi trang
-  isLoading?: boolean;
+} from "@/components/ui/table";
+import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
+import { DataViewProps } from "@/types/data-view";
+import { DataTableRow } from "./data-table-row";
+import { Attachment, FileVisibility, Member } from "@/types";
+import { Button } from "@/components/ui/button";
+interface DataTableProps<
+  TData extends Attachment,
+  TValue,
+> extends DataViewProps<TData, TValue> {
+  onPreview: (file: Attachment) => void;
+  onDownload: (id: string) => void;
+  onDelete: (id: string) => void;
+  onVisibilityChange: (
+    ids: string[],
+    vis: FileVisibility,
+    allowed?: string[],
+  ) => void;
+  members: Member[];
+  projectId?: string;
+  teamId?: string;
+  [key: string]: any;
 }
 
-export function DataTable<TData, TValue>({
-  columns,
+export function DataTable<TData extends Attachment, TValue>({
   data,
-  pageCount,
-  pageIndex,
-  onPageChange,
-  isLoading
+  tableColumns,
+  pagination,
+  isLoading,
+  onPreview,
+  onDownload,
+  onDelete,
+  onVisibilityChange,
+  members,
+  projectId,
+  teamId,
 }: DataTableProps<TData, TValue>) {
-  console.log("Data trong table: ", data)
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const table = useReactTable({
     data,
-    columns,
-    pageCount: pageCount - 1, // Total number of pages (1-based)
+    columns: tableColumns || [],
     state: {
       pagination: {
-        pageIndex: pageIndex - 1, // Convert to 0-based for internal use
-        pageSize: 12, // Show 12 items per page
+        pageIndex: pagination ? pagination.currentPage - 1 : 0,
+        pageSize: 12,
       },
+      rowSelection,
     },
-    manualPagination: true, // Use server-side pagination
-    onPaginationChange: (updater) => {
-      if (typeof updater === 'function') {
-        const currentIndex = pageIndex - 1;
-        const newState = updater({
-          pageIndex: currentIndex,
-          pageSize: 12
-        });
-        onPageChange(Math.max(0, newState.pageIndex + 1));
-      }
-    },
+    pageCount: pagination ? pagination.totalPages : -1,
+    manualPagination: true,
+    enableRowSelection: true, 
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
-  })
+  });
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-md border bg-white dark:bg-zinc-950">
+      <div className="overflow-y-scroll rounded-md border bg-white dark:bg-zinc-950">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -74,7 +82,7 @@ export function DataTable<TData, TValue>({
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -84,27 +92,49 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={tableColumns?.length}
+                  className="h-24 text-center text-zinc-500"
+                >
                   Loading data...
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table
+                .getRowModel()
+                .rows.map((row) => (
+                  <DataTableRow
+                    key={row.id}
+                    row={row}
+                    members={members}
+                    projectId={projectId}
+                    teamId={teamId}
+                    onPreview={onPreview}
+                    onDownload={onDownload}
+                    onDelete={onDelete}
+                    onVisibilityChange={onVisibilityChange}
+                    selectedIds={
+                      new Set(
+                        table
+                          .getSelectedRowModel()
+                          .rows.map((r) => r.original.id),
+                      )
+                    }
+                    setSelectedIds={(ids) => {}}
+                  />
+                ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                <TableCell
+                  colSpan={tableColumns?.length}
+                  className="h-32 text-center"
+                >
+                  <div className="flex flex-col items-center justify-center text-zinc-500">
+                    <Inbox className="h-6 w-6 mb-2 text-zinc-300" />
+                    <span className="text-sm font-medium">
+                      No results found
+                    </span>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -112,26 +142,27 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {/* Pagination Controls - Matched with DataGrid */}
-      {pageCount > 0 && (
-        <div className="flex items-center justify-between border-t mb-3 border-zinc-100 dark:border-zinc-800 pt-4">
-          <p className="text-sm text-zinc-500 font-medium">
-            Page <span className="text-zinc-900 dark:text-zinc-200">{pageIndex + 1}</span> of <span className="text-zinc-900 dark:text-zinc-200">{pageCount}</span>
-          </p>
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-4">
+          {/* Pagination UI Code */}
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onPageChange(pageIndex - 1)}
-              disabled={pageIndex <=0 }
+              onClick={() =>
+                pagination.onPageChange(pagination.currentPage - 1)
+              }
+              disabled={pagination.currentPage <= 1}
             >
               <ChevronLeft className="h-4 w-4 mr-1" /> Previous
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onPageChange(pageIndex + 1)}
-              disabled={pageIndex >= pageCount}
+              onClick={() =>
+                pagination.onPageChange(pagination.currentPage + 1)
+              }
+              disabled={pagination.currentPage >= pagination.totalPages}
             >
               Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
@@ -139,5 +170,5 @@ export function DataTable<TData, TValue>({
         </div>
       )}
     </div>
-  )
+  );
 }

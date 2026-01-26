@@ -197,6 +197,14 @@ export class ClientConfigService {
   getNotificationClientPort(): number {
     return this.config.get<number>('NOTIFICATION_CLIENT_PORT', 4001);
   }
+
+  getNotificationDatabase(): string {
+    return this.config.get<string>(
+      'DATABASE_NOTIFICATION_URL',
+      'postgres://postgres:postgres@localhost:5432/notification',
+    );
+  }
+
   getNotificationQueue(): string {
     return this.config.get<string>(
       'NOTIFICATION_QUEUE',

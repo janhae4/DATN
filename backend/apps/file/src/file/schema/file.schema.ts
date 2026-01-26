@@ -1,4 +1,4 @@
-import { FileStatus, FileType } from '@app/contracts';
+import { FileStatus, FileType, FileVisibility } from '@app/contracts';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
@@ -27,6 +27,9 @@ export class File {
     @Prop({ index: true })
     projectId?: string;
 
+    @Prop({ index: true })
+    teamId?: string;
+
     @Prop()
     mimetype: string;
 
@@ -36,6 +39,12 @@ export class File {
     @Prop({ type: String, enum: FileStatus, default: FileStatus.PENDING })
     status: string;
 
+    @Prop({ type: String, enum: FileVisibility, default: FileVisibility.TEAM, index: true })
+    visibility: FileVisibility;
+
+    @Prop({ type: [String], default: [], index: true })
+    allowedUserIds: string[];
+
     @Prop({ type: String, default: null })
     pendingNewName?: string;
 }
@@ -43,3 +52,4 @@ export class File {
 export const FileSchema = SchemaFactory.createForClass(File);
 
 FileSchema.index({ userId: 1, parentId: 1, type: 1 });
+FileSchema.index({ teamId: 1, visibility: 1 });

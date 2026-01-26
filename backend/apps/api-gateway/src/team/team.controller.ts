@@ -48,7 +48,6 @@ export class TeamController {
     @Param('teamId') teamId: string,
     @CurrentUser('id') userId: string,
   ) {
-    console.log('Controller hit! TeamId:', teamId, 'UserId:', userId);
     return this.teamService.findParticipants(userId, teamId);
   }
 

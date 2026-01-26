@@ -84,7 +84,7 @@ export function TeamMembersList({
   const currentUserRole = useMemo(() => {
     if (!members) return null;
     const me = members.find(
-      (m) => m.id === currentUserId || m.id === currentUserId
+      (m) => m.id === currentUserId || m.id === currentUserId,
     );
     return me?.role || null;
   }, [members, currentUserId]);
@@ -109,7 +109,7 @@ export function TeamMembersList({
           toast.success(`${memberName(memberId)} has been removed`),
         onError: (err: any) =>
           toast.error(err?.response?.data?.message || "Failed"),
-      }
+      },
     );
   };
 
@@ -119,11 +119,11 @@ export function TeamMembersList({
       {
         onSuccess: () =>
           toast.success(
-            `Role updated to ${newRole} for ${memberName(memberId)}`
+            `Role updated to ${newRole} for ${memberName(memberId)}`,
           ),
         onError: (err: any) =>
           toast.error(err?.response?.data?.message || "Failed"),
-      }
+      },
     );
   };
 
@@ -135,11 +135,14 @@ export function TeamMembersList({
           toast.success(`Ownership transferred to ${memberName(memberId)}`),
         onError: (err: any) =>
           toast.error(err?.response?.data?.message || "Failed"),
-      }
+      },
     );
   };
 
-  const showActionsColumn = currentUserRole && currentUserRole !== MemberRole.MEMBER && members.length > 1;
+  const showActionsColumn =
+    currentUserRole &&
+    currentUserRole !== MemberRole.MEMBER &&
+    members.length > 1;
 
   const canInvite =
     currentUserRole === MemberRole.OWNER ||
@@ -253,8 +256,7 @@ export function TeamMembersList({
     }
   };
 
-
-  console.log("filteredMembers: ", filteredMembers)
+  console.log("filteredMembers: ", filteredMembers);
   return (
     <Card className="shadow-sm border-muted/60 overflow-hidden">
       <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 space-y-0 bg-muted/20 pb-4">
@@ -300,7 +302,9 @@ export function TeamMembersList({
                 Joined Date
               </TableHead>
               {showActionsColumn && (
-                <TableHead className="w-[10%] text-right pr-6">Actions</TableHead>
+                <TableHead className="w-[10%] text-right pr-6">
+                  Actions
+                </TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -390,6 +394,9 @@ export function TeamMembersList({
                           <span className="text-sm font-medium text-foreground">
                             {member?.name || "Unknown User"}
                           </span>
+                          <span className="text-xs text-muted-foreground">
+                            {member?.email}
+                          </span>
                         </div>
                       </div>
                     </TableCell>
@@ -408,8 +415,8 @@ export function TeamMembersList({
                       {member.status && getStatusBadge(member.status)}
                     </TableCell>
 
-                    {showActionsColumn && (
-                      member.id == currentUserId ? (
+                    {showActionsColumn &&
+                      (member.id == currentUserId ? (
                         <TableCell className="text-right pr-6 opacity-0">
                           <Button
                             variant="ghost"
@@ -461,7 +468,7 @@ export function TeamMembersList({
                                       onValueChange={(value) =>
                                         handleRoleChange(
                                           member.id,
-                                          value as MemberRole
+                                          value as MemberRole,
                                         )
                                       }
                                     >
@@ -489,15 +496,14 @@ export function TeamMembersList({
                                   className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
                                   onClick={() => handleRemove(member.id)}
                                 >
-                                  <ShieldAlert className="mr-2 h-4 w-4" /> Remove
-                                  from Team
+                                  <ShieldAlert className="mr-2 h-4 w-4" />{" "}
+                                  Remove from Team
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
-                      )
-                    )}
+                      ))}
                   </TableRow>
                 );
               })

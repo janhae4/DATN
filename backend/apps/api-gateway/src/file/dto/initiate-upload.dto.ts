@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class InitiateUploadDto {
     @ApiProperty({
@@ -17,4 +17,16 @@ export class InitiateUploadDto {
     @IsString()
     @IsNotEmpty()
     fileType: string;
+
+    @IsUUID()
+    @IsOptional()
+    teamId?: string
+
+    @IsUUID()
+    @IsOptional()
+    projectId?: string
+
+    @IsUUID()
+    @IsOptional()
+    parentId: string | null = null;
 }

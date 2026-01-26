@@ -163,15 +163,38 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_NOTIFY_WEBHOOK_ENABLE_primary: "on"
-      MINIO_NOTIFY_WEBHOOK_ENDPOINT_primary: "http://host.docker.internal:3000/webhooks/upload-completed"
-      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+      MINIO_NOTIFY_WEBHOOK_ENABLE_PRIMARY: "on"
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_PRIMARY: "http://host.docker.internal:3000/webhooks/upload-completed"      
+      MINIO_API_CORS_ALLOW_ORIGIN: '*'
     command: [ "server", "--console-address", ":9001", "/data" ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
     volumes:
       - minio-data:/data
+    networks:
+      - app-network
+  
+  minio-setup:
+    image: minio/mc:latest
+    container_name: minio-mc-setup
+    # depends_on:
+    #   minio:
+    #     condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set myminio http://minio:9000 minioadmin minioadmin); do echo '...waiting...' && sleep 1; done;
+      mc event add myminio/documents arn:minio:sqs::PRIMARY:webhook --event put;
+      echo 'MinIO Webhook Setup Complete!';
+      exit 0;
+      "
     networks:
       - app-network
 
@@ -362,7 +385,7 @@ services:
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root 
       ME_CONFIG_MONGODB_ADMINPASSWORD: root
-      ME_CONFIG_MONGODB_URL: mongodb://mongo_db:27017/ 
+      ME_CONFIG_MONGODB_URL: mongodb://mongo_db:27017/mongo_db?directConnection=true
       ME_CONFIG_BASICAUTH: "false" 
     depends_on:
       - mongo_db

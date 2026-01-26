@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { User } from '@app/contracts';
+import { User, USER_EXCHANGE, USER_PATTERNS } from '@app/contracts';
 import { RedisService } from '../redis-service.service';
+import { RmqClientService } from '@app/common';
 
 const TTL_24_HOURS = 86400;
 
@@ -8,7 +9,10 @@ const TTL_24_HOURS = 86400;
 export class UserCacheService {
     private readonly logger = new Logger(UserCacheService.name);
 
-    constructor(private readonly redisService: RedisService) { }
+    constructor(
+        private readonly redisService: RedisService,
+        private readonly amqp: RmqClientService
+    ) { }
 
     private getUserInfoKey(userId: string) {
         return `user:profile:${userId}`;
@@ -26,11 +30,15 @@ export class UserCacheService {
         const cached = await redis.get(key);
         if (cached) return JSON.parse(cached);
 
-        if (fetcher) {
-            const user = await fetcher();
-            if (!user) return null;
-            await this.cacheUserProfile(user);
-            return user;
+        const fetchData = await fetcher?.() || await this.amqp.request({
+            exchange: USER_EXCHANGE,
+            routingKey: USER_PATTERNS.FIND_ONE,
+            payload: userId,
+        })
+
+        if (fetchData) {
+            await this.cacheUserProfile(fetchData);
+            return fetchData;
         }
     }
 

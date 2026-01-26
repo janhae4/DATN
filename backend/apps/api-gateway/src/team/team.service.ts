@@ -34,11 +34,11 @@ export class TeamService {
   }
 
   async findParticipants(requesterId: string, teamId: string) {
-    return unwrapRpcResult(await this.amqpConnection.request({
+    return await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
-      payload: { requesterId, teamId },
-    }));
+      payload: { userId: requesterId, teamId },
+    });
   }
 
   async create(createTeamDto: CreateTeamDto) {
@@ -102,7 +102,7 @@ export class TeamService {
   async kickMember(requesterId: string, targetId: string, teamId: string) {
     return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.KICK_MEMBER, 
+      routingKey: TEAM_PATTERN.KICK_MEMBER,
       payload: {
         requesterId,
         targetId,

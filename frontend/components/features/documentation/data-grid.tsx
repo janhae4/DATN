@@ -1,59 +1,80 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Inbox } from "lucide-react"
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
+import { DataViewProps } from "@/types/data-view";
+import { cn } from "@/lib/utils";
+import { DndItemWrapper } from "./dnd-item-wrapper";
 
-interface DataGridProps<TData> {
-  data: TData[]
-  renderItem: (item: TData) => React.ReactNode
-  columns?: {
-    default?: number
-    sm?: number
-    md?: number
-    lg?: number
-    xl?: number
-    "2xl"?: number
-  }
-  // Cập nhật Pagination Props chuẩn
-  pagination?: {
-    currentPage: number
-    totalPages: number
-    onPageChange: (page: number) => void
-  }
-  isLoading?: boolean
-}
+// interface DataGridProps<TData> {
+//   data: TData[]
+//   renderItem: (item: TData) => React.ReactNode
+//   columns?: {
+//     default?: number
+//     sm?: number
+//     md?: number
+//     lg?: number
+//     xl?: number
+//     "2xl"?: number
+//   }
+//   pagination?: {
+//     currentPage: number
+//     totalPages: number
+//     onPageChange: (page: number) => void
+//   }
+//   isLoading?: boolean
+// }
 
-export function DataGrid<TData>({
+const gridCols = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+  5: "grid-cols-5",
+  6: "grid-cols-6",
+  8: "grid-cols-8",
+  10: "grid-cols-10",
+  12: "grid-cols-12",
+};
+
+export function DataGrid<TData extends { id: string }>({
   data,
-  renderItem,
-  columns = { default: 1, sm: 2, lg: 3, xl: 4 }, // Chỉnh default grid hợp lý hơn
+  renderGridItem,
+  gridConfig = { default: 1, sm: 2, lg: 3, xl: 4 },
   pagination,
-  isLoading
-}: DataGridProps<TData>) {
-
-  const gridColsClass = `
-    grid gap-4 
-    grid-cols-${columns.default}
-    sm:grid-cols-${columns.sm || columns.default}
-    md:grid-cols-${columns.md || columns.sm || columns.default}
-    lg:grid-cols-${columns.lg || columns.md || columns.default}
-    xl:grid-cols-${columns.xl || columns.lg || columns.default}
-    2xl:grid-cols-${columns["2xl"] || columns.xl || columns.default}
-  `.trim()
-
+  isLoading,
+}: DataViewProps<TData>) {
   if (isLoading) {
-    return <div className="py-20 text-center text-sm text-zinc-500">Loading grid data...</div>
+    return (
+      <div className="py-20 text-center text-sm text-zinc-500">
+        Loading grid data...
+      </div>
+    );
   }
+  const getGridClass = (cols?: number) =>
+    gridCols[cols as keyof typeof gridCols] || "grid-cols-1";
 
   return (
     <div className="space-y-6">
       {data.length > 0 ? (
-        <div className={gridColsClass}>
+        <div
+          className={cn(
+            "grid gap-4",
+            getGridClass(gridConfig.default),
+            gridConfig.sm && `sm:${getGridClass(gridConfig.sm)}`,
+            gridConfig.md && `md:${getGridClass(gridConfig.md)}`,
+            gridConfig.lg && `lg:${getGridClass(gridConfig.lg)}`,
+            gridConfig.xl && `xl:${getGridClass(gridConfig.xl)}`,
+            gridConfig["2xl"] && `2xl:${getGridClass(gridConfig["2xl"])}`,
+          )}
+        >
           {data.map((item, index) => (
-            <div key={index} className="animate-in fade-in zoom-in-95 duration-200">
-              {renderItem(item)}
-            </div>
+            <DndItemWrapper key={item.id} item={item as any}>
+              <div className="animate-in fade-in zoom-in-95 duration-200 h-full">
+                {renderGridItem ? renderGridItem(item) : JSON.stringify(item)}
+              </div>
+            </DndItemWrapper>
           ))}
         </div>
       ) : (
@@ -65,17 +86,25 @@ export function DataGrid<TData>({
         </div>
       )}
 
-      {/* Pagination UI */}
       {pagination && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between mb-3 border-t border-zinc-100 dark:border-zinc-800 pt-4">
           <p className="text-sm text-zinc-500 font-medium">
-            Page <span className="text-zinc-900 dark:text-zinc-200">{pagination.currentPage}</span> of <span className="text-zinc-900 dark:text-zinc-200">{pagination.totalPages}</span>
+            Page{" "}
+            <span className="text-zinc-900 dark:text-zinc-200">
+              {pagination.currentPage}
+            </span>
+            of{" "}
+            <span className="text-zinc-900 dark:text-zinc-200">
+              {pagination.totalPages}
+            </span>
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
+              onClick={() =>
+                pagination.onPageChange(pagination.currentPage - 1)
+              }
               disabled={pagination.currentPage <= 1}
             >
               <ChevronLeft className="h-4 w-4 mr-1" /> Previous
@@ -83,7 +112,9 @@ export function DataGrid<TData>({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
+              onClick={() =>
+                pagination.onPageChange(pagination.currentPage + 1)
+              }
               disabled={pagination.currentPage >= pagination.totalPages}
             >
               Next <ChevronRight className="h-4 w-4 ml-1" />
@@ -92,5 +123,5 @@ export function DataGrid<TData>({
         </div>
       )}
     </div>
-  )
+  );
 }

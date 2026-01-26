@@ -34,6 +34,12 @@
       "@app/contracts/*": [
         "libs/contracts/src/*"
       ],
+      "@app/minio": [
+        "libs/minio/src"
+      ],
+      "@app/minio/*": [
+        "libs/minio/src/*"
+      ],
       "@app/proto": [
         "libs/proto/src"
       ],

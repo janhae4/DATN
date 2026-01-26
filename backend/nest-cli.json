@@ -125,6 +125,15 @@
         "tsConfigPath": "apps/list-service/tsconfig.app.json"
       }
     },
+    "minio": {
+      "type": "library",
+      "root": "libs/minio",
+      "entryFile": "index",
+      "sourceRoot": "libs/minio/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/minio/tsconfig.lib.json"
+      }
+    },
     "notification": {
       "type": "application",
       "root": "apps/notification",

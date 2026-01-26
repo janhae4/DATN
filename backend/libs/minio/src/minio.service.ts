@@ -43,6 +43,15 @@ export class MinioService implements OnModuleInit {
         }
     }
 
+    async deleteFiles(keys: string[]) {
+        try {
+            await this.minioClient.removeObjects(this.bucketName, keys);
+        } catch (err) {
+            this.logger.error(`Minio delete failed for keys ${keys}:`, err);
+            throw new Error(`Minio delete failed: ${err.message}`);
+        }
+    }
+
     async getPreSignedUploadUrl(
         key: string,
         expiry: number = 60 * 5,
@@ -132,6 +141,15 @@ export class MinioService implements OnModuleInit {
             return await this.minioClient.statObject(this.bucketName, key);
         } catch (err) {
             this.logger.error(`Failed to get metadata for ${key}:`, err);
+            return null;
+        }
+    }
+
+    async getFileStream(key: string) {
+        try {
+            return await this.minioClient.getObject(this.bucketName, key);
+        } catch (err) {
+            this.logger.error(`Failed to get file stream for ${key}:`, err);
             return null;
         }
     }

@@ -237,13 +237,7 @@ export class TeamService {
       `User [${requesterId}] adding ${memberIds.length} members to team [${teamId}].`,
     );
 
-    const usersFromCache = await this.amqp.request<User[]>({
-      exchange: USER_EXCHANGE,
-      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-      payload: { userIds: [...memberIds, requesterId] },
-    });
-
-
+    const usersFromCache = await this.userCacheService.getManyUserInfo([...memberIds, requesterId]);
     const updatedTeam = await this.dataSource.transaction(async (manager) => {
       const memberRepo = manager.getRepository(TeamMember);
       const team = await this._getTeamForModification(teamId, manager);
@@ -286,10 +280,22 @@ export class TeamService {
           membersToInsert.push(newMember);
         }
       }
+
       if (membersToInsert.length > 0) await memberRepo.save(membersToInsert);
       if (membersToRestore.length > 0) await memberRepo.save(membersToRestore);
       const validNewMembers = [...membersToInsert, ...membersToRestore];
       if (validNewMembers.length === 0) return team;
+      const cacheMap: Record<string, CachedMemberState> = {};
+      validNewMembers.forEach(member => {
+        cacheMap[member.userId] = {
+          role: member.role,
+          status: MemberStatus.PENDING,
+          isActive: true,
+          joinedAt: member.joinedAt || new Date()
+        };
+      });
+      await this.teamCache.setManyTeamMembers(teamId, cacheMap);
+      console.log("team.members", team.members);
       team.members.push(...validNewMembers);
       return team;
     });
@@ -341,14 +347,15 @@ export class TeamService {
         });
       await memberRepo.save(member);
 
-      const users = await this.amqp.request<User[]>({
-        exchange: USER_EXCHANGE,
-        routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-        payload: { userIds: [userId] },
-      });
+      const users = await this.userCacheService.getManyUserInfo([userId]);
 
       const user = users && users.length > 0 ? users[0] : null;
-      await this.teamCache.addMember(teamId, userId);
+      const memberState = await this.teamCache.getTeamMember(teamId, userId);
+      if (memberState) {
+        memberState.status = MemberStatus.ACCEPTED;
+        await this.teamCache.setTeamMember(teamId, userId, memberState);
+      }
+
       this.amqp.publish(
         EVENTS_EXCHANGE,
         EVENTS.JOIN_TEAM,
@@ -421,9 +428,6 @@ export class TeamService {
         routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
         payload: { userIds: allRelatedUserIds },
       })
-
-
-    console.log(members)
 
     console.log("Members to notify: ", members.filter(m => m.id !== requesterId).map(m => m.id))
 
@@ -727,11 +731,13 @@ export class TeamService {
   async getTeamMembers(requesterId: string, teamId: string): Promise<MemberDto[]> {
     const requester = await this.validateRequester(requesterId, teamId);
     const membersRolesMap = await this.getMembersRolesMap(teamId);
+    console.log("membersRolesMap", membersRolesMap);
     const isManager = [MemberRole.ADMIN, MemberRole.OWNER].includes(requester.role);
     const visibleUserIds = Object.keys(membersRolesMap).filter(userId => {
       if (isManager) return true;
       return membersRolesMap[userId].status === MemberStatus.ACCEPTED;
     });
+    console.log("visibleUserIds", visibleUserIds);
     if (visibleUserIds.length === 0) return [];
     const userProfiles = await this.fetchUserProfiles(visibleUserIds);
     return userProfiles.map(user =>
@@ -740,11 +746,12 @@ export class TeamService {
   }
 
   async getTeamMember(userId: string, teamId: string): Promise<MemberDto> {
+    console.log("teamId", teamId, "userId", userId);
     await this.validateRequester(userId, teamId);
     const roleState = await this.teamCache.getTeamMember(
       teamId,
       userId,
-      () => this.fetchOneMemberRoleFromDb(teamId, userId)
+      async () => await this.fetchOneMemberRoleFromDb(teamId, userId)
     );
     if (!roleState) {
       throw new NotFoundException(`User ${userId} is not in team ${teamId}`);
@@ -759,6 +766,8 @@ export class TeamService {
       requesterId,
       () => this.fetchOneMemberRoleFromDb(teamId, requesterId)
     );
+
+    console.log("memberState", memberState);
     if (!memberState) {
       throw new ForbiddenException("Access Denied: You are not a member of this team.");
     }
@@ -770,7 +779,6 @@ export class TeamService {
 
   private async getMembersRolesMap(teamId: string) {
     let map = await this.teamCache.getAllTeamRoles(teamId);
-
     if (Object.keys(map).length === 0) {
       const dbMembers = await this.memberRepo.find({
         where: { teamId }, order: { role: 'ASC', joinedAt: 'ASC' }
@@ -805,6 +813,7 @@ export class TeamService {
 
   private async fetchOneMemberRoleFromDb(teamId: string, userId: string): Promise<CachedMemberState | null> {
     const entity = await this.memberRepo.findOne({ where: { teamId, userId } });
+    console.log(entity);
     return entity ? {
       role: entity.role, status: entity.status, joinedAt: entity.joinedAt!, isActive: true
     } : null;

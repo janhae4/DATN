@@ -110,6 +110,7 @@
     "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
     "dayjs": "^1.11.18",
+    "fflate": "^0.8.2",
     "googleapis": "^162.0.0",
     "handlebars": "^4.7.8",
     "ioredis": "^5.8.1",
@@ -191,6 +192,7 @@
     ],
     "moduleNameMapper": {
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
+      "^@app/minio(|/.*)$": "<rootDir>/libs/minio/src/$1",
       "^@app/proto(|/.*)$": "<rootDir>/libs/proto/src/$1",
       "^@app/redis-service(|/.*)$": "<rootDir>/libs/redis-service/src/$1"
     }

@@ -85,14 +85,18 @@ export class NotificationService {
 
   async getNotifications(userId: string) {
     this.logger.log(`Fetching notifications for user: ${userId}`);
-    const not = await this.notificationRepository.find({
-      where: {
-        targetId: userId
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
-    return not;
+    try {
+      const not = await this.notificationRepository.find({
+        where: {
+          targetId: userId
+        },
+        order: {
+          createdAt: 'DESC',
+        },
+      });
+      return not;
+    } catch (e) {
+      console.log(e);
+    }
   }
 }

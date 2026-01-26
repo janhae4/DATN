@@ -1,50 +1,47 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fileService, GetFilesResponse } from "@/services/fileService";
-import { Attachment } from "@/types"; // Đảm bảo type này khớp với UI của mày
+import { Attachment, AttachmentType, FileVisibility, UploadAttachment } from "@/types";
+import mime from "mime-types";
 
-// Helper function giữ nguyên
 const getMimeTypeByExtension = (fileName: string): string => {
-  const extension = fileName.split('.').pop()?.toLowerCase();
-  const mimeMap: Record<string, string> = {
-    'pdf': 'application/pdf',
-    'doc': 'application/msword',
-    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'xls': 'application/vnd.ms-excel',
-    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-    'gif': 'image/gif', 'webp': 'image/webp',
-    'txt': 'text/plain', 'zip': 'application/zip',
-  };
-  return extension ? (mimeMap[extension] || `application/${extension}`) : 'application/octet-stream';
+  return mime.lookup(fileName) || 'application/octet-stream';
 };
 
-// 1. Nhận thêm tham số page và limit
-export function useFiles(projectId?: string, page: number = 1, limit: number = 10) {
+export function useFiles(
+  projectId?: string,
+  teamId?: string,
+  page: number = 1,
+  limit: number = 10,
+  parentId: string | null = null
+) {
   const queryClient = useQueryClient();
-
-  // 2. QueryKey phải chứa page và limit để cache riêng từng trang
-  const queryKey = ["files", projectId || "personal", page, limit];
-
+  const queryKey = ["files", projectId || undefined, teamId, parentId || null, page, limit];
   const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey,
-    queryFn: () => fileService.getFiles(projectId, page, limit),
-    staleTime: 1000 * 60 * 5, // 5 phút
-    placeholderData: keepPreviousData, // QUAN TRỌNG: Giữ data trang cũ khi đang fetch trang mới (UX mượt hơn)
-
-    // 3. Select: Transform data nhưng KHÔNG ĐƯỢC vứt pagination đi
+    queryFn: () => {
+      if (!parentId) {
+        return fileService.getFiles(projectId, teamId, page, limit);
+      }
+      return fileService.getFolder(parentId);
+    },
+    staleTime: 0,
     select: (response: GetFilesResponse) => {
       const mappedFiles: Attachment[] = response.data.map((file) => {
         return {
           id: file._id,
           fileName: file.originalName,
           fileSize: file.size,
-          fileType: file.mimetype || getMimeTypeByExtension(file.originalName),
+          fileType: file.type,
           uploadedById: file.userId || "System",
           uploadedAt: file.createdAt,
+          name: file.originalName,
           taskId: "general",
           fileUrl: "",
-          status: file.status
+          status: file.status,
+          mimeType: file.mimetype,
+          visibility: file.visibility,
+          allowedUserIds: file.allowedUserIds
         };
       });
 
@@ -56,31 +53,29 @@ export function useFiles(projectId?: string, page: number = 1, limit: number = 1
   });
 
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      // 4. Fix Upload: Truyền thêm fileType để MinIO ký signature đúng
+    mutationFn: async ({ file, onProgress, signal }: UploadAttachment) => {
       const { uploadUrl, fileId } = await fileService.initiateUpload({
         fileName: file.name,
-        fileType: file.type // BẮT BUỘC CÓ
-      }, projectId);
+        fileType: getMimeTypeByExtension(file.name),
+        parentId: parentId || null,
+      }, projectId, teamId);
 
-      await fileService.uploadFileToMinIO(uploadUrl, file);
+      await fileService.uploadFileToMinIO(uploadUrl, file, onProgress, signal);
       return fileId;
     },
     onSuccess: () => {
-      // Invalidate toàn bộ cache liên quan đến teamId (bất kể trang nào)
-      queryClient.invalidateQueries({ queryKey: ["files", projectId || "personal"] });
-      toast.success("Tải lên thành công!");
+      queryClient.invalidateQueries({ queryKey: ["files"] });
     },
     onError: (error: any) => {
       const msg = error.response?.data?.message || error.message || "Không thể tải lên tập tin";
-      toast.error(`Lỗi: ${msg}`);
+      toast.error(msg);
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (fileId: string) => fileService.deleteFile(fileId, projectId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["files", projectId || "personal"] });
+      queryClient.invalidateQueries({ queryKey: ["files"] });
       toast.success("Đã xóa tập tin");
     },
     onError: () => {
@@ -89,18 +84,66 @@ export function useFiles(projectId?: string, page: number = 1, limit: number = 1
   });
 
   const downloadFile = async (fileId: string) => {
-    try {
-      const { downloadUrl } = await fileService.getDownloadUrl(fileId, projectId);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.setAttribute('download', '');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      toast.error("Không thể lấy đường dẫn tải xuống");
-    }
+    const url = `http://localhost:3000/files/${fileId}/download`;
+    window.open(url, '_blank');
   };
+
+  const createFolderMutation = useMutation({
+    mutationFn: async (folderName: string) => {
+      return fileService.createFolder(folderName, parentId || null, projectId, teamId);
+    },
+
+    onSuccess: (newFolderData: any) => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Không thể tạo thư mục";
+      toast.error(msg);
+    }
+  });
+
+  const moveFileToFolder = useMutation({
+    mutationFn: async ({ fileId, parentId }: { fileId: string, parentId: string }) => {
+      return fileService.moveFileToFolder(fileId, parentId, projectId, teamId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      toast.success("Thêm tập tin vào thư mục");
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Không thể tạo thư mục";
+      toast.error(msg);
+    }
+  })
+
+  const moveFilesToFolder = useMutation({
+    mutationFn: async ({ fileIds, parentId }: { fileIds: string[], parentId: string }) => {
+      return fileService.moveFilesToFolder(fileIds, parentId, projectId, teamId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      toast.success("Thêm tập tin vào thư mục");
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Không thể tạo thư mục";
+      toast.error(msg);
+    }
+  })
+
+  const changeVisibility = useMutation({
+    mutationFn: async ({ fileIds, visibility, allowedUserIds }: { fileIds: string[], visibility: FileVisibility, allowedUserIds?: string[] }) => {
+      return fileService.changeVisibility(fileIds, visibility, allowedUserIds, projectId, teamId);
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      toast.success("Đã thay đổi quyen truy cập");
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Không thể thay đổi quyen truy cập";
+      toast.error(msg);
+    }
+  })
 
   const previewFile = async (fileId: string): Promise<string | null> => {
     try {
@@ -112,21 +155,43 @@ export function useFiles(projectId?: string, page: number = 1, limit: number = 1
     }
   };
 
+  const deleteFiles = useMutation({
+    mutationFn: (fileIds: string[]) => fileService.deleteFiles(fileIds, projectId, teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      toast.success("Đã xóa tập tin");
+    },
+    onError: () => {
+      toast.error("Không thể xóa tập tin");
+    }
+  })
+
+  const downloadFiles = useMutation({
+    mutationFn: (fileIds: string[]) => fileService.downloadFiles(fileIds, projectId, teamId),
+    onError: () => {
+      toast.error("Không thể tải lên tập tin");
+    }
+  })
+
   return {
-    // Trả về data đã transform (nếu chưa có data thì fallback mảng rỗng)
     files: data?.files || [],
-    pagination: data?.pagination || null, // Trả về pagination cho UI dùng
-    isLoading,
-    isPlaceholderData, // Cờ này để UI biết đang load trang kế tiếp (có thể làm mờ bảng)
+    pagination: data?.pagination || null,
+    isPlaceholderData,
 
     uploadFile: uploadMutation.mutateAsync,
     isUploading: uploadMutation.isPending,
 
     deleteFile: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
-
+    isLoading,
     downloadFile,
+    downloadFiles: downloadFiles.mutateAsync,
     previewFile,
+    createFolder: createFolderMutation.mutateAsync,
+    moveFileToFolder: moveFileToFolder.mutateAsync,
+    moveFilesToFolder: moveFilesToFolder.mutateAsync,
+    changeVisibility: changeVisibility.mutateAsync,
+    deleteFiles: deleteFiles.mutateAsync,
     refreshFiles: () => queryClient.invalidateQueries({ queryKey })
   };
 }

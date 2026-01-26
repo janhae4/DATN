@@ -4,8 +4,9 @@ import { ClientConfigModule, ClientConfigService, FILE_EXCHANGE } from '@app/con
 import { MongooseModule } from '@nestjs/mongoose';
 import { FileSchema, File } from './schema/file.schema';
 import { FileService } from './file.service';
-import { MinioService } from './minio.service';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
+import { MinioService } from '@app/minio';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { RmqModule } from '@app/common';
       exchanges: [
         { name: FILE_EXCHANGE, type: 'direct' },
       ],
-  }),
+    }),
     MongooseModule.forRootAsync({
       useFactory: (configService: ClientConfigService) => ({
         uri: configService.getFileDatabaseUrl()
@@ -23,6 +24,7 @@ import { RmqModule } from '@app/common';
       inject: [ClientConfigService],
     }),
     MongooseModule.forFeature([{ name: File.name, schema: FileSchema }]),
+    RedisServiceModule
   ],
   controllers: [FileController],
   providers: [FileService, MinioService],

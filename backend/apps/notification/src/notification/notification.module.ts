@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { NotificationController } from './notification.controller';
-import { ClientConfigModule, NOTIFICATION_EXCHANGE } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, NOTIFICATION_EXCHANGE } from '@app/contracts';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Notification } from './entity/notification.entity';
 import { NotificationGateway } from './notification.gateway';
@@ -11,12 +11,19 @@ import { RmqModule } from '@app/common';
   imports: [
     ClientConfigModule,
     TypeOrmModule.forRootAsync({
-      useFactory: () => ({
+      useFactory: (cfg: ClientConfigService) => ({
         type: 'postgres',
-        url: process.env.DATABASE_NOTIFICATION_URL,
+        url: cfg.getNotificationDatabase(),
         autoLoadEntities: true,
         synchronize: true,
+        keepConnectionAlive: true,
+        extra: {
+          connectionLimit: 10,
+          idleTimeoutMillis: 30000,
+        }
       }),
+      imports: [ClientConfigModule],
+      inject: [ClientConfigService],
     }),
     TypeOrmModule.forFeature([Notification]),
     RmqModule.register({ exchanges: [{ name: NOTIFICATION_EXCHANGE, type: 'direct' }] }),

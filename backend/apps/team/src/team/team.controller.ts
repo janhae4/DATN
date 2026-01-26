@@ -173,6 +173,7 @@ export class TeamController {
     errorHandler: customErrorHandler,
   })
   async findParticipants(payload: { userId: string; teamId: string }) {
+    console.log('Controller hit! TeamId:', payload.teamId, 'UserId:', payload.userId);
     return await this.teamService.getTeamMembers(payload.userId, payload.teamId);
   }
 

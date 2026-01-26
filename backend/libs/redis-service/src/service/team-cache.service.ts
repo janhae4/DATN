@@ -67,7 +67,11 @@ export class TeamCacheService {
     async removeMember(teamId: string, memberIds: string[]) {
         if (!teamId || !memberIds) return;
         const teamRolesKey = this.getTeamRolesKey(teamId);
-        await this.redisService.getClient().hdel(teamRolesKey, ...memberIds);
+        const teamMemberKey = this.getTeamMembersKey(teamId);
+        const pipe = this.redisService.getClient().pipeline();
+        pipe.hdel(teamRolesKey, ...memberIds);
+        pipe.hdel(teamMemberKey, ...memberIds);
+        await pipe.exec();
         this.logger.log(`Removed ${memberIds.length} members from team cache: ${teamId}`);
     }
 

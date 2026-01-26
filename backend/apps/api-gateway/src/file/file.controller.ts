@@ -29,6 +29,10 @@ import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 import { Role } from '@app/contracts';
 import { CurrentUser } from '../common/role/current-user.decorator';
+import type { Response } from 'express';
+import { BulkVisibility, MoveFile, MoveFiles } from './dto/update-file.dto';
+import { DeleteFiles } from './dto/delete-file.dto';
+import { DownloadFiles } from './dto/download-file.dto';
 
 @ApiTags('File Management')
 @ApiBearerAuth()
@@ -46,9 +50,31 @@ export class FileController {
   initiateUpload(
     @Body() body: InitiateUploadDto,
     @CurrentUser('id') userId: string,
-    @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.initiateUpload(body.fileName, body.fileType, userId, projectId);
+    return this.fileService.initiateUpload(body.fileName, body.fileType, userId, body.projectId, body.teamId, body.parentId);
+  }
+
+  @Post('folder')
+  @ApiOperation({ summary: 'Create a new folder' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
+  @ApiBody({ type: InitiateUploadDto })
+  @ApiResponse({ status: 201, description: 'Returns the Pre-signed URL and fileId' })
+  createFolder(
+    @Body() body: {
+      fileName: string;
+      parentId?: string;
+      projectId?: string;
+      teamId?: string;
+    },
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.createFolder(body.fileName, body.parentId || null, userId, body.projectId, body.teamId);
+  }
+
+  @Get('folder/:folderId')
+  @ApiOperation({ summary: 'Get a folder' })
+  getFolder(@Param('folderId') folderId: string, @CurrentUser('id') userId: string) {
+    return this.fileService.getFolder(userId, folderId);
   }
 
   @Post(':fileId/initiate-update')
@@ -92,9 +118,20 @@ export class FileController {
   downloadFile(
     @Param('fileId') fileId: string,
     @CurrentUser('id') userId: string,
+    @Res() res: Response,
     @Query('projectId') projectId?: string,
   ) {
-    return this.fileService.getDownloadUrl(fileId, userId, projectId);
+    return this.fileService.getDownloadUrl(res, fileId, userId, projectId);
+  }
+
+  @Post('download/bulk')
+  downloadFiles(
+    @Body() body: DownloadFiles,
+    @CurrentUser('id') userId: string,
+    @Res() res: Response,
+  ) {
+    console.log(body);
+    return this.fileService.getDownloadUrl(res, body.fileIds, userId, body.projectId, body.teamId);
   }
 
   @Patch(':fileId/rename')
@@ -110,6 +147,56 @@ export class FileController {
     @Query('projectId') projectId?: string,
   ) {
     return this.fileService.renameFile(fileId, body.newFileName, userId, projectId);
+  }
+
+  @Patch(':fileId/move')
+  @ApiOperation({ summary: '4.1 Move a file' })
+  @ApiParam({ name: 'fileId', type: 'string', description: 'The UUID of the file to rename' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
+  @ApiBody({ type: RenameFileDto })
+  @ApiResponse({ status: 200, description: 'File renamed successfully' })
+  moveFile(
+    @Param('fileId') fileId: string,
+    @Body() body: MoveFile,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.moveFile(userId, {
+      ...body,
+      fileId
+    });
+  }
+
+  @Patch('move/bulk')
+  @ApiOperation({ summary: '4.2 Move a files' })
+  moveFiles(
+    @Body() body: MoveFiles,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.moveFiles(userId, body);
+  }
+
+
+  @Patch('visibility/bulk') 
+  @ApiOperation({ summary: 'Change visibility for multiple files' })
+  async changeVisibilityBulk(
+    @Body() body: BulkVisibility,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.changeVisibilityBulk(userId, body);
+  }
+
+  @Delete('/bulk')
+  @ApiOperation({ summary: 'Delete files' })
+  deleteFiles(
+    @Body() body: DeleteFiles,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.deleteFiles(
+      userId,
+      body.fileIds,
+      body.projectId,
+      body.teamId
+    );
   }
 
   @Delete(':fileId')
@@ -136,8 +223,9 @@ export class FileController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('projectId') projectId?: string,
+    @Query('teamId') teamId?: string
   ) {
-    return this.fileService.getFiles(userId, projectId, page, limit);
+    return this.fileService.getFiles(userId, projectId, teamId, page, limit);
   }
 
   @Post(':fileId/confirm')
@@ -152,6 +240,4 @@ export class FileController {
   ) {
     return this.fileService.confirmUpload(fileId, userId, projectId);
   }
-
-
 }

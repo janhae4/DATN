@@ -1,24 +1,8 @@
-import * as React from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { FileText, Paperclip, Plus, X, Loader2, Link as LinkIcon, Download, Trash, UploadCloud } from "lucide-react"
+import { FileText, Loader2, Link as LinkIcon, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { format } from "date-fns"
-import { taskService } from "@/services/taskService"
-import { fileService, IFile } from "@/services/fileService"
-import { toast } from "sonner"
-import { cn } from "@/lib/utils"
 
-import { useParams } from "next/navigation"
+import { format } from "date-fns"
+import { IFile } from "@/services/fileService"
 
 interface DocumentListProps {
     files: IFile[];

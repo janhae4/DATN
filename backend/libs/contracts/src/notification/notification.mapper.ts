@@ -31,7 +31,7 @@ export class NotificationMapper {
 
         const notifications: CreateNotificationDto[] = [];
 
-        memberIdsToNotify.forEach(member => {
+        memberIdsToNotify?.forEach(member => {
             notifications.push({
                 title: 'Team Invitation',
                 message: `${requesterName} added you to team "${teamName}"`,

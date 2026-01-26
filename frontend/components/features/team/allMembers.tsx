@@ -71,7 +71,6 @@ export default function AllMembers() {
         </div>
       )}
 
-      {/* Members grid */}
       {!isLoading && activeTeam && members.length > 0 && (
         <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {members.map((member) => (

@@ -212,6 +212,8 @@ export * from './file/dto/delete-file.dto';
 export * from './file/dto/update-file.dto';
 export * from './file/dto/upload-file.dto';
 export * from './file/file.enum'
+export * from './file/dto/create-file-folder.dto'
+export * from './file/dto/download-file.dto'
 
 
 

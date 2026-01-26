@@ -1,188 +1,463 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRef, useState, useCallback, useMemo } from "react"
-import { FilePreviewDialog } from "@/components/features/documentation/file-preview-dialog"
+import * as React from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
+import { FilePreviewDialog } from "@/components/features/documentation/file-preview-dialog";
 import {
   LayoutGrid,
   Table2,
   UploadCloud,
   X,
   Search,
-  FileText,
   Loader2,
   HelpCircle,
-  FileUp
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+  Home,
+  ChevronRight,
+  CornerLeftUp,
+  FolderPlus,
+  FileIcon,
+  ChevronUp,
+  ChevronDown,
+  Check,
+  Square,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from "@/components/ui/select"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { toast } from "sonner"
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { FileCard } from "@/components/features/documentation/file-card";
+import { useFiles } from "@/hooks/useFiles";
+import { Attachment, AttachmentType } from "@/types";
 
-// Components & Hooks
-import { getColumns } from "@/components/features/documentation/attachment-columns"
-import { DataGrid } from "@/components/features/documentation/data-grid"
-import { FileCard } from "@/components/features/documentation/file-card"
-import { useFiles } from "@/hooks/useFiles"
-import { DataTable } from "@/components/features/documentation/data-table"
-import { Attachment } from "@/types"
+import { useParams } from "next/navigation";
+import { useProjects } from "@/hooks/useProjects";
+import { useDocumentationTour } from "@/hooks/touring/useDocumentationTour";
+import { CreateFolderDialog } from "./create-folder-dialog";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { createPortal } from "react-dom";
+import { FileDragPreview } from "./file-row-preview";
+import { Progress } from "@/components/ui/progress";
+import { useSelectionBox } from "@/hooks/useSelectionBox";
+import { DndItemWrapper } from "@/components/features/documentation/dnd-item-wrapper";
 
-import { useParams } from "next/navigation"
-import { useProjects } from "@/hooks/useProjects"
-import { useDocumentationTour } from "@/hooks/touring/useDocumentationTour"
+interface StagedFile {
+  file: File;
+  status: "waiting" | "uploading" | "success" | "error";
+  id?: string;
+  progress: number;
+  signal: AbortSignal;
+}
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+};
+
+const DroppableBreadcrumbItem = ({
+  id,
+  name,
+  isCurrent,
+  onClick,
+  isRoot = false,
+}: {
+  id: string | null;
+  name: string;
+  isCurrent: boolean;
+  onClick: () => void;
+  isRoot?: boolean;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: isRoot ? "root-breadcrumb" : `breadcrumb-${id}`,
+    disabled: isCurrent,
+    data: {
+      fileType: AttachmentType.FOLDER,
+      id: id,
+      fileName: name,
+    },
+  });
+
+  return (
+    <div className="relative flex items-center">
+      <button
+        ref={setNodeRef}
+        onClick={onClick}
+        className={cn(
+          "flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-all whitespace-nowrap",
+          isOver
+            ? "bg-zinc-200 dark:bg-zinc-800"
+            : "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+          isCurrent
+            ? "font-semibold text-zinc-900 dark:text-zinc-100 cursor-default"
+            : "text-zinc-500 cursor-pointer",
+        )}
+      >
+        {isRoot && <Home className="h-3.5 w-3.5" />}
+        <span>{name}</span>
+      </button>
+    </div>
+  );
+};
 
 export default function AttachmentPage() {
-  const params = useParams()
-  const teamId = params.teamId as string
-  const { projects } = useProjects(teamId)
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("")
-  const { startTour } = useDocumentationTour()
+  const params = useParams();
+  const teamId = params.teamId as string;
+  const { projects } = useProjects(teamId);
+  const { startTour } = useDocumentationTour();
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [breadcrumbs, setBreadcrumbs] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [hiddenFileIds, setHiddenFileIds] = useState<string[]>([]);
+
+  const handleCreateFolder = async (name: string) => {
+    await createFolder(name);
+  };
+
+  const handleNavigateUp = () => {
+    if (breadcrumbs.length === 0) return;
+    const newBreadcrumbs = breadcrumbs.slice(0, -1);
+    const parentFolder =
+      newBreadcrumbs.length > 0
+        ? newBreadcrumbs[newBreadcrumbs.length - 1].id
+        : null;
+
+    setBreadcrumbs(newBreadcrumbs);
+    setCurrentFolderId(parentFolder);
+  };
+
+  const handleBreadcrumbClick = (index: number) => {
+    if (index === -1) {
+      setCurrentFolderId(null);
+      setBreadcrumbs([]);
+      return;
+    }
+    const target = breadcrumbs[index];
+    setCurrentFolderId(target.id);
+    setBreadcrumbs((prev) => prev.slice(0, index + 1));
+  };
 
   const [paginationState, setPaginationState] = useState({
     pageIndex: 0,
     pageSize: 12,
   });
+  const [fileNameFilter, setFileNameFilter] = useState("");
 
-  // Filter states
-  const [fileNameFilter, setFileNameFilter] = useState("")
-  const [fileTypeFilter, setFileTypeFilter] = useState("all")
-
-  // 1. Quản lý trạng thái dữ liệu qua Hook thực tế
-  // Pass selectedProjectId to useFiles. If empty string, it works as undefined in logic effectively if we process it
-  // But useFiles takes string | undefined. 
-  // If we pass "", backend might receive "" and try to match projectId=""?
-  // Let's ensure we pass undefined if empty string.
   const {
-    files = [],
-    isLoading,
-    isPlaceholderData,
+    files,
     uploadFile,
     deleteFile,
     downloadFile,
     previewFile,
-    pagination
-  } = useFiles(selectedProjectId || undefined, paginationState.pageIndex + 1, paginationState.pageSize);
+    createFolder,
+    moveFilesToFolder,
+    deleteFiles,
+    downloadFiles,
+    changeVisibility,
+  } = useFiles(
+    selectedProjectId,
+    teamId,
+    paginationState.pageIndex + 1,
+    paginationState.pageSize,
+    currentFolderId,
+  );
 
-  console.log("data in page: ", files)
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOverTargetName, setDragOverTargetName] = useState<string | null>(
+    null,
+  );
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  const {
+    isSelecting,
+    selectionRect,
+    handlePointerDown,
+    selectedIds,
+    setSelectedIds,
+  } = useSelectionBox(containerRef as React.RefObject<HTMLElement>);
 
-  // Handle search and filter changes by resetting to first page
   React.useEffect(() => {
-    setPaginationState(prev => ({
-      ...prev,
-      pageIndex: 0, // Reset to first page when filters change
-    }));
-  }, [fileNameFilter, fileTypeFilter]);
+    setHiddenFileIds([]);
+    setSelectedIds(new Set());
+  }, [currentFolderId, selectedProjectId]);
 
-  React.useEffect(() => {
-    if (pagination?.currentPage) {
-      setPaginationState(prev => ({
-        ...prev,
-        pageIndex: pagination.currentPage - 1,
-      }));
+  const handleToggleSelect = (id: string, multiSelect: boolean) => {
+    if (multiSelect) {
+      const newSet = new Set(selectedIds);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      setSelectedIds(newSet);
+    } else {
+      setSelectedIds(new Set([id]));
     }
-  }, [pagination?.currentPage]);
+  };
 
-  const [viewMode, setViewMode] = React.useState<'table' | 'grid'>('grid')
-  const [isUploadVisible, setIsUploadVisible] = useState(false)
-  const [stagedFiles, setStagedFiles] = useState<File[]>([])
-  const [isDragging, setIsDragging] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const handleDndDragOver = (event: DragOverEvent) => {
+    const { over } = event;
 
-  // --- LOGIC XỬ LÝ FILE CHỜ (STAGING) ---
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setIsDragging(true);
-  }, [])
+    if (over && over.data?.current?.fileName) {
+      setDragOverTargetName(over.data.current.fileName);
+    } else {
+      setDragOverTargetName(null);
+    }
+  };
+
+  const handleNativeDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+    }
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setIsDragging(false);
-  }, [])
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setIsDragging(false);
-    const incomingFiles = Array.from(e.dataTransfer.files);
-    setStagedFiles(prev => [...prev, ...incomingFiles.filter(f => !prev.some(p => p.name === f.name))]);
-  }, [])
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const rawFiles = Array.from(e.dataTransfer.files);
+
+    if (rawFiles.length > 0) {
+      const newStagedItems: StagedFile[] = rawFiles.map((file) => ({
+        file: file,
+        status: "waiting",
+        id: crypto.randomUUID(),
+        progress: 0,
+        signal: new AbortController().signal,
+      }));
+
+      setStagedFiles((prev) => {
+        const uniqueNewItems = newStagedItems.filter(
+          (newItem) =>
+            !prev.some(
+              (existingItem) => existingItem.file.name === newItem.file.name,
+            ),
+        );
+
+        return [...prev, ...uniqueNewItems];
+      });
+    }
+  }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, 
+        tolerance: 5,
+      },
+    }),
+  );
+  const [isDndDragging, setIsDndDragging] = useState(false);
+  const [activeDragItem, setActiveDragItem] = useState<Attachment | null>(null);
+  const handleDragStart = (event: any) => {
+    console.log("event", event);
+    setIsDndDragging(true);
+    setActiveDragItem(event.active.data.current as Attachment);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setDragOverTargetName(null);
+    setActiveDragItem(null);
+
+    if (!over || active.id === over.id) return;
+
+    const draggedFileId = active.id as string;
+    const targetFolder = over.data.current as Attachment;
+
+    const isTargetFolder = targetFolder.fileType === "FOLDER";
+
+    if (isTargetFolder) {
+      let idsToMove: string[] = [];
+
+      if (selectedIds.has(draggedFileId)) {
+        idsToMove = Array.from(selectedIds);
+      } else {
+        idsToMove = [draggedFileId];
+      }
+
+      setHiddenFileIds((prev) => [...prev, ...idsToMove]);
+
+      console.log(
+        `Moving ${idsToMove.length} files into folder ${targetFolder.fileName}`,
+      );
+
+      try {
+        await moveFilesToFolder({
+          fileIds: idsToMove,
+          parentId: targetFolder.id,
+        });
+
+        setSelectedIds(new Set());
+      } catch (e) {
+        setHiddenFileIds((prev) =>
+          prev.filter((id) => !idsToMove.includes(id)),
+        );
+        toast.error("Failed to move files");
+      }
+    }
+
+    setIsDndDragging(false);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const incomingFiles = Array.from(e.target.files || []);
-    setStagedFiles(prev => [...prev, ...incomingFiles.filter(f => !prev.some(p => p.name === f.name))]);
-  }
+    const rawFiles = Array.from(e.target.files || []);
+    if (rawFiles.length === 0) return;
+
+    const newStagedFiles: StagedFile[] = rawFiles.map((file) => ({
+      file: file,
+      status: "waiting",
+      id: crypto.randomUUID(),
+      progress: 0,
+      signal: new AbortController().signal,
+    }));
+
+    setStagedFiles((prev) => {
+      const uniqueFiles = newStagedFiles.filter(
+        (newItem) =>
+          !prev.some(
+            (existingItem) => existingItem.file.name === newItem.file.name,
+          ),
+      );
+
+      return [...prev, ...uniqueFiles];
+    });
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const removeStagedFile = (fileName: string) => {
-    setStagedFiles(prev => prev.filter(file => file.name !== fileName));
-  }
+    setStagedFiles((prev) => prev.filter((f) => f.file.name !== fileName));
+  };
 
-  // --- LOGIC UPLOAD THỰC TẾ ---
+  const abortControllers = useRef<Record<string, AbortController>>({});
   const handleUpload = async () => {
-    if (stagedFiles.length === 0) return;
-
     setIsUploading(true);
-    const promise = async () => {
-      for (const file of stagedFiles) {
-        await uploadFile(file);
-      }
-    };
 
-    toast.promise(promise(), {
-      loading: 'Uploading...',
-      success: () => {
-        setStagedFiles([]);
-        setIsUploadVisible(false);
-        setIsUploading(false);
-        return 'Upload successful!';
-      },
-      error: (err) => {
-        setIsUploading(false);
-        return `Error: ${err.message || 'Failed to upload'}`;
+    setStagedFiles((prev) =>
+      prev.map((item) => ({
+        ...item,
+        status: item.status === "success" ? "success" : "uploading",
+        progress: 0,
+      })),
+    );
+
+    const uploadPromises = stagedFiles.map(async (stagedItem) => {
+      if (stagedItem.status === "success") return;
+      const controller = new AbortController();
+      abortControllers.current[stagedItem.id as string] = controller;
+      try {
+        (await uploadFile({
+          file: stagedItem.file,
+          onProgress: (percent) => {
+            setStagedFiles((prev) =>
+              prev.map((item) =>
+                item.id === stagedItem.id
+                  ? { ...item, progress: percent }
+                  : item,
+              ),
+            );
+          },
+          signal: controller.signal,
+        }),
+          setStagedFiles((prev) =>
+            prev.map((item) =>
+              item.id === stagedItem.id
+                ? { ...item, status: "success", progress: 100 }
+                : item,
+            ),
+          ));
+      } catch (e: any) {
+        const isCanceled = e.message === "Canceled";
+        setStagedFiles((prev) =>
+          prev.map((item) =>
+            item.id === stagedItem.id
+              ? {
+                  ...item,
+                  status: isCanceled ? "waiting" : "error",
+                  progress: 0,
+                }
+              : item,
+          ),
+        );
+      } finally {
+        delete abortControllers.current[stagedItem.id as string];
       }
     });
-  }
 
-  // --- LOGIC BỘ LỌC (CLIENT-SIDE) ---
-  // Remove client-side filtering since we're doing it server-side
-  // The filtering is now handled by the API
+    await Promise.allSettled(uploadPromises);
+    setIsUploading(false);
 
-  // Lấy danh sách extension duy nhất để làm filter
-  const uniqueExtensions = useMemo(() => {
-    const exts = new Set<string>();
-    files?.forEach(f => {
-      const fileName = f?.fileName || ''; // Ensure fileName is a string
-      const parts = fileName.split('.');
-      if (parts.length > 1) { // Only process if there's an extension
-        const ext = parts.pop()?.toLowerCase();
-        if (ext) exts.add(ext);
-      }
-    });
-    return Array.from(exts);
-  }, [files]);
+    setTimeout(() => {
+      setStagedFiles((prev) => prev.filter((f) => f.status !== "success"));
+    }, 3000);
+  };
 
-  // Quản lí preview
+  const handleCancelUpload = (fileId: string) => {
+    const controller = abortControllers.current[fileId];
+    if (controller) {
+      controller.abort();
+    } else {
+      setStagedFiles((prev) => prev.filter((f) => f.id !== fileId));
+    }
+  };
+
   const [previewData, setPreviewData] = React.useState<Attachment | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const handleItemClick = async (item: Attachment) => {
+    console.log("item", item);
+    const isFolder = item.fileType === AttachmentType.FOLDER;
 
-  // Hàm xử lý khi user click Preview
+    if (isFolder) {
+      setCurrentFolderId(item.id);
+      setBreadcrumbs((prev) => [...prev, { id: item.id, name: item.fileName }]);
+      setPaginationState((prev) => ({ ...prev, pageIndex: 0 }));
+    } else {
+      handlePreview(item);
+    }
+  };
   const handlePreview = async (file: Attachment) => {
     try {
-      // 1. Gọi API lấy Presigned URL
       const url = await previewFile(file.id);
-
       if (url) {
-        // 2. Set Data vào state & Mở Dialog
         setPreviewData({ ...file, fileUrl: url });
         setIsPreviewOpen(true);
       }
@@ -192,269 +467,421 @@ export default function AttachmentPage() {
   };
 
   return (
-    <div className="container mx-auto ">
-
-
-      {/* 1. TIÊU ĐỀ & NÚT TOGGLE */}
-      <div id="doc-header" className="flex justify-between items-center mb-6">
-        <div className="space-y-0.5">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Document Management</h1>
-          <p className="text-xs text-zinc-500 font-medium">Upload and organize your project assets</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            onClick={startTour}
-            title="Take a tour"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </Button>
-
-          <Button
-            id="upload-toggle-btn"
-            variant={isUploadVisible ? "outline" : "default"}
-            onClick={() => {
-              setIsUploadVisible(!isUploadVisible);
-              if (isUploadVisible) setStagedFiles([]);
-            }}
-            className="rounded-md h-9 px-4 transition-all"
-          >
-            {isUploadVisible ? (
-              <>
-                <X className="mr-2 h-4 w-4" />
-                <span className="text-xs font-bold uppercase tracking-tight">Cancel</span>
-              </>
-            ) : (
-              <>
-                <FileUp className="mr-2 h-4 w-4" />
-                <span className="text-xs font-bold uppercase tracking-tight">Upload File</span>
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {/* 2. KHUNG UPLOAD (CHỈ HIỆN KHI TOGGLE) */}
-      {isUploadVisible && (
-        <div className="mb-8 p-1 bg-zinc-50/50 dark:bg-zinc-900/30 border border-zinc-100 dark:border-zinc-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
-          {/* Hidden input */}
-          <input
-            type="file"
-            multiple
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
-          {/* Dropzone Area */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200
-        ${isDragging
-                ? 'border-zinc-400 bg-white dark:bg-zinc-900 dark:border-zinc-700'
-                : 'border-zinc-200 dark:border-zinc-800 bg-transparent hover:bg-white dark:hover:bg-zinc-900/50 hover:border-zinc-300 dark:hover:border-zinc-700'
-              }
-      `}
-          >
-            <div className={`p-4 rounded-full mb-4 transition-colors ${isDragging ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'bg-transparent text-zinc-400'}`}>
-              <UploadCloud className="h-10 w-10 stroke-[1.5px]" />
+    <div
+      ref={containerRef}
+      className="flex-1 overflow-hidden relative rounded-lg bg-white/50 dark:bg-zinc-900/20 select-none"
+      onDragOver={handleNativeDragOver}
+      onPointerDown={handlePointerDown}
+      onDrop={handleDrop}
+    >
+      {isSelecting && selectionRect && (
+        <div
+          className="absolute z-50 border border-blue-500 bg-blue-500/20 pointer-events-none"
+          style={{
+            left: selectionRect.left,
+            top: selectionRect.top,
+            width: selectionRect.width,
+            height: selectionRect.height,
+          }}
+        />
+      )}
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDndDragOver}
+      >
+        <div className="container mx-auto h-[calc(100vh-40px)] flex flex-col">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4 pt-4">
+            <div className="space-y-0.5">
+              <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                File Explorer
+                <HelpCircle
+                  className="h-4 w-4 text-zinc-400 cursor-pointer hover:text-zinc-600"
+                  onClick={startTour}
+                />
+              </h1>
+              <p className="text-xs text-zinc-500 font-medium">
+                Manage assets for{" "}
+                {selectedProjectId
+                  ? projects?.find((p) => p.id === selectedProjectId)?.name
+                  : "All Projects"}
+              </p>
             </div>
-            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-              Click to choose files or drag and drop
-            </p>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500 font-medium">
-              PDF, PNG, JPG, XLSX (Max 10MB per file)
-            </p>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Select
+                value={selectedProjectId}
+                onValueChange={(val) => {
+                  if (val === "unassigned") {
+                    setSelectedProjectId(null);
+                  } else {
+                    setSelectedProjectId(val);
+                  }
+
+                  setCurrentFolderId(null);
+                  setBreadcrumbs([]);
+                }}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Personal Files</SelectItem>
+                  {projects?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                className="hidden"
+                multiple
+              />
+              <Button
+                variant="default"
+                onClick={() => {
+                  if (fileInputRef.current) fileInputRef.current.click();
+                }}
+                className="gap-2"
+              >
+                <UploadCloud className="h-4 w-4" />
+                <span className="hidden sm:inline">Upload</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateFolderOpen(true)}
+                className="gap-2 hidden sm:flex"
+              >
+                <FolderPlus className="h-4 w-4" />
+                <span>New Folder</span>
+              </Button>
+            </div>
           </div>
 
-          {/* Staged Files List (Chỉ hiện khi có file chờ) */}
+          <div className="bg-zinc-50/80 dark:bg-zinc-900/50 border rounded-lg p-2 mb-4 flex flex-col sm:flex-row gap-3 items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
+            <div className="flex items-center gap-2 flex-1 w-full overflow-hidden bg-zinc-50 dark:bg-zinc-950 rounded-md px-2 h-10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                disabled={breadcrumbs.length === 0}
+                onClick={handleNavigateUp}
+                title="Go to parent folder"
+              >
+                <CornerLeftUp className="h-4 w-4 text-zinc-500" />
+              </Button>
+
+              <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 shrink-0 mx-1" />
+
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar mask-gradient-right flex-1">
+                <DroppableBreadcrumbItem
+                  id={null}
+                  name="Home"
+                  isRoot={true}
+                  isCurrent={breadcrumbs.length === 0}
+                  onClick={() => handleBreadcrumbClick(-1)}
+                />
+
+                {breadcrumbs.map((crumb, index) => (
+                  <React.Fragment key={crumb.id}>
+                    <ChevronRight className="h-3.5 w-3.5 text-zinc-300 shrink-0" />
+                    <DroppableBreadcrumbItem
+                      id={crumb.id}
+                      name={crumb.name}
+                      isCurrent={index === breadcrumbs.length - 1}
+                      onClick={() => handleBreadcrumbClick(index)}
+                    />
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-[180px]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+                <Input
+                  placeholder="Search"
+                  value={fileNameFilter}
+                  onChange={(e) => setFileNameFilter(e.target.value)}
+                  className="pl-8 h-9 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
           {stagedFiles.length > 0 && (
-            <div className="mt-4 p-4 bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-lg animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex items-center justify-between mb-4 px-1">
+            <div
+              className={cn(
+                "fixed bottom-10 right-6 z-50 w-96 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
+                isMinimized ? "h-12" : "max-h-[80vh]",
+              )}
+            >
+              <div
+                className="bg-zinc-900 text-zinc-50 dark:bg-zinc-800 px-4 h-12 flex items-center justify-between cursor-pointer select-none"
+                onClick={() => setIsMinimized(!isMinimized)}
+              >
                 <div className="flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 dark:bg-zinc-100 text-[10px] font-bold text-white dark:text-black">
-                    {stagedFiles.length}
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Files selected</span>
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                  ) : (
+                    <span className="text-sm font-medium">
+                      {stagedFiles.length} uploads ready
+                    </span>
+                  )}
                 </div>
-                <Button size="sm" onClick={handleUpload} className="h-8 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black hover:opacity-90">
-                  Confirm Upload
-                </Button>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMinimized(!isMinimized);
+                    }}
+                  >
+                    {isMinimized ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                    disabled={isUploading}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStagedFiles([]);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
-              <div className="h-fit max-h-48 overflow-y-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {stagedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-md group">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="text-zinc-400 dark:text-zinc-500">
-                          <FileText className="h-4 w-4" />
-                        </div>
-                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 truncate max-w-[150px]" title={file.name}>
-                          {file.name}
-                        </span>
+              <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950">
+                <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {stagedFiles.map((stagedFile, i) => (
+                    <li
+                      key={stagedFile.id || i}
+                      className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 group border-b last:border-0 border-zinc-100 dark:border-zinc-800 transition-colors"
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 text-zinc-500">
+                        <FileIcon className="h-5 w-5" />
                       </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removeStagedFile(file.name); }}
-                        className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+
+                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate pr-2">
+                            {stagedFile.file.name}
+                          </p>
+
+                          <span className="text-xs text-zinc-400 shrink-0 font-mono">
+                            {stagedFile.status === "uploading"
+                              ? `${stagedFile.progress}%`
+                              : formatFileSize(stagedFile.file.size)}
+                          </span>
+                        </div>
+
+                        {stagedFile.status === "uploading" ? (
+                          <Progress
+                            value={stagedFile.progress}
+                            className="h-1.5 w-full bg-zinc-100 dark:bg-zinc-800"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1.5 h-1.5">
+                            {stagedFile.status === "error" && (
+                              <span className="text-xs text-red-500 flex items-center gap-1">
+                                Upload failed
+                              </span>
+                            )}
+                            {stagedFile.status === "success" && (
+                              <span className="text-xs text-green-500 flex items-center gap-1">
+                                Completed
+                              </span>
+                            )}
+                            {stagedFile.status === "waiting" && (
+                              <span className="text-xs text-zinc-400">
+                                Ready to upload
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="shrink-0 flex items-center gap-1">
+                        {stagedFile.status === "uploading" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            onClick={() =>
+                              handleCancelUpload(stagedFile.id as string)
+                            }
+                            title="Cancel upload"
+                          >
+                            <Square className="h-3.5 w-3.5 fill-current" />
+                          </Button>
+                        )}
+
+                        {(stagedFile.status === "waiting" ||
+                          stagedFile.status === "error") && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                            onClick={() =>
+                              handleCancelUpload(stagedFile.id as string)
+                            }
+                            title="Remove file"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {stagedFile.status === "success" && (
+                          <div className="h-8 w-8 flex items-center justify-center">
+                            <Check className="h-5 w-5 text-green-500" />
+                          </div>
+                        )}
+                      </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
+              </div>
+
+              <div className="p-3 border-t bg-zinc-50 dark:bg-zinc-900 flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStagedFiles([])}
+                  disabled={isUploading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleUpload}
+                  disabled={
+                    isUploading ||
+                    stagedFiles.length === 0 ||
+                    stagedFiles.every((item) => item.status === "success")
+                  }
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                      Uploading...
+                    </>
+                  ) : (
+                    "Start Upload"
+                  )}
+                </Button>
               </div>
             </div>
           )}
-        </div>
-      )
-      }
 
-      {/* FILTER BAR */}
-      <div id="filter-bar" className="flex flex-col md:flex-row items-end gap-4 mb-6">
-        <div className="flex-1 w-full space-y-2">
-          <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Search</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Enter file name..."
-              value={fileNameFilter}
-              onChange={(e) => setFileNameFilter(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        <div className="w-full md:w-[200px] space-y-2">
-          <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Project</label>
-          <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Project" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">Personal Files</SelectItem>
-              {projects?.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="w-full md:w-[160px] space-y-2">
-          <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Type</label>
-          <Select value={fileTypeFilter} onValueChange={setFileTypeFilter}>
-            <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Type</SelectItem>
-              {uniqueExtensions.map(ext => (
-                <SelectItem key={ext} value={ext} className="uppercase">{ext}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div id="view-toggle" className="flex items-center p-1 bg-muted rounded-md h-10 border">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className={`h-8 px-3 rounded-sm ${viewMode === 'grid' ? 'bg-background shadow-sm' : ''}`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Grid View</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('table')}
-                  className={`h-8 px-3 rounded-sm ${viewMode === 'table' ? 'bg-background shadow-sm' : ''}`}
-                >
-                  <Table2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Table View</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
-
-      {/* DATA DISPLAY AREA */}
-      <div id="doc-content">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Syncing file data...</p>
-          </div>
-        ) : viewMode === "table" ? (
-          <DataTable
-            columns={getColumns({
-              onPreview: handlePreview,
-              onDownload: (file) => downloadFile(file.id),
-              onDelete: (file) => deleteFile(file.id),
-            })}
-            data={files}
-
-            // DataTable nhận index 0-based
-            pageCount={pagination?.totalPages || 1}
-            pageIndex={paginationState.pageIndex}
-            onPageChange={(page) => {
-              // Scroll lên đầu
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-              setPaginationState(prev => ({ ...prev, pageIndex: page }));
-            }}
-            isLoading={isLoading || isPlaceholderData}
-          />
-        ) : (
-          <DataGrid
-            data={files}
-            renderItem={(file) => (
-              <FileCard
-                file={file}
-                onPreview={handlePreview}
-                onDownload={(f) => downloadFile(f.id)}
-                onDelete={(f) => deleteFile(f.id)}
-              />
+          <div
+            className="flex-1 overflow-hidden relative rounded-lg bg-white/50 dark:bg-zinc-900/20"
+            onDragOver={handleNativeDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {isDragging && (
+              <div className="absolute inset-0 z-50 bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-lg flex flex-col items-center justify-center backdrop-blur-[1px]">
+                <div className="bg-white dark:bg-zinc-900 p-4 rounded-full shadow-lg mb-4">
+                  <UploadCloud className="h-10 w-10 text-blue-800" />
+                </div>
+                <h3 className="text-xl font-bold text-blue-800 dark:text-blue-400">
+                  Drop files here to upload
+                </h3>
+                <p className="text-zinc-500">
+                  {breadcrumbs.length > 0
+                    ? breadcrumbs[breadcrumbs.length - 1].name
+                    : "Home folder"}
+                </p>
+              </div>
             )}
-            // THÊM LOGIC PHÂN TRANG CHO DATAGRID TẠI ĐÂY
-            pagination={{
-              // Convert 0-based -> 1-based để hiển thị "Page 1"
-              currentPage: paginationState.pageIndex + 1,
-              totalPages: pagination?.totalPages || 1,
-              // Khi DataGrid trả về trang mới (ví dụ trang 2), ta trừ 1 để lưu vào state (thành 1)
-              onPageChange: (newPage) => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                setPaginationState(prev => ({ ...prev, pageIndex: newPage - 1 }));
-              }
-            }}
-            isLoading={isLoading || isPlaceholderData}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
+              {files.map((file) => {
+                return (
+                  <DndItemWrapper
+                    key={file.id}
+                    activeDragItem={activeDragItem}
+                    dragOverTargetName={dragOverTargetName}
+                    file={file}
+                    onToggleSelect={handleToggleSelect}
+                    selectedIds={selectedIds}
+                  >
+                    <FileCard
+                      file={file}
+                      projectId={selectedProjectId}
+                      teamId={teamId}
+                      onPreview={handleItemClick}
+                      onDownload={(f) => downloadFile(f)}
+                      onDelete={(f) => deleteFile(f)}
+                      selectedIds={selectedIds}
+                      setSelectedIds={setSelectedIds}
+                      onBulkDelete={deleteFiles}
+                      onBulkDownload={downloadFiles}
+                      onBulkVisibilityChange={changeVisibility}
+                    />
+                  </DndItemWrapper>
+                );
+              })}
+            </div>
+            {createPortal(
+              <DragOverlay dropAnimation={activeDragItem ? null : undefined}>
+                {activeDragItem ? (
+                  <div className="pointer-events-none">
+                    {selectedIds.has(activeDragItem.id) &&
+                    selectedIds.size > 1 ? (
+                      <div className="relative">
+                        <FileDragPreview
+                          file={activeDragItem}
+                          targetFolderName={dragOverTargetName}
+                        />
+                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-md">
+                          +{selectedIds.size - 1}
+                        </div>
+                      </div>
+                    ) : (
+                      <FileDragPreview
+                        file={activeDragItem}
+                        targetFolderName={dragOverTargetName}
+                      />
+                    )}
+                  </div>
+                ) : null}
+              </DragOverlay>,
+              document.body,
+            )}
+          </div>
+
+          <CreateFolderDialog
+            isOpen={isCreateFolderOpen}
+            onOpenChange={setIsCreateFolderOpen}
+            parentId={currentFolderId}
+            onCreate={handleCreateFolder}
           />
-        )}
-      </div>
-
-      <FilePreviewDialog
-        isOpen={isPreviewOpen}
-        onOpenChange={setIsPreviewOpen}
-        file={previewData}
-      />
-    </div >
-  )
-
+          <FilePreviewDialog
+            isOpen={isPreviewOpen}
+            onOpenChange={setIsPreviewOpen}
+            file={previewData}
+          />
+        </div>
+      </DndContext>
+    </div>
+  );
 }

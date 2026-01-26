@@ -1,8 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { FileService } from './file.service';
 import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
-import { FILE_PATTERN, DeleteFilePayload, FILE_EXCHANGE, UploadFilePayload, UpdateFilePayload, EVENTS_EXCHANGE, FileStatus } from '@app/contracts';
+import { FILE_PATTERN, DeleteFilePayload, FILE_EXCHANGE, UploadFilePayload, UpdateFilePayload, EVENTS_EXCHANGE, FileStatus, CreateFolder, DeleteManyFilePayload } from '@app/contracts';
 import { customErrorHandler } from '@app/common';
+import { Response } from 'express';
+import { File, FileDocument } from './schema/file.schema';
 
 @Controller()
 export class FileController {
@@ -12,17 +14,64 @@ export class FileController {
 
   @RabbitRPC({
     exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.CREATE_FOLDER,
+    queue: FILE_PATTERN.CREATE_FOLDER,
+    errorHandler: customErrorHandler
+  })
+  async handleCreateFolder(payload: CreateFolder) {
+    return await this.fileService.createFolder(
+      payload.name,
+      payload.parentId,
+      payload.userId,
+      payload.projectId,
+      payload.teamId
+    );
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.GET_FOLDER,
+    queue: FILE_PATTERN.GET_FOLDER,
+    errorHandler: customErrorHandler
+  })
+  async handleGetFolder(payload: {
+    userId: string,
+    folderId: string
+  }) {
+    return await this.fileService.getFolder(payload.userId, payload.folderId);
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
     routingKey: FILE_PATTERN.UPDATE_FILE,
     queue: FILE_PATTERN.UPDATE_FILE,
     errorHandler: customErrorHandler
   })
-  async handleUpdateFile(payload: UpdateFilePayload) {
-    return await this.fileService.createPreSignedUpdateUrl(
-      payload.fileId,
-      payload.newFileName,
-      payload.userId,
-      payload.projectId,
-    );
+  async handleUpdateFile(body: {
+    userId: string,
+    fileId: string,
+    projectId?: string,
+    teamId?: string,
+    payload: Partial<File>
+  }) {
+    return await this.fileService.updateFile(body.fileId, body.payload, body.userId, body.projectId, body.teamId);
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.UPDATE_MANY_FILE,
+    queue: FILE_PATTERN.UPDATE_MANY_FILE,
+    errorHandler: customErrorHandler
+  })
+  async handleUpdateManyFile(body: {
+    userId: string,
+    fileIds: string[],
+    projectId?: string,
+    teamId?: string,
+    payload: Partial<File>
+  }) {
+    console.log(body);
+    return await this.fileService.updateManyFile(body.fileIds, body.payload, body.userId, body.projectId, body.teamId);
   }
 
   @RabbitRPC({
@@ -32,10 +81,13 @@ export class FileController {
     errorHandler: customErrorHandler
   })
   async handleInitialUpload(payload: UploadFilePayload) {
+    console.log(payload);
     return await this.fileService.createPreSignedUrl(
       payload.fileName,
       payload.userId,
       payload.projectId,
+      payload.teamId,
+      payload.parentId
     );
   }
 
@@ -55,6 +107,20 @@ export class FileController {
 
   @RabbitRPC({
     exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.DELETE_MANY_FILES,
+    queue: FILE_PATTERN.DELETE_MANY_FILES,
+    errorHandler: customErrorHandler
+  })
+  async handleDeleteManyFile(payload: DeleteManyFilePayload) {
+    return await this.fileService.deleteManyFile(
+      payload.fileIds,
+      payload.userId,
+      payload.projectId
+    );
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
     routingKey: FILE_PATTERN.GET_FILES,
     queue: FILE_PATTERN.GET_FILES,
     errorHandler: customErrorHandler
@@ -62,6 +128,7 @@ export class FileController {
   async getFiles(payload: {
     userId: string,
     projectId?: string,
+    teamId?: string,
     parentId: string | null,
     page?: number,
     limit?: number
@@ -69,6 +136,7 @@ export class FileController {
     return await this.fileService.getFiles(
       payload.userId,
       payload.projectId,
+      payload.teamId,
       payload.parentId,
       payload.page,
       payload.limit
@@ -125,7 +193,7 @@ export class FileController {
     queue: FILE_PATTERN.GET_DOWNLOAD_URL,
     errorHandler: customErrorHandler
   })
-  async downloadFile(payload: { fileId: string, userId: string, projectId?: string }) {
+  async downloadFile(payload: { fileId: string | string[], userId: string, projectId?: string }) {
     return await this.fileService.getDownloadUrl(payload.fileId, payload.userId, payload.projectId);
   }
 

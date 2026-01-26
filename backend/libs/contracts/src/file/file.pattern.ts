@@ -1,7 +1,11 @@
 export const FILE_PATTERN = {
     CREATE_FILE: 'file.create',
+    CREATE_FOLDER: 'file.create.folder',
+    GET_FOLDER: 'file.get.folder',
     UPDATE_FILE: 'file.update',
+    UPDATE_MANY_FILE: 'file.update.many',
     DELETE_ITEM: 'file.delete',
+    DELETE_MANY_FILES: 'file.delete.many',
     UPLOAD_FILE: 'file.upload',
     DOWNLOAD_FILE: 'file.download',
     RENAME: 'file.rename',
