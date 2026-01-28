@@ -327,4 +327,56 @@ export class RedisController {
     return await this.redisService.popMeetingBuffer(roomId);
   }
 
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.SAVE_PUSH_TOKEN,
+    queue: REDIS_PATTERN.SAVE_PUSH_TOKEN,
+    errorHandler: customErrorHandler
+  })
+  async savePushToken(payload: { userId: string, token: string }) {
+    return await this.redisService.savePushToken(payload.userId, payload.token);
+  }
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.GET_PUSH_TOKEN,
+    queue: REDIS_PATTERN.GET_PUSH_TOKEN,
+    errorHandler: customErrorHandler
+  })
+  async getPushToken(payload: { userId: string }) {
+    return await this.redisService.getPushToken(payload.userId);
+  }
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.IS_USER_ONLINE,
+    queue: REDIS_PATTERN.IS_USER_ONLINE,
+    errorHandler: customErrorHandler
+  })
+  async isUserOnline(payload: { userId: string }) {
+    return await this.redisService.isUserOnline(payload.userId);
+  }
+
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.GET_MANY_PUSH_TOKENS,
+    queue: REDIS_PATTERN.GET_MANY_PUSH_TOKENS,
+    errorHandler: customErrorHandler
+  })
+  async getManyPushTokens(payload: { userIds: string[] }) {
+    const mapResult = await this.redisService.getManyPushTokens(payload.userIds);
+    return Object.fromEntries(mapResult);
+  }
+
+  @RabbitRPC({
+    exchange: REDIS_EXCHANGE,
+    routingKey: REDIS_PATTERN.GET_MANY_ONLINE_STATUS,
+    queue: REDIS_PATTERN.GET_MANY_ONLINE_STATUS,
+    errorHandler: customErrorHandler
+  })
+  async getManyOnlineStatus(payload: { userIds: string[] }) {
+    const setResult = await this.redisService.getManyOnlineStatus(payload.userIds);
+    return Array.from(setResult);
+  }
 }

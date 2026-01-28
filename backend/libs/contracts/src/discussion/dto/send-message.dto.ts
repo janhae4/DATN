@@ -20,13 +20,12 @@ class MessageSnapshot {
   attachments?: AttachmentDto[]
   sender: SenderSnapshot;
   createdAt: Date;
-} 
+}
 
 export interface SendMessageEventPayload {
   _id: string;
   discussionId: string;
   messageSnapshot: MessageSnapshot;
   teamSnapshot: TeamSnapshot;
-  participantIds?: string[];
-  membersToNotify?: string[]
+
 }

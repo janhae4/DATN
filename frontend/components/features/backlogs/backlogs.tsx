@@ -215,7 +215,7 @@ export default function Backlogs() {
   };
 
   const handlePriorityChange = (taskId: string, priority: Task["priority"]) => {
-    // updateTask(taskId, { priority });
+    updateTask(taskId, { priority });
   };
 
   const handleListChange = (taskId: string, listId: string) => {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Loader2 } from "lucide-react"; // Icon loading chuẩn
 import { Icon } from "@iconify-icon/react";
@@ -40,6 +40,8 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
 
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const joinCode = searchParams.get("join");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,19 +58,27 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
       console.log(response);
       if (response.isFirstLogin) {
         router.push("/auth/onboarding");
+      } else if (joinCode) {
+        router.push(`/invite/${joinCode}`);
       } else {
         try {
           const teams = await teamService.getTeams();
-          const projects = await projectService.getProjects(teams[0].id);
 
-          if (teams && teams.length > 0) {
-            console.log("teams", teams);
-            router.push(`/${teams[0].id}/${projects[0].id}/dashboard`);
-          } else {
+          if (!teams || teams.length === 0) {
             router.push("/team-create");
+            return;
+          }
+
+          const teamId = teams[0].id;
+          const projects = await projectService.getProjects(teamId);
+
+          if (projects && projects.length > 0) {
+            router.push(`/${teamId}/${projects[0].id}/dashboard`);
+          } else {
+            router.push(`/${teamId}`);
           }
         } catch (teamError) {
-          console.error("Failed to fetch teams after login:", teamError);
+          console.error("Failed to fetch teams or projects after login:", teamError);
           router.push("/dashboard");
         }
       }
@@ -95,9 +105,8 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
 
   return (
     <div
-      className={`${styles.form_inner_container} ${
-        isActive ? styles.active_form : styles.inactive_form
-      } flex flex-col justify-center px-4 sm:px-0`} // Thêm padding cho mobile
+      className={`${styles.form_inner_container} ${isActive ? styles.active_form : styles.inactive_form
+        } flex flex-col justify-center px-4 sm:px-0`} // Thêm padding cho mobile
     >
       <div className="w-full max-w-[400px] mx-auto space-y-6">
         {/* Header Section */}

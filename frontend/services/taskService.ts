@@ -42,6 +42,7 @@ export interface BaseTaskFilterDto {
   limit?: number;
   projectId?: string;
   teamId?: string;
+  parentId?: string | "null";
 }
 
 // --- Service ---
@@ -57,7 +58,12 @@ export const taskService = {
   },
 
   getTasksByTeam: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
-    const response = await apiClient.get(`/tasks/by-team`, { data: { teamId: params.teamId } });
+    const response = await apiClient.get(`/tasks/by-team`, { params });
+    return response.data;
+  },
+
+  getTasksAssignToMe: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
+    const response = await apiClient.get(`/tasks/assign-to-me`, { params });
     return response.data;
   },
 

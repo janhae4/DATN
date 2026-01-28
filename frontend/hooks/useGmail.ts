@@ -19,12 +19,11 @@ export const useGmail = (initialMaxResults = 20) => {
             const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch emails';
             const statusCode = err.response?.status;
 
-            // Comprehensive check for auth-related issues
-            // Note: Backend currently returns 500 when tokens are not found in Redis
             const isAuthIssue =
                 statusCode === 401 ||
                 statusCode === 403 ||
-                statusCode === 500 || // Treat 500 as potential auth issue for Gmail
+                statusCode === 500 ||
+                statusCode === 504 ||
                 errorMessage.toLowerCase().includes('google account') ||
                 errorMessage.toLowerCase().includes('link') ||
                 errorMessage.toLowerCase().includes('authenticate') ||
@@ -34,8 +33,8 @@ export const useGmail = (initialMaxResults = 20) => {
                 console.error('Failed to fetch gmail', err);
             }
 
-            // If it's a 500 but we suspect auth, provide a better message
-            const finalMessage = (statusCode === 500 && !errorMessage.includes('Google'))
+            // If it's auth related, provide a friendly message instead of a raw error
+            const finalMessage = isAuthIssue
                 ? 'Please link your Google account to access emails'
                 : errorMessage;
 

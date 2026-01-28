@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
 import { Icon } from "@iconify-icon/react";
@@ -16,12 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { initiateGoogleLogin } from "@/services/authService";
 import styles from "@/app/(secondary)/auth/auth.module.css";
-
-// Assets
 import GoogleIcon from "@/public/assets/login_signup_resources/google_icon.jpg";
-import FacebookIcon from "@/public/assets/login_signup_resources/facebook_icon.jpg";
-import XIcon from "@/public/assets/login_signup_resources/x_icon.jpg";
-import { teamService } from "@/services/teamService";
 
 interface SignupFormProps {
   isActive: boolean;
@@ -41,6 +36,8 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
 
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const joinCode = searchParams.get("join");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -50,36 +47,28 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
     }));
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // 1. Gọi Register (Giả định AuthContext đã tự động Login sau khi Register)
       await register(formData);
 
-      // 2. Kiểm tra xem User này có Team nào chưa
       try {
-        const teams = await teamService.getTeams();
-
-        if (teams && teams.length > 0) {
-          // Case A: Đã có team -> Vào Dashboard team đầu tiên
-          router.push(`/teams/${teams[0].id}/dashboard`);
+        if (joinCode) {
+          router.push(`/invite/${joinCode}`);
         } else {
-          // Case B: Người dùng mới tinh -> Vào trang tạo team
-          router.push("/team-create");
+          router.push("/auth#login");
         }
       } catch (teamError) {
-        // Fallback: Nếu lỗi API lấy team -> Mặc định cho là người mới
         console.error("Failed to fetch teams after signup:", teamError);
-        router.push("/team-create");
+        router.push("/auth#signup");
       }
 
     } catch (error: any) {
       setIsLoading(false);
-      
-      // Xử lý lỗi hiển thị (như code bạn gửi)
+
       if (axios.isAxiosError(error) && error.response) {
         const serverMessage =
           error.response.data?.message || error.response.data?.error;
@@ -88,12 +77,9 @@ const handleSubmit = async (e: React.FormEvent) => {
         setError(error.message || "An error occurred.");
       }
     } finally {
-      // Lưu ý: Nếu thành công và redirect, component sẽ unmount nên setIsLoading(false) có thể không chạy,
-      // nhưng nếu lỗi thì nó sẽ chạy để tắt loading.
-      if (!error) { 
-         // Giữ loading true nếu đang redirect để tránh user bấm lung tung
+      if (!error) {
       } else {
-         setIsLoading(false);
+        setIsLoading(false);
       }
     }
   };
@@ -104,15 +90,11 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <div
-      className={`${styles.form_inner_container} ${
-        isActive ? styles.active_form : styles.inactive_form
-      } flex flex-col justify-center h-full`}
-      // h-full để container tận dụng chiều cao cha
+      className={`${styles.form_inner_container} ${isActive ? styles.active_form : styles.inactive_form
+        } flex flex-col justify-center h-full`}
     >
-      {/* Scrollable Area: Quan trọng cho Mobile khi bàn phím bật lên */}
       <div className="w-full max-w-[400px] mx-auto px-4 sm:px-0 overflow-y-auto max-h-full py-4 scrollbar-hide">
         <div className="space-y-6">
-          {/* Header Section */}
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight">
               Create an Account
@@ -122,7 +104,6 @@ const handleSubmit = async (e: React.FormEvent) => {
             </p>
           </div>
 
-          {/* Social Login Section - Responsive Grid */}
           <div className={styles.social_login_container}>
             <Button
               variant="outline"
@@ -132,20 +113,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             >
               <Image src={GoogleIcon} alt="Google" width={20} height={20} />
             </Button>
-            <Button
-              variant="outline"
-                className={styles.social_button}
-              title="Sign up with Facebook"
-            >
-              <Image src={FacebookIcon} alt="Facebook" width={20} height={20} />
-            </Button>
-            <Button
-              variant="outline"
-              className={styles.social_button}
-              title="Sign up with X"
-            >
-              <Image src={XIcon} alt="X" width={20} height={20} />
-            </Button>
+
           </div>
 
           <div className="relative">

@@ -28,7 +28,6 @@ export const useWebRTC = (roomId: string) => {
             try {
                 const userData = await getMe();
                 if (userData?.id) {
-                    // Save name here
                     setCurrentUser({ 
                         id: userData.id, 
                         name: userData.name || 'Unknown User' 

@@ -89,6 +89,7 @@ export function PriorityPicker({
                   getPriorityColor(priority),
                   disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
                 )}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
                 disabled={disabled}
               >
@@ -111,6 +112,7 @@ export function PriorityPicker({
               variant="ghost"
               size="sm"
               className="justify-start gap-2 h-8"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
                 onPriorityChange(p.value)
@@ -128,6 +130,7 @@ export function PriorityPicker({
             variant="ghost"
             size="sm"
             className="justify-start gap-2 h-8 text-muted-foreground"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
               onPriorityChange(null)

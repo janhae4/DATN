@@ -2,6 +2,31 @@ import { MemberShip } from '@app/contracts';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 
+
+@Schema({ _id: false })
+export class Reaction {
+  @Prop({ required: true })
+  emoji: string;
+
+  @Prop({ type: [String], default: [] })
+  userIds: string[];
+}
+const ReactionSchema = SchemaFactory.createForClass(Reaction);
+
+@Schema({ _id: false })
+export class ReplySnapshot {
+  @Prop({ required: true })
+  messageId: string;
+
+  @Prop({ required: true })
+  content: string;
+
+  @Prop({ required: true })
+  senderName: string;
+}
+export const ReplySnapshotSchema = SchemaFactory.createForClass(ReplySnapshot);
+
+// Attachment = file attachment
 @Schema({ _id: false })
 export class Attachment {
   @Prop({ required: true })
@@ -15,6 +40,8 @@ export class Attachment {
 }
 export const AttachmentSchema = SchemaFactory.createForClass(Attachment);
 
+
+// SenderSnapshot = sender basic info
 @Schema({ _id: false })
 export class SenderSnapshot {
   @Prop({ required: true })
@@ -31,9 +58,11 @@ export class SenderSnapshot {
 }
 export const SenderSnapshotSchema = SchemaFactory.createForClass(SenderSnapshot);
 
+
+// Message = message basic info
 @Schema({ timestamps: true })
 export class Message {
-  @Prop({type: SenderSnapshotSchema, required: true })
+  @Prop({ type: SenderSnapshotSchema, required: true })
   sender: SenderSnapshot;
 
   @Prop({ trim: true, required: true })
@@ -46,21 +75,14 @@ export class Message {
   })
   discussionId: mongoose.Types.ObjectId;
 
-  @Prop({ type: [String], default: [] })
-  readByIds: string[];
+  @Prop({ type: ReplySnapshotSchema })
+  replyTo?: ReplySnapshot;
 
   @Prop({ type: [SchemaFactory.createForClass(Attachment)] })
   attachments: Attachment[];
 
-  @Prop({
-    type: [
-      {
-        userId: String,
-        emoji: String,
-      },
-    ],
-  })
-  reactions: { userId: string; emoji: string }[];
+  @Prop({ type: [ReactionSchema], default: [] })
+  reactions: Reaction[];
 
   @Prop()
   createdAt: Date;

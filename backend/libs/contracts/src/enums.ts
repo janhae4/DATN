@@ -41,6 +41,13 @@ export enum MemberShip {
 }
 
 
+export enum DiscussionType {
+  DIRECT = 'DIRECT',
+  TEXT = 'TEXT',
+  VOICE = 'VOICE',
+  CATEGORY = 'CATEGORY'
+}
+
 export enum NotificationType {
   SUCCESS = 'SUCCESS',
   FAILED = 'FAILED',
@@ -90,4 +97,18 @@ export enum ListCategoryEnum {
   TODO = 'todo',
   IN_PROGRESS = 'in_progress',
   DONE = 'done',
+}
+
+export enum PermissionKey {
+  SEND_MESSAGES = 'SEND_MESSAGES',
+  MANAGE_CHANNELS = 'MANAGE_CHANNELS',
+  MANAGE_ROLES = 'MANAGE_ROLES',
+  KICK_MEMBERS = 'KICK_MEMBERS',
+  BAN_MEMBERS = 'BAN_MEMBERS',
+  CREATE_INVITE = 'CREATE_INVITE',
+  ATTACH_FILES = 'ATTACH_FILES',
+  ADD_REACTIONS = 'ADD_REACTIONS',
+  MENTION_EVERYONE = 'MENTION_EVERYONE',
+  MANAGE_MESSAGES = 'MANAGE_MESSAGES',
+  VIEW_CHANNELS = 'VIEW_CHANNELS',
 }

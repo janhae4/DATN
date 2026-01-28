@@ -379,6 +379,8 @@ export class UserService {
   }
 
   async findManyByIds(ids: string[], forDiscussion?: boolean) {
+    if (!ids || ids.length === 0) return [];
+
     const cachedUsers = await this.amqp.request<Partial<User>[]>({
       exchange: REDIS_EXCHANGE,
       routingKey: REDIS_PATTERN.GET_USER_INFO,

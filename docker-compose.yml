@@ -103,59 +103,59 @@ services:
     networks:
       - app-network
 
-  chatbot: 
-    build:
-      context: ./python/chatbot-service
-      dockerfile: Dockerfile
-    container_name: python_chatbot_worker
-    restart: unless-stopped
-    volumes:
-      - ./python/chatbot-service:/app
-    environment:
-      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
-      CHROMA_HOST: "chroma" 
-      CHROMA_PORT: "8000"
-      MINIO_ENDPOINT: "minio:9000"
-      MINIO_ACCESS_KEY: "minioadmin"
-      MINIO_SECRET_KEY: "minioadmin"
-      MINIO_USE_SSL: "false"
-      MINIO_BUCKET_NAME: "documents"
-      REDIS_HOST: "redis"
-      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
-      OLLAMA_MODEL: "gemma2:2b"
-      OLLAMA_EMBEDDING_MODEL: "siv/Qwen3-Embedding-0.6B-GGUF:f16"
-      THREADPOOL_MAX_WORKERS: "4"
-      PYTHONUNBUFFERED: "1"
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      chroma:
-        condition: service_started
-      minio:
-        condition: service_started
-      ollama:
-        condition: service_started
-    networks:
-      - app-network
+  # chatbot: 
+  #   build:
+  #     context: ./python/chatbot-service
+  #     dockerfile: Dockerfile
+  #   container_name: python_chatbot_worker
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./python/chatbot-service:/app
+  #   environment:
+  #     RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+  #     CHROMA_HOST: "chroma" 
+  #     CHROMA_PORT: "8000"
+  #     MINIO_ENDPOINT: "minio:9000"
+  #     MINIO_ACCESS_KEY: "minioadmin"
+  #     MINIO_SECRET_KEY: "minioadmin"
+  #     MINIO_USE_SSL: "false"
+  #     MINIO_BUCKET_NAME: "documents"
+  #     REDIS_HOST: "redis"
+  #     OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+  #     OLLAMA_MODEL: "gemma2:2b"
+  #     OLLAMA_EMBEDDING_MODEL: "siv/Qwen3-Embedding-0.6B-GGUF:f16"
+  #     THREADPOOL_MAX_WORKERS: "4"
+  #     PYTHONUNBUFFERED: "1"
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #     chroma:
+  #       condition: service_started
+  #     minio:
+  #       condition: service_started
+  #     ollama:
+  #       condition: service_started
+  #   networks:
+  #     - app-network
 
-  ollama:
-    image: ollama/ollama
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-      - ./init-ollama.sh:/init-ollama.sh
-    entrypoint: ["/bin/sh", "/init-ollama.sh"]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    networks:
-      - app-network
+  # ollama:
+  #   image: ollama/ollama
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #     - ./init-ollama.sh:/init-ollama.sh
+  #   entrypoint: ["/bin/sh", "/init-ollama.sh"]
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   networks:
+  #     - app-network
 
   minio:
     image: minio/minio
@@ -198,115 +198,115 @@ services:
     entrypoint: [ "bash", "-c", "chmod +x /scripts/init-mongo.sh && /scripts/init-mongo.sh" ]
     networks:
       - app-network
-  api_gateway:
-    <<: *nest-service
-    container_name: api_gateway
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: api-gateway
-    ports:
-      - "3000:3000"
-
-  auth_service:
-    <<: *nest-service
-    container_name: auth_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: auth
-
-  user_service:
-    <<: *nest-service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: user
-    container_name: user_service
-
-  redis_service:
-    <<: *nest-service
-    container_name: redis_service_app
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: redis
-
-  project_service:
-    <<: *nest-service
-    container_name: project_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: project-service
-
-  task_service:
-    <<: *nest-service
-    container_name: task_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: task-service
-
-  sprint_service:
-    <<: *nest-service
-    container_name: sprint_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: sprint-service
-
-  epic_service:
-    <<: *nest-service
-    container_name: epic_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: epic-service
-
-  label_service:
-    <<: *nest-service
-    container_name: label_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: label-service
-
-  list_service:
-    <<: *nest-service
-    container_name: list_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: list-service
-
-  team_service:
-    <<: *nest-service
-    container_name: team_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: team
-
-  # search_service:
+  # api_gateway:
   #   <<: *nest-service
-  #   container_name: search_service
+  #   container_name: api_gateway
   #   build:
   #     context: ./backend
   #     dockerfile: Dockerfile
   #     args:
-  #         APP_NAME: search-service
+  #         APP_NAME: api-gateway
+  #   ports:
+  #     - "3000:3000"
+
+  # auth_service:
+  #   <<: *nest-service
+  #   container_name: auth_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: auth
+
+  # user_service:
+  #   <<: *nest-service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: user
+  #   container_name: user_service
+
+  # redis_service:
+  #   <<: *nest-service
+  #   container_name: redis_service_app
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: redis
+
+  # project_service:
+  #   <<: *nest-service
+  #   container_name: project_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: project-service
+
+  # task_service:
+  #   <<: *nest-service
+  #   container_name: task_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: task-service
+
+  # sprint_service:
+  #   <<: *nest-service
+  #   container_name: sprint_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: sprint-service
+
+  # epic_service:
+  #   <<: *nest-service
+  #   container_name: epic_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: epic-service
+
+  # label_service:
+  #   <<: *nest-service
+  #   container_name: label_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: label-service
+
+  # list_service:
+  #   <<: *nest-service
+  #   container_name: list_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: list-service
+
+  # team_service:
+  #   <<: *nest-service
+  #   container_name: team_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: team
+
+  # # search_service:
+  # #   <<: *nest-service
+  # #   container_name: search_service
+  # #   build:
+  # #     context: ./backend
+  # #     dockerfile: Dockerfile
+  # #     args:
+  # #         APP_NAME: search-service
 
   socket_service:
     <<: *nest-service
@@ -319,49 +319,49 @@ services:
     ports:
       - "4001:4001"
 
-  notification_service:
-    <<: *nest-service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: notification
+  # notification_service:
+  #   <<: *nest-service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: notification
 
-  ai_discussion_service:
-    <<: *nest-service
-    container_name: ai_discussion_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: discussion-ai
+  # ai_discussion_service:
+  #   <<: *nest-service
+  #   container_name: ai_discussion_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: discussion-ai
 
-  calendar_service:
-    <<: *nest-service
-    container_name: calendar_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: calendar-service
+  # calendar_service:
+  #   <<: *nest-service
+  #   container_name: calendar_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: calendar-service
 
-  gmail_service:
-    <<: *nest-service
-    container_name: gmail_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: gmail
+  # gmail_service:
+  #   <<: *nest-service
+  #   container_name: gmail_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: gmail
 
-  file_service:
-    <<: *nest-service
-    container_name: file_service
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-          APP_NAME: file
+  # file_service:
+  #   <<: *nest-service
+  #   container_name: file_service
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     args:
+  #         APP_NAME: file
 
   mongo-express:
     image: mongo-express
@@ -376,24 +376,24 @@ services:
     depends_on:
       - mongo_db
   
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
-    container_name: nextjs_frontend
-    restart: always
-    ports:
-      - "5000:5000"
-    environment:
-      - PORT=5000
-      - INTERNAL_API_URL=http://api_gateway:3000
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
-    networks:
-      - app-network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #     args:
+  #       NEXT_PUBLIC_API_URL: http://localhost:3000
+  #   container_name: nextjs_frontend
+  #   restart: always
+  #   ports:
+  #     - "5000:5000"
+  #   environment:
+  #     - PORT=5000
+  #     - INTERNAL_API_URL=http://api_gateway:3000
+  #     - NEXT_PUBLIC_API_URL=http://localhost:3000
+  #   networks:
+  #     - app-network
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
 
   
 volumes:

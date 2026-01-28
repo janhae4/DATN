@@ -37,7 +37,7 @@ import {
 import * as cookie from 'cookie';
 import { RmqClientService } from '@app/common';
 
-interface AuthenticatedSocket extends Socket {
+export interface AuthenticatedSocket extends Socket {
   data: {
     user?: JwtDto;
     accumulatedMessage?: string;
@@ -164,28 +164,28 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`User ${targetUserId} was un-kicked from room ${roomId}`);
   }
 
-  @SubscribeMessage("join_room")
-  async joinRoom(
-    client: AuthenticatedSocket,
-    payload: { roomId: string }
-  ) {
-    const user = await this._validateToken(client);
-    if (!user) return
-    const rooms = Array.from(client.rooms);
-    console.log(123, rooms, payload.roomId)
-    const currentRooms = rooms.filter(r => r !== user.id);
-    currentRooms.forEach(r => client.leave(r));
-    client.join(payload.roomId);
-  }
+  // @SubscribeMessage("join_room")
+  // async joinRoom(
+  //   client: AuthenticatedSocket,
+  //   payload: { roomId: string }
+  // ) {
+  //   const user = await this._validateToken(client);
+  //   if (!user) return
+  //   const rooms = Array.from(client.rooms);
+  //   console.log(123, rooms, payload.roomId)
+  //   const currentRooms = rooms.filter(r => r !== user.id);
+  //   currentRooms.forEach(r => client.leave(r));
+  //   client.join(payload.roomId);
+  // }
 
-  @SubscribeMessage('leave_room')
-  async handleRoomDisconnect(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() payload: { roomId: string }
-  ) {
-    await client.leave(payload.roomId);
-    this.logger.log(`Client ${client.id} left room ${payload.roomId}`);
-  }
+  // @SubscribeMessage('leave_room')
+  // async handleRoomDisconnect(
+  //   @ConnectedSocket() client: AuthenticatedSocket,
+  //   @MessageBody() payload: { roomId: string }
+  // ) {
+  //   await client.leave(payload.roomId);
+  //   this.logger.log(`Client ${client.id} left room ${payload.roomId}`);
+  // }
 
   async notifyTaskUpdate(payload: SendTaskNotificationDto) {
     this.server.to(payload.teamId).emit('task_update', payload);
@@ -450,76 +450,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
   }
 
-  async handleStreamResponse(response: ResponseStreamDto) {
-    const { discussionId, socketId, content, type, membersToNotify, teamId } = response;
-
-    const client = this.server.sockets.sockets.get(socketId) as
-      | AuthenticatedSocket
-      | undefined;
-
-    if (!client) {
-      this.logger.warn(`Client ${socketId} not found.`);
-      return;
-    }
-
-    if (!membersToNotify || membersToNotify.length === 0) {
-      this.logger.warn(`Invalid 'membersToNotify' list for stream on ${socketId}.`);
-      client.emit(CHATBOT_PATTERN.RESPONSE_ERROR, { content: "Lỗi: Không tìm thấy người nhận stream (stream session error)." });
-      return;
-    }
-
-    const emitToAll = (event: string, data: any) => {
-      membersToNotify.forEach(userId => {
-        this.server.to(userId).emit(event, {
-          ...data,
-          discussionId,
-          teamId
-        });
-      });
-    };
-
-    if (type === 'chunk') {
-      const currentMessage = client.data.accumulatedMessage || '';
-      client.data.accumulatedMessage = currentMessage + content;
-      emitToAll(CHATBOT_PATTERN.RESPONSE_CHUNK, { content });
-    } else if (type === 'start') {
-      emitToAll(CHATBOT_PATTERN.RESPONSE_START, content);
-    } else if (type === 'error') {
-      emitToAll(CHATBOT_PATTERN.RESPONSE_ERROR, { content });
-    } else if (type === "metadata") {
-      try {
-        client.data.streamMetadata = JSON.parse(content);
-      } catch (e) {
-        this.logger.warn(`Failed to parse metadata: ${content}`);
-        client.data.streamMetadata = { error: "Invalid metadata received" };
-      }
-    } else if (type === 'end') {
-
-      const fullMessage = client.data.accumulatedMessage || '';
-
-      if (fullMessage.trim().length > 0) {
-        const savedMessage = await this.amqpConnection.request<AiDiscussionDto>({
-          exchange: CHATBOT_EXCHANGE,
-          routingKey: CHATBOT_PATTERN.CREATE,
-          payload: {
-            discussionId,
-            message: fullMessage,
-            metadata: client.data.streamMetadata,
-          },
-        });
-
-
-        emitToAll(CHATBOT_PATTERN.RESPONSE_END, { id: savedMessage._id });
-
-        this.logger.log(
-          `Saved streamed AI message for ${socketId} to discussion ${discussionId}.`,
-        );
-      }
-
-      delete client.data.accumulatedMessage;
-      delete client.data.streamMetadata;
-    }
-  }
 
   private summaryBuffer = new Map<string, string>();
   async handleMeetingSummaryStream(payload: MeetingSummaryResponseDto) {
@@ -551,53 +481,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }); 
   }
 
-  handleNewMessage(payload: SendMessageEventPayload) {
-    const {
-      discussionId,
-      _id,
-      messageSnapshot,
-      membersToNotify
-    } = payload;
-
-    const senderId = messageSnapshot.sender?._id;
-    if (!senderId) {
-      this.logger.error("Lỗi: Tin nhắn không có senderId", payload);
-      return;
-    }
-
-    const messageDoc: ResponseMessageDto = {
-      _id,
-      discussionId,
-      message: messageSnapshot as MessageSnapshot,
-    };
-
-    this.logger.log(`Received new message for ${discussionId}. Sender: ${senderId}`);
-
-    if (!membersToNotify?.length) return;
-
-    const onlineUsers: string[] = [];
-    const offlineUsers: string[] = [];
-
-    membersToNotify.forEach((userId) => {
-      if (userId === senderId) {
-        return;
-      }
-
-      const socketIds = this.server.sockets.adapter.rooms.get(userId);
-      if (socketIds && socketIds.size) {
-        onlineUsers.push(userId);
-        socketIds.forEach((socketId) => {
-          this.server.to(userId).emit('new_message', messageDoc);
-        });
-      } else {
-        offlineUsers.push(userId);
-      }
-    });
-
-    if (offlineUsers.length) {
-      this.logger.log(`Offline users: ${offlineUsers.join(', ')}`);
-    }
-  }
 
 
 

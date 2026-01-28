@@ -139,12 +139,22 @@ export function TeamAnalytics({ members, projects }: TeamAnalyticsProps) {
 
   // 3. ROLE DATA
   const roleData = useMemo(() => {
-    const counts = { [MemberRole.OWNER]: 0, [MemberRole.ADMIN]: 0, [MemberRole.MEMBER]: 0 };
-    members.forEach((m) => { if (counts[m.role] !== undefined) counts[m.role]++; });
+    const counts = { 
+      [MemberRole.OWNER]: 0, 
+      [MemberRole.ADMIN]: 0, 
+      [MemberRole.MEMBER]: 0,
+      [MemberRole.SYSTEM]: 0,
+      [MemberRole.AI]: 0
+    };
+    members.forEach((m) => { 
+      if (counts[m.role] !== undefined) counts[m.role]++; 
+    });
     return [
       { name: "Owners", value: counts[MemberRole.OWNER] },
       { name: "Admins", value: counts[MemberRole.ADMIN] },
       { name: "Members", value: counts[MemberRole.MEMBER] },
+      { name: "System", value: counts[MemberRole.SYSTEM] },
+      { name: "AI", value: counts[MemberRole.AI] },
     ].filter(item => item.value > 0);
   }, [members]);
 

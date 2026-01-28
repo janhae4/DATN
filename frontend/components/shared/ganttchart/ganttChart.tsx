@@ -73,8 +73,13 @@ const GanttPage = () => {
   const { lists } = useLists(projectId);
   const { project } = useProject(projectId || "");
 
-  const [selectedTask, setSelectedTask] = React.useState<AppTask | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = React.useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  const selectedTask = React.useMemo(() => {
+    if (!selectedTaskId) return null;
+    return projectTasks?.find((t) => t.id === selectedTaskId) || null;
+  }, [projectTasks, selectedTaskId]);
 
   const ganttTasks = React.useMemo(() => {
     const mapped = mapProjectTasksToGanttTasks(projectTasks || []);
@@ -86,7 +91,6 @@ const GanttPage = () => {
 
   const [isChecked, setIsChecked] = React.useState(true);
 
-  // Calculate column width based on view mode
   let columnWidth = 65;
   if (view === ViewMode.Year) {
     columnWidth = 350;
@@ -96,19 +100,18 @@ const GanttPage = () => {
     columnWidth = 250;
   }
 
-  // Dynamic Colors based on Theme
   const ganttColors = React.useMemo(() => {
     if (isDark) {
       return {
-        barBackgroundColor: "#52525b", // zinc-600
-        barBackgroundSelectedColor: "#71717a", // zinc-500
-        barProgressColor: "#3b82f6", // blue-500
-        barProgressSelectedColor: "#60a5fa", // blue-400
-        projectBackgroundColor: "#065f46", // emerald-800
-        projectBackgroundSelectedColor: "#064e3b", // emerald-900
-        projectProgressColor: "#34d399", // emerald-400
-        projectProgressSelectedColor: "#10b981", // emerald-500
-        arrowColor: "#a1a1aa", // zinc-400
+        barBackgroundColor: "#52525b",
+        barBackgroundSelectedColor: "#71717a",
+        barProgressColor: "#3b82f6",
+        barProgressSelectedColor: "#60a5fa",
+        projectBackgroundColor: "#065f46",
+        projectBackgroundSelectedColor: "#064e3b",
+        projectProgressColor: "#34d399",
+        projectProgressSelectedColor: "#10b981",
+        arrowColor: "#a1a1aa",
       };
     }
     return {
@@ -125,7 +128,6 @@ const GanttPage = () => {
   }, [isDark]);
 
   const handleTaskChange = async (task: Task) => {
-    // Call API - Optimistic update is already handled by useTasks mutation
     try {
       await updateTask(task.id, {
         startDate: task.start.toISOString(),
@@ -152,19 +154,22 @@ const GanttPage = () => {
   };
 
   const handleDblClick = (task: Task) => {
-    const originalTask = projectTasks?.find((t) => t.id === task.id);
-    if (originalTask) {
-      setSelectedTask(originalTask);
-      setIsModalOpen(true);
-    }
+    setSelectedTaskId(task.id);
+    setIsModalOpen(true);
   };
 
   const handleClick = (task: Task) => {
-    // Handle click if needed
+    setSelectedTaskId(task.id);
+    setIsModalOpen(true);
   };
 
   const handleSelect = (task: Task, isSelected: boolean) => {
-    // Handle select if needed
+    // Selection in Gantt chart
+  };
+
+  const handleTaskSelect = (task: AppTask) => {
+    setSelectedTaskId(task.id);
+    setIsModalOpen(true);
   };
 
   const handleExpanderClick = (task: Task) => {
@@ -177,7 +182,7 @@ const GanttPage = () => {
   // Modal Handlers
   const handleModalClose = (open: boolean) => {
     setIsModalOpen(open);
-    if (!open) setSelectedTask(null);
+    if (!open) setSelectedTaskId(null);
   };
 
   const handleListChange = (taskId: string, listId: string) =>
@@ -199,8 +204,9 @@ const GanttPage = () => {
     updateTask(taskId, { description });
   const handleLabelsChange = (taskId: string, labelIds: string[]) =>
     updateTask(taskId, { labelIds });
+  const handleEpicChange = (taskId: string, epicId: string | null) =>
+    updateTask(taskId, { epicId });
 
-  // --- RENDER LOGIC ---
 
   if (isLoading) {
     return <div className="p-4">Loading tasks...</div>;
@@ -257,7 +263,7 @@ const GanttPage = () => {
         onStartTour={startTour}
       />
 
-      <div id="gantt-chart-container" className="flex-1 overflow-hidden">
+      <div id="gantt-chart-container" className="flex-1">
         {ganttTasks.length > 0 ? (
           <Gantt
             tasks={ganttTasks}
@@ -300,6 +306,7 @@ const GanttPage = () => {
           onTitleChange={handleTitleChange}
           onDescriptionChange={handleDescriptionChange}
           onLabelsChange={handleLabelsChange}
+          onTaskSelect={handleTaskSelect}
           updateTask={updateTask}
         />
       )}

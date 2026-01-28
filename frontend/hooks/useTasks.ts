@@ -22,11 +22,12 @@ type UseTasksOptions = Omit<
 
 export function useTasks(
   filters?: BaseTaskFilterDto,
-  options?: UseTasksOptions
+  options?: UseTasksOptions,
+  mode: 'all' | 'team' | 'assign-to-me' = 'all'
 ) {
   const queryClient = useQueryClient();
 
-  const tasksQueryKey = ["tasks", filters];
+  const tasksQueryKey = ["tasks", mode, filters];
   const projectId = filters?.projectId;
   const teamId = filters?.teamId;
   const labelsQueryKey = ["labels", projectId || teamId];
@@ -44,10 +45,17 @@ export function useTasks(
     queryFn: async ({ pageParam }) => {
       const page = pageParam as number;
       if (!filters) throw new Error("No filters provided");
-      return await taskService.getTasks({
-        ...filters,
-        page,
-      });
+
+      const params = { ...filters, page };
+
+      switch (mode) {
+        case 'team':
+          return await taskService.getTasksByTeam(params);
+        case 'assign-to-me':
+          return await taskService.getTasksAssignToMe(params);
+        default:
+          return await taskService.getTasks(params);
+      }
     },
     initialPageParam: filters?.page || 1,
     getNextPageParam: (lastPage, allPages) => {

@@ -472,4 +472,46 @@ export class RedisService {
     await this.redis.del(processingKey);
     return data.map(item => JSON.parse(item));
   }
+
+  async savePushToken(userId: string, token: string) {
+    const key = `user:push_token:${userId}`;
+    await this.redis.set(key, token, 'EX', 86400 * 60);
+    this.logger.log(`Saved Web Push Token for user: ${userId}`);
+    return true;
+  }
+
+  async getPushToken(userId: string) {
+    const key = `user:push_token:${userId}`;
+    return await this.redis.get(key);
+  }
+
+  async isUserOnline(userId: string): Promise<boolean> {
+    const key = `user:profile:${userId}`;
+    const exists = await this.redis.exists(key);
+    return exists === 1;
+  }
+
+  async getManyPushTokens(userIds: string[]) {
+    const keys = userIds.map(id => `user:push_token:${id}`);
+
+    const tokens = await this.redis.mget(keys);
+
+    const result = new Map<string, string>();
+    userIds.forEach((id, index) => {
+      if (tokens[index]) result.set(id, tokens[index]);
+    });
+
+    return result;
+  }
+
+  async getManyOnlineStatus(userIds: string[]) {
+    const pipe = this.redis.pipeline();
+    userIds.forEach(id => pipe.exists(`user:profile:${id}`));
+    const results = await pipe.exec();
+    const onlineUsers = new Set<string>();
+    results?.forEach((res, index) => {
+      if (res[1] === 1) onlineUsers.add(userIds[index]);
+    });
+    return onlineUsers;
+  }
 }

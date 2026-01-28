@@ -94,7 +94,7 @@ export function BacklogTaskList({
   }
 
   return (
-    <div className="flex flex-col relative h-[calc(60vh-9rem)] overflow-y-scroll custom-scrollbar">
+    <div className="flex flex-col relative max-h-[calc(60vh-9rem)] overflow-y-scroll custom-scrollbar">
       <div className="rounded-lg">
         <Table>
           {tasks.length > 0 ? (
@@ -127,7 +127,7 @@ export function BacklogTaskList({
                 />
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="p-0 border-none">
+                  <TableCell colSpan={7} className="py-2 border-none">
                     <div
                       className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed text-muted-foreground hover:bg-muted/50 hover:border-primary/50 hover:text-primary transition-all"
                       onClick={(e) => {
@@ -135,7 +135,7 @@ export function BacklogTaskList({
                         setIsAddingNewRow(true);
                       }}
                     >
-                      <PlusIcon className="h-8 w-8 opacity-50" />
+                      <PlusIcon className="h-8  w-8 opacity-50" />
                       <p className="text-sm font-medium">
                         Your backlog is empty
                       </p>
@@ -154,7 +154,7 @@ export function BacklogTaskList({
       {!isAddingNewRow && tasks.length > 0 && (
         <Button
           variant="ghost"
-          className="w-fit justify-start gap-2 bg-primary/5 hover:bg-primary/10 p-4 text-muted-foreground mt-2 ml-2"
+          className="w-fit mb-2 justify-start gap-2 bg-primary/5 hover:bg-primary/10 p-4 text-muted-foreground mt-2 ml-2"
           onClick={() => setIsAddingNewRow(true)}
         >
           <PlusIcon className="h-4 w-4" />
@@ -162,7 +162,7 @@ export function BacklogTaskList({
         </Button>
       )}
 
-      <div ref={ref} className="h-4 w-full" />
+      <div ref={ref} className="" />
 
       {isFetchingNextPage && (
         <div className="flex justify-center p-4">

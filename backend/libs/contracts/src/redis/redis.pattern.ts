@@ -19,4 +19,9 @@ export const REDIS_PATTERN = {
   MARK_TOKEN_AS_USED: 'redis.markTokenAsUsed',
   IS_TOKEN_USED: 'redis.isTokenUsed',
   DELETE_LOCK_KEY: 'redis.deleteLockKey',
+  SAVE_PUSH_TOKEN: 'redis.savePushToken',
+  GET_PUSH_TOKEN: 'redis.getPushToken',
+  IS_USER_ONLINE: 'redis.isUserOnline',
+  GET_MANY_PUSH_TOKENS: 'redis.getManyPushTokens',
+  GET_MANY_ONLINE_STATUS: 'redis.getManyOnlineStatus',
 };

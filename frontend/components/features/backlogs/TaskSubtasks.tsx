@@ -24,18 +24,21 @@ export function TaskSubtasks({
   lists,
   onRowClick,
 }: TaskSubtasksProps) {
-  // 1. Lấy dữ liệu từ hook
-  const { tasks, updateTask } = useTasks({ projectId, teamId });
+  const queryFilters = React.useMemo(() => ({
+    projectId,
+    teamId,
+    parentId: taskId,
+    sprintId: "null" as const,
+  }), [projectId, teamId, taskId]);
 
-  // 2. State cho việc thêm mới
+  const { tasks, updateTask, isLoading } = useTasks(queryFilters);
+
   const [isAdding, setIsAdding] = React.useState(false);
 
-  // 3. Lọc ra các Subtasks của Task hiện tại
   const subtasks = React.useMemo(() => {
     return tasks.filter((t) => t.parentId === taskId);
   }, [tasks, taskId]);
 
-  // Handler update task
   const handleUpdateTask = (id: string, updates: any) => {
     updateTask(id, updates);
   };
@@ -50,8 +53,13 @@ export function TaskSubtasks({
         </span>
       </div>
 
+      {isLoading && subtasks.length === 0 && (
+        <div className="flex justify-center p-4">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+        </div>
+      )}
+
       <div className="rounded-md border">
-        {/* Nếu không có subtask và không đang thêm mới -> Hiển thị Empty State gọn */}
         {subtasks.length === 0 && !isAdding ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <p className="text-sm text-muted-foreground mb-2">
@@ -68,22 +76,19 @@ export function TaskSubtasks({
         ) : (
           <Table>
             <TableBody>
-              {/* Danh sách Subtasks */}
               {subtasks.map((subtask) => (
                 <BacklogTaskRow
                   key={subtask.id}
                   allTasks={tasks}
                   task={subtask}
                   lists={lists}
-                  // Trong Modal thì tắt kéo thả để tránh xung đột
                   isDraggable={false}
-                  onRowClick={onRowClick} // Click vào subtask sẽ mở modal của subtask đó
+                  onRowClick={onRowClick}
                   onUpdateTask={handleUpdateTask}
-                  level={0} // Trong modal hiển thị phẳng, không cần thụt lề quá nhiều
+                  level={0}
                 />
               ))}
 
-              {/* Form thêm mới */}
               {isAdding && (
                 <AddNewTaskRow
                   lists={lists}
@@ -97,7 +102,6 @@ export function TaskSubtasks({
         )}
       </div>
 
-      {/* Nút thêm mới (nếu đang có list và chưa mở form) */}
       {subtasks.length > 0 && !isAdding && (
         <Button
           variant="ghost"

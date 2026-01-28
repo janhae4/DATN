@@ -84,7 +84,7 @@ function BacklogAccordionItemComponent({
             <Badge variant="secondary">{taskCount} tasks</Badge>
           </div>
         </AccordionTrigger>
-        <AccordionContent className="p-1 border-t bg-muted/20">
+        <AccordionContent className="p-1 border-t  bg-muted/20">
           <BacklogTaskList
             key="backlog-task-list"
             lists={lists}

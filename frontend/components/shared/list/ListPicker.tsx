@@ -23,11 +23,10 @@ import { ListEditDialog } from "./ListEditDialog"
 import { List } from "@/types"
 import { ListCategoryEnum } from "@/types/common/enums"
 
-// 1. Định nghĩa bảng màu dựa trên Category
 const categoryColorMap: Record<ListCategoryEnum, string> = {
-  [ListCategoryEnum.TODO]: "bg-neutral-500",      // Màu xám
-  [ListCategoryEnum.IN_PROGRESS]: "bg-blue-500",  // Màu xanh dương
-  [ListCategoryEnum.DONE]: "bg-green-500",        // Màu xanh lá
+  [ListCategoryEnum.TODO]: "bg-neutral-500",
+  [ListCategoryEnum.IN_PROGRESS]: "bg-blue-500",
+  [ListCategoryEnum.DONE]: "bg-green-500",
 }
 
 type ListPickerProps = {
@@ -109,10 +108,11 @@ export function ListPicker({
                 size="sm"
                 disabled={disabled}
                 className="h-7 px-2 flex items-center gap-2"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
               >
                 {selectedList ? (
                   <>
-                    {/* 3. Cập nhật màu cho phần hiển thị Selected */}
                     <span
                       className={cn(
                         "inline-block h-2 w-2 rounded-full",

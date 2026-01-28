@@ -28,7 +28,6 @@ const GanttChart = dynamic(() => import("./shared/ganttchart/ganttChart"), {
   ssr: false,
 });
 
-// const TimelineView = dynamic(() => import("./features/timeline/TimelineView"), { ssr: false })
 
 function getInitialTab(): string {
   if (typeof window === "undefined") return "summary";

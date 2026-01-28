@@ -117,4 +117,12 @@ export class UserService {
       payload: { userId, skills },
     });
   }
+
+  findManyByIds(ids: string[]) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+      payload: { userIds: ids },
+    });
+  }
 }
