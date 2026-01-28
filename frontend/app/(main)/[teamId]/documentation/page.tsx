@@ -514,7 +514,7 @@ export default function AttachmentPage() {
                 value={selectedProjectId}
                 onValueChange={(val) => {
                   if (val === "unassigned") {
-                    setSelectedProjectId(null);
+                    setSelectedProjectId("");
                   } else {
                     setSelectedProjectId(val);
                   }

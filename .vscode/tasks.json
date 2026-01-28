@@ -322,6 +322,23 @@
             }
         },
         {
+            "label": "File",
+            "command": "nest",
+            "args": [
+                "start",
+                "file",
+                "--watch"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "group": "chatDemo",
+                "panel": "new"
+            }
+        },
+        {
             "label": "Frontend",
             "command": "npm",
             "args": [
@@ -343,7 +360,6 @@
                 "Api Gateway",
                 "Auth",
                 "User",
-                "Redis",
                 "Project",
                 "Task",
                 "Sprint",
@@ -351,6 +367,7 @@
                 "Label Service",
                 "List Service",
                 "Team",
+                "File",
                 // "Search",
                 "Socket",
                 "Notification",

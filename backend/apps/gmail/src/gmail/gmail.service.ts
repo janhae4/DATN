@@ -7,6 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { SendMailDto, ReplyMailDto, GetMailListDto, GetMailDetailDto, User, SendEmailVerificationDto } from '@app/contracts';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { RmqClientService } from '@app/common';
+import { AuthCacheService } from '@app/redis-service';
 
 @Injectable()
 export class GmailService {
@@ -15,7 +16,7 @@ export class GmailService {
 
     constructor(
         private readonly configService: ClientConfigService,
-        private readonly amqpConnection: RmqClientService,
+        private readonly authCache: AuthCacheService,
         private readonly mailerService: MailerService,
     ) {
         this.oauth2Client = new google.auth.OAuth2(
@@ -30,7 +31,7 @@ export class GmailService {
      */
     private async getGmailClient(userId: string): Promise<gmail_v1.Gmail> {
         try {
-            const tokens = await this.getUserTokens(userId);
+            const tokens = await this.authCache.getGoogleToken(userId);
 
             this.oauth2Client.setCredentials({
                 access_token: tokens.accessToken,
@@ -41,30 +42,6 @@ export class GmailService {
         } catch (error) {
             this.logger.error(`Failed to get Gmail client for user ${userId}`, error);
             throw new Error('Failed to authenticate with Gmail. Please link your Google account first.');
-        }
-    }
-
-    /**
-     * Get user's OAuth tokens from Redis via RabbitMQ
-     */
-    private async getUserTokens(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
-        this.logger.log(`Fetching Gmail tokens for user: ${userId}`);
-
-        try {
-            const tokens = await this.amqpConnection.request<{ accessToken: string; refreshToken: string }>({
-                exchange: REDIS_EXCHANGE,
-                routingKey: REDIS_PATTERN.GET_GOOGLE_TOKEN,
-                payload: userId,
-            });
-
-            if (!tokens || !tokens.refreshToken) {
-                throw new Error('No Google account linked');
-            }
-
-            return tokens;
-        } catch (error) {
-            this.logger.error(`Failed to get tokens for user ${userId}`, error);
-            throw new Error('User tokens not found. Please link your Google account first.');
         }
     }
 

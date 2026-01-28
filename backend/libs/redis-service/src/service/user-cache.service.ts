@@ -18,6 +18,11 @@ export class UserCacheService {
         return `user:profile:${userId}`;
     }
 
+    async delete(userId: string) {
+        const key = this.getUserInfoKey(userId);
+        await this.redisService.del(key);
+    }
+
     async cacheUserProfile(user: User) {
         const key = this.getUserInfoKey(user.id);
         await this.redisService.set(key, user, TTL_24_HOURS);
@@ -35,6 +40,8 @@ export class UserCacheService {
             routingKey: USER_PATTERNS.FIND_ONE,
             payload: userId,
         })
+
+        console.log("fetchData in getUserInfo: ", fetchData)
 
         if (fetchData) {
             await this.cacheUserProfile(fetchData);

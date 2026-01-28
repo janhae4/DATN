@@ -291,11 +291,6 @@ export class AuthService {
       ),
     ]);
 
-    console.log(this.jwtService.decode(refreshToken));
-
-    console.log("==========================================");
-    console.log("NEW Refresh Token:", refreshToken.substring(refreshToken.length - 20));
-    console.log("==========================================");
     const tokenDigest = this.hashToken(refreshToken);
     const hashedRefresh = await bcrypt.hash(tokenDigest, 10);
 
@@ -303,7 +298,7 @@ export class AuthService {
     if (user instanceof User) {
       await this.userCacheService.cacheUserProfile(user)
     }
-    
+
     if (!accessToken || !refreshToken) throw new NotFoundException('Failed to generate tokens');
 
     return { accessToken, refreshToken };
@@ -324,6 +319,7 @@ export class AuthService {
       linkedUser,
     } = data;
 
+    console.log("linkedUser in handleLinking: ", linkedUser)
     const user = await this.verifyToken<JwtDto>(linkedUser ?? '');
     if (!user) {
       this.logger.warn('OAuth linking attempt without valid user session.');
@@ -342,12 +338,6 @@ export class AuthService {
       );
       throw new BadRequestException('Google account already linked');
     }
-
-    const currentUser = await this.amqp.request<User>({
-      exchange: USER_EXCHANGE,
-      routingKey: USER_PATTERNS.FIND_ONE,
-      payload: user,
-    })
 
     this.logger.log(`Storing Google tokens for user ${user.id}.`);
     console.log("access token when linking: ", accessToken)
@@ -372,6 +362,7 @@ export class AuthService {
     this.logger.log(
       `Google account ${email} linked successfully to user ${user.id}.`,
     );
+    await this.userCacheService.delete(user.id)
     return { message: 'Google account linked successfully' };
   }
 
@@ -441,6 +432,7 @@ export class AuthService {
       this.logger.log(`Routing to handleLinking for ${data.email}.`);
       return await this.handleLinking(data, account);
     }
+    console.log("account in google callback: ", account)
 
     if (account) {
       this.logger.log(`Routing to handleLoginGoogle for ${data.email}.`);

@@ -39,7 +39,7 @@ export class RpcErrorToHttpFilter implements ExceptionFilter {
 
     return response.status(status).json({
       timestamp: new Date().toISOString(),
-      path: request.url,
+      // path: request.url,
       ...errorResponse as object,
     });
   }

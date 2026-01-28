@@ -4,21 +4,17 @@ import { AUTH_EXCHANGE, AUTH_PATTERN } from '@app/contracts';
 import { CreateEventDto } from 'apps/api-gateway/src/calendar/dto/create-event.dto';
 import { UpdateEventDto } from 'apps/api-gateway/src/calendar/dto/update-event.dto';
 import { RmqClientService } from '@app/common';
+import { AuthCacheService } from '@app/redis-service';
 
 @Injectable()
 export class CalendarService {
   constructor(
-    private readonly amqp: RmqClientService,
+    private readonly authCache: AuthCacheService
   ) { }
 
   private async getCalendarClient(userId: string): Promise<calendar_v3.Calendar> {
     try {
-      const tokens = await this.amqp.request<any>({
-        exchange: AUTH_EXCHANGE,
-        routingKey: AUTH_PATTERN.GET_GOOGLE_TOKEN,
-        payload: userId,
-      });
-
+      const tokens = await this.authCache.getGoogleToken(userId);
       if (!tokens || (!tokens.accessToken && !tokens.refreshToken)) {
         throw new UnauthorizedException('User has not linked Google Calendar');
       }

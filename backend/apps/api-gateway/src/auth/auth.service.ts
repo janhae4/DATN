@@ -184,13 +184,11 @@ export class AuthService {
   }
 
   async handleGoogleCallback(user: GoogleAccountDto, response: Response) {
-    const tokens = await this.amqp.request<LoginResponseDto>({
+    await this.amqp.request<LoginResponseDto>({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.GOOGLE_CALLBACK,
       payload: user
     });
-    this.setCookies(tokens.accessToken, tokens.refreshToken, response);
-    console.log("GOOGLE CALLBACK SET COOKIES");
     return response.redirect(`${process.env.CLIENT_URL || 'http://localhost:5000'}/dashboard`);
   }
 
@@ -226,7 +224,7 @@ export class AuthService {
         payload: userId,
       });
 
-      console.log(user)
+      console.log("user in getGoogleConnectionStatus: ", user)
 
       if (user && user.accounts) {
         const isLinked = user.accounts.some(

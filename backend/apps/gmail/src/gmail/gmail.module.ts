@@ -14,6 +14,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { GmailController } from './gmail.controller';
 import { GmailService } from './gmail.service';
 import { RmqModule } from '@app/common';
+import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
     imports: [
@@ -37,7 +38,8 @@ import { RmqModule } from '@app/common';
         }),
         RmqModule.register({
             exchanges: [{ name: GMAIL_EXCHANGE, type: 'direct' }],
-        })
+        }),
+        RedisServiceModule
     ],
     controllers: [GmailController],
     providers: [GmailService],
