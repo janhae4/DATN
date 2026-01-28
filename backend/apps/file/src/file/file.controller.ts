@@ -1,10 +1,11 @@
 import { Controller } from '@nestjs/common';
-import { FileService } from './file.service';
 import { RabbitRPC, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { FILE_PATTERN, DeleteFilePayload, FILE_EXCHANGE, UploadFilePayload, UpdateFilePayload, EVENTS_EXCHANGE, FileStatus, CreateFolder, DeleteManyFilePayload } from '@app/contracts';
 import { customErrorHandler } from '@app/common';
-import { Response } from 'express';
 import { File, FileDocument } from './schema/file.schema';
+import { FileService } from './file.service';
+import type { S3Object } from './file.service';
+
 
 @Controller()
 export class FileController {
@@ -70,7 +71,6 @@ export class FileController {
     teamId?: string,
     payload: Partial<File>
   }) {
-    console.log(body);
     return await this.fileService.updateManyFile(body.fileIds, body.payload, body.userId, body.projectId, body.teamId);
   }
 
@@ -81,7 +81,6 @@ export class FileController {
     errorHandler: customErrorHandler
   })
   async handleInitialUpload(payload: UploadFilePayload) {
-    console.log(payload);
     return await this.fileService.createPreSignedUrl(
       payload.fileName,
       payload.userId,
@@ -166,15 +165,14 @@ export class FileController {
     return await this.fileService.createPreSignedUpdateUrl(fileId, newFileName, userId, projectId);
   }
 
-  @RabbitSubscribe({
+  @RabbitRPC({
     exchange: FILE_EXCHANGE,
     routingKey: FILE_PATTERN.COMPLETE_UPLOAD,
     queue: FILE_PATTERN.COMPLETE_UPLOAD,
     errorHandler: customErrorHandler
   })
-  async handleUploadCompletion(storageKey: string) {
-    console.log("storageKey", storageKey);
-    return await this.fileService.handleUploadCompletion(storageKey);
+  async handleUploadCompletion(payload: S3Object) {
+    return await this.fileService.handleUploadCompletion(payload);
   }
 
   @RabbitRPC({

@@ -17,6 +17,7 @@ import { MinioService } from '@app/minio';
       ],
     }),
     MongooseModule.forRootAsync({
+
       useFactory: (configService: ClientConfigService) => ({
         uri: configService.getFileDatabaseUrl()
       }),

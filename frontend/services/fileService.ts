@@ -101,9 +101,10 @@ export const fileService = {
   },
 
   getPreviewUrl: async (fileId: string, projectId?: string): Promise<{ viewUrl: string }> => {
+    const params = projectId ? { projectId } : {};
     const response = await apiClient.get<{ viewUrl: string }>(
       `/files/${fileId}/preview`,
-      { params: { projectId } }
+      { params }
     );
     return response.data;
   },

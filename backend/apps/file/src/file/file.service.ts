@@ -10,6 +10,15 @@ import { MinioService } from '@app/minio';
 import { TeamCacheService } from '@app/redis-service';
 import mime from 'mime-types';
 
+export interface S3Object {
+    key: string;
+    size: number;
+    eTag: string;
+    contentType: string;
+    sequencer: string;
+}
+
+
 @Injectable()
 export class FileService {
     private readonly logger = new Logger(FileService.name)
@@ -86,7 +95,7 @@ export class FileService {
                 type: FileType.FILE,
                 status: FileStatus.PENDING,
                 createdAt: new Date(),
-                visibility: FileVisibility.PRIVATE
+                visibility: FileVisibility.PRIVATE,
             });
         } catch (dbError) {
             this.logger.error(`DB create PENDING failed: ${dbError.message}`);
@@ -126,7 +135,12 @@ export class FileService {
         return newFolder;
     }
 
-    async handleUploadCompletion(storageKey: string) {
+    async handleUploadCompletion(payload: S3Object) {
+        const {
+            key: storageKey,
+            size,
+            contentType,
+        } = payload;
         this.logger.log(`Handle upload completion for ${storageKey}`);
 
         const file = await this.fileModel.findOne({ storageKey: storageKey });
@@ -134,8 +148,6 @@ export class FileService {
             this.logger.error(`File ${storageKey} not found`);
             throw new NotFoundException(`File not found`);
         }
-
-        const metadata = await this.minioService.getObjectMetadata(storageKey);
 
         const fileOriginalName = file.pendingNewName || file.originalName;
 
@@ -145,8 +157,8 @@ export class FileService {
                     $set: {
                         originalName: fileOriginalName,
                         status: FileStatus.UPLOADED,
-                        size: metadata?.size || 0,
-                        mimetype: metadata?.metaData?.['content-type'] || 'application/octet-stream',
+                        size: size,
+                        mimetype: contentType,
                     },
                     $unset: {
                         pendingNewName: ''
@@ -184,7 +196,8 @@ export class FileService {
 
     async confirmUpload(fileId: string, userId: string, projectId?: string) {
         const { file } = await this._verifyPermission(fileId, userId, projectId);
-        return this.handleUploadCompletion(file.storageKey);
+        file.status = FileStatus.UPLOADED;
+        await file.save();
     }
 
     async getFiles(
@@ -231,7 +244,6 @@ export class FileService {
         if (parentId) {
             query.parentId = parentId;
         }
-        console.log(query)
 
         const [files, totalItems] = await Promise.all([
             this.fileModel
@@ -293,8 +305,6 @@ export class FileService {
             const member = await this.teamCache.getTeamMember(teamId, userId);
             currentUserRole = member?.role || MemberRole.MEMBER;
         }
-
-        console.log(fileIds)
 
         const query: FilterQuery<FileDocument> = { _id: { $in: fileIds } };
         if (teamId) query.teamId = teamId;
@@ -360,7 +370,6 @@ export class FileService {
             ...(payload.projectId && { projectId: payload.projectId }),
         }
 
-        console.log(updateData);
         try {
             const updatedFile = await this.fileModel.findByIdAndUpdate(
                 fileId,
@@ -457,9 +466,6 @@ export class FileService {
             ...permissionOverride
         };
 
-        console.log(updateData, payload);
-
-
         try {
 
             const result = await this.fileModel.updateMany(
@@ -544,10 +550,6 @@ export class FileService {
         const { file } = await this._verifyPermission(fileId, userId, projectId, teamId);
 
         const fileExtension = path.extname(file.originalName).toLowerCase();
-        const allowedViewTypes = ['.pdf', '.txt', '.jpg', '.jpeg', '.png', '.gif'];
-        if (!allowedViewTypes.includes(fileExtension)) {
-            throw new BadRequestException('File type cannot be viewed directly.');
-        }
 
         const viewUrl = await this.minioService.getPreSignedViewUrl(
             file.storageKey,

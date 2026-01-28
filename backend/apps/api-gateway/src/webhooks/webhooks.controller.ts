@@ -19,15 +19,15 @@ export class WebhooksController {
     @Body() payload: MinioWebhookEvent,
     @Res() res: Response,
   ) {
-    console.log("[WEBHOOK] handleUploadCompletion", payload);
-    try { 
-      const storageKey = payload.Records?.[0]?.s3?.object?.key;
+    console.log("[WEBHOOK] handleUploadCompletion", payload.Records?.[0]?.s3?.object);
+    try {
+      const storageKey = payload.Records?.[0]?.s3?.object;
       if (!storageKey) {
         this.logger.warn('[WEBHOOK] Payload không hợp lệ, thiếu key');
         return res.status(HttpStatus.BAD_REQUEST).send('Invalid payload');
       }
 
-      await this.webhookService.handleUploadCompletion(storageKey);
+      await this.webhookService.handleUploadCompletion(payload.Records?.[0]?.s3?.object);
       return res.status(HttpStatus.OK).send('Webhook processed');
     } catch (error) {
       this.logger.error(`[WEBHOOK] Xử lý thất bại: ${error.message}`, error.stack);

@@ -15,7 +15,7 @@ interface FilePreviewContentProps {
 export default function FilePreviewContent({ file }: FilePreviewContentProps) {
   const fileUrl = file.fileUrl;
   const fileName = file.fileName?.toLowerCase() || "";
-  const fileType = file.fileType?.toLowerCase() || "";
+  const fileType = file.mimeType?.toLowerCase() || "";
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,8 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
   const docxRef = useRef<HTMLDivElement>(null);
   const excelRef = useRef<HTMLDivElement>(null);
 
-  // Logic xác định loại file
+  console.log("file", file);
+
   const isDocx = fileName.endsWith(".docx") || (fileType.includes("document") && !fileType.includes("text"));
   const isExcel = fileName.match(/\.(xlsx|xls|csv)$/) || fileType.includes("spreadsheet") || fileType.includes("excel");
   const isPdf = fileName.endsWith(".pdf") || fileType === "application/pdf";
@@ -62,7 +63,7 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
         const res = await fetch(fileUrl);
         const arrayBuffer = await res.arrayBuffer();
         const wb = XLSX.read(arrayBuffer, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]]; // Lấy sheet đầu tiên
+        const ws = wb.Sheets[wb.SheetNames[0]];
         const html = XLSX.utils.sheet_to_html(ws);
 
         if (excelRef.current) {
@@ -92,7 +93,7 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
   if (isImage) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-zinc-100 dark:bg-zinc-950 p-4">
-        <Image
+        <img
           src={fileUrl}
           alt={fileName}
           width={0} height={0} sizes="100vw"

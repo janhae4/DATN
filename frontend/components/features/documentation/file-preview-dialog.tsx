@@ -64,7 +64,6 @@ export function FilePreviewDialog({
 
         {/* BODY (Render content) */}
         <div className="flex-1 w-full h-full overflow-hidden bg-zinc-100 dark:bg-zinc-900 relative">
-          {/* Kiểm tra fileUrl lần cuối để chắc chắn */}
           {file.fileUrl ? (
             <FilePreviewContent file={file} />
           ) : (
