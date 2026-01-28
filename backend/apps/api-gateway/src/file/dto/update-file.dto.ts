@@ -28,7 +28,8 @@ export class UpdateFiles extends UpdateFile {
 
 export class MoveFiles extends UpdateFiles {
     @IsUUID()
-    parentId: string
+    @IsOptional()
+    parentId?: string
 }
 
 export class BulkVisibility extends UpdateFiles {

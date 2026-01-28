@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CreateEpicDto,
@@ -11,50 +10,22 @@ import {
   TEAM_PATTERN,
   UpdateEpicDto
 } from '@app/contracts';
-=======
-import { Injectable } from '@nestjs/common';
-import { CreateEpicDto, Epic, MemberRole, UpdateEpicDto } from '@app/contracts';
->>>>>>> backend/v2/team-service
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { TeamCacheService } from '@app/redis-service';
+import { RmqClientService } from '@app/common';
 
 @Injectable()
 export class EpicsService {
   constructor(
     @InjectRepository(Epic)
     private readonly epicRepository: Repository<Epic>,
-    private readonly teamCache: TeamCacheService
+    private readonly teamCache: TeamCacheService,
+    private readonly amqp: RmqClientService
   ) { }
 
   async create(createEpicDto: CreateEpicDto, userId: string) {
-<<<<<<< HEAD
-      const project = await this.amqp.request<Project>({
-      exchange: PROJECT_EXCHANGE,
-      routingKey: PROJECT_PATTERNS.GET_BY_ID,
-      payload: { id: createEpicDto.projectId },
-    });
-
-    if (!project) {
-      throw new NotFoundException('Project not found');
-    }
-
-    const teamId = createEpicDto.teamId || project.teamId;
-
-    // 2. Verify permission
-    await this.amqp.request({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: {
-        userId,
-        teamId,
-        roles: [MemberRole.MEMBER, MemberRole.ADMIN, MemberRole.OWNER]
-      },
-    });
-
-=======
     await this.teamCache.checkPermission(createEpicDto.teamId, userId, [MemberRole.ADMIN, MemberRole.OWNER, MemberRole.MEMBER]);
->>>>>>> backend/v2/team-service
     const existingEpic = await this.epicRepository.findOne({
       where: {
         projectId: createEpicDto.projectId,
@@ -66,7 +37,7 @@ export class EpicsService {
 
     const epic = this.epicRepository.create({
       ...createEpicDto,
-      teamId: teamId
+      teamId: createEpicDto.teamId
     });
     return this.epicRepository.save(epic);
   }
@@ -79,15 +50,7 @@ export class EpicsService {
     });
 
     if (project) {
-      await this.amqp.request({
-        exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-        payload: {
-          userId,
-          teamId: project.teamId,
-          roles: [MemberRole.MEMBER, MemberRole.ADMIN, MemberRole.OWNER]
-        },
-      });
+      await this.teamCache.checkPermission(project.teamId, userId);
     }
 
     return this.epicRepository.find({

@@ -8,6 +8,7 @@ import path from 'path';
 import { RmqClientService } from '@app/common';
 import { MinioService } from '@app/minio';
 import { TeamCacheService } from '@app/redis-service';
+import mime from 'mime-types';
 
 @Injectable()
 export class FileService {
@@ -65,6 +66,7 @@ export class FileService {
         const fileId = randomUUID();
         const extension = path.extname(originalName);
         const storageKey = `${fileId}${extension}`;
+        const fileType = mime.lookup(originalName) || 'application/octet-stream';
 
         if (parentId) {
             const parent = await this.fileModel.findOne({ _id: parentId, type: FileType.FOLDER });
@@ -79,6 +81,7 @@ export class FileService {
                 userId,
                 projectId,
                 teamId,
+                mimetype: fileType,
                 parentId: parentId || null,
                 type: FileType.FILE,
                 status: FileStatus.PENDING,
@@ -448,11 +451,13 @@ export class FileService {
         const updateData = {
             ...(payload.originalName && { originalName: payload.originalName }),
             ...(payload.status && { status: payload.status }),
-            ...(payload.parentId && { parentId: payload.parentId }),
+            ...(payload.parentId !== undefined && { parentId: payload.parentId }),
             ...(payload.visibility && { visibility: payload.visibility }),
             ...(payload.allowedUserIds && { allowedUserIds: payload.allowedUserIds }),
             ...permissionOverride
         };
+
+        console.log(updateData, payload);
 
 
         try {
