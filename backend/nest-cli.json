@@ -101,7 +101,10 @@
         "assets": [
           {
             "include": "templates/**/*",
-            "outDir": "dist/apps/gmail/templates",
+            "outDir": "dist/templates"
+          },
+          {
+            "include": "**/*.hbs",
             "watchAssets": true
           }
         ]
