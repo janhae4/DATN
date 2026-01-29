@@ -170,7 +170,7 @@ export class FileService {
             throw new BadRequestException('Failed to update file record');
         }
 
-        this.amqp.publish(
+        await this.amqp.publish(
             SOCKET_EXCHANGE,
             FILE_PATTERN.COMPLETE_UPLOAD,
             {
@@ -181,9 +181,9 @@ export class FileService {
             }
         );
 
-        this.amqp.publish(
-            CHATBOT_EXCHANGE,
-            CHATBOT_PATTERN.PROCESS_DOCUMENT,
+        console.log(`Processing file ${file._id}...`);
+
+        await this.amqp.publish(CHATBOT_EXCHANGE, CHATBOT_PATTERN.PROCESS_DOCUMENT,
             {
                 fileId: file._id,
                 storageKey: file.storageKey,

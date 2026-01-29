@@ -1,4 +1,5 @@
 from flashrank import Ranker, RerankRequest
+from langchain_core.documents import Document
 
 class RetrieverService:
     def __init__(self, embeddings, use_reranker: bool = False):
@@ -22,7 +23,6 @@ class RetrieverService:
         for i, doc in enumerate(documents):
             content = doc.page_content if hasattr(doc, "page_content") else doc.get("content", "")
             meta = doc.metadata if hasattr(doc, "metadata") else doc.get("metadata", {})
-            
             passages.append({
                 "id": str(i),
                 "text": content,
@@ -31,4 +31,14 @@ class RetrieverService:
         request = RerankRequest(query=query, passages=passages)
         results = self.ranker.rerank(request)
         print(f"[Reranker] Done. Top score: {results[0]['score'] if results else 'N/A'}")
-        return results
+        final_docs = []
+        for res in results:
+            new_metadata = res.get('meta', {})
+            new_metadata['score'] = res.get('score') 
+            doc = Document(
+                page_content=res.get('text'),
+                metadata=new_metadata
+            )
+            final_docs.append(doc)
+
+        return final_docs

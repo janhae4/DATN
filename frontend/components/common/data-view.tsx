@@ -1,8 +1,8 @@
 "use client";
 
 import { DataViewProps } from "@/types/data-view";
-import { DataGrid } from "../features/documentation/data-grid";
-import { DataTable } from "../features/documentation/data-table";
+// import { DataGrid } from "../features/documentation/data-grid";
+// import { DataTable } from "../features/documentation/data-table";
 import { Attachment } from "@/types";
 
 interface UnifiedDataViewProps<
@@ -17,8 +17,9 @@ export function DataView<TData extends Attachment, TValue>({
   ...props
 }: UnifiedDataViewProps<TData, TValue>) {
   if (mode === "grid") {
-    return <DataGrid<TData> {...props} />;
+    // return <DataGrid<TData> {...props} />;
   }
 
-  return <DataTable<TData, TValue> {...props} />;
+  // return <DataTable<TData, TValue> {...props} />;
+  return null;
 }

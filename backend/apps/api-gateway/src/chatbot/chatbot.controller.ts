@@ -203,9 +203,19 @@ export class ChatbotController {
           }
         });
       }
-      redisSub.subscribe(channel);
+      redisSub.subscribe(channel, (err) => {
+        if (err) console.error("Redis Subscribe Error", err);
+        else {
+          console.log(`Subscribed to ${channel}, triggering Python...`);
+
+          this.chatbotService.handleMessage(body.message, body.discussionId, userId, body.summarizeId)
+            .then(() => console.log("Sent signal to Python"))
+            .catch(e => console.error("Trigger Python failed", e));
+        }
+      });
 
       redisSub.on('message', async (chan, message) => {
+        console.log("Got message from Redis:", message);
         if (chan === channel) {
           const data = JSON.parse(message);
 

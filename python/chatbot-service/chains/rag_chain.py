@@ -40,7 +40,7 @@ class RAGChain:
     def _save_context_metadata(self, docs):
         formatted = []
         if not docs: 
-            self.last_retrieved_context = []
+            self.last_retrieved_context = {}
             return
             
         for doc in docs:
@@ -64,13 +64,17 @@ class RAGChain:
                 meta = {}
 
             formatted.append({
-                "source_id": meta.get("source", "unknown") if meta else "unknown",
-                "file_name": meta.get("file_name", "unknown") if meta else "unknown",
-                "snippet": content[:150].replace('\n', ' ') + "..." if content else ""
+                "source_id": meta.get("source", "unknown"),
+                "source_name": meta.get("file_name", "unknown"),
+                "chunk_id": 0,
+                "score": 0,
+                "snippet": content[:150]
             })
             
         print("[CONTEXT] Last retrieved context:", formatted)
-        self.last_retrieved_context = formatted
+        self.last_retrieved_context = {
+            "retrieved_context": formatted
+        }
         
     def get_last_retrieved_context(self):
         return self.last_retrieved_context if self.last_retrieved_context else []

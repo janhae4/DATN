@@ -141,6 +141,7 @@ class VectorStoreService:
             final_meta = {
                 "user_id": user_id,
                 "source": file_id,
+                "chunk_id": i,
                 "processed_at": processing_time
             }
             if team_id: final_meta["team_id"] = team_id

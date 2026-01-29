@@ -17,6 +17,7 @@ export class AiDiscussionController {
     queue: CHATBOT_PATTERN.FIND_CONVERSATION,
     errorHandler: customErrorHandler
   })
+
   async findConversation(payload: {
     userId: string;
     page: number;

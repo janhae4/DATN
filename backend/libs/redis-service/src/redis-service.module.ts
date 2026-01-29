@@ -14,9 +14,11 @@ const RedisProvider: Provider = {
     return new Redis({
       host: cfg.get('REDIS_CLIENT_HOST') || 'localhost',
       port: Number(cfg.get('REDIS_CLIENT_PORT')) || 6379,
+      keepAlive: 10000,
       retryStrategy: (times) => {
         return Math.min(times * 50, 2000);
-      }
+      },
+      connectTimeout: 10000,
     })
   },
   inject: [ConfigService]

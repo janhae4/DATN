@@ -257,7 +257,6 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   handleFileStatus(payload: { fileId: string, fileName: string, status: FileStatus, userId: string, teamId?: string }) {
-    console.log(payload)
     this.socketGateway.handleFileStatus(
       payload.fileId,
       payload.fileName,

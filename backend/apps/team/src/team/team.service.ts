@@ -874,11 +874,16 @@ export class TeamService {
 
   async findByUserId(userId: string) {
     console.log('Finding teams for user in service:', userId);
-    return await this.teamRepo.find({
-      where: {
-        members: { userId, status: MemberStatus.ACCEPTED },
-      }
-    });
+    try {
+      return await this.teamRepo.find({
+        where: {
+          members: { userId, status: MemberStatus.ACCEPTED },
+        }
+      });
+    } catch (error) {
+      console.error('Error finding teams for user:', error);
+      throw error;
+    }
   }
 
   async findRoomsByUserId(userId: string) {

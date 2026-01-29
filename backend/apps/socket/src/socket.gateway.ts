@@ -496,6 +496,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else if (type === 'end') {
 
       const fullMessage = client.data.accumulatedMessage || '';
+      console.log("fullMessage", fullMessage);
 
       if (fullMessage.trim().length > 0) {
         const savedMessage = await this.amqpConnection.request<AiDiscussionDto>({

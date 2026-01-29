@@ -179,20 +179,15 @@ async def ingestion_callback(
                 raise ValueError("Payload bị thiếu các trường bắt buộc (userId, fileId, storageKey, originalName).")
             
             print(f"--> Bắt đầu xử lý file '{file_name}' cho user '{user_id}'.")
-            await send_notification(channel, user_id, file_id, "processing", f"File '{original_name}' is being processed.")
-            await send_status_file(channel, user_id, file_id, original_name, "processing", team_id)
+            await send_status_file(channel, user_id, storage_key, original_name, "processing", team_id)
             await vectorstore_service.process_and_store(
                 user_id=user_id,
-                team_id=team_id,
-                file_id=file_id,
-                original_name=original_name,
-                storage_key=storage_key,
-                channel=channel,
-                search_exchange=search_exchange
+                file_id=storage_key,
+                search_exchange=search_exchange,
+                team_id=team_id
             )
             print(f"--> Xử lý file thành công!")
             await send_status_file(channel, user_id, file_id, original_name, "completed", team_id)
-            await send_notification(channel, user_id, original_name, "success", f"File '{original_name}' had been processed successfully.")
 
         except Exception as e:
             error_message = str(e)
@@ -201,7 +196,6 @@ async def ingestion_callback(
                 user_id = payload_dto.get('userId')
                 file_id = payload_dto.get('fileId')
                 original_name = payload_dto.get('originalName', 'unknown file')
-                await send_notification(channel, user_id, file_id, "failed", f"Failed to process '{original_name}': {error_message}")
                 await send_status_file(channel, user_id, file_id ,original_name, "failed", team_id)
 
 async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, task_architect: TaskArchitect, vectorstore_service: VectorStoreService,channel: Channel):
@@ -211,7 +205,6 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
     print(f"\n[ACTION] Nhận được yêu cầu tương tác mới...")
     
     socket_id, user_id, discussion_id, team_id = None, None, None, None
-    membersToNotify = []
     pattern_from_key = "unknown"
     retrieved_metadata = None
     
@@ -234,15 +227,17 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
             user_id = payload_dto.get('userId')
             discussion_id = payload_dto.get('discussionId')
             team_id = payload_dto.get('teamId')
-            membersToNotify = payload_dto.get('membersToNotify', [])
 
             print(f"Socket ID: {socket_id}, User ID: {user_id}, Discussion ID: {discussion_id}, Team ID: {team_id}")
+            print(f"--> [RAG] Bắt đầu tương tác...")
+            print(f"--> [RAG] Pattern from key: {pattern_from_key == 'ask_question'}")
 
             if pattern_from_key == 'suggest_task':
                 if not user_id: raise ValueError("Thiếu userId cho luồng gợi ý task.")
             else:
                 if not all([user_id, discussion_id]):
                     raise ValueError("Thiếu socketId hoặc discussionId cho luồng chat.")
+
 
             if pattern_from_key == 'ask_question':
                 question = payload_dto.get('question')
@@ -339,7 +334,8 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
             if pattern_from_key == 'suggest_task' and user_id:
                 await publish_suggest_task_response(user_id, {"type": "error", "message": str(e)})
             elif socket_id and discussion_id:
-                await publish_response(channel, socket_id, discussion_id, str(e), "error", team_id)         
+                await publish_response(channel, socket_id, discussion_id, str(e), "error", team_id) 
+            return        
 async def on_team_deleted(message: IncomingMessage, vector_store: VectorStoreService):
     """
     Callback lắng nghe sự kiện xóa team từ NestJS và xóa collection 

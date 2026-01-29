@@ -172,6 +172,7 @@ export class FileController {
     errorHandler: customErrorHandler
   })
   async handleUploadCompletion(payload: S3Object) {
+    console.log("handleUploadCompletion", payload);
     return await this.fileService.handleUploadCompletion(payload);
   }
 

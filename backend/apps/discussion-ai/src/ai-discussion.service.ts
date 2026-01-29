@@ -19,13 +19,14 @@ import {
   SenderSnapshotDto,
   TEAM_EXCHANGE,
   TEAM_PATTERN,
+  User,
   USER_EXCHANGE,
   USER_PATTERNS,
 } from '@app/contracts';
 import { AiDiscussion, TeamSnapshot } from './schema/ai-discussion.schema';
 import { AiMessage } from './schema/message.schema';
 import { RmqClientService } from '@app/common';
-import { TeamCacheService } from '@app/redis-service';
+import { TeamCacheService, UserCacheService } from '@app/redis-service';
 
 @Injectable()
 export class AiDiscussionService {
@@ -39,7 +40,8 @@ export class AiDiscussionService {
     @InjectConnection()
     private readonly connection: mongoose.Connection,
     private readonly amqp: RmqClientService,
-    private readonly teamCache: TeamCacheService
+    private readonly teamCache: TeamCacheService,
+    private readonly userCache: UserCacheService
   ) { }
 
   private createLatestMessageSnapshot(messageDoc: AiMessage): AiMessageSnapshot {
@@ -50,27 +52,6 @@ export class AiDiscussionService {
       metadata: messageDoc.metadata as MessageMetadataDto,
       createdAt: messageDoc.timestamp,
     };
-  }
-
-  private async findDiscussionByContext(
-    userId: string,
-    teamId?: string,
-  ): Promise<AiDiscussion | null> {
-
-    let query: FilterQuery<AiDiscussion>;
-
-    if (teamId) {
-      this.logger.log(`Finding discussion for team ${teamId}`);
-      query = { teamId: teamId };
-    } else {
-      this.logger.log(`Finding 1-on-1 discussion for user ${userId}`);
-      query = {
-        ownerId: userId,
-        teamId: { $exists: false }
-      };
-    }
-
-    return await this.aiDiscussionModel.findOne(query);
   }
 
   private async checkDiscussionAuth(options: {
@@ -119,26 +100,8 @@ export class AiDiscussionService {
     throw new ForbiddenException('You do not have permission to access this discussion.');
   }
 
-  private async getSenderSnapshot(userId: string): Promise<SenderSnapshotDto> {
-    try {
-      const senders = await this.amqp.request<SenderSnapshotDto[]>({
-        exchange: USER_EXCHANGE,
-        routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-        payload: { userIds: [userId], forDiscussion: true },
-      });
-
-      if (!senders || senders.length === 0) {
-        throw new NotFoundException(`User with ID ${userId} not found.`);
-      }
-      return senders[0];
-    } catch (error) {
-      this.logger.error(`Failed to get sender snapshot for user ${userId}: ${error.message}`);
-      throw new BadRequestException('Failed to retrieve user data.');
-    }
-  }
-
   private async saveMessageToDiscussion(
-    sender: SenderSnapshotDto,
+    sender: User,
     message: string,
     teamId: string | undefined,
     metadata: MessageMetadataDto | undefined,
@@ -186,14 +149,14 @@ export class AiDiscussionService {
 
   private async publishToChatbotService(
     discussion: AiDiscussion,
-    sender: SenderSnapshotDto,
+    sender: User,
     message: string,
     membersToNotify: string[],
     summarizeFileName?: string,
     socketId?: string,
   ) {
     const requestPayload = {
-      userId: sender._id,
+      userId: sender.id,
       teamId: discussion.teamId,
       discussionId: discussion._id?.toString(),
       socketId,
@@ -201,14 +164,14 @@ export class AiDiscussionService {
     };
 
     if (summarizeFileName) {
-      this.logger.log(`Emitting to RAG_CLIENT (summarize_document) for user ${sender._id}.`);
+      this.logger.log(`Emitting to RAG_CLIENT (summarize_document) for user ${sender.id}.`);
       this.amqp.publish(
         CHATBOT_EXCHANGE,
         CHATBOT_PATTERN.SUMMARIZE_DOCUMENT,
         { ...requestPayload, summarizeFileName },
       );
     } else {
-      const chatHistory = await this.getChatHistory(discussion._id as mongoose.Types.ObjectId, sender._id);
+      const chatHistory = await this.getChatHistory(discussion._id as mongoose.Types.ObjectId, sender.id);
       this.amqp.publish(
         CHATBOT_EXCHANGE,
         CHATBOT_PATTERN.ASK_QUESTION,
@@ -242,7 +205,11 @@ export class AiDiscussionService {
     summarizeFileName?: string,
     socketId?: string,
   ) {
-    const sender = await this.getSenderSnapshot(userId);
+    const sender = await this.userCache.getUserInfo(userId);
+
+    if (!sender) {
+      throw new NotFoundException('User not found');
+    }
 
     try {
       const aiDiscussion = await this.saveMessageToDiscussion(
@@ -296,7 +263,10 @@ export class AiDiscussionService {
     discussionId?: string,
     summarizeFileName?: string
   ) {
-    const sender = await this.getSenderSnapshot(userId);
+    const sender = await this.userCache.getUserInfo(userId);
+    if (!sender) {
+      throw new NotFoundException('User not found');
+    }
     try {
       const aiDiscussion = await this.saveMessageToDiscussion(
         sender,
@@ -343,18 +313,23 @@ export class AiDiscussionService {
   }
 
   private async addMessageToExistingDiscussion(
-    sender: SenderSnapshotDto,
+    sender: User,
     discussionId: string,
     message: string,
     metadata: MessageMetadataDto | undefined,
   ): Promise<AiDiscussion> {
-    const discussion = await this.checkDiscussionAuth({ userId: sender._id, discussionId });
+    const discussion = await this.checkDiscussionAuth({ userId: sender.id, discussionId });
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
       const messageDoc = new this.aiMessageModel({
         discussionId: discussion._id,
-        sender: sender,
+        sender: {
+          _id: sender.id,
+          name: sender.name,
+          avatar: sender.avatar,
+          status: MemberShip.ACTIVE
+        },
         content: message,
         metadata,
       });
@@ -389,7 +364,7 @@ export class AiDiscussionService {
   }
 
   private async createNewDiscussionWithMessage(
-    sender: SenderSnapshotDto,
+    sender: User,
     teamId: string | undefined,
     message: string,
     metadata: MessageMetadataDto | undefined,
@@ -401,14 +376,19 @@ export class AiDiscussionService {
       const newConvData: Partial<AiDiscussion> = {
         name: message.substring(0, 30) + '...',
         teamId: teamId,
-        ownerId: teamId ? undefined : sender._id,
+        ownerId: teamId ? undefined : sender.id,
       };
       this.logger.log("Creating AiDiscussion with data:", newConvData);
       const [discussion] = await this.aiDiscussionModel.create([newConvData], { session });
       this.logger.log(`AiDiscussion created with ID: ${discussion._id}`);
       const messageDoc = new this.aiMessageModel({
         discussionId: discussion._id,
-        sender,
+        sender: {
+          _id: sender.id,
+          name: sender.name,
+          avatar: sender.avatar,
+          status: MemberShip.ACTIVE
+        },
         content: message,
         metadata,
       });

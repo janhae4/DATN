@@ -8,11 +8,10 @@ export class WebhooksService {
     constructor(private readonly amqp: RmqClientService) { }
 
     async handleUploadCompletion(object: S3Object) {
-        return await this.amqp.request({
-            exchange: FILE_EXCHANGE,
-            routingKey: FILE_PATTERN.COMPLETE_UPLOAD,
-            payload: object
-        }
+        return await this.amqp.publish(
+            FILE_EXCHANGE, 
+            FILE_PATTERN.COMPLETE_UPLOAD,
+            object
         );
     }
 }
