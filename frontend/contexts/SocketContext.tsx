@@ -8,9 +8,11 @@ import React, {
   ReactNode,
 } from "react";
 import { io, Socket } from "socket.io-client";
-import { useAuth } from "@/contexts/AuthContext"; 
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4001";
+const SOCKET_URL =
+  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4001";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -64,11 +66,18 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         setIsConnected(false);
       });
 
+      newSocket.on("file_status", (data) => {
+        if (data.status === "completed") {
+          toast.success(`File ${data.name} has been processed by AI! You are now able to chat!`);
+        } else if (data.status === "failed") {
+          toast.error(`File ${data.name} processing failed!`);
+        }
+      });
+
       setSocket(newSocket);
     }
 
-    return () => {
-    };
+    return () => {};
   }, [user, isLoading, socket]);
 
   const value = {

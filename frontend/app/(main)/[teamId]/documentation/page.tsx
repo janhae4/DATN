@@ -176,6 +176,8 @@ export default function AttachmentPage() {
     deleteFiles,
     downloadFiles,
     changeVisibility,
+    pagination,
+    isLoading,
   } = useFiles(
     selectedProjectId,
     teamId,
@@ -280,7 +282,7 @@ export default function AttachmentPage() {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250, 
+        delay: 250,
         tolerance: 5,
       },
     }),
@@ -867,6 +869,44 @@ export default function AttachmentPage() {
               </DragOverlay>,
               document.body,
             )}
+            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm flex items-center justify-between shrink-0">
+              <div className="text-sm text-zinc-500 font-medium">
+                Page {paginationState.pageIndex + 1} of{" "}
+                {pagination?.totalPages || 1}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPaginationState((prev) => ({
+                      ...prev,
+                      pageIndex: Math.max(0, prev.pageIndex - 1),
+                    }))
+                  }
+                  disabled={paginationState.pageIndex === 0 || isLoading}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPaginationState((prev) => ({
+                      ...prev,
+                      pageIndex: prev.pageIndex + 1,
+                    }))
+                  }
+                  disabled={
+                    paginationState.pageIndex + 1 >=
+                      (pagination?.totalPages || 1) || isLoading
+                  }
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           </div>
 
           <CreateFolderDialog
