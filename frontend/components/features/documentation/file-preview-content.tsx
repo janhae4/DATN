@@ -21,12 +21,9 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State to hold Excel data (Array of Arrays)
   const [excelData, setExcelData] = useState<any[][]>([]);
-
+  const [docBuffer, setDocBuffer] = useState<ArrayBuffer | null>(null);
   const docxRef = useRef<HTMLDivElement>(null);
-
-  // --- 1. ROBUST FILE TYPE DETECTION ---
 
   const isDocx = useMemo(() => {
     const validExts = ["docx", "doc"];
@@ -40,11 +37,11 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
   const isExcel = useMemo(() => {
     const validExts = ["xlsx", "xls", "csv"];
     const validMimes = [
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // Standard .xlsx
-      "application/vnd.ms-excel", // Standard .xls
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
       "text/csv",
     ];
-    // MinIO sometimes returns generic "spreadsheet" or "excel" types
+
     return (
       validExts.includes(extension) ||
       validMimes.includes(mimeType) ||
@@ -63,80 +60,76 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
   }, [extension, mimeType]);
 
   useEffect(() => {
-    if (!isDocx || !fileUrl) return;
+    if ((!isDocx && !isExcel) || !fileUrl) return;
 
     let isMounted = true;
-    const renderDocx = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(fileUrl);
-        if (!res.ok) throw new Error("Fetch failed");
-        // Docx Preview requires ArrayBuffer
-        const buffer = await res.arrayBuffer();
+        console.log("🚀 Bắt đầu tải file:", fileUrl);
 
-        if (docxRef.current && isMounted) {
-          docxRef.current.innerHTML = "";
-          await renderAsync(buffer, docxRef.current, undefined, {
-            className: "docx-wrapper",
-            inWrapper: true,
-            ignoreWidth: false,
-          });
+        const res = await fetch(fileUrl);
+        if (!res.ok) throw new Error(`Fetch failed: ${res.statusText}`);
+
+        const buffer = await res.arrayBuffer();
+        console.log("✅ Tải xong Buffer:", buffer.byteLength);
+
+        if (!isMounted) return;
+
+        if (isExcel) {
+          const wb = XLSX.read(buffer, { type: "array" });
+          if (wb.SheetNames.length === 0) throw new Error("No sheets found");
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+          setExcelData(data);
+          setIsLoading(false);
+        } else if (isDocx) {
+          const textDec = new TextDecoder("utf-8");
+          const head = textDec.decode(buffer.slice(0, 100));
+          if (head.includes("<?xml") && head.includes("Error")) {
+            throw new Error("File lỗi từ Server (Access Denied)");
+          }
+
+          setDocBuffer(buffer);
+          setIsLoading(false);
         }
-      } catch (err) {
-        console.error("Docx Error:", err);
-        if (isMounted) setError("Unable to preview this document.");
-      } finally {
-        if (isMounted) setIsLoading(false);
+      } catch (err: any) {
+        console.error("❌ Lỗi tải file:", err);
+        if (isMounted) {
+          setError(err.message || "Không thể tải file.");
+          setIsLoading(false);
+        }
       }
     };
-    renderDocx();
+
+    fetchData();
     return () => {
       isMounted = false;
     };
-  }, [fileUrl, isDocx]);
+  }, [fileUrl, isDocx, isExcel]);
 
   useEffect(() => {
-    if (!isExcel || !fileUrl) return;
+    if (!docBuffer || !docxRef.current) return;
 
-    let isMounted = true;
-    const renderExcel = async () => {
+    const render = async () => {
       try {
-        setIsLoading(true);
-        const res = await fetch(fileUrl);
-        if (!res.ok) throw new Error("Fetch failed");
+        docxRef.current!.innerHTML = "";
 
-        const arrayBuffer = await res.arrayBuffer();
-        const wb = XLSX.read(arrayBuffer, { type: "array" });
-
-        if (wb.SheetNames.length === 0) throw new Error("No sheets found");
-
-        const ws = wb.Sheets[wb.SheetNames[0]];
-
-        const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-        if (isMounted) setExcelData(data);
-      } catch (err) {
-        console.error("Excel Error:", err);
-        if (isMounted) setError("Unable to read this spreadsheet.");
-      } finally {
-        if (isMounted) setIsLoading(false);
+        await renderAsync(docBuffer, docxRef.current!, undefined, {
+          className: "docx-wrapper",
+          inWrapper: true,
+          ignoreWidth: false,
+          experimental: true,
+          useBase64URL: true,
+        });
+      } catch (error) {
+        console.error("Lỗi renderAsync:", error);
+        setError("Lỗi hiển thị nội dung file.");
       }
     };
-    renderExcel();
-    return () => {
-      isMounted = false;
-    };
-  }, [fileUrl, isExcel]);
 
-
-  if (isLoading && (isDocx || isExcel)) {
-    return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-        <span className="text-xs text-zinc-500">Loading preview...</span>
-      </div>
-    );
-  }
+    render();
+  }, [docBuffer]);
 
   if (error) {
     return (
@@ -179,7 +172,14 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
   if (isDocx) {
     return (
       <div className="h-full w-full overflow-auto bg-white">
-        <div ref={docxRef} className="p-8 min-h-full" />
+        <div
+          ref={docxRef}
+          className="p-8 min-h-full"
+          style={{
+            fontFamily: "Arial, sans-serif",
+            color: "#000",
+          }}
+        />
       </div>
     );
   }
@@ -189,7 +189,10 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
       <div className="h-full w-full overflow-auto bg-white p-4">
         {excelData.length > 0 ? (
           <div className="border rounded-md shadow-sm overflow-hidden inline-block min-w-full">
-            <table className="w-full text-sm text-left border-collapse">
+            <table
+              className="w-full text-sm text-left border-collapse"
+              style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+            >
               <thead className="bg-zinc-100 sticky top-0 z-10 shadow-sm">
                 <tr>
                   {excelData[0]?.map((cell: any, idx: number) => (

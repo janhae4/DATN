@@ -84,7 +84,7 @@ export function useFiles(
   });
 
   const downloadFile = async (fileId: string) => {
-    const url = `http://localhost:3000/files/${fileId}/download`;
+    const url = `http://${process.env.NEXT_PUBLIC_API_URL}/files/${fileId}/download`;
     window.open(url, '_blank');
   };
 

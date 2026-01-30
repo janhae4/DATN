@@ -223,7 +223,7 @@ services:
       - app-network
   api_gateway:
     <<: *nest-service
-    container_name: api_gateway
+    container_name: api-gateway
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -231,6 +231,10 @@ services:
           APP_NAME: api-gateway
     ports:
       - "3000:3000"
+    networks:
+      app-network:
+        aliases:
+          - api-gateway
 
   auth_service:
     <<: *nest-service
@@ -395,7 +399,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
+        NEXT_PUBLIC_SOCKET_URL: ws://127.0.0.1:4001
     container_name: nextjs_frontend
     restart: always
     ports:
@@ -403,7 +408,8 @@ services:
     environment:
       - PORT=5000
       - INTERNAL_API_URL=http://api_gateway:3000
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
+      - NEXT_PUBLIC_SOCKET_URL=ws://127.0.0.1:4001
     networks:
       - app-network
     extra_hosts:
