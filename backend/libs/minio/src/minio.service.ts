@@ -1,10 +1,14 @@
 import { BadRequestException, ClientConfigService, NotFoundException } from '@app/contracts';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as Minio from 'minio';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
 @Injectable()
 export class MinioService implements OnModuleInit {
     private readonly logger = new Logger(MinioService.name);
     private readonly minioClient: Minio.Client;
+    private readonly s3Signer: S3Client;
     private readonly bucketName: string;
 
     constructor(private configService: ClientConfigService) {
@@ -15,6 +19,16 @@ export class MinioService implements OnModuleInit {
             accessKey: configService.getAccessKeyMinio(),
             secretKey: configService.getSecretKeyMinio(),
         });
+        this.s3Signer = new S3Client({
+            endpoint: 'http://127.0.0.1:9000',
+            region: 'us-east-1',
+            credentials: {
+                accessKeyId: 'minioadmin',
+                secretAccessKey: 'minioadmin',
+            },
+            forcePathStyle: true,
+        });
+
         this.bucketName = configService.getBucketName();
     }
 
@@ -25,6 +39,7 @@ export class MinioService implements OnModuleInit {
     private async _ensureBucketExists() {
         try {
             const bucketExist = await this.minioClient.bucketExists(this.bucketName);
+            console.log('bucketExist', bucketExist);
             if (!bucketExist) {
                 await this.minioClient.makeBucket(this.bucketName);
                 this.logger.log(`Bucket ${this.bucketName} created`);
@@ -57,12 +72,11 @@ export class MinioService implements OnModuleInit {
         expiry: number = 60 * 5,
     ) {
         try {
-            const url = await this.minioClient.presignedPutObject(
-                this.bucketName,
-                key,
-                expiry,
-            );
-            return url;
+            const command = new PutObjectCommand({
+                Bucket: 'documents',
+                Key: key,
+            });
+            return await getSignedUrl(this.s3Signer, command, { expiresIn: 300 });
         } catch (err) {
             this.logger.error(`Minio getPreSignedUploadUrl failed for key ${key}:`, err);
             throw new BadRequestException('Get pre-signed upload URL failed');
@@ -89,18 +103,14 @@ export class MinioService implements OnModuleInit {
     ): Promise<string> {
         try {
             await this.minioClient.statObject(this.bucketName, storageKey);
+            const command = new GetObjectCommand({
+                Bucket: this.bucketName,
+                Key: storageKey,
+                ResponseContentDisposition: `inline; filename="${viewFilename}"`,
+            });
 
-            const reqParams = {
-                'response-content-disposition': `inline; filename="${viewFilename}"`
-            };
+            return await getSignedUrl(this.s3Signer, command, { expiresIn: expiry });
 
-            const url = await this.minioClient.presignedGetObject(
-                this.bucketName,
-                storageKey,
-                expiry,
-                reqParams
-            );
-            return url;
         } catch (err: any) {
             if (err.code === 'NoSuchKey' || err.code === 'NotFound') {
                 this.logger.error(`File not found in Minio for view URL: ${storageKey}`);
@@ -119,13 +129,14 @@ export class MinioService implements OnModuleInit {
         try {
             await this.minioClient.statObject(this.bucketName, storageKey);
 
-            const url = await this.minioClient.presignedGetObject(
-                this.bucketName,
-                storageKey,
-                expiry,
-                { 'response-content-disposition': `attachment; filename="${downloadFilename}"` }
-            );
-            return url;
+            const command = new GetObjectCommand({
+                Bucket: this.bucketName,
+                Key: storageKey,
+                ResponseContentDisposition: `attachment; filename="${downloadFilename}"`,
+            });
+
+            return await getSignedUrl(this.s3Signer, command, { expiresIn: expiry });
+
         } catch (err: any) {
             if (err.code === 'NoSuchKey' || err.code === 'NotFound') {
                 this.logger.error(`File not found in Minio for download URL: ${storageKey}`);

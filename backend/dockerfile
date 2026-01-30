@@ -19,5 +19,4 @@ RUN if [ "$APP_NAME" = "gmail" ]; then \
     echo "Skipping optional packages for $APP_NAME"; \
     fi
 COPY --from=builder /app/dist/apps/${APP_NAME} ./dist
-COPY --from=builder /app/apps/${APP_NAME}/src/templates ./templates
 CMD ["node", "dist/main"]

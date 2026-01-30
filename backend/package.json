@@ -81,6 +81,8 @@
     "test:e2e": "jest --config ./apps/backend/test/jest-e2e.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.978.0",
+    "@aws-sdk/s3-request-presigner": "^3.978.0",
     "@golevelup/nestjs-rabbitmq": "^6.0.2",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
