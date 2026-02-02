@@ -96,6 +96,7 @@ export class FileService {
                 status: FileStatus.PENDING,
                 createdAt: new Date(),
                 visibility: FileVisibility.PRIVATE,
+                size: 0
             });
         } catch (dbError) {
             this.logger.error(`DB create PENDING failed: ${dbError.message}`);
@@ -550,6 +551,18 @@ export class FileService {
         const { file } = await this._verifyPermission(fileId, userId, projectId, teamId);
 
         const fileExtension = path.extname(file.originalName).toLowerCase();
+        const allowedViewTypes = [
+            '.pdf', '.txt',
+            '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp',
+            '.docx', '.doc',
+            '.xlsx', '.xls', '.csv',
+            '.mp4', '.webm', '.ogg',
+            '.mp3', '.wav',
+            '.ppt', '.pptx'
+        ];
+        if (!allowedViewTypes.includes(fileExtension)) {
+            throw new BadRequestException(`File type ${fileExtension} cannot be viewed directly.`);
+        }
 
         const viewUrl = await this.minioService.getPreSignedViewUrl(
             file.storageKey,

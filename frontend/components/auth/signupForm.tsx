@@ -50,36 +50,18 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
     }));
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // 1. Gọi Register (Giả định AuthContext đã tự động Login sau khi Register)
       await register(formData);
-
-      // 2. Kiểm tra xem User này có Team nào chưa
-      try {
-        const teams = await teamService.getTeams();
-
-        if (teams && teams.length > 0) {
-          // Case A: Đã có team -> Vào Dashboard team đầu tiên
-          router.push(`/teams/${teams[0].id}/dashboard`);
-        } else {
-          // Case B: Người dùng mới tinh -> Vào trang tạo team
-          router.push("/team-create");
-        }
-      } catch (teamError) {
-        // Fallback: Nếu lỗi API lấy team -> Mặc định cho là người mới
-        console.error("Failed to fetch teams after signup:", teamError);
-        router.push("/team-create");
-      }
+      onToggle();
 
     } catch (error: any) {
       setIsLoading(false);
-      
-      // Xử lý lỗi hiển thị (như code bạn gửi)
+
       if (axios.isAxiosError(error) && error.response) {
         const serverMessage =
           error.response.data?.message || error.response.data?.error;
@@ -88,12 +70,9 @@ const handleSubmit = async (e: React.FormEvent) => {
         setError(error.message || "An error occurred.");
       }
     } finally {
-      // Lưu ý: Nếu thành công và redirect, component sẽ unmount nên setIsLoading(false) có thể không chạy,
-      // nhưng nếu lỗi thì nó sẽ chạy để tắt loading.
-      if (!error) { 
-         // Giữ loading true nếu đang redirect để tránh user bấm lung tung
+      if (!error) {
       } else {
-         setIsLoading(false);
+        setIsLoading(false);
       }
     }
   };
@@ -104,10 +83,9 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <div
-      className={`${styles.form_inner_container} ${
-        isActive ? styles.active_form : styles.inactive_form
-      } flex flex-col justify-center h-full`}
-      // h-full để container tận dụng chiều cao cha
+      className={`${styles.form_inner_container} ${isActive ? styles.active_form : styles.inactive_form
+        } flex flex-col justify-center h-full`}
+    // h-full để container tận dụng chiều cao cha
     >
       {/* Scrollable Area: Quan trọng cho Mobile khi bàn phím bật lên */}
       <div className="w-full max-w-[400px] mx-auto px-4 sm:px-0 overflow-y-auto max-h-full py-4 scrollbar-hide">
@@ -122,29 +100,17 @@ const handleSubmit = async (e: React.FormEvent) => {
             </p>
           </div>
 
-          {/* Social Login Section - Responsive Grid */}
-          <div className={styles.social_login_container}>
+          {/* Social Login Section */}
+          <div className="w-full">
             <Button
               variant="outline"
               onClick={handleGoogleLogin}
-              className={styles.social_button}
-              title="Sign up with Google"
+              className="w-full h-11 relative flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
             >
-              <Image src={GoogleIcon} alt="Google" width={20} height={20} />
-            </Button>
-            <Button
-              variant="outline"
-                className={styles.social_button}
-              title="Sign up with Facebook"
-            >
-              <Image src={FacebookIcon} alt="Facebook" width={20} height={20} />
-            </Button>
-            <Button
-              variant="outline"
-              className={styles.social_button}
-              title="Sign up with X"
-            >
-              <Image src={XIcon} alt="X" width={20} height={20} />
+              <div className="absolute left-4 flex items-center">
+              <Icon icon="simple-icons:google" width="20" height="20" />
+              </div>
+              <span className="font-medium text-gray-700 dark:text-gray-200">Sign up with Google</span>
             </Button>
           </div>
 

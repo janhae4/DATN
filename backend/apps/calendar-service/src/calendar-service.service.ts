@@ -169,9 +169,19 @@ export class CalendarService {
         eventId: eventId,
         requestBody: patchBody,
       });
+
+      if (dto.destinationCalendarId && dto.destinationCalendarId !== calendarId) {
+        const moveRes = await calendar.events.move({
+          calendarId: calendarId,
+          eventId: eventId,
+          destination: dto.destinationCalendarId,
+        });
+        return moveRes.data;
+      }
+
       return res.data;
     } catch (error) {
-      console.error(error);
+      console.error('Update Event Error:', error);
       throw new InternalServerErrorException('Failed to update event');
     }
   }

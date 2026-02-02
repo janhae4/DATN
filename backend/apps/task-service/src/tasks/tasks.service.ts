@@ -160,6 +160,34 @@ export class TasksService {
       await this.assignLabelsBulk(labelsToAssign);
     }
 
+    const userSkillMap = new Map<string, { skillName: string; exp: number }[]>();
+
+    createTaskDtos.forEach((dto) => {
+      if (dto.skillName && dto.exp && dto.assigneeIds && dto.assigneeIds.length > 0) {
+        dto.assigneeIds.forEach((userId) => {
+          const currentSkills = userSkillMap.get(userId) || [];
+          userSkillMap.set(userId, [
+            ...currentSkills,
+            { skillName: dto.skillName!, exp: dto.exp! },
+          ]);
+        });
+      }
+    });
+
+    const bulkPayload = Array.from(userSkillMap.entries()).map(([userId, skills]) => ({
+      userId,
+      skills,
+    }));
+
+    if (bulkPayload.length > 0) {
+      console.log("Sending bulk skill increment:", JSON.stringify(bulkPayload));
+      await this.amqpConnection.request({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.INCREMENT_BULK_SKILLS,
+        payload: bulkPayload,
+      });
+    }
+
     return savedTasks;
   }
 

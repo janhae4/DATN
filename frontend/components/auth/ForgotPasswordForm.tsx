@@ -53,8 +53,8 @@ export function ForgotPasswordForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="mt-4">
-          <Button 
-            className="w-full" 
+          <Button
+            className="w-full"
             onClick={() => router.push('/auth/login')}
           >
             Back to Login
@@ -82,20 +82,15 @@ export function ForgotPasswordForm() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="your@email.com" 
-                      type="email" 
+                    <Input
+                      placeholder="your@email.com"
+                      type="email"
                       autoComplete="email"
                       disabled={isLoading}
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
-                  {error && (
-                    <p className="text-sm font-medium text-destructive mt-2">
-                      {error}
-                    </p>
-                  )}
                 </FormItem>
               )}
             />
@@ -112,8 +107,8 @@ export function ForgotPasswordForm() {
           </form>
         </Form>
         <div className="mt-4 text-center text-sm">
-          <button 
-            onClick={() => router.push('/auth/login')}
+          <button
+            onClick={() => router.push('/auth')}
             className="text-primary hover:underline"
           >
             Back to Login

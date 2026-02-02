@@ -48,7 +48,6 @@ export const useTaskSocket = (teamId: string) => {
 
             switch (action) {
                 case 'APPROVED':
-                    toast.success(`${actor.name} approved ${taskName}`);
                     break;
                 case 'REJECTED':
                     toast.error(`${actor.name} rejected ${taskName}`);

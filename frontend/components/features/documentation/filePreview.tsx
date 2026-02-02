@@ -29,6 +29,34 @@ export default function FilePreview({ url }: FilePreviewProps) {
     extension,
   );
 
+  useEffect(() => {
+    if (!isDocx || !url) return;
+
+    let isMounted = true;
+    const renderDocx = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to fetch file");
+
+        const blob = await response.blob();
+
+        if (docxRef.current && isMounted) {
+          docxRef.current.innerHTML = "";
+          await renderAsync(blob, docxRef.current);
+        }
+      } catch (err) {
+        console.error("Docx Preview Error:", err);
+        if (isMounted) setError("Không thể hiển thị tài liệu này.");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    renderDocx();
+    return () => { isMounted = false; };
+  }, [url, isDocx]);
   console.log(
     "IS DOCX",
     isDocx,
@@ -59,7 +87,7 @@ export default function FilePreview({ url }: FilePreviewProps) {
             className: "docx-wrapper",
             inWrapper: true,
             ignoreWidth: false,
-            experimental: true, 
+            experimental: true,
           });
         }
       } catch (err: any) {

@@ -88,7 +88,6 @@ export function NavProjects({
       await deleteProject(projectToDelete);
       toast.success("Project deleted successfully");
 
-      // Redirect if current project is deleted
       if (currentProjectId === projectToDelete) {
         router.push(`/${teamId}`);
       }

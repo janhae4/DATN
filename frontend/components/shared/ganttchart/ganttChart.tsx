@@ -257,7 +257,7 @@ const GanttPage = () => {
         onStartTour={startTour}
       />
 
-      <div id="gantt-chart-container" className="flex-1 overflow-hidden">
+      <div id="gantt-chart-container" className="flex-1">
         {ganttTasks.length > 0 ? (
           <Gantt
             tasks={ganttTasks}

@@ -8,7 +8,7 @@ import { INestApplicationContext } from '@nestjs/common';
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
   private cfg: ClientConfigService;
-  
+
   constructor(private app: INestApplicationContext) {
     super(app);
     this.cfg = app.get(ClientConfigService);

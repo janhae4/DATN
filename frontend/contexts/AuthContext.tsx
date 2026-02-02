@@ -96,12 +96,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       await authService.register(data);
-      const loginResponse = await authService.login({
-        username: data.username,
-        password: data.password,
-      });
-      await fetchUserProfile();
-      return loginResponse;
+      // Removed auto-login logic as requested
+      return { success: true };
     } catch (error: any) {
       console.error("Registration error in AuthContext:", error);
       throw error;

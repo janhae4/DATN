@@ -100,6 +100,30 @@ export class AiDiscussionService {
     throw new ForbiddenException('You do not have permission to access this discussion.');
   }
 
+  private async getSenderSnapshot(userId: string): Promise<SenderSnapshotDto> {
+    try {
+      const senders = await this.amqp.request<any[]>({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+        payload: { userIds: [userId], forDiscussion: true },
+      });
+
+      if (!senders || senders.length === 0) {
+        throw new NotFoundException(`User with ID ${userId} not found.`);
+      }
+      const sender = senders[0];
+      return {
+        _id: sender._id || sender.id,
+        name: sender.name,
+        avatar: sender.avatar,
+        status: MemberShip.ACTIVE,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get sender snapshot for user ${userId}: ${error.message}`);
+      throw new BadRequestException('Failed to retrieve user data.');
+    }
+  }
+
   private async saveMessageToDiscussion(
     sender: User,
     message: string,
@@ -286,8 +310,11 @@ export class AiDiscussionService {
       );
       return aiDiscussion;
     } catch (error) {
-      this.logger.error(`Error handling message: ${error.message}`);
-      throw new BadRequestException('Process message failed');
+      this.logger.error(`Error handling message: ${error.message}`, error.stack);
+      if (error && typeof error.getStatus === 'function') {
+        throw error;
+      }
+      throw new BadRequestException(`Process message failed: ${error.message}`);
     }
   }
 

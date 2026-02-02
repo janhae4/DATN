@@ -149,4 +149,13 @@ export class UserCacheService {
         );
     }
 
+    async deleteManyUsers(userIds: string[]) {
+        const pipe = this.redisService.getClient().pipeline();
+        userIds.forEach((userId) => {
+            const key = this.getUserInfoKey(userId);
+            pipe.del(key);
+        });
+        await pipe.exec();
+    }
+
 }

@@ -122,7 +122,11 @@ export class CreateTaskDto {
 
   @IsOptional()
   @IsString()
-  skill?: string | null;
+  skillName?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  exp?: number | null;
 
   @ApiPropertyOptional({
     description: 'IDs of the users assigned to this task',

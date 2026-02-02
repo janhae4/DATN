@@ -6,6 +6,10 @@ COPY apps/ apps/
 COPY libs/ libs/
 ARG APP_NAME
 RUN npx nest build ${APP_NAME}
+RUN if [ "$APP_NAME" = "gmail" ]; then \
+    mkdir -p dist/apps/gmail/templates && \
+    cp -r apps/gmail/src/templates/* dist/apps/gmail/templates/; \
+    fi
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -19,4 +23,11 @@ RUN if [ "$APP_NAME" = "gmail" ]; then \
     echo "Skipping optional packages for $APP_NAME"; \
     fi
 COPY --from=builder /app/dist/apps/${APP_NAME} ./dist
+RUN if [ "$APP_NAME" = "gmail" ]; then \
+    if [ -d "./dist/templates" ]; then \
+    cp -r ./dist/templates ./templates; \
+    else \
+    echo "Templates not found in dist/templates"; \
+    fi \
+    fi
 CMD ["node", "dist/main"]

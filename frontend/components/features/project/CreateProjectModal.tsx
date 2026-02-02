@@ -19,13 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import { toast } from "sonner";
 import { useProjects } from "@/hooks/useProjects";
@@ -150,27 +143,7 @@ export function CreateProjectModal({ children }: CreateProjectModalProps) {
             )}
           </div>
 
-          {/* Visibility Field */}
-          <div className="space-y-2">
-            <Label htmlFor="visibility">Visibility</Label>
-            <Select
-              onValueChange={(value) => setValue("visibility", value as ProjectVisibility)}
-              defaultValue={ProjectVisibility.TEAM}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select visibility" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ProjectVisibility.PRIVATE}>
-                    🔒 Private (Only you)
-                </SelectItem>
-                <SelectItem value={ProjectVisibility.TEAM}>
-                    👥 Team (Visible to team members)
-                </SelectItem>
-               
-              </SelectContent>
-            </Select>
-          </div>
+       
 
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

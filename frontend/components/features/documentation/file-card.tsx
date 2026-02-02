@@ -550,6 +550,7 @@ export const FileCard = ({
     new Set(),
   );
   console.log("Selected count:", selectedIds?.size, isMultiSelect);
+console.log("File: ", file)
 
   const handleDownloadAction = (e?: React.MouseEvent) => {
     e?.stopPropagation();

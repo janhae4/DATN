@@ -95,9 +95,8 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
 
   return (
     <div
-      className={`${styles.form_inner_container} ${
-        isActive ? styles.active_form : styles.inactive_form
-      } flex flex-col justify-center px-4 sm:px-0`} // Thêm padding cho mobile
+      className={`${styles.form_inner_container} ${isActive ? styles.active_form : styles.inactive_form
+        } flex flex-col justify-center px-4 sm:px-0`} // Thêm padding cho mobile
     >
       <div className="w-full max-w-[400px] mx-auto space-y-6">
         {/* Header Section */}
@@ -111,34 +110,17 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
         </div>
 
         {/* Social Login Section */}
-        <div className={styles.social_login_container}>
-          <button className={styles.social_button} onClick={handleGoogleLogin}>
-            <Image
-              src={GoogleIcon}
-              alt="Google Icon"
-              width={24}
-              height={24}
-              className="w-5 h-auto"
-            />
-          </button>
-          <button className={styles.social_button}>
-            <Image
-              src={FacebookIcon}
-              alt="Facebook Icon"
-              width={24}
-              height={24}
-              className="w-5 h-auto"
-            />
-          </button>
-          <button className={styles.social_button}>
-            <Image
-              src={XIcon}
-              alt="X Icon"
-              width={24}
-              height={24}
-              className="w-5 h-auto"
-            />
-          </button>
+        <div className="w-full">
+          <Button
+            variant="outline"
+            className="w-full h-11 relative flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
+            onClick={handleGoogleLogin}
+          >
+            <div className="absolute left-4 flex items-center">
+              <Icon icon="simple-icons:google" width="20" height="20" />
+            </div>
+            <span className="font-medium text-gray-700 dark:text-gray-200">Continue with Google</span>
+          </Button>
         </div>
 
         <div className="relative">
@@ -201,17 +183,6 @@ export const LoginForm = ({ isActive, onToggle }: LoginFormProps) => {
                 />
               </button>
             </div>
-          </div>
-
-          {/* Remember Me Checkbox */}
-          <div className="flex items-center space-x-2">
-            <Checkbox id="remember" />
-            <Label
-              htmlFor="remember"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Remember me
-            </Label>
           </div>
 
           {/* Error Message Box */}

@@ -5,7 +5,8 @@ export enum NotificationResource {
   TASK = 'TASK',
   COMMENT = 'COMMENT',
   TEAM = 'TEAM',
-  SYSTEM = 'SYSTEM'
+  SYSTEM = 'SYSTEM',
+  DISCUSSION = 'DISCUSSION'
 }
 
 export enum NotificationTargetType {

@@ -132,11 +132,15 @@ export function BacklogTaskList({
 
       <div className="shrink-0 z-10 bg-card sticky bottom-2">
         {isAddingNewRow ? (
-          <AddNewTaskRow
-            lists={listsList}
-            sprintId={""}
-            onCancel={() => setIsAddingNewRow(false)}
-          />
+          <Table>
+            <TableBody>
+              <AddNewTaskRow
+                lists={listsList}
+                sprintId={""}
+                onCancel={() => setIsAddingNewRow(false)}
+              />
+            </TableBody>
+          </Table>
         ) : (
           <div className="flex items-center gap-4 p-4">
             <Button

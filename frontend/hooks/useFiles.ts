@@ -31,7 +31,7 @@ export function useFiles(
         return {
           id: file._id,
           fileName: file.originalName,
-          fileSize: file.size,
+          fileSize: file.size || 0,
           fileType: file.type,
           uploadedById: file.userId || "System",
           uploadedAt: file.createdAt,
@@ -67,7 +67,7 @@ export function useFiles(
       queryClient.invalidateQueries({ queryKey: ["files"] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || error.message || "Không thể tải lên tập tin";
+      const msg = error.response?.data?.message || error.message || "Failed to upload file";
       toast.error(msg);
     }
   });
@@ -76,10 +76,10 @@ export function useFiles(
     mutationFn: (fileId: string) => fileService.deleteFile(fileId, projectId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["files"] });
-      toast.success("Đã xóa tập tin");
+      toast.success("Deleted file successfully");
     },
     onError: () => {
-      toast.error("Không thể xóa tập tin này");
+      toast.error("Failed to delete file");
     }
   });
 
@@ -97,7 +97,7 @@ export function useFiles(
       queryClient.invalidateQueries({ queryKey: ["files"] });
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message || "Không thể tạo thư mục";
+      const msg = error?.response?.data?.message || "Failed to create folder";
       toast.error(msg);
     }
   });
@@ -108,10 +108,10 @@ export function useFiles(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["files"] });
-      toast.success("Thêm tập tin vào thư mục");
+      toast.success("Moved file to folder");
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message || "Không thể tạo thư mục";
+      const msg = error?.response?.data?.message || "Failed to move file";
       toast.error(msg);
     }
   })
@@ -122,10 +122,10 @@ export function useFiles(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["files"] });
-      toast.success("Thêm tập tin vào thư mục");
+      toast.success("Moved files to folder");
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message || "Không thể tạo thư mục";
+      const msg = error?.response?.data?.message || "Failed to move files";
       toast.error(msg);
     }
   })
@@ -137,10 +137,10 @@ export function useFiles(
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["files"] });
-      toast.success("Đã thay đổi quyen truy cập");
+      toast.success("Visibility changed successfully");
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message || "Không thể thay đổi quyen truy cập";
+      const msg = error?.response?.data?.message || "Failed to change visibility";
       toast.error(msg);
     }
   })
@@ -150,7 +150,7 @@ export function useFiles(
       const { viewUrl } = await fileService.getPreviewUrl(fileId, projectId);
       return viewUrl || null;
     } catch (err) {
-      toast.error("Không thể xem trước tập tin");
+      toast.error("Failed to preview file");
       return null;
     }
   };
@@ -159,17 +159,17 @@ export function useFiles(
     mutationFn: (fileIds: string[]) => fileService.deleteFiles(fileIds, projectId, teamId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["files"] });
-      toast.success("Đã xóa tập tin");
+      toast.success("Deleted files successfully");
     },
     onError: () => {
-      toast.error("Không thể xóa tập tin");
+      toast.error("Failed to delete files");
     }
   })
 
   const downloadFiles = useMutation({
     mutationFn: (fileIds: string[]) => fileService.downloadFiles(fileIds, projectId, teamId),
     onError: () => {
-      toast.error("Không thể tải lên tập tin");
+      toast.error("Failed to download files");
     }
   })
 

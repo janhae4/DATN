@@ -91,7 +91,7 @@ export default function CreateTeamPage() {
           <div className="space-y-2 text-left">
             <h1 className="text-3xl font-semibold tracking-tight">Create your team</h1>
             <p className="text-muted-foreground text-sm">
-              Start collaborating with your teammates in one shared workspace.
+              Start collaborating with your teammates in one shared Team.
               Efficiency begins with the right setup.
             </p>
           </div>
@@ -101,7 +101,7 @@ export default function CreateTeamPage() {
               {/* Team Name */}
               <div className="space-y-2.5">
                 <Label htmlFor="teamName" className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground/80">
-                  Workspace Name
+                  Team Name
                 </Label>
                 <Input
                   id="teamName"
@@ -187,7 +187,7 @@ export default function CreateTeamPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span>Create Workspace</span>
+                    <span>Create Team</span>
                     <ArrowRight className="w-4 h-4" />
                   </div>
                 )}
@@ -238,7 +238,7 @@ export default function CreateTeamPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Simplify your team workflows</h2>
           <p className="text-muted-foreground text-sm leading-relaxed px-4">
             Bring everyone together under one roof. Manage sprints, track progress,
-            and ship faster with our intuitive team workspace.
+            and ship faster with our intuitive team.
           </p>
           <div className="flex items-center justify-center gap-4 text-xs font-bold text-muted-foreground/40 uppercase tracking-widest pt-4">
             <span>Minimal</span>

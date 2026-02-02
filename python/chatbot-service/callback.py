@@ -86,51 +86,51 @@ async def publish_suggest_task_response(user_id: str, content: dict):
     await redis_client.publish(f"task_suggest:{user_id}", message_json)
     print(f"--> [Py->SSE] Gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
 
-async def send_notification(channel: Channel, user_id, file_id, original_name, status, message, team_id=None):
+# async def send_notification(channel: Channel, user_id, file_id, original_name, status, message, team_id=None):
 
-    try:
-        noti_type = NotificationType.INFO
-        title = "Processing Document"
+#     try:
+#         noti_type = NotificationType.INFO
+#         title = "Processing Document"
         
-        if status == "success":
-            noti_type = NotificationType.SUCCESS
-            title = "Document Processed"
-        elif status == "failed":
-            noti_type = NotificationType.ERROR
-            title = "Processing Failed"
-        elif status == "processing":
-            noti_type = NotificationType.INFO
-            title = "Processing Started"
+#         if status == "success":
+#             noti_type = NotificationType.SUCCESS
+#             title = "Document Processed"
+#         elif status == "failed":
+#             noti_type = NotificationType.ERROR
+#             title = "Processing Failed"
+#         elif status == "processing":
+#             noti_type = NotificationType.INFO
+#             title = "Processing Started"
 
-        notification_body = {
-            "title": title,
-            "message": message,
-            "type": noti_type,
+#         notification_body = {
+#             "title": title,
+#             "message": message,
+#             "type": noti_type,
 
-            "targetType": "USER", 
-            "targetId": user_id,
+#             "targetType": "USER", 
+#             "targetId": user_id,
 
-            "resourceType": "FILE", 
-            "resourceId": file_id,
-            "actorId": user_id, 
-            "metadata": {
-                "originalName": original_name,
-                "teamId": team_id,
-                "status": status
-            }
-        }
+#             "resourceType": "FILE", 
+#             "resourceId": file_id,
+#             "actorId": user_id, 
+#             "metadata": {
+#                 "originalName": original_name,
+#                 "teamId": team_id,
+#                 "status": status
+#             }
+#         }
 
-        socket = await channel.get_exchange(SOCKET_EXCHANGE)
-        await socket.publish(
-            message=Message(
-                json.dumps(notification_body).encode(),
-            ),
-            routing_key=SEND_NOTIFICATION_ROUTING_KEY
-        )
-        print(f"--> [Notification] Sent '{status}' for file: {original_name}")
+#         socket = await channel.get_exchange(SOCKET_EXCHANGE)
+#         await socket.publish(
+#             message=Message(
+#                 json.dumps(notification_body).encode(),
+#             ),
+#             routing_key=SEND_NOTIFICATION_ROUTING_KEY
+#         )
+#         print(f"--> [Notification] Sent '{status}' for file: {original_name}")
 
-    except Exception as e:
-        print(f"Lỗi khi gửi thông báo Python: {e}")
+#     except Exception as e:
+#         print(f"Lỗi khi gửi thông báo Python: {e}")
 
 async def send_status_file(channel: Channel, user_id, file_id, fileName,status, teamId: str = None):
     try:
@@ -178,8 +178,8 @@ async def ingestion_callback(
             if not all([user_id, file_id, storage_key, original_name]):
                 raise ValueError("Payload bị thiếu các trường bắt buộc (userId, fileId, storageKey, originalName).")
             
-            print(f"--> Bắt đầu xử lý file '{file_name}' cho user '{user_id}'.")
-            await send_status_file(channel, user_id, storage_key, original_name, "processing", team_id)
+            print(f"--> Bắt đầu xử lý file '{file_id}' cho user '{user_id}'.")
+            await send_status_file(channel, user_id, file_id, original_name, "processing", team_id)
             await vectorstore_service.process_and_store(
                 user_id=user_id,
                 file_id=storage_key,
@@ -191,11 +191,12 @@ async def ingestion_callback(
 
         except Exception as e:
             error_message = str(e)
-            print(f"Error processing '{file_name}': {error_message}")
+            print(f"Error processing '{file_id}': {error_message}")
             if payload_dto:
                 user_id = payload_dto.get('userId')
                 file_id = payload_dto.get('fileId')
                 original_name = payload_dto.get('originalName', 'unknown file')
+                team_id = payload_dto.get('teamId')
                 await send_status_file(channel, user_id, file_id ,original_name, "failed", team_id)
 
 async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, task_architect: TaskArchitect, vectorstore_service: VectorStoreService,channel: Channel):

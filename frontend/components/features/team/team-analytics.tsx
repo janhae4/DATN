@@ -41,7 +41,7 @@ const COLORS = {
   primary: "hsl(var(--primary))",
   chart1: "#3b82f6", // Blue
   chart2: "#ec4899", // Pink
-  pie: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"] 
+  pie: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
 };
 
 interface TeamAnalyticsProps {
@@ -390,7 +390,7 @@ export function TeamAnalytics({ members, projects }: TeamAnalyticsProps) {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <p className="text-sm font-semibold text-foreground">{activity.title}</p>
                         <span className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded w-fit">
-                          {formatDistanceToNow(activity.date, { addSuffix: true })}
+                          {formatDistanceToNow(addHours(activity.date, -7), { addSuffix: true })}
                         </span>
                       </div>
 

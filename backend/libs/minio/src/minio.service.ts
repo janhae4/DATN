@@ -83,25 +83,13 @@ export class MinioService implements OnModuleInit {
         }
     }
 
-    async getPreSignedUpdateUrl(key: string, expiry: number = 60 * 5) {
-        try {
-            const url = await this.minioClient.presignedPutObject(
-                this.bucketName,
-                key,
-                expiry,
-            );
-            return url;
-        } catch (err) {
-            this.logger.error(`Minio getPreSignedUpdateUrl failed for key ${key}:`, err);
-            throw new BadRequestException('Get pre-signed update URL failed');
-        }
-    }
     async getPreSignedViewUrl(
         storageKey: string,
         viewFilename: string,
         expiry: number = 60 * 5,
     ): Promise<string> {
         try {
+            // Check file exist uses internal client
             await this.minioClient.statObject(this.bucketName, storageKey);
             const command = new GetObjectCommand({
                 Bucket: this.bucketName,

@@ -413,10 +413,10 @@ export default function AttachmentPage() {
           prev.map((item) =>
             item.id === stagedItem.id
               ? {
-                  ...item,
-                  status: isCanceled ? "waiting" : "error",
-                  progress: 0,
-                }
+                ...item,
+                status: isCanceled ? "waiting" : "error",
+                progress: 0,
+              }
               : item,
           ),
         );
@@ -513,7 +513,7 @@ export default function AttachmentPage() {
 
             <div className="flex items-center gap-2 w-full md:w-auto">
               <Select
-                value={selectedProjectId}
+                value={selectedProjectId || "unassigned"}
                 onValueChange={(val) => {
                   if (val === "unassigned") {
                     setSelectedProjectId("");
@@ -737,18 +737,18 @@ export default function AttachmentPage() {
 
                         {(stagedFile.status === "waiting" ||
                           stagedFile.status === "error") && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                            onClick={() =>
-                              handleCancelUpload(stagedFile.id as string)
-                            }
-                            title="Remove file"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                              onClick={() =>
+                                handleCancelUpload(stagedFile.id as string)
+                              }
+                              title="Remove file"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
 
                         {stagedFile.status === "success" && (
                           <div className="h-8 w-8 flex items-center justify-center">
@@ -848,7 +848,7 @@ export default function AttachmentPage() {
                 {activeDragItem ? (
                   <div className="pointer-events-none">
                     {selectedIds.has(activeDragItem.id) &&
-                    selectedIds.size > 1 ? (
+                      selectedIds.size > 1 ? (
                       <div className="relative">
                         <FileDragPreview
                           file={activeDragItem}

@@ -810,6 +810,7 @@ export class UserService {
   }
 
   async updateSkills(userId: string, skills: string[]) {
+    await this.userCache.delete(userId);
     return await this.dataSource.transaction(async (manager) => {
       await this.syncUserSkills(manager, userId, skills);
     });
@@ -830,6 +831,8 @@ export class UserService {
   }
 
   async handleBulkSkillIncrement(data: Array<{ userId: string, skills: { skillName: string, exp: number }[] }>) {
+    const userIds = data.map(d => d.userId);
+    await this.userCache.deleteManyUsers(userIds);
     return await this.dataSource.transaction(async (manager) => {
       for (const { userId, skills } of data) {
         for (const { skillName, exp } of skills) {
