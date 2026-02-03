@@ -310,11 +310,20 @@ export class MessageService {
         discussion.latestMessageSnapshot = messageSnapshot;
         await discussion.save();
 
+        const memberships = await this.membershipModel.find({
+            discussionId: discussion._id,
+            status: MemberShip.ACTIVE
+        })
+            .select('userId')
+            .lean();
+        const membersToNotify = memberships.map(m => m.userId);
+
         const payload: SendMessageEventPayload = {
             _id: savedMessage._id.toString(),
             discussionId: (discussion._id as Types.ObjectId).toString(),
             messageSnapshot: discussion.latestMessageSnapshot,
             teamSnapshot: discussion.teamSnapshot as TeamSnapshot,
+            membersToNotify,
         };
 
         this.amqp.publish(EVENTS_EXCHANGE, EVENTS.NEW_MESSAGE, payload);
@@ -366,22 +375,71 @@ export class MessageService {
 
 
     async toggleReaction(userId: string, messageId: string, emoji: string) {
-        const message = await this.messageModel.findById(messageId);
-        if (!message) throw new NotFoundException('Message not found');
+        const existingMessage = await this.messageModel.findOne({
+            _id: messageId,
+            reactions: {
+                $elemMatch: {
+                    emoji: emoji,
+                    userIds: userId
+                }
+            }
+        });
 
-        const existingReactionIndex = message.reactions.findIndex(
-            (r) => r.userIds.includes(userId) && r.emoji === emoji
-        );
+        let savedMessage;
 
-        if (existingReactionIndex > -1) {
-            message.reactions.splice(existingReactionIndex, 1);
+        if (existingMessage) {
+            savedMessage = await this.messageModel.findOneAndUpdate(
+                { _id: messageId, "reactions.emoji": emoji },
+                {
+                    $pull: { "reactions.$.userIds": userId }
+                },
+                { new: true }
+            );
+            const reaction = savedMessage?.reactions.find(r => r.emoji === emoji);
+            if (reaction && reaction.userIds.length === 0) {
+                savedMessage = await this.messageModel.findOneAndUpdate(
+                    { _id: messageId },
+                    {
+                        $pull: { reactions: { emoji: emoji } }
+                    },
+                    { new: true }
+                );
+            }
+
         } else {
-            message.reactions.push({ userIds: [userId], emoji });
+            // CASE: Add reaction
+
+            // Try pushing userId to existing emoji group first
+            const updated = await this.messageModel.findOneAndUpdate(
+                { _id: messageId, "reactions.emoji": emoji },
+                {
+                    $addToSet: { "reactions.$.userIds": userId }
+                },
+                { new: true }
+            );
+
+            if (updated) {
+                savedMessage = updated;
+            } else {
+                // Emoji group doesn't exist yet, push new reaction object
+                savedMessage = await this.messageModel.findOneAndUpdate(
+                    { _id: messageId },
+                    {
+                        $push: {
+                            reactions: {
+                                emoji: emoji,
+                                userIds: [userId]
+                            }
+                        }
+                    },
+                    { new: true }
+                );
+            }
         }
 
-        const savedMessage = await message.save();
+        if (!savedMessage) throw new NotFoundException('Message not found');
 
-        const discussion = await this.discussionModel.findById(message.discussionId).lean();
+        const discussion = await this.discussionModel.findById(savedMessage.discussionId).lean();
         if (discussion) {
             const memberships = await this.membershipModel.find({
                 discussionId: discussion._id,

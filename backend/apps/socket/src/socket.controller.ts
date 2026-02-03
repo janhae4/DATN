@@ -70,6 +70,31 @@ export class SocketController {
   })
   handleNewMessage(payload: SendMessageEventPayload) {
     this.chatGateway.handleNewMessage(payload);
+
+    const { messageSnapshot, discussionId, membersToNotify } = payload;
+
+    if (membersToNotify && membersToNotify.length > 0) {
+      membersToNotify.forEach(userId => {
+        
+        if (userId === messageSnapshot.sender._id) return;
+
+        const notificationData = {
+          title: messageSnapshot.sender.name,
+          message: messageSnapshot.content,
+          type: NotificationType.INFO,
+          resourceType: NotificationResource.DISCUSSION,
+          resourceId: discussionId,
+          createdAt: new Date().toISOString(),
+          isRead: false,
+          targetId: userId,
+          metadata: {
+            discussionId
+          }
+        };
+
+        this.socketGateway.server.to(userId).emit('notification', notificationData);
+      });
+    }
   }
 
   @RabbitSubscribe({

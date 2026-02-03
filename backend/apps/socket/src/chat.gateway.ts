@@ -205,10 +205,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     handleMessageUpdate(payload: {
         discussionId: string;
         messageId: string;
-        content: string;
+        content?: string;
+        reactions?: any[];
         membersToNotify: string[]
     }) {
-        const { discussionId, messageId, content, membersToNotify } = payload;
+        const { discussionId, messageId, membersToNotify, ...data } = payload;
 
         this.logger.log(`Broadcasting UPDATE for message ${messageId} in ${discussionId}`);
 
@@ -216,7 +217,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.server.to(userId).emit('message_update', {
                 discussionId,
                 messageId,
-                content,
+                ...data,
             });
         });
     }

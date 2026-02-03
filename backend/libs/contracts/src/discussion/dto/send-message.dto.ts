@@ -27,5 +27,7 @@ export interface SendMessageEventPayload {
   discussionId: string;
   messageSnapshot: MessageSnapshot;
   teamSnapshot: TeamSnapshot;
+  membersToNotify?: string[];
+
 
 }
