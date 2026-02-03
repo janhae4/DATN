@@ -25,7 +25,7 @@ export function TaskSubtasks({
   lists,
   onRowClick,
 }: TaskSubtasksProps) {
-  const { data: tasks, updateTask } = useTaskManagement(projectId, teamId);
+  const { data: tasks, updateTask, isTaskLoading: isLoading } = useTaskManagement(projectId, teamId);
 
   const [isAdding, setIsAdding] = React.useState(false);
 
@@ -78,9 +78,7 @@ export function TaskSubtasks({
                   lists={lists}
                   isDraggable={false}
                   onRowClick={onRowClick}
-                  onRowClick={onRowClick}
                   onUpdateTask={handleUpdateTask}
-                  level={0}
                   level={0}
                 />
               ))}

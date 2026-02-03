@@ -24,6 +24,8 @@ import {
   UserSkill,
   UserOnboardingDto,
   EVENTS,
+  REDIS_EXCHANGE,
+  REDIS_PATTERN,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { RmqClientService } from '@app/common';
