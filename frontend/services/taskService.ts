@@ -42,6 +42,7 @@ export interface BaseTaskFilterDto {
   limit?: number;
   projectId?: string;
   teamId?: string;
+  parentId?: string | "null";
 }
 
 // --- Service ---

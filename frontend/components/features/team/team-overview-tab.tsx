@@ -82,11 +82,11 @@ export function TeamOverviewTab({ teamId, members }: TeamOverviewTabProps) {
     total: totalTasks,
   } = useTasks({
     teamId,
-    assigneeIds: user?.id ? [user.id] : undefined,
     limit: 6,
     sortBy: ["dueDate:ASC"],
-  });
+  }, undefined, 'assign-to-me');
 
+  console.log("myTasks", myTasks);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Derived stats for the card

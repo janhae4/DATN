@@ -398,6 +398,50 @@ export class UserService {
   }
 
   async findManyByIds(ids: string[], forDiscussion?: boolean) {
+    if (!ids || ids.length === 0) return [];
+
+    const cachedUsers = await this.amqp.request<Partial<User>[]>({
+      exchange: REDIS_EXCHANGE,
+      routingKey: REDIS_PATTERN.GET_USER_INFO,
+      payload: ids,
+    })
+
+    const cachedIds = new Set(cachedUsers.map(u => u.id));
+    const missingIds = ids.filter(id => !cachedIds.has(id));
+    let missingUsers: Partial<User>[] = [];
+
+    if (missingIds.length > 0) {
+      this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from DB...`);
+      missingUsers = await this.userRepo.find({
+        where: {
+          id: In(ids)
+        },
+        relations: {
+          skills: true
+        }
+      });
+      if (missingUsers.length > 0) {
+        await this.amqp.publish(
+          REDIS_EXCHANGE,
+          REDIS_PATTERN.SET_MANY_USERS_INFO,
+          missingUsers,
+        )
+      }
+    }
+
+    const allUsers = [...cachedUsers, ...missingUsers];
+    this.logger.log(`Returning ${allUsers.length} users`);
+    if (forDiscussion) {
+      allUsers.forEach(user => {
+        if (user.id !== undefined) {
+          (user as any)._id = user.id;
+          delete user.id;
+        }
+      })
+      this.logger.log(`Returning ${allUsers.length} users for discussion`);
+    }
+
+    return allUsers;
     return await this.userCache.getManyUserInfo(
       ids,
       async (missingIds) => await this.userRepo.find({ where: { id: In(missingIds) } }))

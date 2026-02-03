@@ -40,10 +40,10 @@ const Summary = () => {
   return (
     <div className="flex flex-1 flex-col gap-4 pt-0">
       {/* Project Header */}
-      <div id="project-header" className="flex justify-between items-start mb-2 group">
+      <div id="project-header" className="flex justify-between items-start group">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               {project?.name}
             </h1>
 

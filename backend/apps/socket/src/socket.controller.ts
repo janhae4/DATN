@@ -33,10 +33,16 @@ import type {
 import { SocketGateway } from './socket.gateway';
 import { customErrorHandler } from '@app/common';
 import { NotificationMapper } from '@app/contracts/notification/notification.mapper';
+import { ChatGateway } from './chat.gateway';
+import { VoiceGateway } from './voice.gateway';
 
 @Controller()
 export class SocketController {
-  constructor(private readonly socketGateway: SocketGateway) { }
+  constructor(
+    private readonly socketGateway: SocketGateway,
+    private readonly chatGateway: ChatGateway,
+    private readonly voiceGateway: VoiceGateway
+  ) { }
 
   // @RabbitSubscribe({
   //   exchange: EVENTS_EXCHANGE,
@@ -63,7 +69,32 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   handleNewMessage(payload: SendMessageEventPayload) {
-    this.socketGateway.handleNewMessage(payload);
+    this.chatGateway.handleNewMessage(payload);
+
+    const { messageSnapshot, discussionId, membersToNotify } = payload;
+
+    if (membersToNotify && membersToNotify.length > 0) {
+      membersToNotify.forEach(userId => {
+        
+        if (userId === messageSnapshot.sender._id) return;
+
+        const notificationData = {
+          title: messageSnapshot.sender.name,
+          message: messageSnapshot.content,
+          type: NotificationType.INFO,
+          resourceType: NotificationResource.DISCUSSION,
+          resourceId: discussionId,
+          createdAt: new Date().toISOString(),
+          isRead: false,
+          targetId: userId,
+          metadata: {
+            discussionId
+          }
+        };
+
+        this.socketGateway.server.to(userId).emit('notification', notificationData);
+      });
+    }
   }
 
   @RabbitSubscribe({
@@ -187,7 +218,7 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   async handleStreamResponse(response: ResponseStreamDto) {
-    await this.socketGateway.handleStreamResponse(response);
+    await this.chatGateway.handleStreamResponse(response);
   }
 
   @RabbitSubscribe({
@@ -212,7 +243,7 @@ export class SocketController {
     roomId: string,
     targetUserId: string
   }) {
-    await this.socketGateway.sendUnKickRequestToHost(payload.hostUserId, payload.message, payload.roomId, payload.targetUserId);
+    await this.voiceGateway.sendUnKickRequestToHost(payload.hostUserId, payload.message, payload.roomId, payload.targetUserId);
   }
 
   @RabbitSubscribe({
@@ -227,7 +258,7 @@ export class SocketController {
     roomId: string,
     targetUserId: string
   }) {
-    await this.socketGateway.sendKickRequestToHost(payload.hostUserId, payload.message, payload.roomId, payload.targetUserId);
+    await this.voiceGateway.sendKickRequestToHost(payload.hostUserId, payload.message, payload.roomId, payload.targetUserId);
   }
 
   @RabbitSubscribe({
@@ -237,7 +268,7 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   async handleUserKicked(payload: { targetUserId: string, roomId: string, message: string }) {
-    await this.socketGateway.notifyUserKicked(payload.targetUserId, payload.message, payload.roomId);
+    await this.voiceGateway.notifyUserKicked(payload.targetUserId, payload.message, payload.roomId);
   }
 
   @RabbitSubscribe({
@@ -247,7 +278,7 @@ export class SocketController {
     errorHandler: customErrorHandler
   })
   async handleUserUnKicked(payload: { targetUserId: string, roomId: string, message: string }) {
-    await this.socketGateway.notifyUserUnKicked(payload.targetUserId, payload.message, payload.roomId);
+    await this.voiceGateway.notifyUserUnKicked(payload.targetUserId, payload.message, payload.roomId);
   }
 
   @RabbitSubscribe({
@@ -274,5 +305,24 @@ export class SocketController {
   })
   handleCompleteUpload(payload: { fileId: string, status: FileStatus, userId: string, teamId?: string }) {
     this.socketGateway.handleUploadCompletion(payload.fileId, payload.status, payload.userId, payload.teamId);
+  }
+
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.MESSAGE_UPDATED,
+    errorHandler: customErrorHandler
+  })
+  handleMessageUpdate(payload: any) {
+    this.chatGateway.handleMessageUpdate(payload);
+  }
+
+  @RabbitSubscribe({
+    exchange: EVENTS_EXCHANGE,
+    routingKey: EVENTS.MESSAGE_DELETED,
+    queue: 'events.message.deleted.socket',
+    errorHandler: customErrorHandler
+  })
+  handleMessageDelete(payload: any) {
+    this.chatGateway.handleMessageDelete(payload);
   }
 }

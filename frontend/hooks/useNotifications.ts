@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { notificationService, Notification } from '../services/notificationService';
 import { useSocket } from '@/contexts/SocketContext';
 import { toast } from 'sonner';
+import apiClient from '@/services/apiClient';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 
 export const useNotifications = () => {
@@ -9,6 +11,8 @@ export const useNotifications = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     const { socket, isConnected } = useSocket();
 
@@ -33,10 +37,41 @@ export const useNotifications = () => {
     }, []);
 
     useEffect(() => {
+        if (notifications.length === 0 || !pathname) return;
+
+        const channelId = searchParams.get('channelId');
+
+        const unreadInView = notifications.filter(n =>
+            !n.isRead &&
+            n.resourceType === 'DISCUSSION' &&
+            n.resourceId &&
+            (pathname.includes(n.resourceId) || (channelId && n.resourceId === channelId))
+        );
+
+        if (unreadInView.length > 0) {
+            unreadInView.forEach(n => {
+                markAsRead(n.id);
+            });
+        }
+    }, [notifications, pathname, searchParams]);
+
+    useEffect(() => {
         if (!socket || !isConnected) return;
 
         const handleNewNotification = (data: any) => {
             console.log("🔔 New notification received:", data);
+
+            const currentPath = window.location.pathname;
+            const urlSearchParams = new URLSearchParams(window.location.search);
+            const channelId = urlSearchParams.get('channelId');
+
+            const isViewingDiscussion = data.resourceType === 'DISCUSSION' &&
+                (currentPath.includes(data.resourceId) || (channelId && data.resourceId === channelId));
+
+            if (!isViewingDiscussion) {
+                toast.info(data.title || "New notification");
+            }
+
             toast.info(data.title || "New notification");
 
             const resourceType = data.resourceType;
@@ -86,6 +121,7 @@ export const useNotifications = () => {
 
     const markAsRead = async (id: string) => {
         try {
+            // Optimistic update
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
             await notificationService.markAsRead(id);
         } catch (err) {

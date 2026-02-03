@@ -44,6 +44,7 @@ export * from './discussion/dto/send-message.dto';
 export * from './discussion/dto/response-message.dto'
 export * from './discussion/dto/message.dto'
 export * from './discussion/discussion.pattern.dto';
+export * from './discussion/dto/channel.dto';
 
 /*----
 CHATBOT

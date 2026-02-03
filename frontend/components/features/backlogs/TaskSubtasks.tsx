@@ -47,6 +47,12 @@ export function TaskSubtasks({
         </span>
       </div>
 
+      {isLoading && subtasks.length === 0 && (
+        <div className="flex justify-center p-4">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+        </div>
+      )}
+
       <div className="rounded-md border">
         {subtasks.length === 0 && !isAdding ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
@@ -72,7 +78,9 @@ export function TaskSubtasks({
                   lists={lists}
                   isDraggable={false}
                   onRowClick={onRowClick}
+                  onRowClick={onRowClick}
                   onUpdateTask={handleUpdateTask}
+                  level={0}
                   level={0}
                 />
               ))}

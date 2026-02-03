@@ -11,6 +11,8 @@ export interface Notification {
     createdAt: string;
     readAt: string | null;
     metadata: Record<string, any> | null;
+    resourceType: 'TASK' | 'COMMENT' | 'TEAM' | 'SYSTEM' | 'DISCUSSION';
+    resourceId: string | null;
 }
 
 export const notificationService = {

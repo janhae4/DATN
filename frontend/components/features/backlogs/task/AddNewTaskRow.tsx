@@ -43,6 +43,7 @@ export function AddNewTaskRow({
 
   const [title, setTitle] = React.useState("");
   const [selectedListId, setSelectedListId] = React.useState<string>("");
+  const [isFocused, setIsFocused] = React.useState(false);
 
   const stopPropagation = (e: React.MouseEvent | React.PointerEvent) =>
     e.stopPropagation();
@@ -91,6 +92,14 @@ export function AddNewTaskRow({
     }
   };
 
+  const handleBlur = () => {
+    // Nếu chưa có chữ, tự động ẩn row
+    if (!title.trim()) {
+      onCancel?.();
+    }
+    setIsFocused(false);
+  };
+
   return (
     <TableRow
       onClick={stopPropagation}
@@ -115,8 +124,10 @@ export function AddNewTaskRow({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={handleBlur}
             disabled={isLoading}
-            className="h-auto p-0 px-1 bg-transparent border-none shadow-none flex-grow focus-visible:ring-0 focus:ring-0 focus:border-none focus:outline-none placeholder:text-muted-foreground/50"
+            className="h-auto p-0 px-1 bg-transparent border-none shadow-none flex-grow focus-visible:ring-0 focus:ring-0 focus:border-none focus:outline-none placeholder:text-muted-foreground/30"
           />
         </div>
       </TableCell>
@@ -128,15 +139,19 @@ export function AddNewTaskRow({
       <TableCell></TableCell>
 
       <TableCell className="w-fit">
-        <div className="flex items-center gap-2">
+        <div className={cn(
+          "flex items-center gap-2 transition-all duration-200",
+          isFocused || title.trim() ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"
+        )}>
           <Button
             size="sm"
-            className="cursor-pointer"
+            className="h-7 text-xs px-3"
             onClick={handleCreate}
+            onMouseDown={(e) => e.preventDefault()} // Ngăn việc mất focus input khi click
             disabled={isLoading || !title.trim()}
           >
             {isLoading ? (
-              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
               "Save"
             )}
@@ -144,7 +159,12 @@ export function AddNewTaskRow({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => onCancel?.()}
+            className="h-7 text-xs"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setTitle("");
+              onCancel?.();
+            }}
             disabled={isLoading}
           >
             Cancel

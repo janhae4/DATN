@@ -1,4 +1,5 @@
 import { MemberShip } from '@app/contracts/enums/membership.enum';
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -60,6 +61,10 @@ export class CreateMessageDto {
   @IsString()
   @IsOptional()
   teamId?: string;
+
+  @IsOptional()
+  @IsString()
+  replyToId?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

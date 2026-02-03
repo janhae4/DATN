@@ -82,12 +82,12 @@ const data: {
       icon: CalendarDays,
       isActive: true,
     },
-    // {
-    //   title: "Messages",
-    //   url: "chat",
-    //   icon: MessageCircle,
-    //   isActive: true
-    // },
+    {
+      title: "Messages",
+      url: "chat",
+      icon: MessageCircle,
+      isActive: true
+    },
     {
       title: "AI Assistant",
       url: "ai-assistant",
@@ -146,6 +146,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         resolvedUrl = `/${teamId}/ai-assistant`
       } else if (item.url === "dashboard" && item.title === "Project management") {
         resolvedUrl = `/${teamId}`
+      } else if (item.url === "chat") {
+        resolvedUrl = `/${teamId}/chat`
       } else {
         // Routes that need both teamId and projectId
         resolvedUrl = basePath ? `${basePath}/${item.url}` : `/${teamId}`

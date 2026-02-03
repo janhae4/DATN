@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
 import { Icon } from "@iconify-icon/react";
@@ -16,12 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { initiateGoogleLogin } from "@/services/authService";
 import styles from "@/app/(secondary)/auth/auth.module.css";
-
-// Assets
 import GoogleIcon from "@/public/assets/login_signup_resources/google_icon.jpg";
-import FacebookIcon from "@/public/assets/login_signup_resources/facebook_icon.jpg";
-import XIcon from "@/public/assets/login_signup_resources/x_icon.jpg";
-import { teamService } from "@/services/teamService";
 
 interface SignupFormProps {
   isActive: boolean;
@@ -41,6 +36,8 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
 
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const joinCode = searchParams.get("join");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -50,6 +47,7 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
     }));
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -62,6 +60,7 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
     } catch (error: any) {
       setIsLoading(false);
 
+
       if (axios.isAxiosError(error) && error.response) {
         const serverMessage =
           error.response.data?.message || error.response.data?.error;
@@ -71,7 +70,9 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
       }
     } finally {
       if (!error) {
+      if (!error) {
       } else {
+        setIsLoading(false);
         setIsLoading(false);
       }
     }
@@ -87,10 +88,8 @@ export const SignupForm = ({ isActive, onToggle }: SignupFormProps) => {
         } flex flex-col justify-center h-full`}
     // h-full để container tận dụng chiều cao cha
     >
-      {/* Scrollable Area: Quan trọng cho Mobile khi bàn phím bật lên */}
       <div className="w-full max-w-[400px] mx-auto px-4 sm:px-0 overflow-y-auto max-h-full py-4 scrollbar-hide">
         <div className="space-y-6">
-          {/* Header Section */}
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight">
               Create an Account

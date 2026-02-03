@@ -67,7 +67,9 @@ export function NotificationPopover() {
 
     try {
       switch (metadata.action) {
+        case "MEMBER_INVITED":
         case "ADD_MEMBER_TARGET":
+        case "MEMBER_ADDED":
           if (actionType === "ACCEPT") {
             console.log("Accept invite");
             await acceptInvite({

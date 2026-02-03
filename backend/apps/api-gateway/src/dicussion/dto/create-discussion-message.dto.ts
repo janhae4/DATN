@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength, IsArray } from 'class-validator';
 
 export class CreateDiscussionMessageDto {
-  
+
   @ApiProperty({
     description: 'Nội dung tin nhắn',
     example: 'Chào bạn, khoẻ không?',
@@ -20,4 +20,21 @@ export class CreateDiscussionMessageDto {
   @IsString()
   @IsOptional()
   teamId?: string
+
+  @ApiProperty({
+    description: 'Danh sách tệp đính kèm',
+    required: false,
+    type: [Object],
+  })
+  @IsOptional()
+  @IsArray()
+  attachments?: any[];
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @IsOptional()
+  @IsString()
+  discussionId?: string;
 }

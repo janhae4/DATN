@@ -1,13 +1,14 @@
 "use client";
 
 // import { useState } from "react";
-// import {ChatSidebar} from "@/components/features/chat/ChatSidebar";
 // import ChatArea from "@/components/features/chat/chatArea";
 // import {
 //   ResizableHandle,
 //   ResizablePanel,
 //   ResizablePanelGroup,
 // } from "@/components/ui/resizable";
+// import ChatInformation from "@/components/features/chat/ChatInformation";
+// import ChatSidebar from "@/components/features/chat/ChatSidebar";
 
 // export default function ChatPage() {
 //   const [isInfoOpen, setIsInfoOpen] = useState(false);
@@ -50,4 +51,3 @@
 //   );
 // }
 
-export default function ChatPage() {}
