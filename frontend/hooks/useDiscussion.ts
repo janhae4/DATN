@@ -96,6 +96,13 @@ export const useDiscussionMutations = () => {
     }
   });
 
+  const updateChannelMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => discussionService.updateChannel(id, { name }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['server-channels'] });
+    }
+  });
+
   const deleteChannelMutation = useMutation({
     mutationFn: discussionService.deleteChannel,
     onSuccess: () => {
@@ -177,6 +184,7 @@ export const useDiscussionMutations = () => {
     createChannel: createChannelMutation.mutateAsync,
     isCreatingChannel: createChannelMutation.isPending,
     createCategory: createCategoryMutation.mutateAsync,
+    updateChannel: updateChannelMutation.mutateAsync,
     deleteChannel: deleteChannelMutation.mutateAsync,
     reorderChannels: reorderChannelsMutation.mutateAsync,
   };

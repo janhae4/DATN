@@ -49,10 +49,33 @@ export const useChatSocket = (selectedChannelId: string | null) => {
         chatSocket.on("typing_start", handleTypingStart);
         chatSocket.on("typing_stop", handleTypingStop);
 
+        const handleMessageUpdate = (updatedData: any) => {
+            console.log("Socket: Message update received:", updatedData);
+            if (updatedData.discussionId === selectedChannelId) {
+                queryClient.setQueryData(['messages', selectedChannelId], (oldData: any) => {
+                    if (!oldData) return oldData;
+
+                    const newPages = oldData.pages.map((page: any) => ({
+                        ...page,
+                        data: page.data.map((msg: any) => {
+                            if (msg._id === updatedData.messageId) {
+                                return { ...msg, ...updatedData };
+                            }
+                            return msg;
+                        })
+                    }));
+
+                    return { ...oldData, pages: newPages };
+                });
+            }
+        };
+        chatSocket.on("message_update", handleMessageUpdate);
+
         return () => {
             chatSocket.off("new_message", handleNewMessage);
             chatSocket.off("typing_start", handleTypingStart);
             chatSocket.off("typing_stop", handleTypingStop);
+            chatSocket.off("message_update", handleMessageUpdate);
             chatSocket.emit("leave_room", { roomId: selectedChannelId });
         };
     }, [chatSocket, selectedChannelId, queryClient]);

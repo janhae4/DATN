@@ -76,6 +76,11 @@ export const discussionService = {
     return data;
   },
 
+  updateChannel: async (id: string, payload: { name: string }) => {
+    const { data } = await apiClient.put(`/discussions/channels/${id}`, payload);
+    return data;
+  },
+
   deleteChannel: async (id: string) => {
     const { data } = await apiClient.delete(`/discussions/channels/${id}`);
     return data;

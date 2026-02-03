@@ -1,10 +1,21 @@
 import React from "react";
 import { Icon } from "@iconify-icon/react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+
+interface Member {
+    userId: string;
+    name: string;
+    avatar?: string;
+    role?: string;
+    isAdmin?: boolean;
+}
 
 interface MemberListProps {
     showMembers: boolean;
     selectedServerId: string | null;
-    members: any[];
+    members: Member[];
     loadingMembers: boolean;
     hasNextMembersPage: boolean;
     isFetchingNextMembersPage: boolean;
@@ -22,57 +33,75 @@ export const MemberList: React.FC<MemberListProps> = ({
 }) => {
     if (!showMembers || !selectedServerId) return null;
 
-    return (
-        <div className="w-60 bg-gray-900 border-l border-gray-800 flex flex-col">
-            <div className="h-12 border-b border-gray-800 flex items-center px-4 font-bold text-gray-400 text-sm uppercase tracking-wider">
-                Members — {members.length}
+    const MemberItem = ({ member }: { member: Member }) => (
+        <div className="flex items-center gap-3 p-2 rounded-md hover:bg-zinc-800/50 cursor-pointer transition-colors group">
+            <div className="relative">
+                <Avatar className="h-8 w-8 border border-zinc-800">
+                    <AvatarImage src={member.avatar} />
+                    <AvatarFallback className="text-[10px] bg-zinc-800 text-zinc-400 font-medium">
+                        {member.name?.substring(0, 1).toUpperCase() || "?"}
+                    </AvatarFallback>
+                </Avatar>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                {loadingMembers && <div className="text-gray-500 text-xs">Loading members...</div>}
 
-                <div className="space-y-1">
-                    {members.map((member: any) => (
-                        <div
-                            key={member.userId}
-                            className="flex items-center space-x-3 p-1 rounded hover:bg-gray-800 transition-colors group cursor-pointer"
-                        >
-                            <div className="relative">
-                                <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-bold overflow-hidden">
-                                    {member.avatar ? (
-                                        <img src={member.avatar} alt={member.name} />
-                                    ) : (
-                                        <span>{member.name?.substring(0, 1).toUpperCase() || "?"}</span>
-                                    )}
-                                </div>
-                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-gray-900 rounded-full" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-gray-300 group-hover:text-white truncate text-sm font-medium">
-                                        {member.name}
-                                    </span>
-                                    {member.isAdmin && (
-                                        <Icon icon="lucide:shield-check" className="text-indigo-400" width="12" />
-                                    )}
-                                </div>
-                                <div className="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">
-                                    {member.role}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+            <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium text-zinc-300 group-hover:text-zinc-100 truncate transition-colors">
+                        {member.name}
+                    </span>
+                    {member.isAdmin && (
+                        <Icon
+                            icon="lucide:crown"
+                            width="12"
+                            className="text-amber-500 shrink-0"
+                            title="Admin"
+                        />
+                    )}
                 </div>
-
-                {hasNextMembersPage && (
-                    <button
-                        onClick={onLoadMore}
-                        disabled={isFetchingNextMembersPage}
-                        className="w-full py-2 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                    >
-                        {isFetchingNextMembersPage ? "Loading..." : "Load more members"}
-                    </button>
+                {member.role && (
+                    <span className="text-[10px] text-zinc-500 font-medium truncate group-hover:text-zinc-400 transition-colors">
+                        {member.role}
+                    </span>
                 )}
             </div>
+        </div>
+    );
+
+    return (
+        <div className="w-60 bg-zinc-950 border-l border-zinc-900 flex flex-col h-full">
+            <div className="h-12 flex items-center px-4 shrink-0">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                    Members — {members.length}
+                </span>
+            </div>
+
+            <ScrollArea className="flex-1 px-2 pb-2">
+                <div className="space-y-1 mt-1">
+                    {loadingMembers && (
+                        <div className="flex justify-center p-2">
+                            <Icon icon="lucide:loader-2" className="animate-spin text-zinc-600" width="16" />
+                        </div>
+                    )}
+
+                    {members.map((member: Member) => (
+                        <MemberItem key={member.userId} member={member} />
+                    ))}
+
+                    {hasNextMembersPage && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onLoadMore}
+                            disabled={isFetchingNextMembersPage}
+                            className="w-full text-xs text-zinc-500 h-8 mt-2 hover:text-zinc-300"
+                        >
+                            {isFetchingNextMembersPage ? (
+                                <Icon icon="lucide:loader-2" className="animate-spin mr-2" width="14" />
+                            ) : "Load More"}
+                        </Button>
+                    )}
+                </div>
+            </ScrollArea>
         </div>
     );
 };
