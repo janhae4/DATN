@@ -7,7 +7,8 @@ import {
     useDiscussionMutations,
     useServerMembers,
 } from "@/hooks/useDiscussion";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useProjects } from "@/hooks/useProjects";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useChatSocket } from "@/hooks/chat/useChatSocket";
 import { useVoiceSocket } from "@/hooks/chat/useVoiceSocket";
 
@@ -44,9 +45,14 @@ export const useChatPageLogic = (teamId: string) => {
         router.replace(`/${teamId}/chat?${params.toString()}`, { scroll: false });
     }, [selectedServerId, selectedChannelId, router, teamId]);
 
-    // Data Fetching
+    const params = useParams();
+    const currentProjectId = params?.projectId as string | undefined;
+
     const { data: servers = [], isLoading: loadingServers } = useUserServers(userId || "");
     const { data: channels = [], isLoading: loadingChannels } = useServerChannels(selectedServerId || "");
+    const { projects = [], isLoading: loadingProjects } = useProjects(teamId);
+
+    const currentProject = projects.find(p => p.id === currentProjectId);
 
     // Auto-select first server if none selected
     useEffect(() => {
@@ -54,6 +60,26 @@ export const useChatPageLogic = (teamId: string) => {
             setSelectedServerId(servers[0].id);
         }
     }, [selectedServerId, servers, loadingServers]);
+
+    // Auto-select first channel when server changes or channels load
+    useEffect(() => {
+        if (channels.length > 0 && !loadingChannels) {
+            const isCurrentChannelValid = channels.some((c: any) => c._id === selectedChannelId);
+
+            if (!selectedChannelId || !isCurrentChannelValid) {
+                const playbleChannels = channels.filter((c: any) => c.type !== 'CATEGORY');
+
+                const textChannel = playbleChannels.find((c: any) => c.type === 'TEXT' || (!c.type && c.name));
+                const voiceChannel = playbleChannels.find((c: any) => c.type === 'VOICE');
+
+                const targetId = textChannel?._id || voiceChannel?._id;
+
+                if (targetId) {
+                    setSelectedChannelId(targetId);
+                }
+            }
+        }
+    }, [channels, loadingChannels, selectedChannelId]);
 
     // Derived
     const selectedChannel = channels.find((c: any) => c._id === selectedChannelId);
@@ -108,10 +134,26 @@ export const useChatPageLogic = (teamId: string) => {
         deleteChannel,
         isCreatingServer,
         isCreatingChannel,
-        toggleReaction
+        toggleReaction,
+        updateMessage,
+        deleteMessage
     } = useDiscussionMutations();
 
-    // --- Handlers ---
+    const handleUpdateMessage = async (messageId: string, content: string, attachments?: any[]) => {
+        if (!selectedChannelId) return;
+        try {
+            await updateMessage({ discussionId: selectedChannelId, messageId, content, attachments });
+        } catch (error) { console.error('Failed to update message:', error); }
+    };
+
+    const handleDeleteMessage = async (messageId: string) => {
+        if (!selectedChannelId) return;
+        if (!confirm("Are you sure you want to delete this message?")) return;
+        try {
+            await deleteMessage({ discussionId: selectedChannelId, messageId });
+        } catch (error) { console.error('Failed to delete message:', error); }
+    };
+
     const handleCreateServer = async (serverName?: string) => {
         const name = serverName || prompt("Nhập tên Server mới:");
         if (name) {
@@ -128,12 +170,34 @@ export const useChatPageLogic = (teamId: string) => {
         }
     };
 
-    const handleCreateChannel = async (parentId?: string) => {
-        if (!selectedServerId) return;
-        const validParentId = typeof parentId === 'string' ? parentId : undefined;
-        const name = prompt(validParentId ? "Nhập tên Channel trong Category:" : "Nhập tên Channel:");
-        if (!name) return;
-        const type = confirm("Là kênh Voice? (OK=Voice, Cancel=Text)") ? "VOICE" : "TEXT";
+    const handleCreateChannel = async (parentId?: string, nameIn?: string, typeIn?: "TEXT" | "VOICE") => {
+        if (!selectedServerId || !nameIn) return;
+        let validParentId = typeof parentId === 'string' ? parentId : undefined;
+
+        const name = nameIn;
+        const type = typeIn || "TEXT";
+
+        if (!validParentId) {
+            const targetCategoryName = type === "VOICE" ? "VOICE CHANNELS" : "TEXT CHANNELS";
+            const defaultCategory = channels.find((c: any) => c.type === "CATEGORY" && c.name === targetCategoryName);
+
+            if (defaultCategory) {
+                validParentId = defaultCategory._id;
+            } else {
+                try {
+                    const newCat = await createCategory({
+                        teamId: selectedServerId,
+                        name: targetCategoryName,
+                        ownerId: userId || ""
+                    });
+                    if (newCat && newCat._id) {
+                        validParentId = newCat._id;
+                    }
+                } catch (e) {
+                    console.error(`Failed to create default ${targetCategoryName} category`, e);
+                }
+            }
+        }
 
         if (name) {
             await createChannel({
@@ -146,52 +210,62 @@ export const useChatPageLogic = (teamId: string) => {
         }
     };
 
-    const handleCreateCategory = async () => {
+    const handleCreateCategory = async (nameIn?: string) => {
         if (!selectedServerId) return;
-        const name = prompt("Nhập tên Category mới:");
+        const name = nameIn || prompt("Nhập tên Category mới:");
         if (!name) return;
         try {
             await createCategory({ teamId: selectedServerId, name, ownerId: userId || "" });
         } catch (error) { console.error(error); }
     };
 
-    const handleSendMessage = async (content: string) => {
-        if (!content.trim() || !selectedChannelId || !selectedServerId) return;
+    const handleSendMessage = async (content: string, attachments?: any[], replyToId?: string) => {
+        if ((!content.trim() && (!attachments || attachments.length === 0)) || !selectedChannelId || !selectedServerId) return;
 
         await sendMessage({
             discussionId: selectedChannelId,
             payload: {
                 content,
                 teamId: selectedServerId,
-                attachments: [],
+                attachments: (attachments && attachments.length > 0) ? attachments : undefined,
                 userId: userId || "",
-                discussionId: selectedChannelId
+                discussionId: selectedChannelId,
+                replyToId: replyToId || undefined
             }
         });
 
         stopTypingImmediately();
     };
 
-    const handleUpdateServer = async () => {
+    const handleUpdateServer = async (nameIn?: string, avatarIn?: string) => {
         if (!selectedServerId) return;
         const currentServer = servers.find((s: any) => s.id === selectedServerId);
         if (!currentServer) return;
 
-        const newName = prompt("Nhập tên server mới:", currentServer.name);
-        const newAvatar = prompt("Nhập URL avatar mới:", currentServer.avatar || "");
+        let newName = nameIn;
+        let newAvatar = avatarIn;
 
-        if (newName !== null) {
-            try {
-                await updateServer({
-                    teamId: selectedServerId,
-                    payload: {
-                        name: newName || currentServer.name,
-                        avatar: newAvatar !== null ? newAvatar : currentServer.avatar
-                    }
-                });
-                alert("Cập nhật server thành công!");
-            } catch (error) { console.error(error); }
+        if (nameIn === undefined && avatarIn === undefined) {
+            const promptedName = prompt("Nhập tên server mới:", currentServer.name);
+            if (promptedName === null) return;
+            newName = promptedName;
+
+            const promptedAvatar = prompt("Nhập URL avatar mới:", currentServer.avatar || "");
+            newAvatar = promptedAvatar !== null ? promptedAvatar : undefined;
         }
+
+        const finalName = newName !== undefined ? newName : currentServer.name;
+        const finalAvatar = newAvatar !== undefined ? newAvatar : currentServer.avatar;
+
+        try {
+            await updateServer({
+                teamId: selectedServerId,
+                payload: {
+                    name: finalName,
+                    avatar: finalAvatar
+                }
+            });
+        } catch (error) { console.error(error); }
     };
 
     const handleJoinServer = async (inviteCode?: string) => {
@@ -255,7 +329,6 @@ export const useChatPageLogic = (teamId: string) => {
     };
 
     const handleDeleteChannel = async (channelId: string) => {
-        if (!confirm("Are you sure you want to delete this channel?")) return;
         try {
             await deleteChannel(channelId);
             if (selectedChannelId === channelId) {
@@ -291,6 +364,9 @@ export const useChatPageLogic = (teamId: string) => {
             isFetchingNextMembersPage,
             isCreatingServer,
             isCreatingChannel,
+            projects,
+            loadingProjects,
+            currentProject
         },
         actions: {
             setSelectedServerId,
@@ -312,7 +388,9 @@ export const useChatPageLogic = (teamId: string) => {
             emitTyping,
             stopTypingImmediately,
             handleUpdateChannel,
-            handleDeleteChannel
+            handleDeleteChannel,
+            handleUpdateMessage,
+            handleDeleteMessage
         }
     };
 };

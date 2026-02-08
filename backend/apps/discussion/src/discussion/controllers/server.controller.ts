@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { EVENTS, EVENTS_EXCHANGE, DISCUSSION_EXCHANGE, DISCUSSION_PATTERN } from '@app/contracts';
+import { EVENTS, EVENTS_EXCHANGE, DISCUSSION_EXCHANGE, DISCUSSION_PATTERN, PROJECT_EVENTS } from '@app/contracts';
 import type { CreateTeamEventPayload, RemoveTeamEventPayload, AddMemberEventPayload, User, MemberRole } from '@app/contracts';
 import { ServerService } from '../services/server.service';
 import { MessageService } from '../services/message.service';
@@ -12,6 +12,30 @@ export class ServerController {
         private readonly serverService: ServerService,
         private readonly messageService: MessageService
     ) { }
+
+    @RabbitSubscribe({
+        exchange: EVENTS_EXCHANGE,
+        routingKey: PROJECT_EVENTS.PROJECT_CREATED,
+        queue: "events.create.project.chat",
+        errorHandler: customErrorHandler,
+    })
+    async handleCreateProject(payload: { projectName: string, projectId: string, teamId: string, owner: any }) {
+        if (!payload.owner) {
+            console.warn(`Skipping server creation for project ${payload.projectId} due to missing owner`);
+            return;
+        }
+
+        return await this.serverService.initServer({
+            owner: payload.owner,
+            members: [payload.owner],
+            teamSnapshot: {
+                id: payload.projectId,
+                name: payload.projectName,
+            },
+            membersToNotify: [],
+            createdAt: new Date()
+        });
+    }
 
     /**
      * Subscriber for the CREATE_TEAM event.
@@ -243,5 +267,15 @@ export class ServerController {
     })
     async handleGetServerMembers(payload: { teamId: string, page: number, limit: number }) {
         return await this.serverService.getServerMembers(payload);
+    }
+
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.CHECK_SERVER_MEMBERSHIP,
+        queue: DISCUSSION_PATTERN.CHECK_SERVER_MEMBERSHIP,
+        errorHandler: customErrorHandler,
+    })
+    async handleCheckServerMembership(payload: { serverId: string, userId: string }) {
+        return await this.serverService.checkServerMembership(payload.serverId, payload.userId);
     }
 }

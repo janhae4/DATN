@@ -172,10 +172,13 @@ export class TeamCacheService {
         const rawData = await this.redisService.getClient().hget(key, userId);
 
         if (rawData) return JSON.parse(rawData);
-        const fetcher = fetcherRPC || (() => this.amqp.request({
+        const fetcher = fetcherRPC || (() => this.amqp.request<CachedMemberState>({
             exchange: TEAM_EXCHANGE,
             routingKey: TEAM_PATTERN.FIND_PARTICIPANT,
             payload: { teamId, userId },
+        }).catch(err => {
+            console.error(`TeamCacheService: Failed to fetch participant via RPC for team ${teamId}, user ${userId}`, err);
+            return null;
         }));
 
         const freshData = await fetcher();

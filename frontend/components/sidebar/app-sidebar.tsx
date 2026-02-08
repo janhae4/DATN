@@ -98,13 +98,26 @@ const data: {
 }
 
 import { useProjects } from "@/hooks/useProjects";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const params = useParams();
+  const pathname = usePathname();
+  const { setOpen } = useSidebar();
   const teamId = params.teamId as string;
   const projectId = params.projectId as string | undefined;
   const { projects } = useProjects(teamId);
+
+  const isChat = pathname.includes("/chat");
+
+  React.useEffect(() => {
+    if (isChat) {
+      setOpen(false);
+    } else {
+      setOpen(true);
+    }
+  }, [isChat, setOpen]);
 
   const formattedProjects = React.useMemo(() => {
     return projects

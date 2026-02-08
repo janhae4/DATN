@@ -25,6 +25,10 @@ class AttachmentDto {
   @IsString()
   @IsNotEmpty()
   type: 'image' | 'file' | 'video';
+
+  @IsString()
+  @IsOptional()
+  fileName?: string;
 }
 
 export class SenderSnapshotDto {

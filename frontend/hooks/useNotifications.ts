@@ -72,8 +72,6 @@ export const useNotifications = () => {
                 toast.info(data.title || "New notification");
             }
 
-            toast.info(data.title || "New notification");
-
             const resourceType = data.resourceType;
             const resourceId = data.resourceId;
             const action = data.metadata?.action;

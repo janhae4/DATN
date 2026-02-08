@@ -22,4 +22,6 @@ export const FILE_PATTERN = {
     FILE_STATUS: 'file.status',
     GET_FILES_BY_IDS: 'file.get.ids',
     CONFIRM_UPLOAD: 'file.confirm_upload',
+    SAVE_FROM_CHAT: 'file.save_from_chat',
+    INITIAL_CHAT_UPLOAD: 'file.initial.chat.upload',
 }

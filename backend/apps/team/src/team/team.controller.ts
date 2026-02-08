@@ -13,7 +13,6 @@ import {
 } from '@app/contracts';
 import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import { customErrorHandler } from '@app/common';
-import { VerifyPermissionPayload } from '@app/contracts/team/dto/verify-permission.dto';
 
 @Controller()
 export class TeamController {

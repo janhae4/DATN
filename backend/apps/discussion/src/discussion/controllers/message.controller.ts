@@ -20,6 +20,7 @@ export class MessageController {
         errorHandler: customErrorHandler,
     })
     async createChatMessage(payload: CreateMessageDto) {
+        console.log('Creating chat message with payload:', payload);
         return this.messageService.createChatMessage(payload);
     }
 
@@ -74,5 +75,35 @@ export class MessageController {
     })
     async toggleReaction(payload: { userId: string, messageId: string, emoji: string }) {
         return this.messageService.toggleReaction(payload.userId, payload.messageId, payload.emoji);
+    }
+
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.UPDATE_MESSAGE,
+        queue: DISCUSSION_PATTERN.UPDATE_MESSAGE,
+        errorHandler: customErrorHandler,
+    })
+    async updateMessage(payload: { discussionId: string, messageId: string, content: string, attachments?: any[] }) {
+        return this.messageService.updateMessage(payload.discussionId, payload.messageId, payload.content, payload.attachments);
+    }
+
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.DELETE_MESSAGE,
+        queue: DISCUSSION_PATTERN.DELETE_MESSAGE,
+        errorHandler: customErrorHandler,
+    })
+    async deleteMessage(payload: { discussionId: string, messageId: string, userId: string }) {
+        return this.messageService.deleteMessage(payload.discussionId, payload.messageId, payload.userId);
+    }
+
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.GET_ATTACHMENTS,
+        queue: DISCUSSION_PATTERN.GET_ATTACHMENTS,
+        errorHandler: customErrorHandler,
+    })
+    async getAttachments(payload: { discussionId: string, page: number, limit: number }) {
+        return this.messageService.getDiscussionAttachments(payload.discussionId, payload.page, payload.limit);
     }
 }

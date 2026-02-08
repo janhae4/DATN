@@ -197,6 +197,7 @@ export * from './video-chat/index';
 EVENT
 -----*/
 export * from './events/events.pattern';
+export * from './events/project.events';
 
 
 /*----

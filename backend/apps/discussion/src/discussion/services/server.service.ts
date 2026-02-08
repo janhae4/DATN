@@ -463,4 +463,26 @@ export class ServerService {
             totalPages: Math.ceil(total / limit)
         };
     }
+
+    /**
+     * Checks if a user is a member of a server (has active membership in any discussion of that server)
+     */
+    async checkServerMembership(serverId: string, userId: string): Promise<boolean> {
+        const discussions = await this.discussionModel.find({
+            teamId: serverId,
+            isDeleted: { $ne: true }
+        }).select('_id').lean();
+
+        if (discussions.length === 0) return false;
+
+        const discussionIds = discussions.map(d => d._id);
+
+        const membership = await this.membershipModel.findOne({
+            discussionId: { $in: discussionIds },
+            userId,
+            status: MemberShip.ACTIVE
+        }).lean();
+
+        return !!membership;
+    }
 }

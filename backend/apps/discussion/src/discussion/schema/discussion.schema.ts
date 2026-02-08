@@ -1,7 +1,7 @@
 import { MemberShip, MemberRole, DiscussionType } from "@app/contracts";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import mongoose, { Document } from "mongoose";
-import { Attachment, AttachmentSchema, SenderSnapshot, SenderSnapshotSchema } from "./message.schema";
+import { Attachment, AttachmentSchema, SenderSnapshot, SenderSnapshotSchema, ReplySnapshot, ReplySnapshotSchema } from "./message.schema";
 
 // Membership = links user to discussion 
 @Schema({ timestamps: true })
@@ -19,7 +19,7 @@ export class Membership {
   role: MemberRole;
 
   @Prop({ default: false })
-  isAdmin: boolean; 
+  isAdmin: boolean;
 }
 export const MembershipSchema = SchemaFactory.createForClass(Membership);
 MembershipSchema.index({ discussionId: 1, userId: 1 }, { unique: true });
@@ -74,6 +74,9 @@ export class LatestMessageSnapshot {
 
   @Prop()
   createdAt: Date;
+
+  @Prop({ type: ReplySnapshotSchema })
+  replyTo?: ReplySnapshot;
 }
 export const LatestMessageSnapshotSchema = SchemaFactory.createForClass(LatestMessageSnapshot);
 

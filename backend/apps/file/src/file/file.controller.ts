@@ -81,12 +81,42 @@ export class FileController {
     errorHandler: customErrorHandler
   })
   async handleInitialUpload(payload: UploadFilePayload) {
+    if (payload.isChatAttachment && payload.teamId) {
+      return await this.fileService.createChatPreSignedUrl(
+        payload.fileName,
+        payload.userId,
+        payload.teamId,
+        payload.projectId
+      );
+    }
+
     return await this.fileService.createPreSignedUrl(
       payload.fileName,
       payload.userId,
       payload.projectId,
       payload.teamId,
       payload.parentId
+    );
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.INITIAL_CHAT_UPLOAD,
+    queue: FILE_PATTERN.INITIAL_CHAT_UPLOAD,
+    errorHandler: customErrorHandler
+  })
+  async handleInitialChatUpload(payload: {
+    fileName: string,
+    fileType: string,
+    userId: string,
+    projectId?: string,
+    teamId: string,
+  }) {
+    return await this.fileService.createChatPreSignedUrl(
+      payload.fileName,
+      payload.userId,
+      payload.teamId,
+      payload.projectId
     );
   }
 
@@ -178,11 +208,30 @@ export class FileController {
 
   @RabbitRPC({
     exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.SAVE_FROM_CHAT,
+    queue: FILE_PATTERN.SAVE_FROM_CHAT,
+    errorHandler: customErrorHandler
+  })
+  async saveFromChat(payload: {
+    storageKey: string,
+    userId: string,
+    fileName: string,
+    teamId?: string,
+    projectId?: string,
+  }) {
+    return await this.fileService.saveFromChat(payload);
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
     routingKey: FILE_PATTERN.GET_PREVIEW_URL,
     queue: FILE_PATTERN.GET_PREVIEW_URL,
     errorHandler: customErrorHandler
   })
   async getFileStream(payload: { fileId: string, userId: string, projectId?: string }) {
+    if (payload.fileId.startsWith('chat-files')) {
+      return await this.fileService.getChatViewUrl(payload.fileId, payload.userId);
+    }
     return await this.fileService.getViewUrl(payload.fileId, payload.userId, payload.projectId);
   }
 

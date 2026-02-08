@@ -115,6 +115,23 @@ export class DiscussionController {
     });
   }
 
+  @Get(':discussionId/attachments')
+  @ApiOperation({ summary: 'Get attachments for discussion' })
+  @ApiParam({
+    name: 'discussionId',
+    description: 'Discussion ID',
+    example: '6675b11a8b3a729e2e2a3b4c',
+  })
+  @ApiResponse({ status: 200, description: 'List of attachments with pagination.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  getAttachmentsForDiscussion(
+    @Param('discussionId') discussionId: string,
+    @Query() options: RequestPaginationDto,
+  ) {
+    const { page = 1, limit = 20 } = options;
+    return this.discussionService.getDiscussionAttachments(discussionId, page, limit);
+  }
+
   @Get('teams/:teamId')
   getDiscussionByTeamId(
     @Param('teamId') teamId: string,
@@ -154,7 +171,9 @@ export class DiscussionController {
     @Param('discussionId') discussionId: string,
     @Body() createDiscussionMessageDto: CreateDiscussionMessageDto,
   ) {
+    console.log('📥 Received createDiscussionMessageDto:', JSON.stringify(createDiscussionMessageDto, null, 2));
     const { discussionId: _, userId: __, ...sanitizedDto } = createDiscussionMessageDto;
+    console.log('📤 Sending to service:', JSON.stringify({ ...sanitizedDto, userId, discussionId }, null, 2));
     return this.discussionService.createDiscussionMessage({
       ...sanitizedDto,
       userId,
@@ -183,6 +202,34 @@ export class DiscussionController {
     @Body() body: { emoji: string },
   ) {
     return this.discussionService.toggleReaction(userId, messageId, body.emoji);
+  }
+
+  @Put(':discussionId/messages/:messageId')
+  @ApiOperation({ summary: 'Update message content' })
+  @ApiParam({ name: 'discussionId', description: 'Discussion ID' })
+  @ApiParam({ name: 'messageId', description: 'Message ID' })
+  @ApiResponse({ status: 200, description: 'Message updated successfully.' })
+  @ApiResponse({ status: 404, description: 'Message not found.' })
+  updateMessage(
+    @Param('discussionId') discussionId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { content: string },
+  ) {
+    return this.discussionService.updateMessage(discussionId, messageId, body.content);
+  }
+
+  @Delete(':discussionId/messages/:messageId')
+  @ApiOperation({ summary: 'Delete message' })
+  @ApiParam({ name: 'discussionId', description: 'Discussion ID' })
+  @ApiParam({ name: 'messageId', description: 'Message ID' })
+  @ApiResponse({ status: 200, description: 'Message deleted successfully.' })
+  @ApiResponse({ status: 404, description: 'Message not found.' })
+  deleteMessage(
+    @Param('discussionId') discussionId: string,
+    @Param('messageId') messageId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.discussionService.deleteMessage(discussionId, messageId, userId);
   }
 
   // Server Management Endpoints

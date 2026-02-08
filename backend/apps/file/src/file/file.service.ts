@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery, UpdateQuery } from 'mongoose';
-import { BadRequestException, Error as RpcError, MemberRole, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS, FileType, ForbiddenException, ZipFileEntry, FileVisibility } from '@app/contracts';
+import { BadRequestException, Error as RpcError, MemberRole, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS, FileType, ForbiddenException, ZipFileEntry, FileVisibility, DISCUSSION_EXCHANGE, DISCUSSION_PATTERN } from '@app/contracts';
 import { File, FileDocument } from './schema/file.schema';
 import { randomUUID } from 'crypto';
 import path from 'path';
@@ -32,18 +32,26 @@ export class FileService {
     private async _verifyPermission(fileId: string, userId: string, projectId?: string, teamId?: string): Promise<{ file: FileDocument, currentUserRole?: MemberRole | null }> {
         let currentUserRole: MemberRole | null = null;
 
-        if (projectId && teamId) {
-            currentUserRole = await this.teamCache.getTeamMember(teamId, userId);
-            if (!currentUserRole) {
-                this.logger.error(`User ${userId} not found in team ${teamId}`);
-                throw new BadRequestException('User not found in team');
+        const file = await this.fileModel.findOne({ _id: fileId }).exec();
+        if (!file) throw new NotFoundException(`File not found`);
+
+        if (file.visibility === FileVisibility.PUBLIC) return { file, currentUserRole };
+
+        const effectiveTeamId = teamId || file.teamId;
+
+        if (effectiveTeamId) {
+            try {
+                const member = await this.teamCache.getTeamMember(effectiveTeamId, userId);
+                currentUserRole = member?.role || null;
+            } catch (error) {
+                this.logger.error(`_verifyPermission: Could not fetch team member info for user ${userId} in team ${effectiveTeamId}. Error: ${error.message}`, error.stack);
+                currentUserRole = null;
+            }
+
+            if (teamId && file.teamId && file.teamId !== teamId) {
+                throw new BadRequestException('File does not belong to the specified team');
             }
         }
-
-        const file = await this.fileModel.findOne({ _id: fileId }).exec();
-
-        if (!file) throw new NotFoundException(`File not found`);
-        if (teamId && file.teamId !== teamId) throw new BadRequestException('File does not belong to the specified team');
 
         if (file.userId === userId) return { file, currentUserRole };
 
@@ -58,6 +66,13 @@ export class FileService {
             }
         }
 
+        // For TEAM visibility, ensure user is a member of the team
+        if (file.visibility === FileVisibility.TEAM) {
+            if (!currentUserRole) {
+                throw new ForbiddenException(`You do not have permission to access this team file. User ${userId} is not part of team ${effectiveTeamId}`);
+            }
+        }
+
         return { file, currentUserRole };
     }
 
@@ -66,7 +81,8 @@ export class FileService {
         userId: string,
         projectId?: string,
         teamId?: string,
-        parentId: string | null = null
+        parentId: string | null = null,
+        isChatAttachment: boolean = false
     ) {
         if (teamId && parentId) {
             await this.teamCache.checkPermission(teamId, userId);
@@ -95,8 +111,9 @@ export class FileService {
                 type: FileType.FILE,
                 status: FileStatus.PENDING,
                 createdAt: new Date(),
-                visibility: FileVisibility.PRIVATE,
-                size: 0
+                visibility: teamId ? FileVisibility.TEAM : FileVisibility.PRIVATE,
+                size: 0,
+                isChatAttachment: isChatAttachment
             });
         } catch (dbError) {
             this.logger.error(`DB create PENDING failed: ${dbError.message}`);
@@ -229,6 +246,7 @@ export class FileService {
                 query.$or = [
                     { userId: userId },
                     { visibility: FileVisibility.TEAM, teamId },
+                    { visibility: FileVisibility.PUBLIC },
                     {
                         visibility: FileVisibility.SPECIFIC,
                         allowedUserIds: userId
@@ -245,6 +263,8 @@ export class FileService {
         if (parentId) {
             query.parentId = parentId;
         }
+
+        query.isChatAttachment = { $ne: true };
 
         const [files, totalItems] = await Promise.all([
             this.fileModel
@@ -297,6 +317,15 @@ export class FileService {
     }
 
     async deleteItem(id: string, userId: string, projectId?: string, teamId?: string) {
+        if (id.startsWith('chat-files')) {
+            const parts = id.split('/');
+            if (parts.length < 3) throw new BadRequestException('Invalid chat file key');
+            const fileTeamId = parts[1];
+            await this.teamCache.checkPermission(fileTeamId, userId);
+
+            await this.minioService.deleteFiles([id]);
+            return { success: true };
+        }
         return this.deleteManyFile([id], userId, projectId, teamId);
     }
 
@@ -628,8 +657,122 @@ export class FileService {
             } else {
                 return [{ storageKey: child.storageKey, zipPath: childPath }];
             }
+
         }));
 
         return results.flat();
+    }
+    async createChatPreSignedUrl(
+        originalName: string,
+        userId: string,
+        teamId: string,
+        projectId?: string
+    ) {
+        console.log(`[FileService] createChatPreSignedUrl: teamId=${teamId}, userId=${userId}`);
+        try {
+            // await this.teamCache.checkPermission(teamId, userId);
+        } catch (error) {
+            console.error(`[FileService] Permission check failed for team ${teamId}, user ${userId}:`, error);
+            throw error;
+        }
+
+        const extension = path.extname(originalName);
+        const randomId = randomUUID();
+        const storageKey = `chat-files/${teamId}/${projectId || 'global'}/${randomId}${extension}`;
+
+        const uploadUrl = await this.minioService.getPreSignedUploadUrl(storageKey);
+
+        return {
+            uploadUrl,
+            fileId: storageKey,
+            isDirectKey: true,
+            storageKey
+        };
+    }
+
+    async getChatViewUrl(storageKey: string, userId: string) {
+        const parts = storageKey.split('/');
+        if (parts.length < 3 || parts[0] !== 'chat-files') {
+            throw new BadRequestException('Invalid chat file key');
+        }
+
+        const serverId = parts[1];
+
+        try {
+            const hasAccess = await this.amqp.request<boolean>({
+                exchange: DISCUSSION_EXCHANGE,
+                routingKey: DISCUSSION_PATTERN.CHECK_SERVER_MEMBERSHIP,
+                payload: { serverId, userId }
+            });
+
+            if (!hasAccess) {
+                throw new ForbiddenException('You do not have access to this server');
+            }
+        } catch (error) {
+            if (error instanceof ForbiddenException) {
+                throw error;
+            }
+            throw new ForbiddenException('You do not have access to this server');
+        }
+
+        const originalName = path.basename(storageKey);
+
+        const viewUrl = await this.minioService.getPreSignedViewUrl(
+            storageKey,
+            originalName
+        );
+
+        return { viewUrl };
+    }
+    async saveFromChat(payload: {
+        storageKey: string,
+        userId: string,
+        fileName: string,
+        teamId?: string,
+        projectId?: string,
+    }) {
+        const { storageKey, userId, fileName, teamId, projectId } = payload;
+
+        // 1. Verify chat file access (simplified)
+        const parts = storageKey.split('/');
+        if (parts.length < 3 || parts[0] !== 'chat-files') {
+            throw new BadRequestException('Invalid chat file key');
+        }
+        const fileTeamId = parts[1];
+        await this.teamCache.checkPermission(fileTeamId, userId);
+
+        // 2. Get metadata from MinIO
+        const metadata = await this.minioService.getObjectMetadata(storageKey);
+        if (!metadata) {
+            throw new NotFoundException('Source file not found in storage');
+        }
+
+        // 3. Prepare new file
+        const fileId = randomUUID();
+        const extension = path.extname(storageKey);
+        const newStorageKey = `${fileId}${extension}`;
+        const mimetype = (metadata as any).metaData?.['content-type'] || mime.lookup(fileName) || 'application/octet-stream';
+
+        // 4. Copy object in MinIO
+        await this.minioService.copyObject(storageKey, newStorageKey);
+
+        // 5. Create DB Record
+        const newFile = await this.fileModel.create({
+            _id: fileId,
+            storageKey: newStorageKey,
+            originalName: fileName,
+            userId,
+            projectId: projectId || null,
+            teamId: teamId || null,
+            mimetype,
+            size: metadata.size,
+            type: FileType.FILE,
+            status: FileStatus.UPLOADED,
+            createdAt: new Date(),
+            visibility: teamId ? FileVisibility.TEAM : FileVisibility.PRIVATE,
+            isChatAttachment: false
+        });
+
+        return newFile;
     }
 }

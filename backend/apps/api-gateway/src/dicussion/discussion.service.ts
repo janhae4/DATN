@@ -108,6 +108,33 @@ export class DiscussionService {
     })
   }
 
+  updateMessage(discussionId: string, messageId: string, content: string) {
+    return this.amqp.request({
+      exchange: DISCUSSION_EXCHANGE,
+      routingKey: DISCUSSION_PATTERN.UPDATE_MESSAGE,
+      payload: { discussionId, messageId, content },
+      timeout: this.rpcTimeout,
+    })
+  }
+
+  deleteMessage(discussionId: string, messageId: string, userId: string = '') {
+    return this.amqp.request({
+      exchange: DISCUSSION_EXCHANGE,
+      routingKey: DISCUSSION_PATTERN.DELETE_MESSAGE,
+      payload: { discussionId, messageId, userId },
+      timeout: this.rpcTimeout,
+    })
+  }
+
+  getDiscussionAttachments(discussionId: string, page: number, limit: number) {
+    return this.amqp.request({
+      exchange: DISCUSSION_EXCHANGE,
+      routingKey: DISCUSSION_PATTERN.GET_ATTACHMENTS,
+      payload: { discussionId, page, limit },
+      timeout: this.rpcTimeout,
+    })
+  }
+
   // Server Management
   async createServer(payload: CreateTeamEventPayload) {
     const result = await this.amqp.request({

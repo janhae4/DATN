@@ -769,6 +769,7 @@ export class TeamService {
 
     console.log("memberState", memberState);
     if (!memberState) {
+      this.logger.warn(`validateRequester failed for team ${teamId}, user ${requesterId} - Member not found in DB/Cache`);
       throw new ForbiddenException("Access Denied: You are not a member of this team.");
     }
     if (memberState.status !== MemberStatus.ACCEPTED) {
@@ -813,7 +814,8 @@ export class TeamService {
 
   private async fetchOneMemberRoleFromDb(teamId: string, userId: string): Promise<CachedMemberState | null> {
     const entity = await this.memberRepo.findOne({ where: { teamId, userId } });
-    console.log(entity);
+    console.log(`fetchOneMemberRoleFromDb result for team ${teamId}, user ${userId}:`, entity ? 'Found' : 'NULL');
+    if (!entity) return null;
     return entity ? {
       role: entity.role, status: entity.status, joinedAt: entity.joinedAt!, isActive: true
     } : null;

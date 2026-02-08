@@ -13,19 +13,6 @@ export class Reaction {
 }
 const ReactionSchema = SchemaFactory.createForClass(Reaction);
 
-@Schema({ _id: false })
-export class ReplySnapshot {
-  @Prop({ required: true })
-  messageId: string;
-
-  @Prop({ required: true })
-  content: string;
-
-  @Prop({ required: true })
-  senderName: string;
-}
-export const ReplySnapshotSchema = SchemaFactory.createForClass(ReplySnapshot);
-
 // Attachment = file attachment
 @Schema({ _id: false })
 export class Attachment {
@@ -39,6 +26,22 @@ export class Attachment {
   fileName: string;
 }
 export const AttachmentSchema = SchemaFactory.createForClass(Attachment);
+
+@Schema({ _id: false })
+export class ReplySnapshot {
+  @Prop({ required: true })
+  messageId: string;
+
+  @Prop({ required: true })
+  content: string;
+
+  @Prop({ required: true })
+  senderName: string;
+
+  @Prop({ type: [AttachmentSchema], default: [] })
+  attachments?: Attachment[];
+}
+export const ReplySnapshotSchema = SchemaFactory.createForClass(ReplySnapshot);
 
 
 // SenderSnapshot = sender basic info
@@ -65,7 +68,7 @@ export class Message {
   @Prop({ type: SenderSnapshotSchema, required: true })
   sender: SenderSnapshot;
 
-  @Prop({ trim: true, required: true })
+  @Prop({ trim: true })
   content: string;
 
   @Prop({
@@ -83,6 +86,9 @@ export class Message {
 
   @Prop({ type: [ReactionSchema], default: [] })
   reactions: Reaction[];
+
+  @Prop({ default: false })
+  isDeleted: boolean;
 
   @Prop()
   createdAt: Date;

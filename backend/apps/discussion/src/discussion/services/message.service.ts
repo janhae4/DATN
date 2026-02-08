@@ -22,6 +22,8 @@ import {
     User,
     MemberShip,
     MemberRole,
+    FILE_EXCHANGE,
+    FILE_PATTERN,
 } from '@app/contracts';
 import { Discussion, DiscussionDocument, LatestMessageSnapshot, Membership, MembershipDocument, ReadReceipt, ReadReceiptDocument } from '../schema/discussion.schema';
 import { Attachment, Message, ReplySnapshot, SenderSnapshot } from '../schema/message.schema';
@@ -58,6 +60,14 @@ export class MessageService {
         const { discussionId, userId, content, attachments, replyToId } =
             createChatMessage;
 
+        console.log('📥 [MessageService] createChatMessage called with:', {
+            discussionId,
+            userId,
+            content,
+            attachments,
+            attachmentsCount: attachments?.length || 0
+        });
+
         await this.markAsRead(discussionId, userId);
 
         const discussion = await this.getDiscussionOrFail(discussionId, userId);
@@ -76,13 +86,21 @@ export class MessageService {
         if (replyToId) {
             const parentMessage = await this.messageModel.findById(replyToId).lean();
             if (parentMessage) {
+                let replyContent = parentMessage.content;
+                if (!replyContent && parentMessage.attachments && parentMessage.attachments.length > 0) {
+                    replyContent = "Click to see attachment";
+                }
+
                 replyToSnapshot = {
                     messageId: parentMessage._id.toString(),
-                    content: parentMessage.content,
-                    senderName: parentMessage.sender.name
+                    content: replyContent || "Message",
+                    senderName: parentMessage.sender.name,
+                    attachments: parentMessage.attachments
                 };
             }
         }
+
+        console.log('📤 [MessageService] Calling createMessage with attachments:', attachments);
 
         return await this.createMessage(
             discussion,
@@ -129,7 +147,7 @@ export class MessageService {
                 .sort({ createdAt: -1 })
                 .skip((numericPage - 1) * numericLimit)
                 .limit(numericLimit)
-                .select('_id content sender attachments createdAt reactions')
+                .select('_id content sender attachments createdAt updatedAt reactions isDeleted replyTo')
                 .lean(),
 
             this.messageModel.countDocuments({ discussionId: new mongoose.Types.ObjectId(discussionId) }),
@@ -288,6 +306,12 @@ export class MessageService {
         attachments?: Attachment[],
         replyTo?: ReplySnapshot | null,
     ) {
+        console.log('💾 [createMessage] Creating message with:', {
+            content,
+            attachments,
+            attachmentsCount: attachments?.length || 0
+        });
+
         const message = new this.messageModel({
             discussionId: discussion._id,
             content,
@@ -298,12 +322,20 @@ export class MessageService {
 
         const savedMessage = await message.save();
 
+        console.log('✅ [createMessage] Message saved:', {
+            _id: savedMessage._id,
+            content: savedMessage.content,
+            attachments: savedMessage.attachments,
+            attachmentsCount: savedMessage.attachments?.length || 0
+        });
+
         const messageSnapshot: LatestMessageSnapshot = {
             _id: savedMessage._id.toString(),
             sender,
             content: savedMessage.content,
             attachments: savedMessage.attachments as any,
             createdAt: savedMessage.createdAt,
+            replyTo: savedMessage.replyTo || undefined,
         };
 
         discussion.latestMessage = savedMessage._id as any;
@@ -457,5 +489,151 @@ export class MessageService {
         }
 
         return savedMessage;
+    }
+
+    async updateMessage(discussionId: string, messageId: string, content: string, attachments?: any[]) {
+        const message = await this.messageModel.findOne({ _id: messageId, discussionId: new mongoose.Types.ObjectId(discussionId) });
+        if (!message) throw new NotFoundException('Message not found');
+        message.content = content;
+        if (attachments) {
+            message.attachments = attachments;
+        }
+        const updatedMessage = await message.save();
+
+        const discussion = await this.discussionModel.findById(discussionId).lean();
+        if (discussion) {
+            const memberships = await this.membershipModel.find({
+                discussionId: discussion._id,
+                status: MemberShip.ACTIVE
+            }).lean();
+            const membersToNotify = memberships.map(m => m.userId);
+
+            const updatedMessageObject = updatedMessage.toObject();
+
+            this.amqp.publish(EVENTS_EXCHANGE, EVENTS.MESSAGE_UPDATED, {
+                discussionId,
+                messageId,
+                content,
+                attachments: updatedMessageObject.attachments,
+                updatedAt: updatedMessageObject.updatedAt,
+                isDeleted: updatedMessageObject.isDeleted,
+                membersToNotify
+            });
+
+            if (discussion.latestMessage && discussion.latestMessage.toString() === messageId) {
+                await this.discussionModel.updateOne(
+                    { _id: discussion._id },
+                    { $set: { 'latestMessageSnapshot.content': content } }
+                );
+            }
+
+            // Update all messages that reply to this updated message
+            await this.messageModel.updateMany(
+                { 'replyTo.messageId': messageId },
+                { $set: { 'replyTo.content': content } },
+                { timestamps: false }
+            );
+        }
+        return updatedMessage;
+    }
+
+    async deleteMessage(discussionId: string, messageId: string, userId?: string) {
+        // Find message first to delete attachments
+        const messageToDelete = await this.messageModel.findOne({
+            _id: messageId,
+            discussionId: new mongoose.Types.ObjectId(discussionId)
+        });
+
+        if (messageToDelete && messageToDelete.attachments && messageToDelete.attachments.length > 0) {
+            this.logger.log(`Deleting ${messageToDelete.attachments.length} attachments for message ${messageId}`);
+            for (const att of messageToDelete.attachments) {
+                if (att.url && !att.url.startsWith('http') && userId) {
+                    try {
+                        await this.amqp.request({
+                            exchange: FILE_EXCHANGE,
+                            routingKey: FILE_PATTERN.DELETE_ITEM,
+                            payload: {
+                                fileId: att.url,
+                                userId: userId
+                            }
+                        });
+                    } catch (err) {
+                        this.logger.error(`Failed to delete file ${att.url}:`, err);
+                    }
+                }
+            }
+        }
+
+        const deletedMessage = await this.messageModel.findOneAndUpdate(
+            { _id: messageId, discussionId: new mongoose.Types.ObjectId(discussionId) },
+            { isDeleted: true },
+            { new: true }
+        );
+
+        if (!deletedMessage) throw new NotFoundException('Message not found');
+
+        const discussion = await this.discussionModel.findById(discussionId).lean();
+
+        if (discussion) {
+            const memberships = await this.membershipModel.find({
+                discussionId: discussion._id,
+                status: MemberShip.ACTIVE
+            }).lean();
+            const membersToNotify = memberships.map(m => m.userId);
+
+            this.amqp.publish(EVENTS_EXCHANGE, EVENTS.MESSAGE_DELETED, {
+                discussionId,
+                messageId,
+                isDeleted: true,
+                membersToNotify
+            });
+
+            await this.messageModel.updateMany(
+                { 'replyTo.messageId': messageId },
+                { $set: { 'replyTo.content': 'This message has been deleted.' } },
+                { timestamps: false }
+            );
+        }
+        return { success: true, messageId };
+    }
+
+    async getDiscussionAttachments(discussionId: string, page: number = 1, limit: number = 20) {
+        const skip = (page - 1) * limit;
+
+        const messages = await this.messageModel.find({
+            discussionId,
+            attachments: { $exists: true, $not: { $size: 0 } },
+            isDeleted: false
+        })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean()
+            .exec();
+
+        const attachments = messages.flatMap(msg =>
+            msg.attachments.map(att => ({
+                ...att,
+                messageId: msg._id,
+                senderId: msg.sender._id,
+                createdAt: msg.createdAt
+            }))
+        );
+
+        const totalMessagesWithAttachments = await this.messageModel.countDocuments({
+            discussionId,
+            attachments: { $exists: true, $not: { $size: 0 } },
+            isDeleted: false
+        });
+
+        return {
+            data: attachments,
+            pagination: {
+                total: totalMessagesWithAttachments,
+                page,
+                limit,
+                totalPages: Math.ceil(totalMessagesWithAttachments / limit)
+            }
+        };
     }
 }

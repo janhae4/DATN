@@ -31,4 +31,8 @@ export const DISCUSSION_PATTERN = {
   GET_INVITE: 'chat.getInvite',
   UPDATE_MEMBER_ROLE: 'chat.updateMemberRole',
   UPDATE_PERMISSION: 'chat.updatePermission',
+  UPDATE_MESSAGE: 'chat.updateMessage',
+  DELETE_MESSAGE: 'chat.deleteMessage',
+  GET_ATTACHMENTS: 'chat.getAttachments',
+  CHECK_SERVER_MEMBERSHIP: 'chat.checkServerMembership',
 };

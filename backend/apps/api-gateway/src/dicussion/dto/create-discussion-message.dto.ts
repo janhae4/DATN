@@ -7,11 +7,12 @@ export class CreateDiscussionMessageDto {
     description: 'Nội dung tin nhắn',
     example: 'Chào bạn, khoẻ không?',
     maxLength: 2000,
+    required: false,
   })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(2000)
-  content: string;
+  content?: string;
 
   @ApiProperty({
     description: 'ID team',
@@ -37,4 +38,13 @@ export class CreateDiscussionMessageDto {
   @IsOptional()
   @IsString()
   discussionId?: string;
+
+  @ApiProperty({
+    description: 'ID của tin nhắn được trả lời',
+    example: '6675b11a8b3a729e2e2a3b4d',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  replyToId?: string;
 }

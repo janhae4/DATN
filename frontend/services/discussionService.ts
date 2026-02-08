@@ -15,22 +15,25 @@ export const discussionService = {
     return data;
   },
 
+  getDiscussionAttachments: async (discussionId: string, params: { page?: number; limit?: number }) => {
+    const { data } = await apiClient.get(`/discussions/${discussionId}/attachments`, { params });
+    return data;
+  },
+
   sendMessage: async (discussionId: string, payload: CreateMessageDto) => {
-    if (payload.attachments && payload.attachments.length > 0) {
-      const formData = new FormData();
-      if (payload.content) formData.append('content', payload.content);
-      if (payload.replyToId) formData.append('replyToId', payload.replyToId);
-      if (payload.discussionId) formData.append('discussionId', payload.discussionId);
-      if (payload.userId) formData.append('userId', payload.userId);
-      if (payload.teamId) formData.append('teamId', payload.teamId);
-
-      const { data } = await apiClient.post(`/discussions/${discussionId}/messages`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      return data;
-    }
-
     const { data } = await apiClient.post(`/discussions/${discussionId}/messages`, payload);
+    return data;
+  },
+
+  updateMessage: async (discussionId: string, messageId: string, content: string, attachments?: any[]) => {
+    const payload: any = { content };
+    if (attachments) payload.attachments = attachments;
+    const { data } = await apiClient.put(`/discussions/${discussionId}/messages/${messageId}`, payload);
+    return data;
+  },
+
+  deleteMessage: async (discussionId: string, messageId: string) => {
+    const { data } = await apiClient.delete(`/discussions/${discussionId}/messages/${messageId}`);
     return data;
   },
 

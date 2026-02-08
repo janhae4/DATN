@@ -20,6 +20,13 @@ class MessageSnapshot {
   attachments?: AttachmentDto[]
   sender: SenderSnapshot;
   createdAt: Date;
+  replyTo?: ReplySnapshot;
+}
+
+class ReplySnapshot {
+  messageId: string;
+  content: string;
+  senderName: string;
 }
 
 export interface SendMessageEventPayload {

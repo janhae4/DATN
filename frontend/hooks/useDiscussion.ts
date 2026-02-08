@@ -52,6 +52,19 @@ export const useDiscussionMessages = (discussionId: string) => {
   });
 };
 
+export const useDiscussionAttachments = (discussionId: string) => {
+  return useInfiniteQuery({
+    queryKey: ['attachments', discussionId],
+    queryFn: ({ pageParam = 1 }) =>
+      discussionService.getDiscussionAttachments(discussionId, { page: pageParam as number, limit: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: any) => {
+      return lastPage.pagination.page < lastPage.pagination.totalPages ? lastPage.pagination.page + 1 : undefined;
+    },
+    enabled: !!discussionId,
+  });
+};
+
 export const useDiscussionMutations = () => {
   const queryClient = useQueryClient();
 
@@ -66,6 +79,22 @@ export const useDiscussionMutations = () => {
   const toggleReactionMutation = useMutation({
     mutationFn: ({ discussionId, messageId, emoji }: { discussionId: string; messageId: string; emoji: string }) =>
       discussionService.toggleReaction(discussionId, messageId, emoji),
+  });
+
+  const updateMessageMutation = useMutation({
+    mutationFn: ({ discussionId, messageId, content, attachments }: { discussionId: string; messageId: string; content: string; attachments?: any[] }) =>
+      discussionService.updateMessage(discussionId, messageId, content, attachments),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['messages', variables.discussionId] });
+    }
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: ({ discussionId, messageId }: { discussionId: string; messageId: string }) =>
+      discussionService.deleteMessage(discussionId, messageId),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['messages', variables.discussionId] });
+    }
   });
 
   const createDirectMutation = useMutation({
@@ -156,6 +185,7 @@ export const useDiscussionMutations = () => {
     mutationFn: (teamId: string) => discussionService.permanentDeleteServer(teamId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-servers'] });
+      queryClient.invalidateQueries({ queryKey: ['deleted-servers'] });
     }
   });
 
@@ -163,6 +193,8 @@ export const useDiscussionMutations = () => {
     sendMessage: sendMessageMutation.mutateAsync,
     isSending: sendMessageMutation.isPending,
     toggleReaction: toggleReactionMutation.mutateAsync,
+    updateMessage: updateMessageMutation.mutateAsync,
+    deleteMessage: deleteMessageMutation.mutateAsync,
     createDirect: createDirectMutation.mutateAsync,
 
     createServer: createServerMutation.mutateAsync,
