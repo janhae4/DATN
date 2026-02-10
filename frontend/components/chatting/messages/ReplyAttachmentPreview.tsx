@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify-icon/react";
 import { fileService } from "@/services/fileService";
-import { MessageAttachment } from "./types";
+import { AttachmentDto } from "@/types";
 
 interface ReplyAttachmentPreviewProps {
-    attachment: MessageAttachment;
+    attachment: AttachmentDto;
     serverId: string | null;
 }
 
@@ -18,9 +18,9 @@ export const ReplyAttachmentPreview: React.FC<ReplyAttachmentPreviewProps> = ({ 
         if (!isImage) return;
 
         const fetchPreview = async () => {
-            if (attachment.url.startsWith('http')) {
+            if (attachment.url?.startsWith('http')) {
                 setPreviewUrl(attachment.url);
-            } else {
+            } else if (attachment.url) {
                 try {
                     const { viewUrl } = await fileService.getPreviewUrl(attachment.url, undefined, serverId || undefined);
                     setPreviewUrl(viewUrl);

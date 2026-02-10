@@ -21,6 +21,11 @@ export class CreateChannelDto {
   @IsString()
   teamId: string;
 
+  @ApiProperty({ description: 'Server ID', required: false })
+  @IsOptional()
+  @IsString()
+  serverId?: string;
+
   @ApiProperty({ description: 'Channel name' })
   @IsString()
   name: string;
@@ -33,6 +38,26 @@ export class CreateChannelDto {
   @IsOptional()
   @IsString()
   parentId?: string;
+
+  @ApiProperty({ description: 'Owner ID', required: false })
+  @IsOptional()
+  @IsString()
+  ownerId?: string;
+}
+
+export class CreateCategoryDto {
+  @ApiProperty({ description: 'Team ID' })
+  @IsString()
+  teamId: string;
+
+  @ApiProperty({ description: 'Server ID', required: false })
+  @IsOptional()
+  @IsString()
+  serverId?: string;
+
+  @ApiProperty({ description: 'Category name' })
+  @IsString()
+  name: string;
 
   @ApiProperty({ description: 'Owner ID', required: false })
   @IsOptional()

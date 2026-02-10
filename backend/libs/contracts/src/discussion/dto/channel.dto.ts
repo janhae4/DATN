@@ -2,6 +2,7 @@ import { DiscussionType } from "../../enums";
 
 export class CreateChannelDto {
     teamId: string;
+    serverId?: string;
     name: string;
     type: DiscussionType;
     parentId?: string;
@@ -10,6 +11,7 @@ export class CreateChannelDto {
 
 export class CreateCategoryDto {
     teamId: string;
+    serverId?: string;
     name: string;
     ownerId: string;
 }

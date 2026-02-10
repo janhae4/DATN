@@ -2,21 +2,18 @@ import React, { useRef, useState } from "react";
 import { Icon } from "@iconify-icon/react";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { Button } from "@/components/ui/button";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fileService } from "@/services/fileService";
+import { AttachmentDto } from "@/types";
 
-const ReplyPreviewImage = ({ att, serverId }: { att: any; serverId?: string | null }) => {
+const ReplyPreviewImage = ({ att, serverId }: { att: AttachmentDto; serverId?: string | null }) => {
     const [previewUrl, setPreviewUrl] = useState<string>("");
 
     React.useEffect(() => {
         const fetchPreview = async () => {
-            if (att.url.startsWith('http')) {
+            if (att.url?.startsWith('http')) {
                 setPreviewUrl(att.url);
-            } else {
+            } else if (att.url) {
                 try {
                     const { viewUrl } = await fileService.getPreviewUrl(att.url, undefined, serverId || undefined);
                     setPreviewUrl(viewUrl);
@@ -52,7 +49,7 @@ interface MessageInputProps {
     replyingTo?: {
         sender: { name: string };
         content: string;
-        attachments?: any[];
+        attachments?: AttachmentDto[];
     } | null;
     onCancelReply?: () => void;
     selectedServerId?: string | null;

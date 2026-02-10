@@ -10,9 +10,10 @@ import {
 import { cn } from "@/lib/utils";
 import { CreateServerDialog } from "../dialogs/CreateServerDialog";
 import { JoinServerDialog } from "../dialogs/JoinServerDialog";
+import { ServerDto } from "@/types";
 
 interface ServerListProps {
-    servers: any[];
+    servers: ServerDto[];
     selectedServerId: string | null;
     loadingServers: boolean;
     isCreatingServer: boolean;
@@ -107,7 +108,7 @@ export const ServerList: React.FC<ServerListProps> = ({
                         <div className="w-12 h-12 rounded-[24px] bg-zinc-100 dark:bg-zinc-900 animate-pulse" />
                     )}
 
-                    {servers.map((server: any) => {
+                    {servers.map((server: ServerDto) => {
                         const isSelected = selectedServerId === server.id;
                         return (
                             <div key={server.id} className="relative flex items-center justify-center w-full group">

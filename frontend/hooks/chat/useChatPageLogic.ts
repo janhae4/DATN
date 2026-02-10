@@ -1,4 +1,4 @@
-import { useState, useEffect, SetStateAction, Dispatch } from "react";
+import { useState, useEffect, SetStateAction, Dispatch, useMemo } from "react";
 import { useUserProfile } from "@/hooks/useAuth";
 import {
     useUserServers,
@@ -6,11 +6,22 @@ import {
     useDiscussionMessages,
     useDiscussionMutations,
     useServerMembers,
+    useTeamMembers,
 } from "@/hooks/useDiscussion";
+import {
+    ServerDto,
+    DiscussionDto,
+    ServerMemberDto,
+    AttachmentDto,
+    ResponseMessageDto,
+    PaginatedResponse,
+    CreateMessageDto
+} from "@/types";
 import { useProjects } from "@/hooks/useProjects";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useChatSocket } from "@/hooks/chat/useChatSocket";
 import { useVoiceSocket } from "@/hooks/chat/useVoiceSocket";
+import { useServerVoiceStats } from "@/hooks/chat/useServerVoiceStats";
 
 export const useChatPageLogic = (teamId: string) => {
     const { data: user } = useUserProfile();
@@ -19,6 +30,8 @@ export const useChatPageLogic = (teamId: string) => {
     const searchParams = useSearchParams();
     const [selectedServerId, setSelectedServerId] = useState<string | null>(searchParams.get('serverId'));
     const [selectedChannelId, setSelectedChannelId] = useState<string | null>(searchParams.get('channelId'));
+    const [selectedDirectMessageUserId, setSelectedDirectMessageUserId] = useState<string | null>(searchParams.get('dm'));
+    const [activeVoiceChannelId, setActiveVoiceChannelId] = useState<string | null>(null);
     const [showMembers, setShowMembers] = useState(false);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const toggleCategory = (categoryId: string) => {
@@ -42,64 +55,89 @@ export const useChatPageLogic = (teamId: string) => {
         if (selectedChannelId) params.set('channelId', selectedChannelId);
         else params.delete('channelId');
 
+        if (selectedDirectMessageUserId) params.set('dm', selectedDirectMessageUserId);
+        else params.delete('dm');
+
         router.replace(`/${teamId}/chat?${params.toString()}`, { scroll: false });
-    }, [selectedServerId, selectedChannelId, router, teamId]);
+    }, [selectedServerId, selectedChannelId, selectedDirectMessageUserId, router, teamId]);
 
     const params = useParams();
     const currentProjectId = params?.projectId as string | undefined;
 
-    const { data: servers = [], isLoading: loadingServers } = useUserServers(userId || "");
-    const { data: channels = [], isLoading: loadingChannels } = useServerChannels(selectedServerId || "");
+    const { data: rawServers = [] as ServerDto[], isLoading: loadingServers } = useUserServers(userId || "", teamId);
+    const servers = useMemo(() => (rawServers as ServerDto[]).map((s: ServerDto) => ({ ...s, id: s.id || s._id || "" })), [rawServers]);
+
+    const { data: rawChannels = [] as DiscussionDto[], isLoading: loadingChannels } = useServerChannels(selectedServerId || "");
+    const channels = useMemo(() => (rawChannels as DiscussionDto[]).map((c: DiscussionDto) => ({ ...c, id: c.id || c._id || "" })), [rawChannels]);
+
     const { projects = [], isLoading: loadingProjects } = useProjects(teamId);
 
     const currentProject = projects.find(p => p.id === currentProjectId);
 
-    // Auto-select first server if none selected
+    // Auto-select first server if none selected (but not in DM mode)
     useEffect(() => {
-        if (!selectedServerId && servers.length > 0 && !loadingServers) {
+        if (!selectedServerId && !selectedDirectMessageUserId && servers.length > 0 && !loadingServers) {
             setSelectedServerId(servers[0].id);
         }
-    }, [selectedServerId, servers, loadingServers]);
+    }, [selectedServerId, selectedDirectMessageUserId, servers, loadingServers]);
 
-    // Auto-select first channel when server changes or channels load
     useEffect(() => {
+        if (selectedDirectMessageUserId) return;
+
         if (channels.length > 0 && !loadingChannels) {
-            const isCurrentChannelValid = channels.some((c: any) => c._id === selectedChannelId);
+            const isCurrentChannelValid = channels.some((c: DiscussionDto) => c.id === selectedChannelId);
 
             if (!selectedChannelId || !isCurrentChannelValid) {
-                const playbleChannels = channels.filter((c: any) => c.type !== 'CATEGORY');
+                const playbleChannels = channels.filter((c: DiscussionDto) => c.type !== 'CATEGORY');
 
-                const textChannel = playbleChannels.find((c: any) => c.type === 'TEXT' || (!c.type && c.name));
-                const voiceChannel = playbleChannels.find((c: any) => c.type === 'VOICE');
+                const textChannel = playbleChannels.find((c: DiscussionDto) => c.type === 'TEXT' || (!c.type && c.name));
+                const voiceChannel = playbleChannels.find((c: DiscussionDto) => c.type === 'VOICE');
 
-                const targetId = textChannel?._id || voiceChannel?._id;
+                const targetId = textChannel?.id || voiceChannel?.id;
 
                 if (targetId) {
                     setSelectedChannelId(targetId);
                 }
             }
         }
-    }, [channels, loadingChannels, selectedChannelId]);
+    }, [channels, loadingChannels, selectedChannelId, selectedDirectMessageUserId]);
 
     // Derived
-    const selectedChannel = channels.find((c: any) => c._id === selectedChannelId);
+    const selectedChannel = channels.find((c: DiscussionDto) => c.id === selectedChannelId);
     const isVoiceChannel = selectedChannel?.type === 'VOICE';
+
+    // Effect to set active voice channel
+    useEffect(() => {
+        if (isVoiceChannel && selectedChannelId) {
+            setActiveVoiceChannelId(selectedChannelId);
+        }
+    }, [isVoiceChannel, selectedChannelId]);
 
     // State Hooks
     const { typingUsers, emitTyping, stopTypingImmediately } = useChatSocket(selectedChannelId);
-    const { voiceParticipants, remoteStreams } = useVoiceSocket(
-        selectedChannelId,
+    const {
+        voiceParticipants,
+        remoteStreams,
+        isMuted,
+        toggleMute,
+        isVideoOn,
+        toggleVideo,
+        speakingUsers
+    } = useVoiceSocket(
+        activeVoiceChannelId,
         selectedServerId,
         userId,
         user,
-        isVoiceChannel
+        !!activeVoiceChannelId
     );
+
+    const { globalVoiceParticipants } = useServerVoiceStats(selectedServerId);
 
     useEffect(() => {
         if (channels.length > 0) {
             const categoryIds = channels
-                .filter((c: any) => c.type === "CATEGORY")
-                .map((c: any) => c._id);
+                .filter((c: DiscussionDto) => c.type === "CATEGORY")
+                .map((c: DiscussionDto) => c.id);
             setExpandedCategories(new Set(categoryIds));
         }
     }, [selectedServerId, !!channels.length]);
@@ -118,7 +156,14 @@ export const useChatPageLogic = (teamId: string) => {
         isLoading: loadingMembers
     } = useServerMembers(selectedServerId || "");
 
-    const members = membersData?.pages.flatMap((page: any) => page.data) || [];
+    // Fetch team members for Direct Messages (independent of server)
+    const {
+        data: teamMembersData,
+        isLoading: loadingTeamMembers
+    } = useTeamMembers(teamId);
+
+    const members = useMemo(() => membersData?.pages.flatMap((page: PaginatedResponse<ServerMemberDto>) => page.data) || [], [membersData]);
+    const teamMembers = useMemo(() => teamMembersData?.pages.flatMap((page: PaginatedResponse<ServerMemberDto>) => page.data).filter(m => m.userId !== userId) || [], [teamMembersData, userId]);
 
     const {
         createServer,
@@ -136,10 +181,11 @@ export const useChatPageLogic = (teamId: string) => {
         isCreatingChannel,
         toggleReaction,
         updateMessage,
-        deleteMessage
+        deleteMessage,
+        createDirect
     } = useDiscussionMutations();
 
-    const handleUpdateMessage = async (messageId: string, content: string, attachments?: any[]) => {
+    const handleUpdateMessage = async (messageId: string, content: string, attachments?: AttachmentDto[]) => {
         if (!selectedChannelId) return;
         try {
             await updateMessage({ discussionId: selectedChannelId, messageId, content, attachments });
@@ -154,15 +200,61 @@ export const useChatPageLogic = (teamId: string) => {
         } catch (error) { console.error('Failed to delete message:', error); }
     };
 
+    const handleLeaveVoice = () => {
+        setActiveVoiceChannelId(null);
+    };
+
+    const handleJoinVoice = (channelId: string) => {
+        setActiveVoiceChannelId(channelId);
+    };
+
+    const handleSelectDirectMessage = async (partnerId: string) => {
+        try {
+            // Clear current selections immediately
+            setSelectedDirectMessageUserId(partnerId);
+            setSelectedServerId(null);
+            setSelectedChannelId(null); // Clear immediately to prevent showing old channel
+
+            // Create or get existing direct discussion
+            const discussion = await createDirect({
+                partnerId: partnerId
+            });
+
+            console.log('📩 Direct discussion response:', discussion);
+
+            // Set the DM discussion as the selected channel
+            // Backend returns MongoDB _id, not id
+            const discussionId = discussion?.id || discussion?._id;
+            if (discussionId) {
+                console.log('✅ Setting selected channel to DM:', discussionId);
+                setSelectedChannelId(discussionId);
+            } else {
+                console.error('❌ No discussion ID in response:', discussion);
+            }
+        } catch (error) {
+            console.error('Failed to create/fetch direct discussion:', error);
+            // Reset state on error
+            setSelectedDirectMessageUserId(null);
+        }
+    };
+
+    // Wrapper to clear DM mode when selecting a server
+    const handleSelectServer = (serverId: string | null) => {
+        setSelectedServerId(serverId);
+        if (serverId) {
+            // Clear DM mode when selecting a server
+            setSelectedDirectMessageUserId(null);
+        }
+    };
+
     const handleCreateServer = async (serverName?: string) => {
         const name = serverName || prompt("Nhập tên Server mới:");
         if (name) {
-            const newTeamId = crypto.randomUUID();
             try {
-                const result = await createServer({ name, teamId: newTeamId, avatar: "" });
-                if (result && result.teamId) {
-                    setSelectedServerId(result.teamId);
-                    if (result._id) setSelectedChannelId(result._id);
+                const result = await createServer({ name, teamId: teamId, avatar: "" });
+                if (result) {
+                    const newServerId = result.id || result._id;
+                    if (newServerId) setSelectedServerId(newServerId);
                 }
             } catch (error) {
                 console.error('Failed to create server:', error);
@@ -179,19 +271,20 @@ export const useChatPageLogic = (teamId: string) => {
 
         if (!validParentId) {
             const targetCategoryName = type === "VOICE" ? "VOICE CHANNELS" : "TEXT CHANNELS";
-            const defaultCategory = channels.find((c: any) => c.type === "CATEGORY" && c.name === targetCategoryName);
+            const defaultCategory = channels.find((c: DiscussionDto) => c.type === "CATEGORY" && c.name === targetCategoryName);
 
             if (defaultCategory) {
-                validParentId = defaultCategory._id;
+                validParentId = defaultCategory.id;
             } else {
                 try {
                     const newCat = await createCategory({
-                        teamId: selectedServerId,
+                        teamId: teamId,
+                        serverId: selectedServerId,
                         name: targetCategoryName,
                         ownerId: userId || ""
                     });
-                    if (newCat && newCat._id) {
-                        validParentId = newCat._id;
+                    if (newCat) {
+                        validParentId = newCat.id || newCat._id;
                     }
                 } catch (e) {
                     console.error(`Failed to create default ${targetCategoryName} category`, e);
@@ -201,7 +294,8 @@ export const useChatPageLogic = (teamId: string) => {
 
         if (name) {
             await createChannel({
-                teamId: selectedServerId,
+                teamId: teamId,
+                serverId: selectedServerId,
                 name,
                 type: type as any,
                 parentId: validParentId,
@@ -215,18 +309,18 @@ export const useChatPageLogic = (teamId: string) => {
         const name = nameIn || prompt("Nhập tên Category mới:");
         if (!name) return;
         try {
-            await createCategory({ teamId: selectedServerId, name, ownerId: userId || "" });
+            await createCategory({ teamId: teamId, serverId: selectedServerId, name, ownerId: userId || "" });
         } catch (error) { console.error(error); }
     };
 
-    const handleSendMessage = async (content: string, attachments?: any[], replyToId?: string) => {
-        if ((!content.trim() && (!attachments || attachments.length === 0)) || !selectedChannelId || !selectedServerId) return;
+    const handleSendMessage = async (content: string, attachments?: AttachmentDto[], replyToId?: string) => {
+        if ((!content.trim() && (!attachments || attachments.length === 0)) || !selectedChannelId) return;
 
         await sendMessage({
             discussionId: selectedChannelId,
             payload: {
                 content,
-                teamId: selectedServerId,
+                teamId: selectedServerId || undefined, 
                 attachments: (attachments && attachments.length > 0) ? attachments : undefined,
                 userId: userId || "",
                 discussionId: selectedChannelId,
@@ -239,7 +333,7 @@ export const useChatPageLogic = (teamId: string) => {
 
     const handleUpdateServer = async (nameIn?: string, avatarIn?: string) => {
         if (!selectedServerId) return;
-        const currentServer = servers.find((s: any) => s.id === selectedServerId);
+        const currentServer = servers.find((s: ServerDto) => s.id === selectedServerId);
         if (!currentServer) return;
 
         let newName = nameIn;
@@ -259,7 +353,7 @@ export const useChatPageLogic = (teamId: string) => {
 
         try {
             await updateServer({
-                teamId: selectedServerId,
+                serverId: selectedServerId,
                 payload: {
                     name: finalName,
                     avatar: finalAvatar
@@ -303,8 +397,8 @@ export const useChatPageLogic = (teamId: string) => {
         if (!selectedServerId) { alert("Vui lòng chọn server."); return; }
         let targetChannelId = selectedChannelId;
         if (!targetChannelId && channels.length > 0) {
-            const generalChannel = channels.find((c: any) => c.name.toLowerCase() === "general");
-            targetChannelId = generalChannel ? generalChannel._id : channels[0]._id;
+            const generalChannel = channels.find((c: DiscussionDto) => c.name.toLowerCase() === "general");
+            targetChannelId = generalChannel ? generalChannel.id : channels[0].id;
         }
         if (!targetChannelId) { alert("Server không có channel."); return; }
 
@@ -337,28 +431,36 @@ export const useChatPageLogic = (teamId: string) => {
         } catch (error) { console.error('Failed to delete channel:', error); }
     };
 
-    const messages = messagesData?.pages.flatMap((page: any) => page.data) || [];
+    const messages = useMemo(() => messagesData?.pages.flatMap((page: ResponseMessageDto) => page.data) || [], [messagesData]);
 
     return {
         state: {
             selectedServerId,
             selectedChannelId,
+            selectedDirectMessageUserId,
             showMembers,
             expandedCategories,
             servers,
             channels,
             messages,
             members,
+            teamMembers,
             user,
             userId,
             selectedChannel,
             isVoiceChannel,
+            activeVoiceChannelId,
             typingUsers,
             voiceParticipants,
+            globalVoiceParticipants,
             remoteStreams,
+            isMuted,
+            isVideoOn,
+            speakingUsers,
             loadingServers,
             loadingChannels,
             loadingMembers,
+            loadingTeamMembers,
             hasNextPage,
             hasNextMembersPage,
             isFetchingNextMembersPage,
@@ -369,7 +471,7 @@ export const useChatPageLogic = (teamId: string) => {
             currentProject
         },
         actions: {
-            setSelectedServerId,
+            setSelectedServerId: handleSelectServer,
             setSelectedChannelId,
             setShowMembers,
             toggleCategory,
@@ -390,7 +492,12 @@ export const useChatPageLogic = (teamId: string) => {
             handleUpdateChannel,
             handleDeleteChannel,
             handleUpdateMessage,
-            handleDeleteMessage
+            handleDeleteMessage,
+            handleLeaveVoice,
+            handleJoinVoice,
+            handleSelectDirectMessage,
+            toggleMute,
+            toggleVideo
         }
     };
 };

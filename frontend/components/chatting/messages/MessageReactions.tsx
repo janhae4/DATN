@@ -6,10 +6,10 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ChatMessage } from "./types";
+import { MessageSnapshot } from "@/types";
 
 interface MessageReactionsProps {
-    msg: ChatMessage;
+    msg: MessageSnapshot;
     isMe: boolean;
     userId?: string;
     selectedChannelId: string | null;

@@ -67,8 +67,7 @@ export class FileController {
     @Body() body: InitiateUploadDto,
     @CurrentUser('id') userId: string,
   ) {
-    if (!body.teamId) throw new Error("TeamId is required")
-    return this.fileService.initiateChatUpload(body.fileName, body.fileType, userId, body.teamId, body.projectId);
+    return this.fileService.initiateChatUpload(body.fileName, body.fileType, userId, body.teamId || '', body.projectId);
   }
 
   @Post('folder')

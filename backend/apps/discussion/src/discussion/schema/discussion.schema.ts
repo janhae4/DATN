@@ -90,6 +90,9 @@ export class Discussion {
   @Prop()
   ownerId: string;
 
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Server', index: true })
+  serverId?: mongoose.Types.ObjectId;
+
   @Prop({ index: true })
   teamId?: string;
 

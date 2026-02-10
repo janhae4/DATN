@@ -4,10 +4,11 @@ import React from "react";
 import { Icon } from "@iconify-icon/react";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
-import { MemberItem, Member } from "./MemberItem";
+import { MemberItem } from "./MemberItem";
+import { ServerMemberDto } from "@/types";
 
 interface MembersTabProps {
-    members: Member[];
+    members: ServerMemberDto[];
     loadingMembers: boolean;
     hasNextMembersPage: boolean;
     isFetchingNextMembersPage: boolean;
@@ -40,7 +41,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
                         </div>
                     )}
 
-                    {members.map((member: Member) => (
+                    {members.map((member: ServerMemberDto) => (
                         <MemberItem key={member.userId} member={member} />
                     ))}
 

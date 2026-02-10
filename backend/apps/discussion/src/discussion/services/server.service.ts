@@ -1,7 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Discussion, DiscussionDocument, Membership, MembershipDocument } from '../schema/discussion.schema';
+import { Server, ServerDocument } from '../schema/server.schema';
 import { Invite, InviteDocument } from '../schema/invite.schema';
 import {
     CreateTeamEventPayload,
@@ -27,6 +28,8 @@ export class ServerService {
     constructor(
         @InjectModel(Discussion.name)
         private readonly discussionModel: Model<DiscussionDocument>,
+        @InjectModel(Server.name)
+        private readonly serverModel: Model<ServerDocument>,
         @InjectModel(Invite.name)
         private readonly inviteModel: Model<InviteDocument>,
         @InjectModel(Membership.name)
@@ -43,17 +46,30 @@ export class ServerService {
         const { owner, members, teamSnapshot } = payload;
         const { id: teamId, name: teamName } = teamSnapshot;
 
-        const existingChannels = await this.discussionModel.countDocuments({ teamId });
+        // 0. Create actual Server document if it doesn't exist
+        let server = await this.serverModel.findOne({ teamId, name: teamName });
+        if (!server) {
+            server = await this.serverModel.create({
+                name: teamName,
+                teamId: teamId,
+                ownerId: owner.id,
+                avatar: teamSnapshot.avatar
+            });
+        }
+        const serverId = (server._id as any).toString();
+
+        const existingChannels = await this.discussionModel.countDocuments({ serverId });
         if (existingChannels > 0) {
-            this.logger.warn(`Server for team ${teamId} (${teamName}) already initialized. skipping.`);
-            return await this.discussionModel.findOne({ teamId, name: 'general' });
+            this.logger.warn(`Server ${serverId} for team ${teamId} (${teamName}) already initialized. skipping.`);
+            return await this.discussionModel.findOne({ serverId, name: 'general' });
         }
 
-        this.logger.log(`Initializing server for team: ${teamName}`);
+        this.logger.log(`Initializing server [${serverId}] for team: ${teamName}`);
 
         const [textCategory, voiceCategory] = await Promise.all([
             this.channelService.createChannelInternal({
                 teamId,
+                serverId,
                 name: "TEXT CHANNELS",
                 ownerId: owner.id,
                 teamSnapshot,
@@ -62,6 +78,7 @@ export class ServerService {
             }),
             this.channelService.createChannelInternal({
                 teamId,
+                serverId,
                 name: "VOICE CHANNELS",
                 ownerId: owner.id,
                 teamSnapshot,
@@ -73,6 +90,7 @@ export class ServerService {
         const [generalChannel, notificationChannel, waitingRoom] = await Promise.all([
             this.channelService.createChannelInternal({
                 teamId,
+                serverId,
                 name: "general",
                 ownerId: owner.id,
                 teamSnapshot,
@@ -82,6 +100,7 @@ export class ServerService {
             }),
             this.channelService.createChannelInternal({
                 teamId,
+                serverId,
                 name: "notification",
                 ownerId: owner.id,
                 teamSnapshot,
@@ -91,6 +110,7 @@ export class ServerService {
             }),
             this.channelService.createChannelInternal({
                 teamId,
+                serverId,
                 name: "Waiting room",
                 ownerId: owner.id,
                 teamSnapshot,
@@ -298,50 +318,62 @@ export class ServerService {
     /**
      * Retrieves all unique servers (team snapshots) that a specific user belongs to.
      */
-    async getUserServerList(userId: string) {
-        this.logger.log(`Fetching server list for user: ${userId}`);
-        // Query memberships for the user
+    async getUserServerList(userId: string, teamId?: string) {
+        this.logger.log(`Fetching server list for user: ${userId}${teamId ? ` in team: ${teamId}` : ''}`);
         const memberships = await this.membershipModel.find({ userId, status: MemberShip.ACTIVE }).select('discussionId').lean();
         const discussionIds = memberships.map(m => m.discussionId);
 
         this.logger.debug(`Found ${discussionIds.length} memberships for user ${userId}`);
 
-        // Aggregate unique servers from the discussions
-        const discussions = await this.discussionModel.aggregate([
-            {
-                $match: {
-                    _id: { $in: discussionIds },
-                    teamId: { $exists: true },
-                    isDeleted: { $ne: true },
-                    teamSnapshot: { $exists: true, $ne: null }
-                }
-            },
-            {
-                $group: {
-                    _id: '$teamId',
-                    teamSnapshot: { $first: '$teamSnapshot' }
-                }
-            },
-            { $replaceRoot: { newRoot: '$teamSnapshot' } }
-        ]);
+        const discussionsWithServer = await this.discussionModel.find({
+            _id: { $in: discussionIds },
+            serverId: { $exists: true },
+            isDeleted: { $ne: true }
+        }).select('serverId').lean();
 
-        this.logger.log(`Found ${discussions.length} unique servers for user ${userId}`);
-        return discussions;
+        const serverIds = [...new Set(discussionsWithServer.map(d => d.serverId?.toString()))].filter(id => !!id);
+
+        if (serverIds.length === 0) return [];
+
+        const query: any = {
+            _id: { $in: serverIds.map(id => new Types.ObjectId(id)) },
+            isDeleted: { $ne: true }
+        };
+
+        if (teamId) {
+            query.teamId = teamId;
+        }
+
+        return await this.serverModel.find(query).lean();
     }
 
     /**
      * Updates server settings (name, avatar) in all discussions belonging to a team.
      */
-    async updateServer(payload: { teamId: string; name?: string; avatar?: string }) {
-        const { teamId, name, avatar } = payload;
+    async updateServer(payload: { serverId?: string, teamId?: string; name?: string; avatar?: string }) {
+        const { serverId, teamId, name, avatar } = payload;
 
-        const update: any = {};
-        if (name) update['teamSnapshot.name'] = name;
-        if (avatar) update['teamSnapshot.avatar'] = avatar;
+        const updateData: any = {};
+        if (name) updateData.name = name;
+        if (avatar) updateData.avatar = avatar;
 
-        if (Object.keys(update).length === 0) return { success: true };
+        if (Object.keys(updateData).length === 0) return { success: true };
 
-        await this.discussionModel.updateMany({ teamId }, { $set: update });
+        if (serverId) {
+            await this.serverModel.findByIdAndUpdate(serverId, { $set: updateData });
+            // Also update snapshots in discussions
+            const snapshotsUpdate: any = {};
+            if (name) snapshotsUpdate['teamSnapshot.name'] = name;
+            if (avatar) snapshotsUpdate['teamSnapshot.avatar'] = avatar;
+            await this.discussionModel.updateMany({ serverId: new Types.ObjectId(serverId) }, { $set: snapshotsUpdate });
+        } else if (teamId) {
+            // Fallback for when only teamId is provided (updates all servers in team)
+            await this.serverModel.updateMany({ teamId }, { $set: updateData });
+            const snapshotsUpdate: any = {};
+            if (name) snapshotsUpdate['teamSnapshot.name'] = name;
+            if (avatar) snapshotsUpdate['teamSnapshot.avatar'] = avatar;
+            await this.discussionModel.updateMany({ teamId }, { $set: snapshotsUpdate });
+        }
 
         return { success: true };
     }
@@ -415,11 +447,18 @@ export class ServerService {
      * Efficiently retrieves unique members of a server with pagination.
      * Uses aggregation to avoid memory bottlenecks with large member counts.
      */
-    async getServerMembers(payload: { teamId: string, page: number, limit: number }) {
-        const { teamId, page = 1, limit = 20 } = payload;
+    async getServerMembers(payload: { teamId?: string, serverId?: string, page: number, limit: number }) {
+        const { teamId, serverId, page = 1, limit = 20 } = payload;
         const skip = (page - 1) * limit;
 
-        const discussions = await this.discussionModel.find({ teamId, isDeleted: { $ne: true } }).select('_id').lean();
+        const query: any = { isDeleted: { $ne: true } };
+        if (serverId && Types.ObjectId.isValid(serverId)) {
+            query.serverId = new Types.ObjectId(serverId);
+        } else if (teamId) {
+            query.teamId = teamId;
+        }
+
+        const discussions = await this.discussionModel.find(query).select('_id').lean();
         const discussionIds = discussions.map(d => d._id);
 
         if (discussionIds.length === 0) return { data: [], total: 0 };
@@ -460,6 +499,72 @@ export class ServerService {
             })),
             total,
             page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
+    /**
+     * Retrieves all unique members across all servers in a team with pagination.
+     * This is used for Direct Messaging to show all team members.
+     */
+    async getTeamMembers(payload: { teamId: string, page: number, limit: number }) {
+        const { teamId, page = 1, limit = 50 } = payload;
+        const skip = (page - 1) * limit;
+
+        // Find all servers in the team
+        const servers = await this.serverModel.find({ teamId, isDeleted: { $ne: true } }).select('_id').lean();
+        const serverIds = servers.map(s => s._id);
+
+        if (serverIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
+
+        // Find all discussions in these servers
+        const discussions = await this.discussionModel.find({
+            serverId: { $in: serverIds },
+            isDeleted: { $ne: true }
+        }).select('_id').lean();
+        const discussionIds = discussions.map(d => d._id);
+
+        if (discussionIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
+
+        // Aggregate unique members across all discussions
+        const result = await this.membershipModel.aggregate([
+            { $match: { discussionId: { $in: discussionIds }, status: MemberShip.ACTIVE } },
+            {
+                $group: {
+                    _id: '$userId',
+                    role: { $first: '$role' },
+                    isAdmin: { $first: '$isAdmin' },
+                    joinedAt: { $min: '$createdAt' }
+                }
+            },
+            {
+                $facet: {
+                    data: [
+                        { $sort: { joinedAt: 1 } },
+                        { $skip: skip },
+                        { $limit: limit }
+                    ],
+                    total: [
+                        { $count: 'count' }
+                    ]
+                }
+            }
+        ]);
+
+        const data = result[0].data;
+        const total = result[0].total[0]?.count || 0;
+
+        return {
+            data: data.map((item: any) => ({
+                userId: item._id,
+                role: item.role,
+                isAdmin: item.isAdmin,
+                joinedAt: item.joinedAt
+            })),
+            total,
+            page,
+            limit,
             totalPages: Math.ceil(total / limit)
         };
     }
@@ -468,10 +573,14 @@ export class ServerService {
      * Checks if a user is a member of a server (has active membership in any discussion of that server)
      */
     async checkServerMembership(serverId: string, userId: string): Promise<boolean> {
-        const discussions = await this.discussionModel.find({
-            teamId: serverId,
-            isDeleted: { $ne: true }
-        }).select('_id').lean();
+        const query: any = { isDeleted: { $ne: true } };
+        if (Types.ObjectId.isValid(serverId)) {
+            query.serverId = new Types.ObjectId(serverId);
+        } else {
+            query.teamId = serverId;
+        }
+
+        const discussions = await this.discussionModel.find(query).select('_id').lean();
 
         if (discussions.length === 0) return false;
 

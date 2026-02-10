@@ -21,15 +21,15 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ChatMessage } from "./types";
+import { MessageSnapshot } from "@/types";
 
 interface MessageActionsProps {
-    msg: ChatMessage;
+    msg: MessageSnapshot;
     isMe: boolean;
     isDeleted?: boolean;
     selectedChannelId: string | null;
     onReact: (params: { discussionId: string; messageId: string; emoji: string }) => void;
-    onReply: (message: ChatMessage) => void;
+    onReply: (message: MessageSnapshot) => void;
     onDelete?: (messageId: string) => void;
     onStartEdit: () => void;
 }

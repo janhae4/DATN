@@ -3,17 +3,17 @@
 import React from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDiscussionAttachments } from "@/hooks/useDiscussion";
-import { Member } from "./MemberItem";
 import { cn } from "@/lib/utils";
 import { MembersTab } from "./MembersTab";
 import { MediaTab } from "./MediaTab";
 import { Icon } from "@iconify-icon/react";
+import { ServerMemberDto } from "@/types";
 
 interface ChannelSidebarProps {
     showMembers: boolean;
     selectedServerId: string | null;
     selectedChannelId?: string | null;
-    members: Member[];
+    members: ServerMemberDto[];
     loadingMembers: boolean;
     hasNextMembersPage: boolean;
     isFetchingNextMembersPage: boolean;
@@ -57,18 +57,18 @@ export const ChannelSidebar: React.FC<ChannelSidebarProps> = ({
             !onClose && "border-l border-zinc-200 dark:border-zinc-800"
         )}>
             <Tabs defaultValue="members" className="flex-1 flex flex-col overflow-hidden">
-                
+
                 {/* Header / Tab Switcher Area */}
                 <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-black z-10">
                     <TabsList className="grid w-full grid-cols-2 h-9 p-1 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg">
-                        <TabsTrigger 
-                            value="members" 
+                        <TabsTrigger
+                            value="members"
                             className="text-xs font-medium rounded-md transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-zinc-100 data-[state=active]:shadow-sm"
                         >
                             Members
                         </TabsTrigger>
-                        <TabsTrigger 
-                            value="media" 
+                        <TabsTrigger
+                            value="media"
                             className="text-xs font-medium rounded-md transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-zinc-100 data-[state=active]:shadow-sm"
                         >
                             Media

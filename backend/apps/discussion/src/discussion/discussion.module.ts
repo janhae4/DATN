@@ -7,6 +7,7 @@ import { Discussion, DiscussionSchema, Membership, MembershipSchema, ReadReceipt
 import { Message, MessageSchema } from './schema/message.schema';
 import { PermissionOverride, PermissionOverrideSchema } from './schema/permission.schema';
 import { Invite, InviteSchema } from './schema/invite.schema';
+import { Server, ServerSchema } from './schema/server.schema';
 
 import { ServerService } from './services/server.service';
 import { ChannelService } from './services/channel.service';
@@ -35,6 +36,7 @@ import { PermissionController } from './controllers/permission.controller';
       { name: Invite.name, schema: InviteSchema },
       { name: Membership.name, schema: MembershipSchema },
       { name: ReadReceipt.name, schema: ReadReceiptSchema },
+      { name: Server.name, schema: ServerSchema },
     ]),
     RmqModule.register({
       exchanges: [

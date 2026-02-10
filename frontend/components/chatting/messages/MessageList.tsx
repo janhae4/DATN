@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { Icon } from "@iconify-icon/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageItem } from "./MessageItem";
-import { ChatMessage } from "./types";
+import { MessageSnapshot, AttachmentDto, ResponseMessageDto, ServerMemberDto, PaginatedResponse } from "@/types";
 
 interface TypingUser {
     userId: string;
@@ -27,20 +27,21 @@ interface VoiceParticipant {
 }
 
 interface MessageListProps {
-    messages: ChatMessage[];
+    messages: MessageSnapshot[];
     typingUsers: TypingUser[];
     selectedChannelName?: string;
     selectedChannelId: string | null;
     selectedServerId: string | null;
+    selectedTeamId: string | null;
     hasNextPage: boolean;
     onFetchNextPage: () => void;
     userId?: string;
     onReact: (params: { discussionId: string; messageId: string; emoji: string }) => void;
     members: ChatMember[];
     voiceParticipants: VoiceParticipant[];
-    onUpdateMessage: (messageId: string, content: string, attachments?: any[]) => void;
+    onUpdateMessage: (messageId: string, content: string, attachments?: AttachmentDto[]) => void;
     onDeleteMessage: (messageId: string) => void;
-    onReply: (message: ChatMessage) => void;
+    onReply: (message: MessageSnapshot) => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -49,6 +50,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     selectedChannelName,
     selectedChannelId,
     selectedServerId,
+    selectedTeamId,
     hasNextPage,
     onFetchNextPage,
     userId,
@@ -127,7 +129,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         return () => observer.disconnect();
     }, [hasNextPage, onFetchNextPage]);
 
-    const formatTime = (dateString: string) => {
+    const formatTime = (dateString: string | Date) => {
         return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
@@ -186,6 +188,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                             userId={userId}
                             selectedChannelId={selectedChannelId}
                             selectedServerId={selectedServerId}
+                            selectedTeamId={selectedTeamId}
                             onReact={onReact}
                             getUserName={getUserName}
                             formatTime={formatTime}

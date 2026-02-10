@@ -5,16 +5,10 @@ import { Icon } from "@iconify-icon/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-export interface Member {
-    userId: string;
-    name: string;
-    avatar?: string;
-    role?: string;
-    isAdmin?: boolean;
-}
+import { ServerMemberDto, MemberRole } from "@/types";
 
 interface MemberItemProps {
-    member: Member;
+    member: ServerMemberDto;
 }
 
 export const MemberItem = React.memo(({ member }: MemberItemProps) => (
@@ -38,9 +32,9 @@ export const MemberItem = React.memo(({ member }: MemberItemProps) => (
                 )}>
                     {member.name}
                 </span>
-                {member.isAdmin && (
+                {(member.role === MemberRole.ADMIN || member.role === MemberRole.OWNER) && (
                     <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500" title="Admin">
-                        <Icon icon="lucide:crown" width="12"  />
+                        <Icon icon="lucide:crown" width="12" />
                     </div>
                 )}
             </div>

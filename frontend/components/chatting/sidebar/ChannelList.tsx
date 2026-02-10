@@ -4,20 +4,32 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ChannelSettingsDialog } from "../dialogs/ChannelSettingsDialog";
+
 import { CreateCategoryDialog } from "../dialogs/CreateCategoryDialog";
 import { CreateChannelDialog } from "../dialogs/CreateChannelDialog";
 import { ServerSettingsDialog } from "../dialogs/ServerSettingsDialog";
+import { DiscussionDto, ServerMemberDto } from "@/types";
+import { VoiceUserItem } from "../chat/voice-channel/VoiceUserItem";
+import { ChannelSettingsDialog } from "../dialogs/ChannelSettingsDialog";
+import { DirectMessageItem } from "./DirectMessageItem";
+
+interface VoiceParticipant {
+    userInfo: {
+        id: string;
+        name: string;
+        avatar?: string;
+    };
+    isSpeaking?: boolean;
+}
 
 interface ChannelListProps {
     selectedServerName: string;
     selectedServerId: string | null;
-    channels: any[];
+    channels: DiscussionDto[];
     selectedChannelId: string | null;
     expandedCategories: Set<string>;
     loadingChannels: boolean;
@@ -32,56 +44,82 @@ interface ChannelListProps {
     onCreateCategory: (name?: string) => void;
     onUpdateChannel: (id: string, name: string) => void;
     onDeleteChannel: (id: string) => void;
+    voiceParticipants?: Record<string, VoiceParticipant[]>;
+    speakingUsers?: Set<string>;
+    teamMembers?: ServerMemberDto[];
+    onSelectDirectMessage?: (userId: string) => void;
+    selectedDirectMessageUserId?: string | null;
 }
 
 interface ChannelItemProps {
-    channel: any;
+    channel: DiscussionDto;
     isNested?: boolean;
     selectedChannelId: string | null;
     onSelectChannel: (id: string) => void;
-    onOpenSettings: (e: React.MouseEvent, channel: any) => void;
+    onOpenSettings: (e: React.MouseEvent, channel: DiscussionDto) => void;
+    voiceParticipants?: VoiceParticipant[];
+    speakingUsers?: Set<string>;
 }
 
-const ChannelItem = React.memo(({ channel, isNested = false, selectedChannelId, onSelectChannel, onOpenSettings }: ChannelItemProps) => {
-    const isSelected = selectedChannelId === channel._id;
+const ChannelItem = React.memo(({ channel, isNested = false, selectedChannelId, onSelectChannel, onOpenSettings, voiceParticipants = [], speakingUsers = new Set() }: ChannelItemProps) => {
+    const isSelected = selectedChannelId === channel.id;
     const iconName = channel.type === "VOICE" ? "lucide:volume-2" : "lucide:hash";
 
     return (
-        <div className={cn("group relative flex items-center mb-0.5", isNested ? "ml-4 w-[calc(100%-16px)]" : "w-full")}>
-            <button
-                onClick={() => onSelectChannel(channel._id)}
-                className={cn(
-                    "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 text-sm",
-                    isSelected
-                        ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold"
-                        : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200 font-medium"
-                )}
-            >
-                <Icon
-                    icon={iconName}
-                    width="16"
+        <div className={cn("group relative flex flex-col mb-0.5", isNested ? "ml-4 w-[calc(100%-16px)]" : "w-full")}>
+            <div className="flex items-center relative">
+                <button
+                    onClick={() => onSelectChannel(channel.id)}
                     className={cn(
-                        "shrink-0",
+                        "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 text-sm",
                         isSelected
-                            ? "text-zinc-900 dark:text-zinc-100"
-                            : "text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"
+                            ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold"
+                            : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200 font-medium"
                     )}
-                />
-                <span className="truncate flex-1 text-left">{channel.name}</span>
-            </button>
+                >
+                    <Icon
+                        icon={iconName}
+                        width="16"
+                        className={cn(
+                            "shrink-0",
+                            isSelected
+                                ? "text-zinc-900 dark:text-zinc-100"
+                                : "text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"
+                        )}
+                    />
+                    <span className="truncate flex-1 text-left">{channel.name}</span>
+                </button>
 
-            {/* Settings Icon - Only shows on hover or selected */}
-            <button
-                onClick={(e) => onOpenSettings(e, channel)}
-                className={cn(
-                    "absolute right-1.5 p-1 rounded-sm transition-all",
-                    "opacity-0 group-hover:opacity-100",
-                    "text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-700"
-                )}
-                title="Channel Settings"
-            >
-                <Icon icon="lucide:settings-2" width="14" />
-            </button>
+                {/* Settings Icon */}
+                <button
+                    onClick={(e) => onOpenSettings(e, channel)}
+                    className={cn(
+                        "absolute right-1.5 p-1 rounded-sm transition-all",
+                        "opacity-0 group-hover:opacity-100",
+                        "text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-700"
+                    )}
+                    title="Channel Settings"
+                >
+                    <Icon icon="lucide:settings-2" width="14" />
+                </button>
+            </div>
+
+            {/* Voice Participants List */}
+            {channel.type === "VOICE" && voiceParticipants && voiceParticipants.length > 0 && (
+                <div className="pl-8 pr-2 py-1 space-y-1">
+                    {voiceParticipants.map((p) => {
+                        const isSpeaking = speakingUsers.has(p.userInfo.id);
+                        return (
+                            <div key={p.userInfo.id} onClick={(e) => e.stopPropagation()}>
+                                <VoiceUserItem
+                                    userInfo={p.userInfo}
+                                    isSpeaking={isSpeaking}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 });
@@ -104,19 +142,26 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     onCreateChannel,
     onCreateCategory,
     onUpdateChannel,
-    onDeleteChannel
+    onDeleteChannel,
+    voiceParticipants = {},
+    speakingUsers = new Set(),
+    teamMembers = [],
+    onSelectDirectMessage,
+    selectedDirectMessageUserId
 }) => {
 
-    const [settingsChannel, setSettingsChannel] = useState<any | null>(null);
+    const [settingsChannel, setSettingsChannel] = useState<DiscussionDto | null>(null);
     const [createChannelDialogOpen, setCreateChannelDialogOpen] = useState(false);
     const [createCategoryDialogOpen, setCreateCategoryDialogOpen] = useState(false);
     const [targetParentId, setTargetParentId] = useState<string | null>(null);
     const [serverSettingsOpen, setServerSettingsOpen] = useState(false);
+    const [dmCategoryExpanded, setDmCategoryExpanded] = useState(true);
 
     const handleOpenCreateChannel = (parentId?: string) => {
         setTargetParentId(parentId || null);
         setCreateChannelDialogOpen(true);
     };
+
 
     const handleOpenSettings = (e: React.MouseEvent, channel: any) => {
         e.stopPropagation();
@@ -124,11 +169,11 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     };
 
     const categories = channels
-        .filter((c: any) => c.type === "CATEGORY")
-        .sort((a: any, b: any) => a.position - b.position);
+        .filter((c: DiscussionDto) => c.type === "CATEGORY")
+        .sort((a: DiscussionDto, b: DiscussionDto) => a.position - b.position);
 
     const orphans = channels.filter(
-        (c: any) => c.type !== "CATEGORY" && !c.parentId
+        (c: DiscussionDto) => c.type !== "CATEGORY" && !c.parentId
     );
 
     const [width, setWidth] = useState(260); // Slightly wider default
@@ -213,6 +258,40 @@ export const ChannelList: React.FC<ChannelListProps> = ({
             {/* Channels List */}
             <div className="flex-1 w-full overflow-y-auto custom-scrollbar">
                 <div className="px-3 py-4 space-y-4">
+                    {/* Direct Messages Category */}
+                    {teamMembers && teamMembers.length > 0 && (
+                        <div className="space-y-1">
+                            <div className="group flex items-center justify-between px-1 mb-1 select-none">
+                                <button
+                                    onClick={() => setDmCategoryExpanded(!dmCategoryExpanded)}
+                                    className="flex items-center text-[10px] font-bold text-zinc-500 dark:text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors uppercase tracking-widest"
+                                >
+                                    <Icon
+                                        icon={dmCategoryExpanded ? "lucide:chevron-down" : "lucide:chevron-right"}
+                                        width="10"
+                                        className="mr-1 transition-transform"
+                                    />
+                                    <span>Direct Messages</span>
+                                </button>
+                            </div>
+
+                            {dmCategoryExpanded && (
+                                <div className="space-y-0.5">
+                                    {teamMembers.map((member) => (
+                                        <DirectMessageItem
+                                            key={member.userId}
+                                            userId={member.userId}
+                                            name={member.name}
+                                            avatar={member.avatar}
+                                            isSelected={selectedDirectMessageUserId === member.userId}
+                                            onClick={() => onSelectDirectMessage?.(member.userId)}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {selectedServerId && loadingChannels && (
                         <div className="flex justify-center p-4">
                             <Icon icon="lucide:loader-2" className="animate-spin text-zinc-400" width="20" />
@@ -227,77 +306,85 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                         </div>
                     )}
 
-                    {orphans.length > 0 && (
-                        <div className="space-y-0.5">
-                            {orphans.map((c: any) => (
-                                <ChannelItem
-                                    key={c._id}
-                                    channel={c}
-                                    selectedChannelId={selectedChannelId}
-                                    onSelectChannel={onSelectChannel}
-                                    onOpenSettings={handleOpenSettings}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {categories.map((cat: any) => {
-                        const isExpanded = expandedCategories.has(cat._id);
-                        const children = channels.filter((c: any) => c.parentId === cat._id);
-
-                        return (
-                            <div key={cat._id} className="space-y-1">
-                                <div className="group flex items-center justify-between px-1 mb-1 select-none">
-                                    <button
-                                        onClick={() => onToggleCategory(cat._id)}
-                                        className="flex items-center text-[10px] font-bold text-zinc-500 dark:text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors uppercase tracking-widest"
-                                    >
-                                        <Icon
-                                            icon={isExpanded ? "lucide:chevron-down" : "lucide:chevron-right"}
-                                            width="10"
-                                            className="mr-1 transition-transform"
+                    {selectedServerId && (
+                        <>
+                            {orphans.length > 0 && (
+                                <div className="space-y-0.5">
+                                    {orphans.map((c: DiscussionDto) => (
+                                        <ChannelItem
+                                            key={c.id}
+                                            channel={c}
+                                            selectedChannelId={selectedChannelId}
+                                            onSelectChannel={onSelectChannel}
+                                            onOpenSettings={handleOpenSettings}
+                                            voiceParticipants={voiceParticipants ? voiceParticipants[c.id] : []}
+                                            speakingUsers={speakingUsers}
                                         />
-                                        <span className="truncate">{cat.name}</span>
-                                    </button>
-
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleOpenCreateChannel(cat._id);
-                                        }}
-                                        className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 opacity-0 group-hover:opacity-100 transition-all p-0.5"
-                                        title="Create Channel"
-                                    >
-                                        <Icon icon="lucide:plus" width="12" />
-                                    </button>
+                                    ))}
                                 </div>
+                            )}
 
-                                {isExpanded && (
-                                    <div className="space-y-0.5 relative">
-                                        {/* Guide line for nested items */}
-                                        <div className="absolute left-1.5 top-0 bottom-2 w-px bg-zinc-200 dark:bg-zinc-800/50" />
+                            {categories.map((cat: DiscussionDto) => {
+                                const isExpanded = expandedCategories.has(cat.id);
+                                const children = channels.filter((c: DiscussionDto) => c.parentId === cat.id);
 
-                                        {children.map((child: any) => (
-                                            <ChannelItem
-                                                key={child._id}
-                                                channel={child}
-                                                isNested
-                                                selectedChannelId={selectedChannelId}
-                                                onSelectChannel={onSelectChannel}
-                                                onOpenSettings={handleOpenSettings}
-                                            />
-                                        ))}
+                                return (
+                                    <div key={cat.id} className="space-y-1">
+                                        <div className="group flex items-center justify-between px-1 mb-1 select-none">
+                                            <button
+                                                onClick={() => onToggleCategory(cat.id)}
+                                                className="flex items-center text-[10px] font-bold text-zinc-500 dark:text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors uppercase tracking-widest"
+                                            >
+                                                <Icon
+                                                    icon={isExpanded ? "lucide:chevron-down" : "lucide:chevron-right"}
+                                                    width="10"
+                                                    className="mr-1 transition-transform"
+                                                />
+                                                <span className="truncate">{cat.name}</span>
+                                            </button>
 
-                                        {children.length === 0 && (
-                                            <div className="ml-5 px-2 py-1 text-[11px] text-zinc-400 dark:text-zinc-600 font-mono">
-                                                Empty category
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleOpenCreateChannel(cat.id);
+                                                }}
+                                                className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 opacity-0 group-hover:opacity-100 transition-all p-0.5"
+                                                title="Create Channel"
+                                            >
+                                                <Icon icon="lucide:plus" width="12" />
+                                            </button>
+                                        </div>
+
+                                        {isExpanded && (
+                                            <div className="space-y-0.5 relative">
+                                                {/* Guide line for nested items */}
+                                                <div className="absolute left-1.5 top-0 bottom-2 w-px bg-zinc-200 dark:bg-zinc-800/50" />
+
+                                                {children.map((child: DiscussionDto) => (
+                                                    <ChannelItem
+                                                        key={child.id}
+                                                        channel={child}
+                                                        isNested
+                                                        selectedChannelId={selectedChannelId}
+                                                        onSelectChannel={onSelectChannel}
+                                                        onOpenSettings={handleOpenSettings}
+                                                        voiceParticipants={voiceParticipants ? voiceParticipants[child.id] : []}
+                                                        speakingUsers={speakingUsers}
+                                                    />
+                                                ))}
+
+                                                {children.length === 0 && (
+                                                    <div className="ml-5 px-2 py-1 text-[11px] text-zinc-400 dark:text-zinc-600 font-mono">
+                                                        Empty category
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                                );
+                            })}
+                        </>
+                    )}
 
                     <div className="h-8" />
                 </div>

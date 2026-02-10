@@ -24,19 +24,27 @@ export class ChannelService {
      * @param data The discussion data including teamId, name, and optional parentId.
      * @returns The created discussion document.
      */
-    async createChannelInternal(data: Partial<Discussion> & { teamId: string; name: string, parentId?: string }) {
-        const count = await this.discussionModel.countDocuments({ teamId: data.teamId, parentId: data.parentId });
+    async createChannelInternal(data: Partial<Discussion> & { teamId: string; name: string, parentId?: string, serverId?: string }) {
+        const query: any = { teamId: data.teamId, parentId: data.parentId };
+        if (data.serverId) query.serverId = data.serverId;
+
+        const count = await this.discussionModel.countDocuments(query);
         return await this.discussionModel.create({
             ...data,
+            serverId: data.serverId ? new Types.ObjectId(data.serverId) : undefined,
             isGroup: true,
             position: count,
         });
     }
 
-    async createChannel(data: { teamId: string; name: string; type: DiscussionType; ownerId: string; parentId?: string; teamSnapshot?: TeamSnapshot }) {
-        const count = await this.discussionModel.countDocuments({ teamId: data.teamId, parentId: data.parentId });
+    async createChannel(data: { teamId: string; name: string; type: DiscussionType; ownerId: string; parentId?: string; teamSnapshot?: TeamSnapshot; serverId?: string }) {
+        const query: any = { teamId: data.teamId, parentId: data.parentId };
+        if (data.serverId) query.serverId = data.serverId;
+
+        const count = await this.discussionModel.countDocuments(query);
         const discussion = await this.discussionModel.create({
             ...data,
+            serverId: data.serverId ? new Types.ObjectId(data.serverId) : undefined,
             isGroup: true,
             position: count,
         });
@@ -51,10 +59,14 @@ export class ChannelService {
         return discussion;
     }
 
-    async createCategory(data: { teamId: string; name: string; ownerId: string; teamSnapshot?: TeamSnapshot }) {
-        const count = await this.discussionModel.countDocuments({ teamId: data.teamId, type: DiscussionType.CATEGORY });
+    async createCategory(data: { teamId: string; name: string; ownerId: string; teamSnapshot?: TeamSnapshot; serverId?: string }) {
+        const query: any = { teamId: data.teamId, type: DiscussionType.CATEGORY };
+        if (data.serverId) query.serverId = data.serverId;
+
+        const count = await this.discussionModel.countDocuments(query);
         const discussion = await this.discussionModel.create({
             ...data,
+            serverId: data.serverId ? new Types.ObjectId(data.serverId) : undefined,
             type: DiscussionType.CATEGORY,
             isGroup: true,
             position: count,
@@ -93,6 +105,19 @@ export class ChannelService {
      */
     async getChannelsByTeam(teamId: string) {
         return await this.discussionModel.find({ teamId, isDeleted: { $ne: true } }).lean();
+    }
+
+    /**
+     * Retrieves all active (non-deleted) channels belonging to a specific server.
+     * @param serverId The ID of the server.
+     * @returns A list of discussion documents.
+     */
+    async getChannelsByServer(serverId: string) {
+        console.log('serverId when getChannelsByServer', serverId);
+        return await this.discussionModel.find({
+            serverId: new Types.ObjectId(serverId),
+            isDeleted: { $ne: true }
+        }).lean();
     }
 
     /**
@@ -167,5 +192,55 @@ export class ChannelService {
             .skip(skip)
             .limit(limit)
             .lean();
+    }
+
+    /**
+     * Creates or retrieves an existing direct message discussion between two users.
+     * @param senderId The ID of the user initiating the DM.
+     * @param partnerId The ID of the other user.
+     * @returns The direct discussion document.
+     */
+    async createDirectDiscussion(senderId: string, partnerId: string) {
+        // Check if a DM already exists between these two users
+        const existingDM = await this.discussionModel.findOne({
+            type: DiscussionType.DIRECT,
+            isGroup: false,
+            isDeleted: { $ne: true },
+            $or: [
+                { name: `${senderId}_${partnerId}` },
+                { name: `${partnerId}_${senderId}` }
+            ]
+        }).lean();
+
+        if (existingDM) {
+            this.logger.log(`Found existing DM: ${existingDM._id}`);
+            return existingDM;
+        }
+
+        // Create new DM discussion
+        const discussion = await this.discussionModel.create({
+            name: `${senderId}_${partnerId}`,
+            type: DiscussionType.DIRECT,
+            isGroup: false,
+        });
+
+        // Create memberships for both users
+        await this.membershipModel.insertMany([
+            {
+                discussionId: discussion._id,
+                userId: senderId,
+                role: MemberRole.MEMBER,
+                status: MemberShip.ACTIVE
+            },
+            {
+                discussionId: discussion._id,
+                userId: partnerId,
+                role: MemberRole.MEMBER,
+                status: MemberShip.ACTIVE
+            }
+        ]);
+
+        this.logger.log(`Created new DM: ${discussion._id} between ${senderId} and ${partnerId}`);
+        return discussion;
     }
 }

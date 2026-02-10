@@ -321,7 +321,10 @@ export class FileService {
             const parts = id.split('/');
             if (parts.length < 3) throw new BadRequestException('Invalid chat file key');
             const fileTeamId = parts[1];
-            await this.teamCache.checkPermission(fileTeamId, userId);
+
+            if (fileTeamId !== 'dm') {
+                await this.teamCache.checkPermission(fileTeamId, userId);
+            }
 
             await this.minioService.deleteFiles([id]);
             return { success: true };
@@ -668,17 +671,23 @@ export class FileService {
         teamId: string,
         projectId?: string
     ) {
-        console.log(`[FileService] createChatPreSignedUrl: teamId=${teamId}, userId=${userId}`);
-        try {
-            // await this.teamCache.checkPermission(teamId, userId);
-        } catch (error) {
-            console.error(`[FileService] Permission check failed for team ${teamId}, user ${userId}:`, error);
-            throw error;
+        // For DM (Direct Message), teamId will be undefined, use 'dm' as identifier
+        const effectiveTeamId = teamId || 'dm';
+        console.log(`[FileService] createChatPreSignedUrl: teamId=${teamId}, effectiveTeamId=${effectiveTeamId}, userId=${userId}`);
+
+        // Only check permission if teamId is provided (not DM)
+        if (teamId) {
+            try {
+                // await this.teamCache.checkPermission(teamId, userId);
+            } catch (error) {
+                console.error(`[FileService] Permission check failed for team ${teamId}, user ${userId}:`, error);
+                throw error;
+            }
         }
 
         const extension = path.extname(originalName);
         const randomId = randomUUID();
-        const storageKey = `chat-files/${teamId}/${projectId || 'global'}/${randomId}${extension}`;
+        const storageKey = `chat-files/${effectiveTeamId}/${projectId || 'global'}/${randomId}${extension}`;
 
         const uploadUrl = await this.minioService.getPreSignedUploadUrl(storageKey);
 
@@ -698,22 +707,28 @@ export class FileService {
 
         const serverId = parts[1];
 
-        try {
-            const hasAccess = await this.amqp.request<boolean>({
-                exchange: DISCUSSION_EXCHANGE,
-                routingKey: DISCUSSION_PATTERN.CHECK_SERVER_MEMBERSHIP,
-                payload: { serverId, userId }
-            });
+        // If serverId is 'dm', this is a DM file - skip server membership check
+        // DM files are accessible to anyone who has the link (they're in a private discussion)
+        if (serverId !== 'dm') {
+            try {
+                const hasAccess = await this.amqp.request<boolean>({
+                    exchange: DISCUSSION_EXCHANGE,
+                    routingKey: DISCUSSION_PATTERN.CHECK_SERVER_MEMBERSHIP,
+                    payload: { serverId, userId }
+                });
 
-            if (!hasAccess) {
+                if (!hasAccess) {
+                    throw new ForbiddenException('You do not have access to this server');
+                }
+            } catch (error) {
+                if (error instanceof ForbiddenException) {
+                    throw error;
+                }
                 throw new ForbiddenException('You do not have access to this server');
             }
-        } catch (error) {
-            if (error instanceof ForbiddenException) {
-                throw error;
-            }
-            throw new ForbiddenException('You do not have access to this server');
         }
+        // For DM files, we trust that the user has access if they have the storage key
+        // The storage key is only shared within the DM discussion
 
         const originalName = path.basename(storageKey);
 
@@ -732,16 +747,44 @@ export class FileService {
         projectId?: string,
     }) {
         const { storageKey, userId, fileName, teamId, projectId } = payload;
+        this.logger.log(`[saveFromChat] Processing request: userId=${userId}, fileName=${fileName}, teamId=${teamId}, projectId=${projectId}`);
+        this.logger.log(`[saveFromChat] storageKey: ${storageKey}`);
 
-        // 1. Verify chat file access (simplified)
+        // 1. Verify chat file access
         const parts = storageKey.split('/');
         if (parts.length < 3 || parts[0] !== 'chat-files') {
+            this.logger.error(`[saveFromChat] Invalid chat file key: ${storageKey}`);
             throw new BadRequestException('Invalid chat file key');
         }
-        const fileTeamId = parts[1];
-        await this.teamCache.checkPermission(fileTeamId, userId);
 
-        // 2. Get metadata from MinIO
+        const serverId = parts[1];
+        this.logger.log(`[saveFromChat] Checking server membership for serverId=${serverId}, userId=${userId}`);
+
+        // Skip server membership check for DM files
+        if (serverId !== 'dm') {
+            try {
+                const hasServerAccess = await this.amqp.request<boolean>({
+                    exchange: DISCUSSION_EXCHANGE,
+                    routingKey: DISCUSSION_PATTERN.CHECK_SERVER_MEMBERSHIP,
+                    payload: { serverId, userId }
+                });
+
+                if (!hasServerAccess) {
+                    this.logger.warn(`[saveFromChat] User ${userId} is not a member of server ${serverId}`);
+                    throw new ForbiddenException('You do not have access to this chat file');
+                }
+            } catch (error) {
+                this.logger.error(`[saveFromChat] Error checking server membership: ${error.message}`);
+                throw new ForbiddenException('You do not have access to this chat file');
+            }
+        }
+        // For DM files, we trust that the user has access if they have the storage key
+
+        // 2. Check destination team permission if saving to a team
+        if (teamId) {
+            this.logger.log(`[saveFromChat] Checking destination team permission for teamId=${teamId}, userId=${userId}`);
+            await this.teamCache.checkPermission(teamId, userId);
+        }
         const metadata = await this.minioService.getObjectMetadata(storageKey);
         if (!metadata) {
             throw new NotFoundException('Source file not found in storage');

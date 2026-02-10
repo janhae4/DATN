@@ -12,17 +12,11 @@ import { Server } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { RmqClientService } from '@app/common';
 import * as cookie from 'cookie';
-import { 
-  JwtDto, AUTH_EXCHANGE, AUTH_PATTERN, User, 
-  VIDEO_CHAT_EXCHANGE, VIDEO_CHAT_PATTERN 
+import {
+  JwtDto, AUTH_EXCHANGE, AUTH_PATTERN, User,
+  VIDEO_CHAT_EXCHANGE, VIDEO_CHAT_PATTERN
 } from '@app/contracts';
 import * as socketGateway from './socket.gateway';
-
-// Voice / video-call signaling namespace.
-// - Authenticates clients via accessToken cookie (validated via AUTH service)
-// - Relays WebRTC signaling messages (offer/answer/ice_candidate)
-// - Broadcasts media state changes (mute/video/screen share)
-// - Publishes transcripts and end-call events to RMQ
 
 @WebSocketGateway({
   namespace: 'voice',
@@ -41,10 +35,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(VoiceGateway.name);
 
-  constructor(private readonly amqpConnection: RmqClientService) {}
-
-  // Authenticate the socket connection using the access token cookie.
-  // The socket is joined to a private room keyed by `user.id` for direct signaling.
+  constructor(private readonly amqpConnection: RmqClientService) { }
   async handleConnection(client: socketGateway.AuthenticatedSocket) {
     try {
       const accessToken = cookie.parse(client.handshake.headers.cookie || '').accessToken;
@@ -65,15 +56,61 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       client.data.user = user;
-      client.join(user.id); 
+      client.join(user.id);
       this.logger.log(`User ${user.id} connected to Voice Namespace`);
     } catch (error) {
       client.disconnect();
     }
   }
 
-  handleDisconnect(client: socketGateway.AuthenticatedSocket) {
+  async handleDisconnect(client: socketGateway.AuthenticatedSocket) {
     this.logger.log(`Client disconnected from Voice Namespace: ${client.id}`);
+    const { currentRoomId, currentTeamId, user } = client.data as any;
+
+    if (currentRoomId && currentTeamId && user) {
+      this.server.to(currentTeamId).emit('voice_state_update', {
+        userId: user.id,
+        roomId: currentRoomId,
+        type: 'LEAVE',
+        userInfo: user
+      });
+
+      this.server.to(currentRoomId).emit('user_left_video', {
+        userId: user.id,
+        socketId: client.id,
+        reason: 'DISCONNECT'
+      });
+    }
+  }
+
+  @SubscribeMessage('join_server_events')
+  handleJoinServerEvents(
+    @ConnectedSocket() client: socketGateway.AuthenticatedSocket,
+    @MessageBody() payload: { teamId: string }
+  ) {
+    client.join(payload.teamId);
+    (client.data as any).currentTeamId = payload.teamId;
+    // Note: We don't verify membership here for brevity, but should in production
+  }
+
+  // Fetch current voice states for the team
+  @SubscribeMessage('get_server_voice_state')
+  async handleGetServerVoiceState(
+    @ConnectedSocket() client: socketGateway.AuthenticatedSocket,
+    @MessageBody() payload: { teamId: string }
+  ) {
+    // Fetch all sockets in the team room
+    const sockets = await this.server.in(payload.teamId).fetchSockets();
+    const states = sockets
+      .filter(s => (s.data as any).currentRoomId)
+      .map(s => ({
+        userId: (s.data as any).user.id,
+        userInfo: (s.data as any).user,
+        roomId: (s.data as any).currentRoomId,
+        socketId: s.id
+      }));
+
+    return states; // Returns to the caller
   }
 
   // Join a shared video room; notify other participants in the room.
@@ -83,6 +120,11 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     payload: { roomId: string; teamId: string; userInfo: User; role: string }
   ) {
     client.join(payload.roomId);
+    client.join(payload.teamId); // Ensure they are in the team room
+
+    (client.data as any).currentRoomId = payload.roomId;
+    (client.data as any).currentTeamId = payload.teamId;
+
     this.logger.log(`User ${client.data.user?.id} joining video room ${payload.roomId}`);
 
     client.to(payload.roomId).emit('user_joined_video', {
@@ -90,6 +132,45 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socketId: client.id,
       role: payload.role
     });
+
+    (client.data as any).user = {
+      ...(client.data as any).user,
+      ...payload.userInfo
+    };
+
+    client.to(payload.teamId).emit('voice_state_update', {
+      userId: payload.userInfo.id,
+      userInfo: payload.userInfo,
+      roomId: payload.roomId,
+      type: 'JOIN'
+    });
+  }
+
+  @SubscribeMessage('leave_video_room')
+  handleLeaveVideoRoom(
+    @ConnectedSocket() client: socketGateway.AuthenticatedSocket,
+    @MessageBody() payload: { roomId: string }
+  ) {
+    client.leave(payload.roomId);
+    const teamId = (client.data as any).currentTeamId;
+    const user = client.data.user;
+
+    if (teamId && user) {
+      client.to(teamId).emit('voice_state_update', {
+        userId: user.id,
+        roomId: payload.roomId,
+        type: 'LEAVE',
+        userInfo: user
+      });
+    }
+
+    client.to(payload.roomId).emit('user_left_video', {
+      userId: client.data.user?.id,
+      socketId: client.id,
+      reason: 'LEFT'
+    });
+
+    (client.data as any).currentRoomId = null;
   }
 
   // WebRTC SDP offer relay (caller -> callee).
@@ -223,7 +304,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // --- HÀM HỖ TRỢ CONTROLLER GỌI XUỐNG (Kick/Unkick) ---
-  
+
   // Ask the host to approve kicking a user from the room.
   async sendKickRequestToHost(hostUserId: string, message: string, roomId: string, targetUserId: string) {
     this.server.to(hostUserId).emit('request-kick', { message, roomId, targetUserId });

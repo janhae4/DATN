@@ -172,8 +172,8 @@ export class ServerController {
         queue: DISCUSSION_PATTERN.GET_USER_SERVER_LIST,
         errorHandler: customErrorHandler,
     })
-    async handleGetUserServerList(payload: { userId: string }) {
-        return await this.serverService.getUserServerList(payload.userId);
+    async handleGetUserServerList(payload: { userId: string, teamId?: string }) {
+        return await this.serverService.getUserServerList(payload.userId, payload.teamId);
     }
 
     /**
@@ -267,6 +267,16 @@ export class ServerController {
     })
     async handleGetServerMembers(payload: { teamId: string, page: number, limit: number }) {
         return await this.serverService.getServerMembers(payload);
+    }
+
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.GET_TEAM_MEMBERS,
+        queue: DISCUSSION_PATTERN.GET_TEAM_MEMBERS,
+        errorHandler: customErrorHandler,
+    })
+    async handleGetTeamMembers(payload: { teamId: string, page: number, limit: number }) {
+        return await this.serverService.getTeamMembers(payload);
     }
 
     @RabbitRPC({

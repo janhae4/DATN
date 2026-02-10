@@ -135,4 +135,35 @@ export class ChannelController {
     async reorderChannels(payload: ReorderChannelsDto) {
         return this.channelService.reorderChannels(payload.teamId, payload.orders);
     }
+
+    /**
+     * RPC handler to retrieve all channels belonging to a specific server.
+     * @param payload Contains serverId.
+     * @returns A list of discussion documents for the server.
+     */
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.GET_CHANNELS_BY_SERVER,
+        queue: DISCUSSION_PATTERN.GET_CHANNELS_BY_SERVER,
+        errorHandler: customErrorHandler,
+    })
+    async getChannelsByServer(payload: { serverId: string }) {
+        console.log('serverId when getChannelsByServer', payload.serverId);
+        return this.channelService.getChannelsByServer(payload.serverId);
+    }
+
+    /**
+     * RPC handler to create or retrieve a direct message discussion between two users.
+     * @param payload Contains senderId and partnerId.
+     * @returns The direct discussion document.
+     */
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.CREATE_DIRECT_MESSAGE,
+        queue: DISCUSSION_PATTERN.CREATE_DIRECT_MESSAGE,
+        errorHandler: customErrorHandler,
+    })
+    async createDirectDiscussion(payload: { senderId: string; partnerId: string }) {
+        return this.channelService.createDirectDiscussion(payload.senderId, payload.partnerId);
+    }
 }

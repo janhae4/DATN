@@ -24,6 +24,9 @@ export class Attachment {
 
   @Prop()
   fileName: string;
+
+  @Prop()
+  size?: number;
 }
 export const AttachmentSchema = SchemaFactory.createForClass(Attachment);
 

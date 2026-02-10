@@ -1,14 +1,14 @@
-import { IsOptional, IsUUID } from "class-validator";
+import { IsOptional, IsString } from "class-validator";
 
 export class DownloadFiles {
     @IsOptional()
-    @IsUUID()
+    @IsString()
     projectId?: string
 
     @IsOptional()
-    @IsUUID()
+    @IsString()
     teamId?: string
 
-    @IsUUID('all', { each: true })
+    @IsString({ each: true })
     fileIds: string[]
 }

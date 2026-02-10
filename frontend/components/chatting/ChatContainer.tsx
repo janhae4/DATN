@@ -10,6 +10,7 @@ import {
 import { useChatPageLogic } from "@/hooks/chat/useChatPageLogic";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { ServerDto } from "@/types";
 
 interface ChatContainerProps {
     teamId: string;
@@ -39,7 +40,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ teamId }) => {
             />
 
             <ChannelList
-                selectedServerName={state.servers.find((s: any) => s.id === state.selectedServerId)?.name || "Select a Server"}
+                selectedServerName={state.servers.find((s: ServerDto) => s.id === state.selectedServerId)?.name || "Select a Server"}
                 selectedServerId={state.selectedServerId}
                 channels={state.channels}
                 selectedChannelId={state.selectedChannelId}
@@ -59,18 +60,33 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ teamId }) => {
                 onCreateCategory={actions.handleCreateCategory}
                 onUpdateChannel={actions.handleUpdateChannel}
                 onDeleteChannel={actions.handleDeleteChannel}
+                voiceParticipants={
+                    (() => {
+                        const merged = { ...state.globalVoiceParticipants };
+
+                        if (state.activeVoiceChannelId && state.voiceParticipants) {
+                            if (!merged[state.activeVoiceChannelId]) merged[state.activeVoiceChannelId] = [];
+
+                            merged[state.activeVoiceChannelId] = state.voiceParticipants;
+                        }
+
+                        return merged;
+                    })()
+                }
+                speakingUsers={state.speakingUsers}
+                teamMembers={state.teamMembers}
+                onSelectDirectMessage={actions.handleSelectDirectMessage}
+                selectedDirectMessageUserId={state.selectedDirectMessageUserId}
             />
         </>
     );
 
     return (
         <div className="flex h-screen bg-zinc-50/50 dark:bg-black rounded-xl text-zinc-900 dark:text-zinc-200 overflow-hidden p-0 sm:p-2 gap-0 sm:gap-2">
-            {/* Desktop Sidebar - Hidden on mobile/tablet */}
             <aside className="hidden lg:flex shrink-0 rounded-none sm:rounded-lg bg-white dark:bg-zinc-900 border-0 sm:border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
                 {renderSidebar()}
             </aside>
 
-            {/* Mobile/Tablet Left Sidebar (Sheet) */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetContent side="left" className="p-0 flex flex-row w-[85vw] sm:w-[340px] gap-0 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
                     <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
@@ -82,6 +98,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ teamId }) => {
                 <ChatArea
                     selectedServerId={state.selectedServerId}
                     selectedChannelId={state.selectedChannelId}
+                    selectedTeamId={teamId}
                     selectedChannelName={state.selectedChannel?.name}
                     showMembers={state.showMembers}
                     onToggleMembers={() => {
@@ -98,12 +115,25 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ teamId }) => {
                     onSendMessage={actions.handleSendMessage}
                     onTyping={actions.emitTyping}
                     isVoice={state.isVoiceChannel}
+                    activeVoiceChannelId={state.activeVoiceChannelId}
                     user={state.user}
                     userId={state.userId}
                     voiceParticipants={state.voiceParticipants}
                     remoteStreams={state.remoteStreams}
-                    onLeaveVoice={() => actions.setSelectedChannelId(null)}
-                    onReact={actions.toggleReaction as any}
+                    onLeaveVoice={actions.handleLeaveVoice}
+                    onJoinVoice={actions.handleJoinVoice}
+                    isMuted={state.isMuted}
+                    isVideoOn={state.isVideoOn}
+                    speakingUsers={state.speakingUsers}
+                    onToggleMute={actions.toggleMute}
+                    onToggleVideo={actions.toggleVideo}
+                    onReact={async (params) => {
+                        await actions.toggleReaction({
+                            discussionId: state.selectedChannelId || "",
+                            messageId: params.messageId,
+                            emoji: params.emoji
+                        });
+                    }}
                     members={state.members}
                     onUpdateMessage={actions.handleUpdateMessage}
                     onDeleteMessage={actions.handleDeleteMessage}

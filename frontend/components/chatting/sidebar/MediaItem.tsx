@@ -48,21 +48,21 @@ export const MediaItem = React.memo(({ attachment, serverId, teamId, currentProj
                     onClick={() => setIsPreviewOpen(true)}
                 >
                     <div className="flex justify-between items-start">
-                         <div className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm border border-zinc-100 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400">
+                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm border border-zinc-100 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400">
                             <Icon icon="lucide:file" width="16" />
-                         </div>
-                         <span className="text-[10px] font-bold text-zinc-300 dark:text-zinc-600 tracking-wider">
+                        </div>
+                        <span className="text-[10px] font-bold text-zinc-300 dark:text-zinc-600 tracking-wider">
                             {extension}
-                         </span>
+                        </span>
                     </div>
-                    
+
                     <div className="space-y-1">
-                         <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate leading-tight w-full" title={attachment.fileName}>
+                        <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate leading-tight w-full" title={attachment.fileName}>
                             {attachment.fileName}
-                         </p>
-                         <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                        </p>
+                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                             {attachment.size ? `${(attachment.size / 1024).toFixed(0)} KB` : 'Unknown'}
-                         </p>
+                        </p>
                     </div>
 
                     {/* Hover Overlay Light */}
@@ -79,10 +79,10 @@ export const MediaItem = React.memo(({ attachment, serverId, teamId, currentProj
                 className="group relative aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
                 onClick={() => setIsPreviewOpen(true)}
             >
-                <img 
-                    src={previewUrl} 
-                    alt={attachment.fileName} 
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                <img
+                    src={previewUrl}
+                    alt={attachment.fileName}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
 
                 {/* Overlay */}
@@ -104,7 +104,7 @@ export const MediaItem = React.memo(({ attachment, serverId, teamId, currentProj
                 onOpenChange={setIsPreviewOpen}
                 attachment={attachment}
                 previewUrl={previewUrl}
-                teamId={teamId}
+                destinationTeamId={teamId}
                 currentProjectId={currentProjectId}
                 currentProjectName={currentProjectName}
                 projects={projects}

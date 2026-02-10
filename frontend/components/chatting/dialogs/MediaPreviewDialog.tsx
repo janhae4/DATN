@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify-icon/react";
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
@@ -21,17 +20,21 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { fileService } from "@/services/fileService";
+import { cn } from "@/lib/utils";
+import FilePreview from "@/components/features/documentation/filePreview";
 
 interface MediaPreviewDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     attachment: any;
     previewUrl: string;
-    teamId?: string;
+    serverId?: string;
+    destinationTeamId?: string;
     currentProjectId?: string;
     currentProjectName?: string;
     projects?: Array<{ id: string; name: string }>;
     onDelete?: () => void | Promise<void>;
+    simple?: boolean;
 }
 
 export const MediaPreviewDialog: React.FC<MediaPreviewDialogProps> = ({
@@ -39,17 +42,22 @@ export const MediaPreviewDialog: React.FC<MediaPreviewDialogProps> = ({
     onOpenChange,
     attachment,
     previewUrl,
-    teamId,
+    destinationTeamId,
     currentProjectId,
     currentProjectName,
-    projects = []
+    projects = [],
+    simple = false
 }) => {
     const [selectedDestination, setSelectedDestination] = useState<string>(
         currentProjectId || "personal"
     );
     const [isSaving, setIsSaving] = useState(false);
 
-    const isImage = attachment?.type === 'image' || attachment?.type?.startsWith('image/');
+    useEffect(() => {
+        if (open) {
+            setSelectedDestination(currentProjectId || "personal");
+        }
+    }, [open, currentProjectId]);
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -60,7 +68,7 @@ export const MediaPreviewDialog: React.FC<MediaPreviewDialogProps> = ({
             await fileService.saveFromChat({
                 storageKey: attachment.url,
                 fileName: attachment.fileName,
-                teamId,
+                teamId: destinationTeamId,
                 projectId
             });
 
@@ -87,143 +95,128 @@ export const MediaPreviewDialog: React.FC<MediaPreviewDialogProps> = ({
         toast.success("Download started");
     };
 
-    // Reset selection when dialog opens
-    React.useEffect(() => {
-        if (open) {
-            setSelectedDestination(currentProjectId || "personal");
-        }
-    }, [open, currentProjectId]);
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
-                <DialogHeader className="px-6 pt-6 pb-4 border-b border-zinc-800">
-                    <DialogTitle className="text-lg font-semibold text-zinc-100">
-                        {attachment?.fileName || "Media Preview"}
-                    </DialogTitle>
-                    <DialogDescription className="text-xs text-zinc-500">
-                        {attachment?.type} • {attachment?.size ? `${(attachment.size / 1024).toFixed(2)} KB` : 'Unknown size'}
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className={cn(
+                "p-0 gap-0 overflow-hidden bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-2xl sm:rounded-xl",
+                simple ? "max-w-4xl h-[75vh]" : "max-w-6xl h-[85vh]"
+            )}>
+                <div className="sr-only">
+                    <DialogTitle>{attachment?.fileName}</DialogTitle>
+                    <DialogDescription>Media preview and actions</DialogDescription>
+                </div>
 
-                <div className="flex flex-col md:flex-row gap-0">
-                    {/* Preview Area */}
-                    <div className="flex-1 bg-zinc-950/50 flex items-center justify-center p-6 min-h-[300px] md:min-h-[400px]">
-                        {isImage ? (
-                            <img
-                                src={previewUrl}
-                                alt={attachment?.fileName}
-                                className="max-h-[60vh] max-w-full rounded-md shadow-xl"
-                            />
-                        ) : (
-                            <div className="flex flex-col items-center gap-4 text-zinc-400">
-                                <Icon icon="lucide:file" width="64" />
-                                <span className="text-sm">{attachment?.fileName}</span>
+                <div className="flex h-full flex-col md:flex-row">
+                    {/* LEFT: Preview Area */}
+                    <div className="relative flex-1 bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
+                        <FilePreview url={previewUrl} />
+
+                        {/* Top Left Filename Overlay */}
+                        <div className="absolute top-4 left-4 z-20">
+                            <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-sm font-medium">
+                                {attachment?.fileName}
+                            </div>
+                        </div>
+
+                        {/* Simple Mode Download Button Overlay */}
+                        {simple && (
+                            <div className="absolute bottom-4 right-4 z-20">
+                                <Button size="sm" onClick={handleDownload} className="shadow-lg">
+                                    <Icon icon="lucide:download" className="mr-2" />
+                                    Download
+                                </Button>
                             </div>
                         )}
                     </div>
 
-                    {/* Actions Panel */}
-                    <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-zinc-800 bg-zinc-900/50 p-6 flex flex-col gap-6">
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-semibold text-zinc-200">Save to Database</h3>
+                    {!simple && (
+                        <div className="w-full md:w-[320px] flex flex-col bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800">
+                            {/* Simple Header */}
+                            <div className="p-6 pb-2">
+                                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Save to Storage</h3>
+                                <p className="text-xs text-zinc-500 mt-1">Copy this file to your permanent storage.</p>
+                            </div>
 
-                            {/* Single Destination Select */}
-                            <div className="space-y-2">
-                                <Label htmlFor="destination" className="text-xs text-zinc-400">
-                                    Save Location
-                                </Label>
-                                <Select value={selectedDestination} onValueChange={setSelectedDestination}>
-                                    <SelectTrigger id="destination" className="bg-zinc-800 border-zinc-700">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-zinc-800 border-zinc-700">
-                                        {/* Personal Files */}
-                                        <SelectItem value="personal">
-                                            <div className="flex items-center gap-2">
-                                                <Icon icon="lucide:user" width="14" />
-                                                <span>Personal Files</span>
-                                            </div>
-                                        </SelectItem>
-
-                                        {/* Separator if there's a current project or other projects */}
-                                        {(currentProjectId || projects.length > 0) && (
-                                            <Separator className="my-1 bg-zinc-700" />
-                                        )}
-
-                                        {/* Current Project (highlighted) */}
-                                        {currentProjectId && currentProjectName && (
-                                            <SelectItem value={currentProjectId}>
-                                                <div className="flex items-center gap-2">
-                                                    <Icon icon="lucide:folder" width="14" className="text-indigo-400" />
-                                                    <span className="font-medium text-indigo-400">{currentProjectName}</span>
-                                                    <span className="text-[10px] text-zinc-500 ml-1">(Current)</span>
+                            <div className="flex-1 px-6 pt-4 space-y-8 overflow-y-auto">
+                                {/* Destination Control */}
+                                <div className="space-y-2.5">
+                                    <Label className="text-[10px] uppercase font-bold text-zinc-400 tracking-tight">Location</Label>
+                                    <Select value={selectedDestination} onValueChange={setSelectedDestination}>
+                                        <SelectTrigger className="w-full h-10 bg-transparent border-zinc-200 dark:border-zinc-800 shadow-none">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="personal">
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <Icon icon="lucide:user" className="text-zinc-400" width="14" />
+                                                    <span>Personal Cloud</span>
                                                 </div>
                                             </SelectItem>
-                                        )}
 
-                                        {/* Other Projects */}
-                                        {projects
-                                            .filter(p => p.id !== currentProjectId)
-                                            .map((project) => (
+                                            {(currentProjectId || projects.length > 0) && <Separator className="my-1.5 opacity-50" />}
+
+                                            {currentProjectId && (
+                                                <SelectItem value={currentProjectId}>
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <Icon icon="lucide:folder" className="text-blue-500" width="14" />
+                                                        <span className="font-medium">{currentProjectName}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            )}
+
+                                            {projects.filter(p => p.id !== currentProjectId).map((project) => (
                                                 <SelectItem key={project.id} value={project.id}>
-                                                    <div className="flex items-center gap-2">
-                                                        <Icon icon="lucide:folder" width="14" />
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <Icon icon="lucide:folder" className="text-zinc-400" width="14" />
                                                         <span>{project.name}</span>
                                                     </div>
                                                 </SelectItem>
-                                            ))
-                                        }
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
 
-                                        {/* No projects message */}
-                                        {!currentProjectId && projects.length === 0 && (
-                                            <div className="p-2 text-xs text-zinc-500 text-center italic">
-                                                No projects available
-                                            </div>
-                                        )}
-                                    </SelectContent>
-                                </Select>
+                                {/* Metadata List */}
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] uppercase font-bold text-zinc-400 tracking-tight">File Info</Label>
+                                    <div className="space-y-3 px-1">
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-zinc-500">Extension</span>
+                                            <span className="text-zinc-900 dark:text-zinc-300 font-medium uppercase">{attachment?.type || 'File'}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-zinc-500">Total Size</span>
+                                            <span className="text-zinc-900 dark:text-zinc-300 font-medium">
+                                                {typeof attachment?.size === 'number'
+                                                    ? attachment.size > 1024 * 1024
+                                                        ? `${(attachment.size / (1024 * 1024)).toFixed(2)} MB`
+                                                        : `${(attachment.size / 1024).toFixed(2)} KB`
+                                                    : '---'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <Button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <Icon icon="lucide:loader-2" className="animate-spin mr-2" width="16" />
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Icon icon="lucide:save" className="mr-2" width="16" />
-                                        Save to Database
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-
-                        <div className="border-t border-zinc-800 pt-4 space-y-2">
-                            <Button
-                                onClick={handleDownload}
-                                variant="outline"
-                                className="w-full border-zinc-700 hover:bg-zinc-800"
-                            >
-                                <Icon icon="lucide:download" className="mr-2" width="16" />
-                                Download
-                            </Button>
-                        </div>
-
-                        {/* File Info */}
-                        <div className="border-t border-zinc-800 pt-4 space-y-2 mt-auto">
-                            <h4 className="text-xs font-semibold text-zinc-400">File Information</h4>
-                            <div className="space-y-1 text-xs text-zinc-500">
-                                <div>Type: <span className="text-zinc-400">{attachment?.type}</span></div>
-                                <div>Size: <span className="text-zinc-400">{attachment?.size ? `${(attachment.size / 1024).toFixed(2)} KB` : 'Unknown'}</span></div>
+                            {/* Actions */}
+                            <div className="p-6 space-y-2">
+                                <Button
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className="w-full h-10 bg-zinc-900 dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity rounded-lg font-semibold text-xs"
+                                >
+                                    {isSaving ? "Saving..." : "Save to Storage"}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleDownload}
+                                    className="w-full h-10 border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 shadow-none text-zinc-600 dark:text-zinc-400 text-xs"
+                                >
+                                    Download
+                                </Button>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </DialogContent>
         </Dialog>

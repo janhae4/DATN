@@ -62,16 +62,15 @@ export const fileService = {
     projectId?: string,
     teamId?: string
   ): Promise<PresignedUrlResponse> => {
-    if (data.isChatAttachment && teamId) {
+    if (data.isChatAttachment) {
       return fileService.initiateChatUpload({
         fileName: data.fileName,
         fileType: data.fileType,
-      }, teamId, projectId);
+      }, teamId || '', projectId);
     }
     const payload: any = { ...data };
     if (projectId) payload.projectId = projectId;
     if (teamId) payload.teamId = teamId;
-    if (data.isChatAttachment) payload.isChatAttachment = true;
 
     const response = await apiClient.post<PresignedUrlResponse>(
       "/files/initiate-upload",

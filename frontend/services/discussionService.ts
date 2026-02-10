@@ -5,18 +5,25 @@ import {
   CreateChannelDto,
   CreateCategoryDto,
   ReorderChannelsDto,
-  CreateServerDto
+  CreateServerDto,
+  ServerDto,
+  DiscussionDto,
+  ResponseMessageDto,
+  MessageSnapshot,
+  ServerMemberDto,
+  PaginatedResponse,
+  AttachmentDto
 } from '@/types/discussion';
 
 export const discussionService = {
 
-  getMessages: async (discussionId: string, params: { page?: number; limit?: number }) => {
-    const { data } = await apiClient.get(`/discussions/${discussionId}/messages`, { params });
+  getMessages: async (discussionId: string, params: { page?: number; limit?: number }): Promise<ResponseMessageDto> => {
+    const { data } = await apiClient.get<ResponseMessageDto>(`/discussions/${discussionId}/messages`, { params });
     return data;
   },
 
-  getDiscussionAttachments: async (discussionId: string, params: { page?: number; limit?: number }) => {
-    const { data } = await apiClient.get(`/discussions/${discussionId}/attachments`, { params });
+  getDiscussionAttachments: async (discussionId: string, params: { page?: number; limit?: number }): Promise<PaginatedResponse<AttachmentDto>> => {
+    const { data } = await apiClient.get<PaginatedResponse<AttachmentDto>>(`/discussions/${discussionId}/attachments`, { params });
     return data;
   },
 
@@ -25,10 +32,10 @@ export const discussionService = {
     return data;
   },
 
-  updateMessage: async (discussionId: string, messageId: string, content: string, attachments?: any[]) => {
-    const payload: any = { content };
+  updateMessage: async (discussionId: string, messageId: string, content: string, attachments?: AttachmentDto[]): Promise<MessageSnapshot> => {
+    const payload: Partial<CreateMessageDto> = { content };
     if (attachments) payload.attachments = attachments;
-    const { data } = await apiClient.put(`/discussions/${discussionId}/messages/${messageId}`, payload);
+    const { data } = await apiClient.put<MessageSnapshot>(`/discussions/${discussionId}/messages/${messageId}`, payload);
     return data;
   },
 
@@ -51,13 +58,20 @@ export const discussionService = {
     return data;
   },
 
-  getUserServers: async (userId: string) => {
-    const { data } = await apiClient.get(`/discussions/servers/user/${userId}`);
+  getUserServers: async (userId: string, teamId?: string) => {
+    const { data } = await apiClient.get(`/discussions/servers/user/${userId}`, {
+      params: { teamId }
+    });
     return data;
   },
 
-  getServerChannels: async (teamId: string) => {
-    const { data } = await apiClient.get(`/discussions/teams/${teamId}/channels`);
+  getServerChannels: async (teamId: string): Promise<DiscussionDto[]> => {
+    const { data } = await apiClient.get<DiscussionDto[]>(`/discussions/teams/${teamId}/channels`);
+    return data;
+  },
+
+  getServerChannelsByServer: async (serverId: string): Promise<DiscussionDto[]> => {
+    const { data } = await apiClient.get<DiscussionDto[]>(`/discussions/servers/${serverId}/channels`);
     return data;
   },
 
@@ -109,18 +123,18 @@ export const discussionService = {
     return data;
   },
 
-  updateServer: async (teamId: string, payload: { name?: string; avatar?: string }) => {
-    const { data } = await apiClient.put(`/discussions/servers/${teamId}`, payload);
+  updateServer: async (serverId: string, payload: { name?: string; avatar?: string }) => {
+    const { data } = await apiClient.put(`/discussions/servers/${serverId}`, payload);
     return data;
   },
 
-  deleteServer: async (teamId: string) => {
-    const { data } = await apiClient.delete(`/discussions/servers/${teamId}`);
+  deleteServer: async (serverId: string) => {
+    const { data } = await apiClient.delete(`/discussions/servers/${serverId}`);
     return data;
   },
 
-  permanentDeleteServer: async (teamId: string) => {
-    const { data } = await apiClient.delete(`/discussions/servers/${teamId}/permanent`);
+  permanentDeleteServer: async (serverId: string) => {
+    const { data } = await apiClient.delete(`/discussions/servers/${serverId}/permanent`);
     return data;
   },
 
@@ -129,13 +143,20 @@ export const discussionService = {
     return data;
   },
 
-  restoreServer: async (teamId: string) => {
-    const { data } = await apiClient.put(`/discussions/servers/${teamId}/restore`);
+  restoreServer: async (serverId: string) => {
+    const { data } = await apiClient.put(`/discussions/servers/${serverId}/restore`);
     return data;
   },
 
-  getServerMembers: async (teamId: string, page: number = 1, limit: number = 20) => {
-    const { data } = await apiClient.get(`/discussions/servers/${teamId}/members`, {
+  getServerMembers: async (serverId: string, page: number = 1, limit: number = 20): Promise<PaginatedResponse<ServerMemberDto>> => {
+    const { data } = await apiClient.get<PaginatedResponse<ServerMemberDto>>(`/discussions/servers/${serverId}/members`, {
+      params: { page, limit }
+    });
+    return data;
+  },
+
+  getTeamMembers: async (teamId: string, page: number = 1, limit: number = 50): Promise<PaginatedResponse<ServerMemberDto>> => {
+    const { data } = await apiClient.get<PaginatedResponse<ServerMemberDto>>(`/discussions/teams/${teamId}/members`, {
       params: { page, limit }
     });
     return data;

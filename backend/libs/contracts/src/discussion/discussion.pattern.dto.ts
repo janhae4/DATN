@@ -25,6 +25,7 @@ export const DISCUSSION_PATTERN = {
   UPDATE_SERVER: 'chat.updateServer',
   CREATE_SERVER: 'chat.createServer',
   GET_SERVER_MEMBERS: 'chat.getServerMembers',
+  GET_TEAM_MEMBERS: 'chat.getTeamMembers',
   GET_DELETED_SERVERS: 'chat.getDeletedServers',
   RESTORE_SERVER: 'chat.restoreServer',
   TOGGLE_REACTION: 'chat.toggleReaction',
@@ -35,4 +36,5 @@ export const DISCUSSION_PATTERN = {
   DELETE_MESSAGE: 'chat.deleteMessage',
   GET_ATTACHMENTS: 'chat.getAttachments',
   CHECK_SERVER_MEMBERSHIP: 'chat.checkServerMembership',
+  GET_CHANNELS_BY_SERVER: 'chat.getChannelsByServer',
 };

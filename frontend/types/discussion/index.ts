@@ -17,8 +17,9 @@ export enum MemberShip {
 export interface AttachmentDto {
   type: 'image' | 'file' | 'video';
   name?: string;
-  url?: string;
-  fileName?: string;
+  url: string;
+  fileName: string;
+  size?: number;
 }
 
 export interface SenderSnapshotDto {
@@ -46,13 +47,22 @@ export interface MessageSnapshot {
   content: string;
   attachments?: AttachmentDto[];
   sender: SenderSnapshotDto;
-  createdAt: Date;
+  createdAt: string | Date;
+  updatedAt?: string | Date;
+  isDeleted?: boolean;
   reactions?: ReactionDto[];
+  replyTo?: {
+    messageId: string;
+    content: string;
+    senderName: string;
+    attachments?: AttachmentDto[];
+  };
 }
 
 // Channel & Category DTOs
 export interface CreateChannelDto {
   teamId: string;
+  serverId?: string;
   name: string;
   type: DiscussionType;
   parentId?: string;
@@ -61,6 +71,7 @@ export interface CreateChannelDto {
 
 export interface CreateCategoryDto {
   teamId: string;
+  serverId?: string;
   name: string;
   ownerId: string;
 }
@@ -80,7 +91,6 @@ export interface ReorderChannelsDto {
 
 // Discussion DTOs
 export interface CreateDirectDiscussionDto {
-  senderId: string;
   partnerId: string;
 }
 
@@ -103,7 +113,11 @@ export interface SendMessageEventPayload {
   _id: string;
   discussionId: string;
   messageSnapshot: MessageSnapshot;
-  teamSnapshot: any; 
+  teamSnapshot: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
   participantIds?: string[];
   membersToNotify?: string[];
 }
@@ -121,8 +135,15 @@ export interface GetMessagesDto {
   before?: string;
 }
 
-export interface ResponseMessageDto {
-  data: MessageSnapshot[];
+export interface PaginatedResponse<T> {
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface ResponseMessageDto extends PaginatedResponse<MessageSnapshot> {
   nextCursor?: string;
   hasMore?: boolean;
 }
@@ -141,4 +162,34 @@ export interface CreateServerDto {
   name: string;
   avatar?: string;
   teamId: string;
+}
+
+export interface ServerDto {
+  id: string;
+  _id?: string;
+  name: string;
+  avatar?: string;
+  teamId: string;
+  ownerId: string;
+  isDeleted?: boolean;
+}
+
+export interface DiscussionDto {
+  id: string;
+  _id?: string;
+  name: string;
+  type: DiscussionType;
+  serverId?: string;
+  teamId: string;
+  parentId?: string;
+  position: number;
+  isDeleted?: boolean;
+}
+
+export interface ServerMemberDto {
+  userId: string;
+  role: string;
+  joinedAt: string;
+  name: string;
+  avatar?: string;
 }

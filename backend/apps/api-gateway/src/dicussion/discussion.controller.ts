@@ -26,6 +26,7 @@ import { PermissionOverrideDto } from './dto/update-permission.dto';
 import {
   CreateServerDto,
   CreateChannelDto,
+  CreateCategoryDto,
   UpdateChannelDto,
   ReorderChannelsDto,
   GenerateInviteDto,
@@ -65,7 +66,7 @@ export class DiscussionController {
   @ApiResponse({ status: 200, description: 'Get discussion success.' })
   @ApiResponse({ status: 404, description: 'discussion not found.' })
   getDiscussionById(
-    @Param('discussion') discussionId: string,
+    @Param('discussionId') discussionId: string,
     @CurrentUser('id') userId: string,
     @Query() requestPaginationDto: RequestPaginationDto
   ) {
@@ -150,10 +151,10 @@ export class DiscussionController {
     @CurrentUser('id') senderId: string,
     @Body() createDirectDiscussionDto: CreateDirectDiscussionDto,
   ) {
-    return this.discussionService.createDirectDiscussion({
+    return this.discussionService.createDirectDiscussion(
       senderId,
-      partnerId: createDirectDiscussionDto.partnerId,
-    });
+      createDirectDiscussionDto.partnerId
+    );
   }
 
   @Post(':discussionId/messages')
@@ -213,9 +214,9 @@ export class DiscussionController {
   updateMessage(
     @Param('discussionId') discussionId: string,
     @Param('messageId') messageId: string,
-    @Body() body: { content: string },
+    @Body() body: { content: string, attachments?: any[] },
   ) {
-    return this.discussionService.updateMessage(discussionId, messageId, body.content);
+    return this.discussionService.updateMessage(discussionId, messageId, body.content, body.attachments);
   }
 
   @Delete(':discussionId/messages/:messageId')
@@ -232,7 +233,6 @@ export class DiscussionController {
     return this.discussionService.deleteMessage(discussionId, messageId, userId);
   }
 
-  // Server Management Endpoints
   @Post('servers')
   @ApiOperation({ summary: 'Create new server' })
   @ApiResponse({ status: 201, description: 'Server created successfully.' })
@@ -255,16 +255,16 @@ export class DiscussionController {
     });
   }
 
-  @Delete('servers/:teamId')
+  @Delete('servers/:serverId')
   @ApiOperation({ summary: 'Delete server' })
-  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
   @ApiResponse({ status: 200, description: 'Server deleted successfully.' })
   deleteServer(
     @CurrentUser('id') userId: string,
-    @Param('teamId') teamId: string,
+    @Param('serverId') serverId: string,
   ) {
     return this.discussionService.deleteServer({
-      teamId,
+      teamId: serverId,
       requesterId: userId,
       requesterName: '',
       teamName: '',
@@ -272,31 +272,31 @@ export class DiscussionController {
     });
   }
 
-  @Delete('servers/:teamId/permanent')
+  @Delete('servers/:serverId/permanent')
   @ApiOperation({ summary: 'Permanently delete server' })
-  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
   @ApiResponse({ status: 200, description: 'Server permanently deleted.' })
-  permanentDeleteServer(@Param('teamId') teamId: string) {
-    return this.discussionService.permanentDeleteServer(teamId);
+  permanentDeleteServer(@Param('serverId') serverId: string) {
+    return this.discussionService.permanentDeleteServer(serverId);
   }
 
-  @Put('servers/:teamId')
+  @Put('servers/:serverId')
   @ApiOperation({ summary: 'Update server' })
-  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
   @ApiResponse({ status: 200, description: 'Server updated successfully.' })
   updateServer(
-    @Param('teamId') paramTeamId: string,
+    @Param('serverId') serverId: string,
     @Body() updateServerDto: UpdateServerDto,
   ) {
-    return this.discussionService.updateServer({ teamId: paramTeamId, ...updateServerDto });
+    return this.discussionService.updateServer({ serverId, ...updateServerDto });
   }
 
   @Get('servers/user/:userId')
   @ApiOperation({ summary: 'Get user server list' })
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User server list retrieved.' })
-  getUserServerList(@Param('userId') userId: string) {
-    return this.discussionService.getUserServerList(userId);
+  getUserServerList(@Param('userId') userId: string, @Query('teamId') teamId?: string) {
+    return this.discussionService.getUserServerList(userId, teamId);
   }
 
   @Get('servers/deleted/user')
@@ -306,24 +306,36 @@ export class DiscussionController {
     return this.discussionService.getDeletedServers(userId);
   }
 
-  @Put('servers/:teamId/restore')
+  @Put('servers/:serverId/restore')
   @ApiOperation({ summary: 'Restore soft deleted server' })
-  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
   @ApiResponse({ status: 200, description: 'Server restored.' })
-  restoreServer(@Param('teamId') teamId: string) {
-    return this.discussionService.restoreServer(teamId);
+  restoreServer(@Param('serverId') serverId: string) {
+    return this.discussionService.restoreServer(serverId);
   }
 
-  @Get('servers/:teamId/members')
+  @Get('servers/:serverId/members')
   @ApiOperation({ summary: 'Get server members with pagination' })
-  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
   @ApiResponse({ status: 200, description: 'Server members list.' })
   getServerMembers(
-    @Param('teamId') teamId: string,
+    @Param('serverId') serverId: string,
     @Query() options: RequestPaginationDto,
   ) {
     const { page = 1, limit = 20 } = options;
-    return this.discussionService.getServerMembers({ teamId, page, limit });
+    return this.discussionService.getServerMembers({ serverId, page, limit });
+  }
+
+  @Get('teams/:teamId/members')
+  @ApiOperation({ summary: 'Get team members with pagination' })
+  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiResponse({ status: 200, description: 'Team members list.' })
+  getTeamMembers(
+    @Param('teamId') teamId: string,
+    @Query() options: RequestPaginationDto,
+  ) {
+    const { page = 1, limit = 50 } = options;
+    return this.discussionService.getTeamMembers({ teamId, page, limit });
   }
 
   // Channel Management Endpoints
@@ -346,11 +358,11 @@ export class DiscussionController {
   @ApiResponse({ status: 201, description: 'Category created successfully.' })
   createCategory(
     @CurrentUser('id') userId: string,
-    @Body() createCategoryDto: { teamId: string; name: string },
+    @Body() createCategoryDto: CreateCategoryDto,
   ) {
     return this.discussionService.createCategory({
       ...createCategoryDto,
-      ownerId: userId,
+      ownerId: createCategoryDto.ownerId || userId,
     });
   }
 
@@ -392,13 +404,21 @@ export class DiscussionController {
     return this.discussionService.getChannelsByTeam(teamId);
   }
 
+  @Get('servers/:serverId/channels')
+  @ApiOperation({ summary: 'Get channels by server' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
+  @ApiResponse({ status: 200, description: 'Channels retrieved successfully.' })
+  getChannelsByServer(@Param('serverId') serverId: string) {
+    return this.discussionService.getChannelsByServer(serverId);
+  }
+
   // Member Management Endpoints
-  @Post('servers/:teamId/members')
+  @Post('servers/:serverId/members')
   @ApiOperation({ summary: 'Add members to server' })
-  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
   @ApiResponse({ status: 200, description: 'Members added successfully.' })
   addMembers(
-    @Param('teamId') teamId: string,
+    @Param('serverId') serverId: string,
     @CurrentUser() user: any,
     @Body() body: { members: { id: string; name: string }[] },
   ) {
@@ -411,7 +431,7 @@ export class DiscussionController {
     } as any));
 
     return this.discussionService.addMembers({
-      teamId,
+      teamId: serverId, // Mapping serverId to teamId payload for now
       requesterId: user.id,
       requesterName: user.name || '',
       teamName: '',
@@ -421,18 +441,18 @@ export class DiscussionController {
     });
   }
 
-  @Delete('servers/:teamId/members/:memberId')
+  @Delete('servers/:serverId/members/:memberId')
   @ApiOperation({ summary: 'Remove member from server' })
-  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
   @ApiParam({ name: 'memberId', description: 'Member ID' })
   @ApiResponse({ status: 200, description: 'Member removed successfully.' })
   removeMember(
-    @Param('teamId') teamId: string,
+    @Param('serverId') serverId: string,
     @Param('memberId') memberId: string,
     @CurrentUser() user: any,
   ) {
     return this.discussionService.removeMember({
-      teamId,
+      teamId: serverId, // Mapping serverId to teamId payload for now
       requesterId: user.id,
       requesterName: user.name || '',
       teamName: '',
@@ -441,16 +461,16 @@ export class DiscussionController {
     });
   }
 
-  @Post('servers/:teamId/leave')
+  @Post('servers/:serverId/leave')
   @ApiOperation({ summary: 'Leave server' })
-  @ApiParam({ name: 'teamId', description: 'Team ID' })
+  @ApiParam({ name: 'serverId', description: 'Server ID' })
   @ApiResponse({ status: 200, description: 'Left server successfully.' })
   leaveServer(
-    @Param('teamId') teamId: string,
+    @Param('serverId') serverId: string,
     @CurrentUser() user: any,
   ) {
     return this.discussionService.leaveTeam({
-      teamId,
+      teamId: serverId, // Mapping serverId to teamId payload for now
       teamName: '',
       requester: { id: user.id, name: user.name || '', email: '' },
       memberIdsToNotify: [],
@@ -501,16 +521,16 @@ export class DiscussionController {
     return this.discussionService.updateUser({ id: userId, ...body });
   }
 
-  @Put('servers/:teamId/members/:userId/role')
+  @Put('servers/:serverId/members/:userId/role')
   @ApiOperation({ summary: 'Update a member role' })
   @ApiResponse({ status: 200, description: 'Role updated successfully.' })
   updateMemberRole(
     @CurrentUser('id') requesterId: string,
-    @Param('teamId') teamId: string,
+    @Param('serverId') serverId: string,
     @Param('userId') userId: string,
     @Body('role') role: any,
   ) {
-    return this.discussionService.updateMemberRole({ teamId, userId, role, requesterId });
+    return this.discussionService.updateMemberRole({ teamId: serverId, userId, role, requesterId });
   }
 
   @Put(':id/permissions')

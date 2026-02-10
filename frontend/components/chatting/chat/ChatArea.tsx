@@ -2,35 +2,12 @@ import React, { useState } from "react";
 import { Icon } from "@iconify-icon/react";
 import { ChatHeader } from "./ChatHeader";
 import { VoiceChannelArea } from "./VoiceChannelArea";
+import { DisconnectedVoice } from "./DisconnectedVoice";
 import { fileService } from "@/services/fileService";
 import { toast } from "sonner";
 import { MessageList } from "../messages/MessageList";
 import { MessageInput } from "../messages/MessageInput";
-
-interface Reaction {
-    emoji: string;
-    userIds: string[];
-}
-
-interface MessageSender {
-    _id: string;
-    name: string;
-    avatar?: string;
-}
-
-interface ChatMessage {
-    _id: string;
-    content: string;
-    sender: MessageSender;
-    createdAt: string;
-    reactions: Reaction[];
-    replyTo?: {
-        messageId: string;
-        content: string;
-        senderName: string;
-        attachments?: any[];
-    };
-}
+import { MessageSnapshot, AttachmentDto } from "@/types";
 
 interface TypingUser {
     userId: string;
@@ -63,14 +40,15 @@ interface CurrentUser {
 interface ChatAreaProps {
     selectedServerId: string | null;
     selectedChannelId: string | null;
+    selectedTeamId: string | null;
     selectedChannelName?: string;
     showMembers: boolean;
     onToggleMembers: () => void;
-    messages: ChatMessage[];
+    messages: MessageSnapshot[];
     typingUsers: TypingUser[];
     hasNextPage: boolean;
     onFetchNextPage: () => void;
-    onSendMessage: (content: string, attachments?: any[], replyToId?: string) => void;
+    onSendMessage: (content: string, attachments?: AttachmentDto[], replyToId?: string) => void;
     onTyping: () => void;
     isVoice: boolean;
     user: CurrentUser | null | undefined;
@@ -78,9 +56,16 @@ interface ChatAreaProps {
     voiceParticipants: VoiceParticipant[];
     remoteStreams: Map<string, MediaStream>;
     onLeaveVoice: () => void;
+    onJoinVoice?: (channelId: string) => void;
+    activeVoiceChannelId?: string | null;
+    isMuted: boolean;
+    isVideoOn: boolean;
+    speakingUsers: Set<string>;
+    onToggleMute: () => void;
+    onToggleVideo: () => void;
     onReact: (params: { discussionId: string; messageId: string; emoji: string }) => void;
     members: ChatMember[];
-    onUpdateMessage: (messageId: string, content: string, attachments?: any[]) => void;
+    onUpdateMessage: (messageId: string, content: string, attachments?: AttachmentDto[]) => void;
     onDeleteMessage: (messageId: string) => void;
     onOpenMobileMenu?: () => void;
 }
@@ -88,6 +73,7 @@ interface ChatAreaProps {
 export const ChatArea: React.FC<ChatAreaProps> = ({
     selectedServerId,
     selectedChannelId,
+    selectedTeamId,
     selectedChannelName,
     showMembers,
     onToggleMembers,
@@ -103,21 +89,28 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     voiceParticipants,
     remoteStreams,
     onLeaveVoice,
+    isMuted,
+    isVideoOn,
+    speakingUsers,
+    onToggleMute,
+    onToggleVideo,
     onReact,
     members,
     onUpdateMessage,
     onDeleteMessage,
-    onOpenMobileMenu
+    onOpenMobileMenu,
+    onJoinVoice,
+    activeVoiceChannelId
 }) => {
     const [inputMsg, setInputMsg] = React.useState("");
     const [isUploading, setIsUploading] = useState(false);
-    const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+    const [replyingTo, setReplyingTo] = useState<MessageSnapshot | null>(null);
 
     const handleAttachFiles = async (files: File[]) => {
-        if (!selectedChannelId || !selectedServerId) return;
+        if (!selectedChannelId) return;
 
         setIsUploading(true);
-        const attachments: any[] = [];
+        const attachments: AttachmentDto[] = [];
 
         try {
             for (const file of files) {
@@ -129,7 +122,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         isChatAttachment: true
                     },
                     undefined,
-                    selectedServerId
+                    selectedServerId || undefined // serverId is optional for DM
                 );
 
                 await fileService.uploadFileToMinIO(uploadUrl, file);
@@ -141,7 +134,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 attachments.push({
                     url: fileId,
                     type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file',
-                    fileName: file.name
+                    fileName: file.name,
+                    size: file.size
                 });
             }
 
@@ -168,7 +162,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         }
     };
 
-    const handleReply = (message: ChatMessage) => {
+    const handleReply = (message: MessageSnapshot) => {
         setReplyingTo(message);
     };
 
@@ -197,6 +191,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     }
 
     if (isVoice) {
+        if (activeVoiceChannelId !== selectedChannelId) {
+            return (
+                <DisconnectedVoice
+                    selectedChannelName={selectedChannelName}
+                    showMembers={showMembers}
+                    onToggleMembers={onToggleMembers}
+                    onOpenMobileMenu={onOpenMobileMenu}
+                    voiceParticipants={voiceParticipants}
+                    selectedChannelId={selectedChannelId || ""}
+                    onJoinVoice={onJoinVoice}
+                />
+            );
+        }
+
         return (
             <VoiceChannelArea
                 selectedChannelName={selectedChannelName}
@@ -207,6 +215,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 voiceParticipants={voiceParticipants}
                 remoteStreams={remoteStreams}
                 onLeaveVoice={onLeaveVoice}
+                isMuted={isMuted}
+                isVideoOn={isVideoOn}
+                speakingUsers={speakingUsers}
+                onToggleMute={onToggleMute}
+                onToggleVideo={onToggleVideo}
             />
         );
     }
@@ -226,6 +239,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 selectedChannelName={selectedChannelName}
                 selectedChannelId={selectedChannelId}
                 selectedServerId={selectedServerId}
+                selectedTeamId={selectedTeamId}
                 hasNextPage={hasNextPage}
                 onFetchNextPage={onFetchNextPage}
                 userId={userId}

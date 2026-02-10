@@ -18,18 +18,18 @@ export class InitiateUploadDto {
     @IsNotEmpty()
     fileType: string;
 
-    @IsUUID()
+    @IsString()
     @IsOptional()
     teamId?: string
 
-    @IsUUID()
+    @IsString()
     @IsOptional()
     projectId?: string
 
-    @IsUUID()
+    @IsString()
     @IsOptional()
     parentId: string | null = null;
-    
+
     @IsOptional()
     @IsBoolean()
     isChatAttachment?: boolean;

@@ -14,8 +14,17 @@ export const useVoiceSocket = (
     const localStreamRef = useRef<MediaStream | null>(null);
     const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
 
-    // Helper to cleanup media/peers
+    const [isMuted, setIsMuted] = useState(false);
+    const [isVideoOn, setIsVideoOn] = useState(false);
+    const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analysersRef = useRef<Map<string, AnalyserNode>>(new Map());
+    const sourceNodesRef = useRef<Map<string, MediaStreamAudioSourceNode>>(new Map());
+
     const cleanup = () => {
+        if (selectedChannelId && voiceSocket) {
+            voiceSocket.emit("leave_video_room", { roomId: selectedChannelId });
+        }
         if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach(track => track.stop());
             localStreamRef.current = null;
@@ -24,24 +33,129 @@ export const useVoiceSocket = (
         peersRef.current.clear();
         setRemoteStreams(new Map());
         setVoiceParticipants([]);
+        setIsMuted(false);
+        setIsVideoOn(false);
+        setSpeakingUsers(new Set());
+
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+        analysersRef.current.clear();
+        sourceNodesRef.current.forEach(node => node.disconnect());
+        sourceNodesRef.current.clear();
     };
+
+    // Toggle Mute
+    const toggleMute = () => {
+        if (localStreamRef.current) {
+            localStreamRef.current.getAudioTracks().forEach(track => {
+                track.enabled = !track.enabled;
+            });
+            setIsMuted(prev => !prev);
+        }
+    };
+
+    const toggleVideo = async () => {
+        setIsVideoOn(prev => !prev);
+    };
+
+    useEffect(() => {
+        if (!isVoiceChannel) return;
+
+        if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const audioCtx = audioContextRef.current;
+
+        const setupAnalyser = (stream: MediaStream, id: string) => {
+            if (analysersRef.current.has(id)) return;
+            if (stream.getAudioTracks().length === 0) return;
+
+            try {
+                const source = audioCtx.createMediaStreamSource(stream);
+                const analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+
+                sourceNodesRef.current.set(id, source);
+                analysersRef.current.set(id, analyser);
+            } catch (e) {
+                console.error("Error setting up audio analysis for", id, e);
+            }
+        };
+
+        if (localStreamRef.current && userId) {
+            setupAnalyser(localStreamRef.current, userId);
+        }
+        remoteStreams.forEach((stream, socketId) => {
+            const participant = voiceParticipants.find(p => p.socketId === socketId);
+            if (participant?.userInfo?.id) {
+                setupAnalyser(stream, participant.userInfo.id);
+            }
+        });
+
+        const intervalId = setInterval(() => {
+            const speaking = new Set<string>();
+            const dataArray = new Uint8Array(128);
+            const THRESHOLD = 10;
+
+            analysersRef.current.forEach((analyser, id) => {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / dataArray.length;
+
+                if (average > THRESHOLD) {
+                    speaking.add(id);
+                }
+            });
+
+            if (userId && isMuted) {
+                speaking.delete(userId);
+            }
+
+            setSpeakingUsers(speaking);
+        }, 100);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [isVoiceChannel, remoteStreams.size, voiceParticipants.length, userId, isMuted, localStreamRef.current]);
 
     useEffect(() => {
         if (!voiceSocket || !selectedChannelId || !userId || !user || !selectedServerId) {
             // If we switch away from voice channel, ensure clean up
-            if (!isVoiceChannel) cleanup();
+            if (!isVoiceChannel) {
+                if (selectedChannelId && voiceSocket) voiceSocket.emit("leave_video_room", { roomId: selectedChannelId });
+                cleanup();
+            }
             return;
         }
 
         if (!isVoiceChannel) {
+            if (selectedChannelId) voiceSocket.emit("leave_video_room", { roomId: selectedChannelId });
             cleanup();
             return;
         }
 
         const startVoice = async () => {
+            // If we already have a stream, don't restart (prevents loops)
+            if (localStreamRef.current) return;
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 localStreamRef.current = stream;
+
+                stream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+
+                setVoiceParticipants(prev => {
+                    const exists = prev.find(p => p.userInfo?.id === user?.id);
+                    if (exists) return prev;
+                    return [...prev, { userInfo: user, socketId: voiceSocket.id || 'me' }];
+                });
 
                 voiceSocket.emit("join_video_room", {
                     roomId: selectedChannelId,
@@ -161,8 +275,23 @@ export const useVoiceSocket = (
             }
         };
 
-        const handleUserLeft = (data: { userId: string, socketId?: string, reason: string }) => {
-            setVoiceParticipants(prev => prev.filter(p => p.userInfo?.id !== data.userId));
+        const handleUserLeft = (data: { userId?: string, socketId?: string, reason?: string }) => {
+            console.log("User left voice (event received):", data);
+
+            setVoiceParticipants(prev => {
+                const newParticipants = prev.filter(p => {
+                    if (data.userId && p.userInfo?.id === data.userId) {
+                        return false;
+                    }
+                    if (data.socketId && p.socketId === data.socketId) {
+                        return false;
+                    }
+                    return true;
+                });
+                console.log("Participants after removal:", newParticipants);
+                return newParticipants;
+            });
+
             if (data.socketId) {
                 const peer = peersRef.current.get(data.socketId);
                 if (peer) {
@@ -174,6 +303,10 @@ export const useVoiceSocket = (
                     newMap.delete(data.socketId!);
                     return newMap;
                 });
+            }
+
+            if (data.userId && analysersRef.current.has(data.userId)) {
+                analysersRef.current.delete(data.userId);
             }
         };
 
@@ -191,10 +324,18 @@ export const useVoiceSocket = (
             voiceSocket.off("answer", handleAnswer);
             voiceSocket.off("ice_candidate", handleIceCandidate);
             voiceSocket.off("user_left_video", handleUserLeft);
-            // Main cleanup on unmount/dep change
+            if (selectedChannelId) voiceSocket.emit("leave_video_room", { roomId: selectedChannelId });
             cleanup();
         };
     }, [voiceSocket, selectedChannelId, userId, user, isVoiceChannel, selectedServerId]);
 
-    return { voiceParticipants, remoteStreams };
+    return {
+        voiceParticipants,
+        remoteStreams,
+        isMuted,
+        toggleMute,
+        isVideoOn,
+        toggleVideo,
+        speakingUsers // Set<userId>
+    };
 };

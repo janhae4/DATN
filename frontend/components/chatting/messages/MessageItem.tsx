@@ -9,22 +9,21 @@ import { MessageContent } from "./MessageContent";
 import { MessageReactions } from "./MessageReactions";
 import { MessageActions } from "./MessageActions";
 import { MessageReply } from "./MessageReply";
-import { ChatMessage } from "./types";
-
-export { type ChatMessage } from "./types";
+import { MessageSnapshot, AttachmentDto } from "@/types";
 
 interface MessageItemProps {
-    msg: ChatMessage;
+    msg: MessageSnapshot;
     isSameSender: boolean;
     userId?: string;
     selectedChannelId: string | null;
     selectedServerId: string | null;
+    selectedTeamId: string | null;
     onReact: (params: { discussionId: string; messageId: string; emoji: string }) => void;
-    onEdit?: (message: ChatMessage) => void;
+    onEdit?: (message: MessageSnapshot) => void;
     onDelete?: (messageId: string) => void;
     getUserName: (id: string) => string;
-    formatTime: (dateString: string) => string;
-    onReply: (message: ChatMessage) => void;
+    formatTime: (dateString: string | Date) => string;
+    onReply: (message: MessageSnapshot) => void;
     onReplyClick?: (messageId: string) => void;
 }
 
@@ -34,6 +33,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     userId,
     selectedChannelId,
     selectedServerId,
+    selectedTeamId,
     onReact,
     onEdit,
     onDelete,
@@ -140,6 +140,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                             <MessageAttachments
                                 attachments={msg.attachments || []}
                                 serverId={selectedServerId}
+                                teamId={selectedTeamId}
                                 isMe={isMe}
                                 onRemove={async (index) => {
                                     const attachment = msg.attachments?.[index];

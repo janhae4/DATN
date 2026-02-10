@@ -6,9 +6,11 @@ export class ReactionDto {
 }
 
 export class AttachmentDto {
-    type: string;
-    name?: string
-    url?: string;
+    type: 'image' | 'file' | 'video';
+    name?: string;
+    url: string;
+    fileName: string;
+    size?: number;
 }
 
 export class MessageSnapshot {
@@ -16,6 +18,8 @@ export class MessageSnapshot {
     content: string;
     attachments?: AttachmentDto[];
     sender: SenderSnapshotDto;
-    createdAt: Date;
+    createdAt: string | Date;
+    updatedAt?: string | Date;
+    isDeleted?: boolean;
     reactions?: ReactionDto[];
 }

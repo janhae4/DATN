@@ -353,7 +353,7 @@ export class MessageService {
         const payload: SendMessageEventPayload = {
             _id: savedMessage._id.toString(),
             discussionId: (discussion._id as Types.ObjectId).toString(),
-            messageSnapshot: discussion.latestMessageSnapshot,
+            messageSnapshot: discussion.latestMessageSnapshot as MessageSnapshot,
             teamSnapshot: discussion.teamSnapshot as TeamSnapshot,
             membersToNotify,
         };

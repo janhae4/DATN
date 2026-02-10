@@ -1,11 +1,11 @@
 import React from "react";
 import { Icon } from "@iconify-icon/react";
 import { cn } from "@/lib/utils";
-import { ChatMessage } from "./types";
+import { MessageSnapshot } from "@/types";
 import { ReplyAttachmentPreview } from "./ReplyAttachmentPreview";
 
 interface MessageReplyProps {
-    replyTo: NonNullable<ChatMessage['replyTo']>;
+    replyTo: NonNullable<MessageSnapshot['replyTo']>;
     isMe: boolean;
     senderName: string;
     selectedServerId: string | null;

@@ -7,6 +7,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsIn,
   ValidateNested,
 } from 'class-validator';
 
@@ -24,11 +25,15 @@ class AttachmentDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsIn(['image', 'file', 'video'])
   type: 'image' | 'file' | 'video';
 
   @IsString()
+  @IsNotEmpty()
+  fileName: string;
+
   @IsOptional()
-  fileName?: string;
+  size?: number;
 }
 
 export class SenderSnapshotDto {

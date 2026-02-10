@@ -1,32 +1,55 @@
 import { discussionService } from '@/services/discussionService';
-import { CreateMessageDto, CreateChannelDto, CreateCategoryDto } from '@/types';
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  CreateMessageDto,
+  CreateChannelDto,
+  CreateCategoryDto,
+  ResponseMessageDto,
+  AttachmentDto,
+  DiscussionDto,
+  ServerMemberDto,
+  PaginatedResponse,
+  ServerDto
+} from '@/types';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery, InfiniteData } from '@tanstack/react-query';
 
-export const useServerChannels = (teamId: string) => {
+export const useServerChannels = (serverId: string) => {
   return useQuery({
-    queryKey: ['server-channels', teamId],
-    queryFn: () => discussionService.getServerChannels(teamId),
-    enabled: !!teamId,
+    queryKey: ['server-channels', serverId],
+    queryFn: () => discussionService.getServerChannelsByServer(serverId),
+    enabled: !!serverId,
   });
 };
 
-export const useServerMembers = (teamId: string) => {
-  return useInfiniteQuery({
-    queryKey: ['server-members', teamId],
+export const useServerMembers = (serverId: string) => {
+  return useInfiniteQuery<PaginatedResponse<ServerMemberDto>, Error, InfiniteData<PaginatedResponse<ServerMemberDto>>, string[], number>({
+    queryKey: ['server-members', serverId],
     queryFn: ({ pageParam = 1 }) =>
-      discussionService.getServerMembers(teamId, pageParam as number, 20),
+      discussionService.getServerMembers(serverId, pageParam as number, 20),
     initialPageParam: 1,
-    getNextPageParam: (lastPage: any) => {
+    getNextPageParam: (lastPage: PaginatedResponse<ServerMemberDto>) => {
+      return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
+    },
+    enabled: !!serverId,
+  });
+};
+
+export const useTeamMembers = (teamId: string) => {
+  return useInfiniteQuery<PaginatedResponse<ServerMemberDto>, Error, InfiniteData<PaginatedResponse<ServerMemberDto>>, string[], number>({
+    queryKey: ['team-members', teamId],
+    queryFn: ({ pageParam = 1 }) =>
+      discussionService.getTeamMembers(teamId, pageParam as number, 50),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: PaginatedResponse<ServerMemberDto>) => {
       return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
     },
     enabled: !!teamId,
   });
 };
 
-export const useUserServers = (userId: string) => {
+export const useUserServers = (userId: string, teamId?: string) => {
   return useQuery({
-    queryKey: ['user-servers', userId],
-    queryFn: () => discussionService.getUserServers(userId),
+    queryKey: ['user-servers', userId, teamId],
+    queryFn: () => discussionService.getUserServers(userId, teamId),
     enabled: !!userId,
   });
 };
@@ -40,12 +63,12 @@ export const useDeletedServers = (userId: string) => {
 };
 
 export const useDiscussionMessages = (discussionId: string) => {
-  return useInfiniteQuery({
+  return useInfiniteQuery<ResponseMessageDto, Error, InfiniteData<ResponseMessageDto>, string[], number>({
     queryKey: ['messages', discussionId],
     queryFn: ({ pageParam = 1 }) =>
       discussionService.getMessages(discussionId, { page: pageParam as number, limit: 30 }),
     initialPageParam: 1,
-    getNextPageParam: (lastPage: any) => {
+    getNextPageParam: (lastPage: ResponseMessageDto) => {
       return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
     },
     enabled: !!discussionId,
@@ -53,13 +76,13 @@ export const useDiscussionMessages = (discussionId: string) => {
 };
 
 export const useDiscussionAttachments = (discussionId: string) => {
-  return useInfiniteQuery({
+  return useInfiniteQuery<PaginatedResponse<AttachmentDto>, Error, InfiniteData<PaginatedResponse<AttachmentDto>>, string[], number>({
     queryKey: ['attachments', discussionId],
     queryFn: ({ pageParam = 1 }) =>
       discussionService.getDiscussionAttachments(discussionId, { page: pageParam as number, limit: 20 }),
     initialPageParam: 1,
-    getNextPageParam: (lastPage: any) => {
-      return lastPage.pagination.page < lastPage.pagination.totalPages ? lastPage.pagination.page + 1 : undefined;
+    getNextPageParam: (lastPage: PaginatedResponse<AttachmentDto>) => {
+      return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
     },
     enabled: !!discussionId,
   });
@@ -82,7 +105,7 @@ export const useDiscussionMutations = () => {
   });
 
   const updateMessageMutation = useMutation({
-    mutationFn: ({ discussionId, messageId, content, attachments }: { discussionId: string; messageId: string; content: string; attachments?: any[] }) =>
+    mutationFn: ({ discussionId, messageId, content, attachments }: { discussionId: string; messageId: string; content: string; attachments?: AttachmentDto[] }) =>
       discussionService.updateMessage(discussionId, messageId, content, attachments),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['messages', variables.discussionId] });
@@ -114,14 +137,14 @@ export const useDiscussionMutations = () => {
   const createChannelMutation = useMutation({
     mutationFn: (payload: CreateChannelDto) => discussionService.createChannel(payload),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['server-channels', variables.teamId] });
+      queryClient.invalidateQueries({ queryKey: ['server-channels', variables.serverId || variables.teamId] });
     }
   });
 
   const createCategoryMutation = useMutation({
     mutationFn: (payload: CreateCategoryDto) => discussionService.createCategory(payload),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['server-channels', variables.teamId] });
+      queryClient.invalidateQueries({ queryKey: ['server-channels', variables.serverId || variables.teamId] });
     }
   });
 
@@ -166,8 +189,8 @@ export const useDiscussionMutations = () => {
   });
 
   const updateServerMutation = useMutation({
-    mutationFn: ({ teamId, payload }: { teamId: string; payload: { name?: string; avatar?: string } }) =>
-      discussionService.updateServer(teamId, payload),
+    mutationFn: ({ serverId, payload }: { serverId: string; payload: { name?: string; avatar?: string } }) =>
+      discussionService.updateServer(serverId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-servers'] });
       queryClient.invalidateQueries({ queryKey: ['server-channels'] });
@@ -175,14 +198,14 @@ export const useDiscussionMutations = () => {
   });
 
   const deleteServerMutation = useMutation({
-    mutationFn: (teamId: string) => discussionService.deleteServer(teamId),
+    mutationFn: (serverId: string) => discussionService.deleteServer(serverId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-servers'] });
     }
   });
 
   const permanentDeleteServerMutation = useMutation({
-    mutationFn: (teamId: string) => discussionService.permanentDeleteServer(teamId),
+    mutationFn: (serverId: string) => discussionService.permanentDeleteServer(serverId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-servers'] });
       queryClient.invalidateQueries({ queryKey: ['deleted-servers'] });
@@ -206,7 +229,7 @@ export const useDiscussionMutations = () => {
     permanentDeleteServer: permanentDeleteServerMutation.mutateAsync,
 
     restoreServer: useMutation({
-      mutationFn: (teamId: string) => discussionService.restoreServer(teamId),
+      mutationFn: (serverId: string) => discussionService.restoreServer(serverId),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['user-servers'] });
         queryClient.invalidateQueries({ queryKey: ['deleted-servers'] });

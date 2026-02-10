@@ -1,9 +1,9 @@
 import React from "react";
-import { ChatMessage } from "./types";
+import { MessageSnapshot } from "@/types";
 
 interface SystemMessageProps {
-    msg: ChatMessage;
-    formatTime: (dateString: string) => string;
+    msg: MessageSnapshot;
+    formatTime: (date: string | Date) => string;
 }
 
 export const SystemMessage: React.FC<SystemMessageProps> = ({ msg, formatTime }) => {
