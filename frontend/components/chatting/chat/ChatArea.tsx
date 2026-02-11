@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { MessageList } from "../messages/MessageList";
 import { MessageInput } from "../messages/MessageInput";
 import { MessageSnapshot, AttachmentDto } from "@/types";
+import { HOME_SERVER_ID } from "@/constants/chat";
+import { SummaryBox } from "./SummaryBox";
 
 interface TypingUser {
     userId: string;
@@ -68,6 +70,8 @@ interface ChatAreaProps {
     onUpdateMessage: (messageId: string, content: string, attachments?: AttachmentDto[]) => void;
     onDeleteMessage: (messageId: string) => void;
     onOpenMobileMenu?: () => void;
+    isOnline?: boolean;
+    lastSeen?: Date | null;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -100,11 +104,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     onDeleteMessage,
     onOpenMobileMenu,
     onJoinVoice,
-    activeVoiceChannelId
+    activeVoiceChannelId,
+    isOnline,
+    lastSeen
 }) => {
     const [inputMsg, setInputMsg] = React.useState("");
     const [isUploading, setIsUploading] = useState(false);
-    const [replyingTo, setReplyingTo] = useState<MessageSnapshot | null>(null);
+    const [replyingTo, setReplyingTo] = React.useState<MessageSnapshot | null>(null);
+    const [showSummary, setShowSummary] = useState(false);
 
     const handleAttachFiles = async (files: File[]) => {
         if (!selectedChannelId) return;
@@ -231,6 +238,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 showMembers={showMembers}
                 onToggleMembers={onToggleMembers}
                 onOpenMobileMenu={onOpenMobileMenu}
+                isDirectMessage={selectedServerId === HOME_SERVER_ID}
+                isOnline={isOnline}
+                lastSeen={lastSeen}
+                onSummarize={() => setShowSummary(true)}
+                canSummarize={messages.length >= 20}
             />
 
             <MessageList
@@ -261,6 +273,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 onCancelReply={() => setReplyingTo(null)}
                 selectedServerId={selectedServerId}
             />
+
+            <SummaryBox open={showSummary} onClose={() => setShowSummary(false)} />
         </div>
     );
 };

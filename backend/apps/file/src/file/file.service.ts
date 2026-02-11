@@ -671,19 +671,8 @@ export class FileService {
         teamId: string,
         projectId?: string
     ) {
-        // For DM (Direct Message), teamId will be undefined, use 'dm' as identifier
-        const effectiveTeamId = teamId || 'dm';
-        console.log(`[FileService] createChatPreSignedUrl: teamId=${teamId}, effectiveTeamId=${effectiveTeamId}, userId=${userId}`);
-
-        // Only check permission if teamId is provided (not DM)
-        if (teamId) {
-            try {
-                // await this.teamCache.checkPermission(teamId, userId);
-            } catch (error) {
-                console.error(`[FileService] Permission check failed for team ${teamId}, user ${userId}:`, error);
-                throw error;
-            }
-        }
+      
+        const effectiveTeamId = (!teamId || teamId === 'dm' || teamId === '@me') ? 'dm' : teamId;
 
         const extension = path.extname(originalName);
         const randomId = randomUUID();
@@ -707,9 +696,7 @@ export class FileService {
 
         const serverId = parts[1];
 
-        // If serverId is 'dm', this is a DM file - skip server membership check
-        // DM files are accessible to anyone who has the link (they're in a private discussion)
-        if (serverId !== 'dm') {
+        if (serverId !== 'dm' && serverId !== '@me') {
             try {
                 const hasAccess = await this.amqp.request<boolean>({
                     exchange: DISCUSSION_EXCHANGE,
@@ -761,7 +748,7 @@ export class FileService {
         this.logger.log(`[saveFromChat] Checking server membership for serverId=${serverId}, userId=${userId}`);
 
         // Skip server membership check for DM files
-        if (serverId !== 'dm') {
+        if (serverId !== 'dm' && serverId !== '@me') {
             try {
                 const hasServerAccess = await this.amqp.request<boolean>({
                     exchange: DISCUSSION_EXCHANGE,

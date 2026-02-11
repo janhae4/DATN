@@ -13,6 +13,7 @@ import { JwtDto, AUTH_EXCHANGE, AUTH_PATTERN, MessageSnapshot, ResponseMessageDt
 import * as cookie from 'cookie';
 import { RmqClientService } from '@app/common';
 import { AuthenticatedSocket } from './socket.gateway';
+import { RedisService } from '@app/redis-service';
 
 @WebSocketGateway({
     namespace: 'chat',
@@ -31,7 +32,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     private readonly logger = new Logger(ChatGateway.name);
 
-    constructor(private readonly amqpConnection: RmqClientService) { }
+    constructor(
+        private readonly amqpConnection: RmqClientService,
+        private readonly redisService: RedisService,
+    ) { }
+
+    private async setUserOnline(userId: string) {
+        await this.redisService.getClient().set(`user:online:${userId}`, 'true', 'EX', 45);
+        await this.redisService.getClient().set(`user:last_seen:${userId}`, Date.now().toString());
+    }
+
+    private async setUserOffline(userId: string) {
+        await this.redisService.del(`user:online:${userId}`);
+        await this.redisService.getClient().set(`user:last_seen:${userId}`, Date.now().toString());
+    }
 
     async handleConnection(client: Socket) {
         try {
@@ -55,14 +69,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             (client as any).data.user = user;
 
             client.join(user.id);
+            await this.setUserOnline(user.id);
             this.logger.log(`User ${user.id} connected to Chat Namespace`);
         } catch (error) {
             client.disconnect();
         }
     }
 
-    handleDisconnect(client: Socket) {
-        this.logger.log(`Client disconnected from Chat Namespace: ${client.id}`);
+    async handleDisconnect(client: Socket) {
+        const user = (client as any).data.user;
+        if (user) {
+            await this.setUserOffline(user.id);
+            this.logger.log(`Client disconnected from Chat Namespace: ${client.id} (User: ${user.id})`);
+        } else {
+            this.logger.log(`Client disconnected from Chat Namespace: ${client.id}`);
+        }
     }
 
     @SubscribeMessage('join_room')
@@ -239,4 +260,42 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
     }
 
+    @SubscribeMessage('heartbeat')
+    async handleHeartbeat(@ConnectedSocket() client: Socket) {
+        const user = (client as any).data.user;
+        if (user) {
+            await this.setUserOnline(user.id);
+        }
+    }
+
+    @SubscribeMessage('check_online')
+    async handleCheckOnline(
+        @MessageBody() userIds: string[]
+    ): Promise<string[]> {
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) return [];
+
+        const keys = userIds.map(id => `user:online:${id}`);
+        const results = await this.redisService.getClient().mget(keys);
+
+        return userIds.filter((_, index) => results[index] !== null);
+    }
+
+    @SubscribeMessage('check_user_status')
+    async handleCheckUserStatus(
+        @MessageBody() userIds: string[]
+    ): Promise<any[]> {
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) return [];
+
+        const onlineKeys = userIds.map(id => `user:online:${id}`);
+        const lastSeenKeys = userIds.map(id => `user:last_seen:${id}`);
+
+        const onlineResults = await this.redisService.getClient().mget(onlineKeys);
+        const lastSeenResults = await this.redisService.getClient().mget(lastSeenKeys);
+
+        return userIds.map((id, index) => ({
+            userId: id,
+            isOnline: onlineResults[index] !== null,
+            lastSeen: lastSeenResults[index] ? new Date(parseInt(lastSeenResults[index])) : null
+        }));
+    }
 }

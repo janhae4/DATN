@@ -62,6 +62,19 @@ export const useDeletedServers = (userId: string) => {
   });
 };
 
+export const useUserDiscussions = (enabled: boolean = true) => {
+  return useInfiniteQuery<PaginatedResponse<DiscussionDto>, Error, InfiniteData<PaginatedResponse<DiscussionDto>>, string[], number>({
+    queryKey: ['user-discussions'],
+    queryFn: ({ pageParam = 1 }) =>
+      discussionService.getDiscussionsForUser(pageParam as number, 50),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: PaginatedResponse<DiscussionDto>) => {
+      return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
+    },
+    enabled: enabled,
+  });
+};
+
 export const useDiscussionMessages = (discussionId: string) => {
   return useInfiniteQuery<ResponseMessageDto, Error, InfiniteData<ResponseMessageDto>, string[], number>({
     queryKey: ['messages', discussionId],

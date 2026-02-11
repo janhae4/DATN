@@ -29,7 +29,7 @@ export class ServerController {
             owner: payload.owner,
             members: [payload.owner],
             teamSnapshot: {
-                id: payload.projectId,
+                id: payload.teamId,
                 name: payload.projectName,
             },
             membersToNotify: [],

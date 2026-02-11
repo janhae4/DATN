@@ -23,6 +23,8 @@ export class Membership {
 }
 export const MembershipSchema = SchemaFactory.createForClass(Membership);
 MembershipSchema.index({ discussionId: 1, userId: 1 }, { unique: true });
+MembershipSchema.index({ discussionId: 1, status: 1 });
+
 
 // ReadReceipt = tracks progress of reading 
 @Schema({ timestamps: true })

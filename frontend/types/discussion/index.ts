@@ -184,6 +184,13 @@ export interface DiscussionDto {
   parentId?: string;
   position: number;
   isDeleted?: boolean;
+  partnerId?: string;
+  otherUser?: {
+    _id: string;
+    name: string;
+    avatar?: string;
+    email?: string;
+  };
 }
 
 export interface ServerMemberDto {

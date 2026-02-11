@@ -46,7 +46,6 @@ export class ServerService {
         const { owner, members, teamSnapshot } = payload;
         const { id: teamId, name: teamName } = teamSnapshot;
 
-        // 0. Create actual Server document if it doesn't exist
         let server = await this.serverModel.findOne({ teamId, name: teamName });
         if (!server) {
             server = await this.serverModel.create({
@@ -120,7 +119,6 @@ export class ServerService {
             })
         ]);
 
-        // 2. Tạo Membership quy mô lớn cho tất cả thành viên vào các channel này
         const allChannels = [textCategory, voiceCategory, generalChannel, notificationChannel, waitingRoom];
         const allUserInfos = [
             { id: owner.id, role: MemberRole.OWNER, isAdmin: true },
@@ -269,12 +267,16 @@ export class ServerService {
             status: MemberShip.ACTIVE
         }));
 
-        for (const doc of membershipDocs) {
-            await this.membershipModel.findOneAndUpdate(
-                { discussionId: doc.discussionId, userId: doc.userId },
-                { $setOnInsert: doc },
-                { upsert: true }
-            );
+        const operations = membershipDocs.map(doc => ({
+            updateOne: {
+                filter: { discussionId: doc.discussionId, userId: doc.userId },
+                update: { $setOnInsert: doc },
+                upsert: true
+            }
+        }));
+
+        if (operations.length > 0) {
+            await this.membershipModel.bulkWrite(operations);
         }
 
         await this.inviteModel.updateOne({ _id: invite._id }, { $inc: { uses: 1 } });
@@ -303,7 +305,6 @@ export class ServerService {
             PermissionKey.MANAGE_ROLES
         );
 
-        // Update role trong Membership collection của tất cả channel thuộc server
         const discussions = await this.discussionModel.find({ teamId }).select('_id').lean();
         const discussionIds = discussions.map(d => d._id);
 
@@ -398,12 +399,16 @@ export class ServerService {
             }
         }
 
-        for (const doc of membershipDocs) {
-            await this.membershipModel.findOneAndUpdate(
-                { discussionId: doc.discussionId, userId: doc.userId },
-                { $setOnInsert: doc },
-                { upsert: true }
-            );
+        const operations = membershipDocs.map(doc => ({
+            updateOne: {
+                filter: { discussionId: doc.discussionId, userId: doc.userId },
+                update: { $setOnInsert: doc },
+                upsert: true
+            }
+        }));
+
+        if (operations.length > 0) {
+            await this.membershipModel.bulkWrite(operations);
         }
 
         const generalChannel = await this.discussionModel.findOne({ teamId, name: 'general' });
@@ -512,13 +517,11 @@ export class ServerService {
         const { teamId, page = 1, limit = 50 } = payload;
         const skip = (page - 1) * limit;
 
-        // Find all servers in the team
         const servers = await this.serverModel.find({ teamId, isDeleted: { $ne: true } }).select('_id').lean();
         const serverIds = servers.map(s => s._id);
 
         if (serverIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
 
-        // Find all discussions in these servers
         const discussions = await this.discussionModel.find({
             serverId: { $in: serverIds },
             isDeleted: { $ne: true }
@@ -527,7 +530,6 @@ export class ServerService {
 
         if (discussionIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
 
-        // Aggregate unique members across all discussions
         const result = await this.membershipModel.aggregate([
             { $match: { discussionId: { $in: discussionIds }, status: MemberShip.ACTIVE } },
             {

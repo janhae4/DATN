@@ -60,14 +60,6 @@ export class MessageService {
         const { discussionId, userId, content, attachments, replyToId } =
             createChatMessage;
 
-        console.log('📥 [MessageService] createChatMessage called with:', {
-            discussionId,
-            userId,
-            content,
-            attachments,
-            attachmentsCount: attachments?.length || 0
-        });
-
         await this.markAsRead(discussionId, userId);
 
         const discussion = await this.getDiscussionOrFail(discussionId, userId);
@@ -99,8 +91,6 @@ export class MessageService {
                 };
             }
         }
-
-        console.log('📤 [MessageService] Calling createMessage with attachments:', attachments);
 
         return await this.createMessage(
             discussion,
@@ -306,12 +296,6 @@ export class MessageService {
         attachments?: Attachment[],
         replyTo?: ReplySnapshot | null,
     ) {
-        console.log('💾 [createMessage] Creating message with:', {
-            content,
-            attachments,
-            attachmentsCount: attachments?.length || 0
-        });
-
         const message = new this.messageModel({
             discussionId: discussion._id,
             content,
@@ -321,13 +305,6 @@ export class MessageService {
         });
 
         const savedMessage = await message.save();
-
-        console.log('✅ [createMessage] Message saved:', {
-            _id: savedMessage._id,
-            content: savedMessage.content,
-            attachments: savedMessage.attachments,
-            attachmentsCount: savedMessage.attachments?.length || 0
-        });
 
         const messageSnapshot: LatestMessageSnapshot = {
             _id: savedMessage._id.toString(),
@@ -439,9 +416,6 @@ export class MessageService {
             }
 
         } else {
-            // CASE: Add reaction
-
-            // Try pushing userId to existing emoji group first
             const updated = await this.messageModel.findOneAndUpdate(
                 { _id: messageId, "reactions.emoji": emoji },
                 {
@@ -453,7 +427,6 @@ export class MessageService {
             if (updated) {
                 savedMessage = updated;
             } else {
-                // Emoji group doesn't exist yet, push new reaction object
                 savedMessage = await this.messageModel.findOneAndUpdate(
                     { _id: messageId },
                     {
@@ -527,7 +500,6 @@ export class MessageService {
                 );
             }
 
-            // Update all messages that reply to this updated message
             await this.messageModel.updateMany(
                 { 'replyTo.messageId': messageId },
                 { $set: { 'replyTo.content': content } },
@@ -538,14 +510,12 @@ export class MessageService {
     }
 
     async deleteMessage(discussionId: string, messageId: string, userId?: string) {
-        // Find message first to delete attachments
         const messageToDelete = await this.messageModel.findOne({
             _id: messageId,
             discussionId: new mongoose.Types.ObjectId(discussionId)
         });
 
         if (messageToDelete && messageToDelete.attachments && messageToDelete.attachments.length > 0) {
-            this.logger.log(`Deleting ${messageToDelete.attachments.length} attachments for message ${messageId}`);
             for (const att of messageToDelete.attachments) {
                 if (att.url && !att.url.startsWith('http') && userId) {
                     try {

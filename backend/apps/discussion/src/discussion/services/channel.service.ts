@@ -2,8 +2,9 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Discussion, DiscussionDocument, TeamSnapshot, Membership, MembershipDocument } from '../schema/discussion.schema';
-import { DiscussionType, MemberShip, MemberRole } from '@app/contracts';
+import { DiscussionType, MemberShip, MemberRole, USER_EXCHANGE, USER_PATTERNS } from '@app/contracts';
 import { Types } from 'mongoose';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 /**
  * Service responsible for managing discussion channels and categories within a team.
@@ -17,6 +18,7 @@ export class ChannelService {
         private readonly discussionModel: Model<DiscussionDocument>,
         @InjectModel(Membership.name)
         private readonly membershipModel: Model<MembershipDocument>,
+        private readonly amqp: AmqpConnection
     ) { }
 
     /**
@@ -174,7 +176,6 @@ export class ChannelService {
     async getDiscussionsForUser(userId: string, page = 1, limit = 20) {
         const skip = (page - 1) * limit;
 
-        // 1. Tìm các Membership của user này
         const memberships = await this.membershipModel
             .find({ userId, status: MemberShip.ACTIVE })
             .select('discussionId')
@@ -182,16 +183,72 @@ export class ChannelService {
 
         const discussionIds = memberships.map(m => m.discussionId);
 
-        // 2. Lấy thông tin Discussion tương ứng
-        return await this.discussionModel
+        const total = await this.discussionModel.countDocuments({
+            _id: { $in: discussionIds },
+            type: DiscussionType.DIRECT,
+            isDeleted: { $ne: true }
+        });
+
+        const totalPages = Math.ceil(total / limit);
+
+        const discussions = await this.discussionModel
             .find({
                 _id: { $in: discussionIds },
+                type: DiscussionType.DIRECT,
                 isDeleted: { $ne: true }
             })
             .sort({ updatedAt: -1 })
             .skip(skip)
             .limit(limit)
             .lean();
+
+        const partnerIds = new Set<string>();
+        discussions.forEach(d => {
+            const ids = d.name.split('_');
+            const pid = ids.find(id => id !== userId);
+            if (pid) partnerIds.add(pid);
+        });
+
+        let usersMap = new Map<string, any>();
+        if (partnerIds.size > 0) {
+            try {
+                const users = await this.amqp.request<any[]>({
+                    exchange: USER_EXCHANGE,
+                    routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+                    payload: { userIds: Array.from(partnerIds) },
+                });
+                if (users) {
+                    users.forEach(u => usersMap.set(u.id || u._id, u));
+                }
+            } catch (e) {
+                this.logger.error('Failed to fetch partner details', e);
+            }
+        }
+
+        const data = discussions.map(d => {
+            const ids = d.name.split('_');
+            const partnerId = ids.find(id => id !== userId);
+            const otherUser = partnerId ? usersMap.get(partnerId) : null;
+
+            return {
+                ...d,
+                partnerId,
+                otherUser: otherUser ? {
+                    _id: otherUser.id || otherUser._id,
+                    name: otherUser.name,
+                    avatar: otherUser.avatar,
+                    email: otherUser.email
+                } : null
+            };
+        });
+
+        return {
+            data,
+            page,
+            limit,
+            total,
+            totalPages
+        };
     }
 
     /**
@@ -201,7 +258,6 @@ export class ChannelService {
      * @returns The direct discussion document.
      */
     async createDirectDiscussion(senderId: string, partnerId: string) {
-        // Check if a DM already exists between these two users
         const existingDM = await this.discussionModel.findOne({
             type: DiscussionType.DIRECT,
             isGroup: false,
@@ -217,14 +273,12 @@ export class ChannelService {
             return existingDM;
         }
 
-        // Create new DM discussion
         const discussion = await this.discussionModel.create({
             name: `${senderId}_${partnerId}`,
             type: DiscussionType.DIRECT,
             isGroup: false,
         });
 
-        // Create memberships for both users
         await this.membershipModel.insertMany([
             {
                 discussionId: discussion._id,

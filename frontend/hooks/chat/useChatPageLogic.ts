@@ -7,6 +7,7 @@ import {
     useDiscussionMutations,
     useServerMembers,
     useTeamMembers,
+    useUserDiscussions,
 } from "@/hooks/useDiscussion";
 import {
     ServerDto,
@@ -22,6 +23,7 @@ import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useChatSocket } from "@/hooks/chat/useChatSocket";
 import { useVoiceSocket } from "@/hooks/chat/useVoiceSocket";
 import { useServerVoiceStats } from "@/hooks/chat/useServerVoiceStats";
+import { HOME_SERVER_ID } from "@/constants/chat";
 
 export const useChatPageLogic = (teamId: string) => {
     const { data: user } = useUserProfile();
@@ -67,8 +69,17 @@ export const useChatPageLogic = (teamId: string) => {
     const { data: rawServers = [] as ServerDto[], isLoading: loadingServers } = useUserServers(userId || "", teamId);
     const servers = useMemo(() => (rawServers as ServerDto[]).map((s: ServerDto) => ({ ...s, id: s.id || s._id || "" })), [rawServers]);
 
-    const { data: rawChannels = [] as DiscussionDto[], isLoading: loadingChannels } = useServerChannels(selectedServerId || "");
+    const { data: rawChannels = [] as DiscussionDto[], isLoading: loadingChannels } = useServerChannels(
+        (selectedServerId && selectedServerId !== HOME_SERVER_ID) ? selectedServerId : ""
+    );
     const channels = useMemo(() => (rawChannels as DiscussionDto[]).map((c: DiscussionDto) => ({ ...c, id: c.id || c._id || "" })), [rawChannels]);
+
+    // Fetch DMs (Universal)
+    const { data: directDiscussionsData } = useUserDiscussions(selectedServerId === HOME_SERVER_ID);
+    const directDiscussions = useMemo(() =>
+        directDiscussionsData?.pages.flatMap((page: PaginatedResponse<DiscussionDto>) => page.data).map(d => ({ ...d, id: d.id || d._id || "" })) || [],
+        [directDiscussionsData]
+    );
 
     const { projects = [], isLoading: loadingProjects } = useProjects(teamId);
 
@@ -102,8 +113,14 @@ export const useChatPageLogic = (teamId: string) => {
         }
     }, [channels, loadingChannels, selectedChannelId, selectedDirectMessageUserId]);
 
+
     // Derived
-    const selectedChannel = channels.find((c: DiscussionDto) => c.id === selectedChannelId);
+    const selectedChannel = useMemo(() => {
+        if (selectedServerId === HOME_SERVER_ID) {
+            return directDiscussions.find(d => d.id === selectedChannelId);
+        }
+        return channels.find((c: DiscussionDto) => c.id === selectedChannelId);
+    }, [channels, directDiscussions, selectedServerId, selectedChannelId]);
     const isVoiceChannel = selectedChannel?.type === 'VOICE';
 
     // Effect to set active voice channel
@@ -212,7 +229,7 @@ export const useChatPageLogic = (teamId: string) => {
         try {
             // Clear current selections immediately
             setSelectedDirectMessageUserId(partnerId);
-            setSelectedServerId(null);
+            setSelectedServerId(HOME_SERVER_ID);
             setSelectedChannelId(null); // Clear immediately to prevent showing old channel
 
             // Create or get existing direct discussion
@@ -241,8 +258,8 @@ export const useChatPageLogic = (teamId: string) => {
     // Wrapper to clear DM mode when selecting a server
     const handleSelectServer = (serverId: string | null) => {
         setSelectedServerId(serverId);
-        if (serverId) {
-            // Clear DM mode when selecting a server
+        if (serverId && serverId !== HOME_SERVER_ID) {
+            // Clear DM mode when selecting a REAL server
             setSelectedDirectMessageUserId(null);
         }
     };
@@ -320,7 +337,7 @@ export const useChatPageLogic = (teamId: string) => {
             discussionId: selectedChannelId,
             payload: {
                 content,
-                teamId: selectedServerId || undefined, 
+                teamId: selectedServerId || undefined,
                 attachments: (attachments && attachments.length > 0) ? attachments : undefined,
                 userId: userId || "",
                 discussionId: selectedChannelId,
@@ -468,7 +485,8 @@ export const useChatPageLogic = (teamId: string) => {
             isCreatingChannel,
             projects,
             loadingProjects,
-            currentProject
+            currentProject,
+            directDiscussions
         },
         actions: {
             setSelectedServerId: handleSelectServer,
@@ -476,7 +494,7 @@ export const useChatPageLogic = (teamId: string) => {
             setShowMembers,
             toggleCategory,
             handleCreateServer,
-            handleCreateChannel,
+            handleCreateChannel,                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
             handleCreateCategory,
             handleSendMessage,
             handleUpdateServer,

@@ -7,6 +7,8 @@ import { TabsContent } from "@/components/ui/tabs";
 import { MemberItem } from "./MemberItem";
 import { ServerMemberDto } from "@/types";
 
+import { useOnlineStatus } from "@/hooks/chat/useOnlineStatus";
+
 interface MembersTabProps {
     members: ServerMemberDto[];
     loadingMembers: boolean;
@@ -22,9 +24,10 @@ export const MembersTab: React.FC<MembersTabProps> = ({
     isFetchingNextMembersPage,
     onLoadMore
 }) => {
+    const onlineUsers = useOnlineStatus(members.map(m => m.userId));
+
     return (
         <TabsContent value="members" className="flex-1 data-[state=active]:flex flex-col mt-0 w-full h-full">
-            {/* Header */}
             <div className="h-12 flex items-center px-4 shrink-0 border-b border-zinc-100 dark:border-zinc-800/50">
                 <Icon icon="lucide:users" width="14" className="text-zinc-400 mr-2" />
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">
@@ -42,7 +45,11 @@ export const MembersTab: React.FC<MembersTabProps> = ({
                     )}
 
                     {members.map((member: ServerMemberDto) => (
-                        <MemberItem key={member.userId} member={member} />
+                        <MemberItem
+                            key={member.userId}
+                            member={member}
+                            isOnline={onlineUsers.has(member.userId)}
+                        />
                     ))}
 
                     {hasNextMembersPage && (

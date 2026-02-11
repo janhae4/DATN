@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fileService } from "@/services/fileService";
 import { AttachmentDto } from "@/types";
+import { SlashCommandMenu, SlashCommand } from "./SlashCommandMenu";
 
 const ReplyPreviewImage = ({ att, serverId }: { att: AttachmentDto; serverId?: string | null }) => {
     const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -68,12 +69,208 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textInputRef = useRef<HTMLInputElement>(null);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [showSlashMenu, setShowSlashMenu] = useState(false);
+    const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
     React.useEffect(() => {
         if (replyingTo && textInputRef.current) {
             textInputRef.current.focus();
         }
     }, [replyingTo]);
+
+    // Define slash commands
+    const slashCommands: SlashCommand[] = [
+        {
+            id: "task",
+            label: "/task",
+            description: "Create a task from this conversation",
+            icon: "lucide:check-square",
+            action: () => {
+                console.log("Create task from chat context");
+                // TODO: Open task creation dialog with chat context
+            }
+        },
+        {
+            id: "meeting",
+            label: "/meeting",
+            description: "Schedule a meeting with participants",
+            icon: "lucide:calendar",
+            action: () => {
+                console.log("Schedule meeting");
+                // TODO: Open meeting scheduler
+            }
+        },
+        {
+            id: "poll",
+            label: "/poll",
+            description: "Create a quick poll",
+            icon: "lucide:bar-chart-3",
+            action: () => {
+                console.log("Create poll");
+                // TODO: Open poll creator
+            }
+        },
+        {
+            id: "remind",
+            label: "/remind",
+            description: "Set a reminder for this channel",
+            icon: "lucide:bell",
+            action: () => {
+                console.log("Set reminder");
+                // TODO: Open reminder dialog
+            }
+        },
+        {
+            id: "summarize",
+            label: "/summarize",
+            description: "AI summarize recent messages",
+            icon: "lucide:sparkles",
+            action: () => {
+                console.log("Summarize conversation");
+                // TODO: Call AI to summarize
+            }
+        },
+        {
+            id: "decision",
+            label: "/decision",
+            description: "Log an important decision",
+            icon: "lucide:lightbulb",
+            action: () => {
+                console.log("Log decision");
+                // TODO: Create decision log
+            }
+        },
+        {
+            id: "action",
+            label: "/action",
+            description: "Create action items from discussion",
+            icon: "lucide:list-checks",
+            action: () => {
+                console.log("Create action items");
+                // TODO: Extract action items
+            }
+        },
+        {
+            id: "file",
+            label: "/file",
+            description: "Attach a file",
+            icon: "lucide:paperclip",
+            action: () => {
+                fileInputRef.current?.click();
+            }
+        },
+        {
+            id: "code",
+            label: "/code",
+            description: "Insert a code block",
+            icon: "lucide:code",
+            action: () => {
+                const event = {
+                    target: { value: "```\n\n```" }
+                } as React.ChangeEvent<HTMLInputElement>;
+                onInputChange(event);
+                setTimeout(() => {
+                    if (textInputRef.current) {
+                        textInputRef.current.setSelectionRange(4, 4);
+                        textInputRef.current.focus();
+                    }
+                }, 0);
+            }
+        },
+        {
+            id: "shrug",
+            label: "/shrug",
+            description: "¯\\_(ツ)_/¯",
+            icon: "lucide:smile",
+            action: () => {
+                const event = {
+                    target: { value: inputMsg.replace("/", "") + "¯\\_(ツ)_/¯" }
+                } as React.ChangeEvent<HTMLInputElement>;
+                onInputChange(event);
+            }
+        },
+    ];
+
+    const handleInputChangeWithSlash = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        const cursorPosition = e.target.selectionStart || 0;
+        onInputChange(e);
+
+        // Find the last / before cursor position
+        const textBeforeCursor = value.substring(0, cursorPosition);
+        const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
+
+        // Show menu if there's a / before cursor and no space after it
+        if (lastSlashIndex !== -1) {
+            const textAfterSlash = value.substring(lastSlashIndex + 1, cursorPosition);
+            const hasSpace = textAfterSlash.includes(' ');
+
+            if (!hasSpace) {
+                if (textInputRef.current) {
+                    const rect = textInputRef.current.getBoundingClientRect();
+                    setMenuPosition({
+                        top: window.innerHeight - rect.top + 10,
+                        left: rect.left,
+                    });
+                }
+                setShowSlashMenu(true);
+                return;
+            }
+        }
+
+        setShowSlashMenu(false);
+    };
+
+    const handleCommandSelect = (command: SlashCommand) => {
+        setShowSlashMenu(false);
+
+        if (!textInputRef.current) return;
+
+        const cursorPosition = textInputRef.current.selectionStart || 0;
+        const value = inputMsg;
+
+        // Find the last / before cursor
+        const textBeforeCursor = value.substring(0, cursorPosition);
+        const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
+
+        if (lastSlashIndex !== -1) {
+            // Remove the / and any text after it up to cursor
+            const beforeSlash = value.substring(0, lastSlashIndex);
+            const afterCursor = value.substring(cursorPosition);
+
+            // For commands that insert text (like /shrug, /code)
+            if (command.id === 'shrug') {
+                const newValue = beforeSlash + "¯\\_(ツ)_/¯" + afterCursor;
+                const event = {
+                    target: { value: newValue }
+                } as React.ChangeEvent<HTMLInputElement>;
+                onInputChange(event);
+            } else if (command.id === 'code') {
+                const newValue = beforeSlash + "```\n\n```" + afterCursor;
+                const event = {
+                    target: { value: newValue }
+                } as React.ChangeEvent<HTMLInputElement>;
+                onInputChange(event);
+                setTimeout(() => {
+                    if (textInputRef.current) {
+                        const newCursorPos = lastSlashIndex + 4;
+                        textInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+                        textInputRef.current.focus();
+                    }
+                }, 0);
+            } else {
+                // For other commands (file, giphy), just remove the /
+                const newValue = beforeSlash + afterCursor;
+                const event = {
+                    target: { value: newValue }
+                } as React.ChangeEvent<HTMLInputElement>;
+                onInputChange(event);
+
+                // Execute command action
+                command.action();
+            }
+        }
+    };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
@@ -89,6 +286,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setShowSlashMenu(false);
         if (selectedFiles.length > 0 && onAttachFiles) {
             onAttachFiles(selectedFiles);
             setSelectedFiles([]);
@@ -218,6 +416,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 </div>
             )}
 
+            {showSlashMenu && (
+                <SlashCommandMenu
+                    commands={slashCommands}
+                    onSelect={handleCommandSelect}
+                    position={menuPosition}
+                />
+            )}
+
             <div className="relative bg-zinc-100 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800/50 focus-within:border-zinc-400 dark:focus-within:border-zinc-700 transition-all shadow-sm">
                 <form
                     onSubmit={handleSubmit}
@@ -247,7 +453,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                         ref={textInputRef}
                         type="text"
                         value={inputMsg}
-                        onChange={onInputChange}
+                        onChange={handleInputChangeWithSlash}
                         placeholder={`Message #${selectedChannelName || "channel"}`}
                         className="flex-1 bg-transparent border-none outline-none text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 text-[15px] min-w-0"
                     />

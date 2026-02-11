@@ -9,9 +9,10 @@ import { ServerMemberDto, MemberRole } from "@/types";
 
 interface MemberItemProps {
     member: ServerMemberDto;
+    isOnline?: boolean;
 }
 
-export const MemberItem = React.memo(({ member }: MemberItemProps) => (
+export const MemberItem = React.memo(({ member, isOnline = false }: MemberItemProps) => (
     <div className="group flex items-center gap-3 p-2.5 rounded-xl transition-all duration-200 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 cursor-pointer">
         <div className="relative shrink-0">
             <Avatar className="h-9 w-9 border border-zinc-200 dark:border-zinc-800 shadow-sm">
@@ -20,8 +21,9 @@ export const MemberItem = React.memo(({ member }: MemberItemProps) => (
                     {member.name?.substring(0, 1).toUpperCase() || "?"}
                 </AvatarFallback>
             </Avatar>
-            {/* Online/Status Indicator (Optional placeholder) */}
-            {/* <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-black" /> */}
+            {isOnline && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-zinc-950 shadow-sm animate-in zoom-in duration-300" />
+            )}
         </div>
 
         <div className="flex flex-col min-w-0 flex-1">

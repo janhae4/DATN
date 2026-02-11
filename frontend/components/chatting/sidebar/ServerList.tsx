@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { CreateServerDialog } from "../dialogs/CreateServerDialog";
 import { JoinServerDialog } from "../dialogs/JoinServerDialog";
 import { ServerDto } from "@/types";
+import { HOME_SERVER_ID } from "@/constants/chat";
 
 interface ServerListProps {
     servers: ServerDto[];
@@ -104,6 +105,38 @@ export const ServerList: React.FC<ServerListProps> = ({
         <div className="w-[84px] flex flex-col items-center py-6 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 h-full z-10 shrink-0">
             <div className="flex-1 w-full px-2 overflow-y-auto no-scrollbar scroll-smooth">
                 <div className="flex flex-col items-center gap-4">
+                    <div className="relative flex items-center justify-center w-full group">
+                        <div
+                            className={cn(
+                                "absolute -left-2 w-1.5 bg-zinc-900 dark:bg-white rounded-r-full transition-all duration-300",
+                                selectedServerId === HOME_SERVER_ID ? "h-10 opacity-100" : "h-2 opacity-0 group-hover:opacity-100 group-hover:h-5"
+                            )}
+                        />
+                        <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={() => onSelectServer(HOME_SERVER_ID)}
+                                        className={cn(
+                                            "group relative w-12 h-12 flex items-center justify-center overflow-hidden transition-all duration-300",
+                                            selectedServerId === HOME_SERVER_ID ? "rounded-[16px]" : "rounded-[24px] hover:rounded-[16px]",
+                                            selectedServerId === HOME_SERVER_ID
+                                                ? "bg-zinc-900 dark:bg-white text-white dark:text-black shadow-lg shadow-zinc-500/10"
+                                                : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                                        )}
+                                    >
+                                        <Icon icon="lucide:message-square" width="24" className={cn("transition-transform duration-300", selectedServerId !== HOME_SERVER_ID && "group-hover:scale-110")} />
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="font-bold bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 border-none shadow-xl text-xs">
+                                    <p>Direct Messages</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
+
+                    <div className="w-8 h-[2px] bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+
                     {loadingServers && (
                         <div className="w-12 h-12 rounded-[24px] bg-zinc-100 dark:bg-zinc-900 animate-pulse" />
                     )}
@@ -171,12 +204,7 @@ export const ServerList: React.FC<ServerListProps> = ({
                 />
 
                 <div className="flex flex-col gap-1 mt-1">
-                    <ActionButton
-                        onClick={() => setIsJoinDialogOpen(true)}
-                        icon="lucide:compass"
-                        label="Join Server"
-                        variant="ghost"
-                    />
+
 
                     <Link href={`/${teamId}/chat/trash`}>
                         <ActionButton

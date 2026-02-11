@@ -11,6 +11,9 @@ import { useChatPageLogic } from "@/hooks/chat/useChatPageLogic";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ServerDto } from "@/types";
+import { useHeartbeat } from "@/hooks/chat/useHeartbeat";
+import { useOnlineStatus } from "@/hooks/chat/useOnlineStatus";
+import { useUserPresence } from "@/hooks/chat/useUserPresence";
 
 interface ChatContainerProps {
     teamId: string;
@@ -18,8 +21,22 @@ interface ChatContainerProps {
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({ teamId }) => {
     const { state, actions } = useChatPageLogic(teamId);
+    useHeartbeat();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
+
+    // Determine partnerId for online status check if in DM
+    const partnerId = React.useMemo(() => {
+        const channel = state.selectedChannel;
+        if (!channel || (channel.type !== "DIRECT" && channel.serverId)) return null;
+
+        const dm = state.directDiscussions.find(d => d.id === channel.id);
+        return dm?.otherUser?._id || channel.name.split('_').find(id => id !== state.userId) || null;
+    }, [state.selectedChannel, state.directDiscussions, state.userId]);
+
+
+    const userPresence = useUserPresence(partnerId);
+    const isPartnerOnline = userPresence?.isOnline || false;
 
     if (!state.userId) return <div className="p-10">Đang tải thông tin user...</div>;
 
@@ -77,6 +94,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ teamId }) => {
                 teamMembers={state.teamMembers}
                 onSelectDirectMessage={actions.handleSelectDirectMessage}
                 selectedDirectMessageUserId={state.selectedDirectMessageUserId}
+                directDiscussions={state.directDiscussions}
+                currentUserId={state.userId}
             />
         </>
     );
@@ -99,7 +118,21 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ teamId }) => {
                     selectedServerId={state.selectedServerId}
                     selectedChannelId={state.selectedChannelId}
                     selectedTeamId={teamId}
-                    selectedChannelName={state.selectedChannel?.name}
+                    selectedChannelName={(() => {
+                        const channel = state.selectedChannel;
+                        if (!channel) return undefined;
+                        if (channel.type === "DIRECT" || !channel.serverId) {
+                            const dm = state.directDiscussions.find(d => d.id === channel.id);
+                            if (dm?.otherUser) return dm.otherUser.name;
+
+                            const partnerId = channel.name.split('_').find(id => id !== state.userId);
+                            const partner = state.teamMembers.find(m => m.userId === partnerId);
+                            return partner?.name || "Unknown User";
+                        }
+                        return channel.name;
+                    })()}
+                    isOnline={isPartnerOnline}
+                    lastSeen={userPresence?.lastSeen}
                     showMembers={state.showMembers}
                     onToggleMembers={() => {
                         if (window.innerWidth < 1280) { // lg breakpoint

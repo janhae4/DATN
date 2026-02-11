@@ -58,6 +58,13 @@ export const discussionService = {
     return data;
   },
 
+  getDiscussionsForUser: async (page = 1, limit = 20): Promise<PaginatedResponse<DiscussionDto>> => {
+    const { data } = await apiClient.get<PaginatedResponse<DiscussionDto>>('/discussions', {
+      params: { page, limit }
+    });
+    return data;
+  },
+
   getUserServers: async (userId: string, teamId?: string) => {
     const { data } = await apiClient.get(`/discussions/servers/user/${userId}`, {
       params: { teamId }

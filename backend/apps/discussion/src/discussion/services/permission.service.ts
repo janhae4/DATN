@@ -24,25 +24,23 @@ export class PermissionService {
         const discussion = await this.discussionModel.findById(discussionId).lean();
         if (!discussion) return false;
 
-        // 1. Owner always has permission
         if (discussion.ownerId === userId) return true;
 
-        // 2. Check membership and role via simplified Membership collection
         const membership = await this.membershipModel.findOne({ discussionId, userId }).lean();
         if (!membership) return false;
 
-        // 3. User is Admin of this group/server
         if (membership.isAdmin || membership.role === MemberRole.ADMIN || membership.role === MemberRole.OWNER) return true;
 
-        // 4. Check User Override cụ thể (Ưu tiên nhất)
-        const userOverride = await this.overrideModel.findOne({ discussionId, userId }).lean();
+        const [userOverride, roleOverride] = await Promise.all([
+            this.overrideModel.findOne({ discussionId, userId }).lean(),
+            this.overrideModel.findOne({ discussionId, role: membership.role }).lean()
+        ]);
+
         if (userOverride) {
             if (userOverride.deny.includes(permission)) return false;
             if (userOverride.allow.includes(permission)) return true;
         }
 
-        // 5. Kiểm tra Role Override
-        const roleOverride = await this.overrideModel.findOne({ discussionId, role: membership.role }).lean();
         if (roleOverride) {
             if (roleOverride.deny.includes(permission)) return false;
             if (roleOverride.allow.includes(permission)) return true;
