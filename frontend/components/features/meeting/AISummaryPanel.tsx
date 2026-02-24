@@ -45,7 +45,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
             }
         } catch (err) {
             console.error(err);
-            toast.error('Gặp lỗi khi tải AI Summary');
+            toast.error('Error loading AI Summary');
         } finally {
             setLoading(false);
         }
@@ -68,13 +68,13 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
         try {
             setTriggering(true);
             // Wait for 1-2 seconds visually
-            toast.info('Đang yêu cầu AI phân tích cuộc hội thoại...');
+            toast.info('Requesting AI analysis of the conversation...');
             await apiClient.post('/video-call/trigger-summary', { roomId });
-            toast.success('AI phân tích thành công!');
+            toast.success('AI analysis successful!');
             await fetchSummaryAndTasks();
         } catch (err) {
             console.error(err);
-            toast.error('Gặp lỗi khi chạy AI Summary!');
+            toast.error('Error running AI Summary!');
         } finally {
             setTriggering(false);
         }
@@ -82,16 +82,16 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
 
     const handleSaveTask = async (taskId: string) => {
         try {
-            toast.info('Lưu thay đổi task...');
+            toast.info('Saving task changes...');
             setActionItems(prev =>
                 prev.map(item =>
                     item.id === taskId ? { ...item, ...editingForm } : item
                 )
             );
-            toast.success('Lưu task thành công!');
+            toast.success('Task saved successfully!');
             setEditingTaskId(null);
         } catch (err) {
-            toast.error('Gặp lỗi khi lưu task!');
+            toast.error('Error saving task!');
         }
     };
 
@@ -100,7 +100,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
     };
 
     const handleAddAllToBacklog = () => {
-        toast.info("Tính năng thêm tất cả vào backlog sẽ được cập nhật sớm");
+        toast.info("Add all to backlog feature coming soon");
     };
 
     const isPrivileged = myCallRole === 'HOST' || myCallRole === 'ADMIN';
@@ -127,7 +127,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                     <div className="flex flex-col gap-4">
                         <div className="bg-amber-500/10 border border-amber-500/20 text-neutral-200 text-sm p-4 rounded-xl leading-relaxed whitespace-pre-wrap">
                             <span className="font-semibold text-amber-400 flex items-center gap-2 mb-3">
-                                <Loader2 className="animate-spin" size={14} /> AI đang phân tích hội thoại...
+                                <Loader2 className="animate-spin" size={14} /> AI is analyzing the conversation...
                             </span>
                             <div className="opacity-80 font-mono text-xs max-h-[300px] overflow-hidden">
                                 {streamContent?.substring(Math.max(0, streamContent.length - 500))}
@@ -138,10 +138,10 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                 ) : (
                     <>
                         <div className="mb-6">
-                            <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Tóm tắt chung</h3>
+                            <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">General Summary</h3>
                             {loading ? (
                                 <div className="text-sm text-neutral-500 flex items-center gap-2">
-                                    <Loader2 className="animate-spin" size={14} /> Tải tóm tắt...
+                                    <Loader2 className="animate-spin" size={14} /> Loading summary...
                                 </div>
                             ) : summary ? (
                                 <div className="bg-amber-500/10 border border-amber-500/20 text-neutral-200 text-sm p-4 rounded-xl leading-relaxed whitespace-pre-wrap">
@@ -149,7 +149,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                 </div>
                             ) : (
                                 <div className="text-sm text-neutral-500 italic">
-                                    Chưa có dữ liệu tóm tắt cho phòng này.
+                                    No summary data available for this room.
                                 </div>
                             )}
                         </div>
@@ -176,7 +176,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                             </div>
                             {loading ? (
                                 <div className="text-sm text-neutral-500 flex items-center gap-2">
-                                    <Loader2 className="animate-spin" size={14} /> Tải tasks...
+                                    <Loader2 className="animate-spin" size={14} /> Loading tasks...
                                 </div>
                             ) : actionItems.length > 0 ? (
                                 <div className="flex flex-col gap-3">
@@ -187,7 +187,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                                 {editingTaskId === item.id ? (
                                                     <div className="flex-1 flex flex-col gap-2">
                                                         <textarea
-                                                            placeholder="Nội dung công việc..."
+                                                            placeholder="Task content..."
                                                             className="w-full bg-neutral-900 border border-amber-500/50 rounded-md p-2 text-sm text-white resize-none focus:outline-none focus:border-amber-500"
                                                             value={editingForm.content || ""}
                                                             onChange={(e) => setEditingForm({ ...editingForm, content: e.target.value })}
@@ -195,7 +195,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                                         />
                                                         <input
                                                             type="text"
-                                                            placeholder="Người thực hiện"
+                                                            placeholder="Assignee"
                                                             className="w-full bg-neutral-900 border border-amber-500/50 rounded-md p-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
                                                             value={editingForm.assigneeId || ""}
                                                             onChange={(e) => setEditingForm({ ...editingForm, assigneeId: e.target.value })}
@@ -215,8 +215,8 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                                             />
                                                         </div>
                                                         <div className="flex justify-end gap-2 mt-1">
-                                                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setEditingTaskId(null)}>Hủy</Button>
-                                                            <Button size="sm" className="h-6 px-2 text-xs bg-amber-500 hover:bg-amber-600 text-white" onClick={() => handleSaveTask(item.id)}>Lưu</Button>
+                                                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setEditingTaskId(null)}>Cancel</Button>
+                                                            <Button size="sm" className="h-6 px-2 text-xs bg-amber-500 hover:bg-amber-600 text-white" onClick={() => handleSaveTask(item.id)}>Save</Button>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -243,7 +243,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                                         <div className="flex justify-between items-center mt-2">
                                                             <button
                                                                 className="text-[10px] font-medium bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/20 transition-colors"
-                                                                onClick={() => toast.info("Tính năng thêm vào backlog sẽ được cập nhật sớm")}
+                                                                onClick={() => toast.info("Add to backlog feature coming soon")}
                                                             >
                                                                 Add to Backlog
                                                             </button>
@@ -262,7 +262,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                                             setEditingTaskId(item.id);
                                                             setEditingForm(item);
                                                         }}
-                                                        title="Chỉnh sửa task"
+                                                        title="Edit task"
                                                     >
                                                         <Save size={12} className="hidden" />
                                                         <Edit2 className="w-3.5 h-3.5" />
@@ -270,7 +270,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                                     <button
                                                         className="text-neutral-500 hover:text-red-400 p-1 transition-colors"
                                                         onClick={() => handleRemoveTask(item.id)}
-                                                        title="Xóa task"
+                                                        title="Delete task"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -281,7 +281,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                 </div>
                             ) : (
                                 <div className="text-sm text-neutral-500 italic">
-                                    Chưa có cấu trúc Task được trích xuất.
+                                    No structured tasks extracted yet.
                                 </div>
                             )}
                         </div>
@@ -296,7 +296,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                     disabled={triggering || isStreaming}
                 >
                     {triggering ? <Loader2 size={18} className="animate-spin mr-2" /> : <RefreshCw size={18} className="mr-2" />}
-                    Lấy tóm tắt mới nhất
+                    Get Latest Summary
                 </Button>
             </div>
         </div>

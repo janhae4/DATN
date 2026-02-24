@@ -57,7 +57,7 @@ func (s *VideoChatService) getMemberRole(teamID, userID string) (models.MemberRo
 
 	var memberState *CachedMemberState
 
-	// 1. Thử lấy từ Redis
+	// 1. Try to get from Redis
 	jsonData, err := s.redisClient.HGet(ctx, key, userID).Result()
 	log.Println("jsonData", jsonData)
 	if err == nil {
@@ -66,7 +66,7 @@ func (s *VideoChatService) getMemberRole(teamID, userID string) (models.MemberRo
 		}
 	}
 
-	// 2. Nếu Redis không có (Nil) hoặc Unmarshal lỗi, gọi RPC sang Team Service
+	// 2. If Redis is missing (Nil) or Unmarshal error, call RPC to Team Service
 	if memberState == nil {
 		log.Printf("Cache miss for team %s, user %s. Calling RPC...", teamID, userID)
 
@@ -713,11 +713,11 @@ func (s *VideoChatService) LeaveCall(roomID, userID string) error {
 	return nil
 }
 
-// HandleTranscriptReceive xử lý transcript realtime từ client
+// HandleTranscriptReceive processes real-time transcripts from client
 func (s *VideoChatService) HandleTranscriptReceive(roomID, userID, userName, content string) error {
 	ctx := context.Background()
 
-	// 1. Lưu câu nói vào Redis Buffer trực tiếp bằng redisClient
+	// 1. Save sentence to Redis Buffer directly using redisClient
 	transcriptData := map[string]interface{}{
 		"userId":    userID,
 		"userName":  userName,
@@ -738,16 +738,16 @@ func (s *VideoChatService) HandleTranscriptReceive(roomID, userID, userName, con
 
 	log.Printf("🗣️ [%s] %s: %s (Buffer: %d/30)", roomID, userName, content, lenBuffer)
 
-	// 2. Nếu đạt ngưỡng 30 câu, trigger tóm tắt
+	// 2. If threshold of 30 sentences is reached, trigger summary
 	if lenBuffer >= 30 {
 		log.Printf("🤖 Buffer reached 30 sentences for room %s. Triggering AI Summary...", roomID)
 
-		// Chạy trong goroutine để không block việc nhận transcript tiếp theo
+		// Run in goroutine to not block receiving next transcripts
 		go func() {
 			if err := s.ProcessMeetingSummary(roomID); err != nil {
 				log.Printf("❌ Failed to process real-time summary: %v", err)
 			} else {
-				// Sau khi tóm tắt xong, gửi thông báo qua WebSocket để UI cập nhật
+				// After summary is done, send notification via WebSocket for UI update
 				s.mqClient.PublishToExchange("video_chat_exchange", "video_chat.summary.updated", map[string]string{
 					"roomId": roomID,
 					"type":   "LIVE_SUMMARY",
@@ -768,18 +768,18 @@ func (s *VideoChatService) ProcessMeetingSummary(roomID string) error {
 		return err
 	}
 
-	// Get transcripts từ Redis trực tiếp
+	// Get transcripts from Redis directly
 	ctx := context.Background()
 	bufferKey := fmt.Sprintf("meeting_buffer:%s", roomID)
 
-	// Lấy tất cả messages trong danh sách
+	// Get all messages in the list
 	items, err := s.redisClient.LRange(ctx, bufferKey, 0, -1).Result()
 	if err != nil {
 		log.Printf("Failed to pop meeting buffer: %v", err)
 		return err
 	}
 
-	// Xóa buffer sau khi đã lấy xong
+	// Clear buffer after retrieval
 	s.redisClient.Del(ctx, bufferKey)
 
 	if len(items) == 0 {
@@ -822,7 +822,7 @@ func (s *VideoChatService) ProcessMeetingSummary(roomID string) error {
 		} `json:"actionItems"`
 	}
 
-	/* TẠM THỜI COMMENT RPC CALL LẠI
+	/* TEMPORARILY COMMENTING OUT RPC CALL
 	err = s.rpcClient.Call("chatbot_exchange", "chatbot.summarize_meeting", map[string]string{
 		"roomId":  roomID,
 		"content": conversationText,
@@ -833,7 +833,7 @@ func (s *VideoChatService) ProcessMeetingSummary(roomID string) error {
 	}
 	*/
 
-	// SỬ DỤNG THƯ VIỆN GENAI CHÍNH THỨC
+	// USE OFFICIAL GENAI LIBRARY
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		log.Printf("❌ GEMINI_API_KEY is not set in .env")
@@ -855,29 +855,29 @@ func (s *VideoChatService) ProcessMeetingSummary(roomID string) error {
 		hasPreviousSummary = true
 	}
 
-	prompt := `Hãy tóm tắt đoạn hội thoại cuộc họp sau đây thành một file JSON hợp lệ có chứa 2 trường: 
-1. "summary": một chuỗi chứa nội dung tóm tắt chính của cuộc họp.
-2. "actionItems": một mảng các đối tượng, mỗi đối tượng chứa các trường sau:
-   - "content": các công việc cần thực hiện tiếp theo (nhớ viết ngắn gọn).
-   - "assignee": tên hoặc userId của người được giao việc này (nếu có, nếu không thì null).
-   - "startDate": thời gian bắt đầu dự kiến theo định dạng ISO 8601 (VD: 2026-02-23T10:00:00Z) (nếu có).
-   - "endDate": thời gian kết thúc/hạn chót dự kiến theo định dạng ISO 8601 (nếu có).
-Tuyệt đối không sử dụng markdown (như '''json), chỉ trả về nguyên văn dữ liệu JSON hợp lệ.
+	prompt := `Summarize the following meeting conversation into a valid JSON object containing 2 fields: 
+1. "summary": a string containing the main summary of the meeting.
+2. "actionItems": an array of objects, each containing the following fields:
+   - "content": the next tasks to be performed (write concisely).
+   - "assignee": the name or userId of the person assigned to this task (if any, otherwise null).
+   - "startDate": expected start time in ISO 8601 format (e.g., 2026-02-23T10:00:00Z) (if any).
+   - "endDate": expected end time/deadline in ISO 8601 format (if any).
+Absolutely do not use markdown (like ` + "```json" + `), only return the raw valid JSON data.
 `
 
 	if hasPreviousSummary {
-		prompt += fmt.Sprintf(`LƯU Ý QUAN TRỌNG: Đây là đoạn hội thoại TIẾP THEO của một cuộc họp đang diễn ra. 
-		Dưới đây là phần TÓM TẮT TRƯỚC ĐÓ của cuộc họp:
+		prompt += fmt.Sprintf(`IMPORTANT NOTE: This is a CONTINUATION of an ongoing meeting conversation. 
+		Below is the PREVIOUS SUMMARY of the meeting:
 		----------
 		%s
 		----------
-		Dựa vào phần tóm tắt trước đó và đoạn hội thoại MỚI bên dưới, hãy tạo ra một BẢN TÓM TẮT MỚI bao gồm cả nội dung cũ và mới một cách mạch lạc (tổng hợp lại), đồng thời cập nhật thêm các Action Items nếu có.
+		Based on the previous summary and the NEW conversation below, create a NEW SUMMARY that includes both old and new content in a coherent way (synthesized), and update Action Items if any.
 		`, lastSummaryBlock.Content)
 	}
 
-	prompt += fmt.Sprintf(`Đoạn hội thoại MỚI: %s`, conversationText)
+	prompt += fmt.Sprintf(`NEW conversation: %s`, conversationText)
 
-	// Gọi AI bằng thư viện (tự động xử lý url và các models mới nhất được support)
+	// Call AI via library (automatically handles url and latest supported models)
 	stream := client.Models.GenerateContentStream(ctx, "gemini-2.5-flash", genai.Text(prompt), nil)
 	var extractedJSONStr string
 	for chunk, iterErr := range stream {
@@ -890,7 +890,7 @@ Tuyệt đối không sử dụng markdown (như '''json), chỉ trả về nguy
 				if part.Text != "" {
 					extractedJSONStr += part.Text
 
-					// Gửi realtime chunk nếu được thiết lập
+					// Send realtime chunk if established
 					if s.OnSummaryChunk != nil {
 						s.OnSummaryChunk(roomID, part.Text)
 					}
@@ -899,7 +899,7 @@ Tuyệt đối không sử dụng markdown (như '''json), chỉ trả về nguy
 		}
 	}
 
-	// Gửi tín hiệu hoàn tất stream
+	// Send stream completion signal
 	if s.OnSummaryComplete != nil {
 		s.OnSummaryComplete(roomID)
 	}
@@ -909,7 +909,7 @@ Tuyệt đối không sử dụng markdown (như '''json), chỉ trả về nguy
 		return errors.New("empty text collected from gemini parts")
 	}
 
-	// Làm sạch JSON nếu Gemini lỡ trả về markdown ```json ... ```
+	// Clean JSON if Gemini returns markdown ```json ... ```
 	extractedJSONStr = strings.TrimPrefix(extractedJSONStr, "```json")
 	extractedJSONStr = strings.TrimSuffix(extractedJSONStr, "```")
 	extractedJSONStr = strings.TrimSpace(extractedJSONStr)
@@ -917,7 +917,7 @@ Tuyệt đối không sử dụng markdown (như '''json), chỉ trả về nguy
 	err = json.Unmarshal([]byte(extractedJSONStr), &summaryResult)
 	if err != nil {
 		log.Printf("❌ Failed to unmarshal Gemini JSON: %v, String: %s", err, extractedJSONStr)
-		// Fallback: Nếu không parse được JSON, lưu thẳng toàn bộ text vào summary
+		// Fallback: If JSON cannot be parsed, save whole text to summary
 		summaryResult.Summary = extractedJSONStr
 	}
 

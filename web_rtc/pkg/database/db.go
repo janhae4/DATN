@@ -29,7 +29,7 @@ func InitDB() {
 
 	log.Println("Database connected successfully")
 
-	// AutoMigrate – tự động tạo/cập nhật schema
+	// AutoMigrate - automatically create/update schema
 	if err := DB.AutoMigrate(
 		&models.Call{},
 		&models.CallParticipant{},

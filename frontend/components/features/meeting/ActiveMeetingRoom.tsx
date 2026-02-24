@@ -341,34 +341,34 @@ export function ActiveMeetingRoom({ roomId, teamId, initialRoomInfo }: ActiveMee
         </div>
       )}
 
-      {/* NÚT TEST 30 CÂU (Tự động xóa đi sau khi test xong) */}
+      {/* DEBUG: Send test transcripts (for development) */}
       <div className="absolute top-16 left-4 z-50">
         <button
           className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow-lg transition-transform active:scale-95"
           onClick={() => {
             const mySentences = [
-              "Xin chào mọi người tham gia họp.",
-              "Hôm nay ta bàn về dự án mạng xã hội nội bộ.",
-              "Team Backend ra sao rồi?",
-              "Đang làm API login và profile.",
-              "Xong JWT và chuẩn bị làm Redis Cache.",
-              "Quá tốt, chờ frontend ghép.",
-              "Xong 80% giao diện trang chủ rồi.",
-              "Chiều nay có API, test luôn chứ?",
-              "Đúng vậy, để em check Postman trước.",
-              "Lỗi Egress ghi hình LiveKit xử lý được chưa?",
-              "Em đã cấu hình tự tạo bucket trên MinIO.",
-              "Để anh test lại xem có file mp4 chưa.",
-              "Giọng nói tiếng Việt nhận diện ổn chứ?",
-              "Đang code phần gom cụm 30 câu realtime.",
-              "Ok, vậy ổn rồi. Giờ chờ kết quả từ AI."
+              "Hello everyone joining the meeting.",
+              "Today we discuss the internal social network project.",
+              "How's the Backend team doing?",
+              "Working on login and profile APIs.",
+              "Finished JWT and preparing Redis Cache.",
+              "Great, waiting for frontend integration.",
+              "Finished 80% of the homepage UI.",
+              "API available this afternoon, test it?",
+              "Yes, let me check Postman first.",
+              "Is the LiveKit Egress recording issue fixed?",
+              "I configured auto-bucket creation on MinIO.",
+              "Let me re-test for the mp4 file.",
+              "Is Vietnamese voice recognition stable?",
+              "Coding the 30-sentence realtime grouping part.",
+              "Ok, looks good. waiting for AI results."
             ];
 
             let index = 0;
             const timer = setInterval(() => {
               if (index >= 15) {
                 clearInterval(timer);
-                alert("Bạn đã gửi xong 15 câu!");
+                alert("Sent 15 test sentences!");
                 return;
               }
 
@@ -389,10 +389,10 @@ export function ActiveMeetingRoom({ roomId, teamId, initialRoomInfo }: ActiveMee
               }]);
 
               index++;
-            }, 1000); // Mỗi 1 giây gửi 1 câu
+            }, 1000);
           }}
         >
-          🔥 Gửi 15 câu (Mỗi Tab bấm 1 phát)
+          🔥 Send 15 Test Sentences
         </button>
       </div>
 

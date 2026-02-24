@@ -4,11 +4,11 @@ set -e
 create_database() {
   local db_name=$1
   if psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT 1 FROM pg_database WHERE datname='$db_name'" | grep -q 1; then
-    echo "Database [$db_name] đã tồn tại, bỏ qua."
+    echo "Database [$db_name] already exists, skipping."
   else
-    echo "Đang tạo database [$db_name]..."
+    echo "Creating database [$db_name]..."
     createdb -U "$POSTGRES_USER" "$db_name"
-    echo "Database [$db_name] đã được tạo."
+    echo "Database [$db_name] created."
   fi
 }
 
@@ -28,7 +28,7 @@ create_database "sprint_db"
 create_database "video_chat_db"
 
 
-echo "Đang thêm extensions..."
+echo "Adding extensions..."
 psql -U "$POSTGRES_USER" -d "team" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
 psql -U "$POSTGRES_USER" -d "task" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
 psql -U "$POSTGRES_USER" -d "user" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
@@ -40,4 +40,4 @@ psql -U "$POSTGRES_USER" -d "list_db" -c "CREATE EXTENSION IF NOT EXISTS dblink;
 psql -U "$POSTGRES_USER" -d "epic_db" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
 psql -U "$POSTGRES_USER" -d "sprint_db" -c "CREATE EXTENSION IF NOT EXISTS dblink;"
 
-echo "Hoàn tất script khởi tạo Postgres."
+echo "Postgres initialization complete."

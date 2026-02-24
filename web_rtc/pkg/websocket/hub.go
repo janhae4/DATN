@@ -528,7 +528,7 @@ func (c *Client) readPump() {
 				event := map[string]interface{}{
 					"roomId":    roomID,
 					"userId":    c.userID,
-					"userName":  c.userName, // Thêm tên người nói
+					"userName":  c.userName, // Add speaker name
 					"content":   content,
 					"timestamp": time.Now().Format(time.RFC3339),
 				}
@@ -791,7 +791,7 @@ func (c *Client) readPump() {
 	}
 }
 
-// ServeUploadRecording - HTTP endpoint nhận file upload từ browser sau khi ghi xong
+// ServeUploadRecording - HTTP endpoint receiving file upload from browser after recording finishes
 func (h *Hub) ServeUploadRecording(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

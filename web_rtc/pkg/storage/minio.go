@@ -22,7 +22,17 @@ var defaultClient *MinioClient
 func InitMinio() error {
 	endpoint := os.Getenv("MINIO_ENDPOINT")
 	if endpoint == "" {
+		endpoint = os.Getenv("MINIO_ENDPOINT_INTERNAL")
+	}
+	if endpoint == "" {
 		endpoint = "localhost:9000"
+	}
+
+	// Strip protocol if present (minio.New expects host:port)
+	if len(endpoint) > 7 && endpoint[:7] == "http://" {
+		endpoint = endpoint[7:]
+	} else if len(endpoint) > 8 && endpoint[:8] == "https://" {
+		endpoint = endpoint[8:]
 	}
 
 	accessKey := os.Getenv("MINIO_ACCESS_KEY")

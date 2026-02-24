@@ -64,7 +64,7 @@ export function ChatPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="w-80 h-full flex-shrink-0 bg-neutral-900/95 backdrop-blur-md border-l border-white/10 flex flex-col z-10 animate-in slide-in-from-right duration-300">
+    <div className="w-80 h-full shrink-0 bg-neutral-900/95 backdrop-blur-md border-l border-white/10 flex flex-col z-10 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
         <h3 className="text-lg font-semibold text-white">Chat</h3>
@@ -108,10 +108,10 @@ export function ChatPanel({
                   )}
                   {isOwnMessage && msg.isPrivate && (
                     <p className="text-[10px] font-medium text-purple-200 mb-1">
-                      Nhắn riêng cho {msg.targetUserName || peerNames?.get(msg.targetUserId!) || 'ai đó'}
+                      Private message to {msg.targetUserName || peerNames?.get(msg.targetUserId!) || 'someone'}
                     </p>
                   )}
-                  <p className="text-sm break-words">{msg.content}</p>
+                  <p className="text-sm wrap-break-word">{msg.content}</p>
                   <p
                     className={`text-xs mt-1 ${isOwnMessage ? "text-blue-200" : "text-neutral-500"}`}
                   >
@@ -132,7 +132,7 @@ export function ChatPanel({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-xs bg-neutral-800/80 border-white/10 text-neutral-300 hover:bg-neutral-800 hover:text-white">
-                  {targetUserId === "all" ? "Tất cả mọi người" : peerNames.get(targetUserId)}
+                  {targetUserId === "all" ? "Everyone" : peerNames.get(targetUserId)}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-72 bg-neutral-900 border-white/10 text-neutral-300 mb-2">
@@ -140,10 +140,10 @@ export function ChatPanel({
                   className="text-xs focus:bg-white/10 focus:text-white cursor-pointer"
                   onClick={() => setTargetUserId("all")}
                 >
-                  Tất cả mọi người
+                  Everyone
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuLabel className="text-[10px] text-neutral-500 uppercase tracking-wider">Trong phòng</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-[10px] text-neutral-500 uppercase tracking-wider">Participants</DropdownMenuLabel>
                 {Array.from(peerNames.entries()).map(([id, name]) => (
                   <DropdownMenuItem
                     key={id}

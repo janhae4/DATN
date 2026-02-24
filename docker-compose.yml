@@ -408,6 +408,38 @@ services:
       args:
         APP_NAME: file
 
+  web_rtc_service:
+    build:
+      context: ./web_rtc
+      dockerfile: Dockerfile
+    container_name: web_rtc_service
+    ports:
+      - "8005:8005"
+    environment:
+      - LIVEKIT_URL=http://livekit:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=4msnddOgHpRlhfN1P2uVM0akISxFJJPY
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - PORT=8005
+      - DATABASE_VIDEO_CHAT_URL=postgresql://postgres:postgres@postgres:5432/call
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_PUBLIC_URL=http://localhost:9000
+      - MINIO_ENDPOINT_INTERNAL=http://minio:9000
+      - GEMINI_API_KEY=key
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      livekit:
+        condition: service_started
+    networks:
+      - app-network
+
   mongo-express:
     image: mongo-express
     restart: always
@@ -428,6 +460,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
         NEXT_PUBLIC_SOCKET_URL: ws://127.0.0.1:4001
+        NEXT_PUBLIC_WEBRTC_WS_URL: ws://127.0.0.1:8005/ws
+        NEXT_PUBLIC_LIVEKIT_URL: http://127.0.0.1:7880
     container_name: nextjs_frontend
     restart: always
     ports:
@@ -437,6 +471,8 @@ services:
       - INTERNAL_API_URL=http://api_gateway:3000
       - NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
       - NEXT_PUBLIC_SOCKET_URL=ws://127.0.0.1:4001
+      - NEXT_PUBLIC_WEBRTC_WS_URL=ws://127.0.0.1:8005/ws
+      - NEXT_PUBLIC_LIVEKIT_URL=http://127.0.0.1:7880
     networks:
       - app-network
     extra_hosts:

@@ -12,9 +12,9 @@ import {
     VideoPresets
 } from 'livekit-client';
 
-const WS_URL = 'ws://127.0.0.1:8005/ws';
+const WS_URL = process.env.NEXT_PUBLIC_WEBRTC_WS_URL || 'ws://127.0.0.1:8005/ws';
 // LiveKit URL (inside browser should use the public one, or localhost if testing)
-const LIVEKIT_URL = 'http://127.0.0.1:7880';
+const LIVEKIT_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'http://127.0.0.1:7880';
 
 interface WebSocketMessage {
     type: string;
@@ -485,7 +485,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
                         setJoinErrorMessage(payload.message);
                     } else if (payload.code === 'CALL_ENDED') {
                         setJoinStatus('denied');
-                        setJoinErrorMessage('Phòng họp này đã kết thúc.');
+                        setJoinErrorMessage('This meeting has ended.');
                     } else {
                         addToast('error', payload.message || 'Error joining room');
                     }
