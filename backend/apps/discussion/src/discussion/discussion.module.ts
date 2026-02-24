@@ -10,8 +10,9 @@ import {
 } from '@app/contracts';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from './schema/message.schema';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { RmqModule } from '@app/common';
 import { Discussion, DiscussionSchema } from './schema/discussion.schema';
+
 @Module({
   imports: [
     ClientConfigModule,
@@ -32,22 +33,9 @@ import { Discussion, DiscussionSchema } from './schema/discussion.schema';
         schema: MessageSchema,
       },
     ]),
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (cfg: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: DISCUSSION_EXCHANGE,
-            type: 'direct'
-          }
-        ],
-        uri: cfg.getRMQUrl(),
-        connectionInitOptions: { wait: false },
-      }),
-    }),
+    RmqModule.register(),
   ],
   controllers: [DiscussionController],
-  providers: [DiscussionService, DiscussionController]
+  providers: [DiscussionService]
 })
 export class DiscussionModule { }

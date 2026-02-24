@@ -17,8 +17,10 @@ export enum CallRole {
 export interface CreateCallPayload {
   userId?: string;
   teamId: string;
-  refId?: string;      
-  refType?: RefType;    
+  refId?: string;
+  refType?: RefType;
+  password?: string;
+  isLobbyEnabled?: boolean;
 }
 
 export interface KickUserPayload {

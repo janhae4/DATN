@@ -24,7 +24,7 @@ export class NotificationService {
     const notifications = await this.amqp.request({
       exchange: NOTIFICATION_EXCHANGE,
       routingKey: NOTIFICATION_PATTERN.FIND,
-      payload: userId
+      payload: {userId}
     })
     console.log(notifications);
     return notifications

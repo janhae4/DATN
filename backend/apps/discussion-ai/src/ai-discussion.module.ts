@@ -17,6 +17,7 @@ import { RmqModule } from '@app/common';
 import { RedisServiceModule } from '@app/redis-service';
 @Module({
   imports: [
+
     ClientConfigModule,
     MongooseModule.forRootAsync({
       useFactory: (config: ClientConfigService) => ({
@@ -34,14 +35,7 @@ import { RedisServiceModule } from '@app/redis-service';
         schema: AiMessageSchema,
       }
     ]),
-    RmqModule.register({
-      exchanges: [
-        {
-          name: CHATBOT_EXCHANGE,
-          type: 'direct',
-        }
-      ]
-    }),
+    RmqModule.register(),
     RedisServiceModule
   ],
   providers: [

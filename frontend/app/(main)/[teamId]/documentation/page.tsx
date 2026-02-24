@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Check,
   Square,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,16 +103,16 @@ const DroppableBreadcrumbItem = ({
         ref={setNodeRef}
         onClick={onClick}
         className={cn(
-          "flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-all whitespace-nowrap",
+          "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all whitespace-nowrap",
           isOver
-            ? "bg-zinc-200 dark:bg-zinc-800"
-            : "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+            ? "bg-primary/10 text-primary"
+            : "hover:bg-muted/60",
           isCurrent
-            ? "font-semibold text-zinc-900 dark:text-zinc-100 cursor-default"
-            : "text-zinc-500 cursor-pointer",
+            ? "font-bold text-foreground cursor-default bg-muted/30"
+            : "text-muted-foreground cursor-pointer hover:text-foreground",
         )}
       >
-        {isRoot && <Home className="h-3.5 w-3.5" />}
+        {isRoot && <Home className="h-4 w-4" />}
         <span>{name}</span>
       </button>
     </div>
@@ -413,10 +414,10 @@ export default function AttachmentPage() {
           prev.map((item) =>
             item.id === stagedItem.id
               ? {
-                  ...item,
-                  status: isCanceled ? "waiting" : "error",
-                  progress: 0,
-                }
+                ...item,
+                status: isCanceled ? "waiting" : "error",
+                progress: 0,
+              }
               : item,
           ),
         );
@@ -471,11 +472,12 @@ export default function AttachmentPage() {
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-hidden relative rounded-lg bg-white/50 dark:bg-zinc-900/20 select-none"
+      className="flex-1 overflow-hidden relative rounded-lg bg-background select-none h-full"
       onDragOver={handleNativeDragOver}
       onPointerDown={handlePointerDown}
       onDrop={handleDrop}
     >
+
       {isSelecting && selectionRect && (
         <div
           className="absolute z-50 border border-blue-500 bg-blue-500/20 pointer-events-none"
@@ -493,25 +495,28 @@ export default function AttachmentPage() {
         onDragEnd={handleDragEnd}
         onDragOver={handleDndDragOver}
       >
-        <div className="container mx-auto h-[calc(100vh-40px)] flex flex-col">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4 pt-4">
-            <div className="space-y-0.5">
-              <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+        <div className="container mx-auto h-[calc(100vh-40px)] flex flex-col relative z-10 p-4 sm:p-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+            <div className="space-y-4 max-w-lg">
+              <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground leading-[1.1] flex items-center gap-3">
                 File Explorer
                 <HelpCircle
-                  className="h-4 w-4 text-zinc-400 cursor-pointer hover:text-zinc-600"
+                  className="h-6 w-6 text-muted-foreground/40 cursor-pointer hover:text-primary transition-colors"
                   onClick={startTour}
                 />
               </h1>
-              <p className="text-xs text-zinc-500 font-medium">
-                Manage assets for{" "}
-                {selectedProjectId
-                  ? projects?.find((p) => p.id === selectedProjectId)?.name
-                  : "All Projects"}
+              <p className="text-sm sm:text-base text-muted-foreground font-medium leading-relaxed">
+                Manage, share, and organize assets for{" "}
+                <span className="text-foreground font-bold">
+                  {selectedProjectId
+                    ? projects?.find((p) => p.id === selectedProjectId)?.name
+                    : "All Projects"}
+                </span>
+                .
               </p>
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <Select
                 value={selectedProjectId}
                 onValueChange={(val) => {
@@ -525,13 +530,13 @@ export default function AttachmentPage() {
                   setBreadcrumbs([]);
                 }}
               >
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[180px] sm:w-[220px] h-11 rounded-xl bg-card border-border/50 text-sm font-semibold">
                   <SelectValue placeholder="Select Project" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Personal Files</SelectItem>
+                <SelectContent className="rounded-xl border-border/50">
+                  <SelectItem value="unassigned" className="font-bold text-sm">Personal Files</SelectItem>
                   {projects?.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
+                    <SelectItem key={p.id} value={p.id} className="font-bold text-sm">
                       {p.name}
                     </SelectItem>
                   ))}
@@ -545,43 +550,42 @@ export default function AttachmentPage() {
                 multiple
               />
               <Button
+                variant="outline"
+                onClick={() => setIsCreateFolderOpen(true)}
+                className="gap-2 hidden sm:flex h-11 px-5 rounded-xl border-border/50 bg-card hover:bg-muted font-bold text-sm transition-all hover:scale-101 active:scale-99"
+              >
+                <FolderPlus className="h-4.5 w-4.5 text-muted-foreground" />
+                <span>New Folder</span>
+              </Button>
+              <Button
                 variant="default"
                 onClick={() => {
                   if (fileInputRef.current) fileInputRef.current.click();
                 }}
-                className="gap-2"
+                className="gap-2 h-11 px-6 rounded-xl bg-black hover:bg-primary/90 text-white font-bold text-smimary/20 transition-all hover:scale-101 active:scale-99"
               >
-                <UploadCloud className="h-4 w-4" />
-                <span className="hidden sm:inline">Upload</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => setIsCreateFolderOpen(true)}
-                className="gap-2 hidden sm:flex"
-              >
-                <FolderPlus className="h-4 w-4" />
-                <span>New Folder</span>
+                <UploadCloud className="h-4.5 w-4.5 text-white" />
+                <span className="hidden  sm:inline text-white">Upload Files</span>
               </Button>
             </div>
           </div>
 
-          <div className="bg-zinc-50/80 dark:bg-zinc-900/50 border rounded-lg p-2 mb-4 flex flex-col sm:flex-row gap-3 items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
-            <div className="flex items-center gap-2 flex-1 w-full overflow-hidden bg-zinc-50 dark:bg-zinc-950 rounded-md px-2 h-10">
+          <div className="bg-card/60 border border-border/50 rounded-2xl p-2.5 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between sticky top-0 z-20">
+            <div className="flex items-center gap-2 flex-1 w-full overflow-hidden bg-background/50 rounded-xl px-3 h-12 border border-border/30ner">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0"
+                className="h-8 w-8 shrink-0 hover:bg-muted text-muted-foreground"
                 disabled={breadcrumbs.length === 0}
                 onClick={handleNavigateUp}
                 title="Go to parent folder"
               >
-                <CornerLeftUp className="h-4 w-4 text-zinc-500" />
+                <CornerLeftUp className="h-4 w-4 text-muted-foreground" />
               </Button>
 
-              <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 shrink-0 mx-1" />
+              <div className="h-5 w-px bg-border/50 shrink-0 mx-2" />
 
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar mask-gradient-right flex-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-gradient-right flex-1 font-medium pb-1 pt-1">
                 <DroppableBreadcrumbItem
                   id={null}
                   name="Home"
@@ -592,7 +596,7 @@ export default function AttachmentPage() {
 
                 {breadcrumbs.map((crumb, index) => (
                   <React.Fragment key={crumb.id}>
-                    <ChevronRight className="h-3.5 w-3.5 text-zinc-300 shrink-0" />
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                     <DroppableBreadcrumbItem
                       id={crumb.id}
                       name={crumb.name}
@@ -605,13 +609,13 @@ export default function AttachmentPage() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-[180px]">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+              <div className="relative flex-1 sm:w-[240px]">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search"
+                  placeholder="Search files..."
                   value={fileNameFilter}
                   onChange={(e) => setFileNameFilter(e.target.value)}
-                  className="pl-8 h-9 text-xs"
+                  className="pl-10 h-12 rounded-xl bg-background/50 border-border/30 focus-visible:ring-primary/20 text-sm font-medium transition-allner"
                 />
               </div>
             </div>
@@ -620,7 +624,7 @@ export default function AttachmentPage() {
           {stagedFiles.length > 0 && (
             <div
               className={cn(
-                "fixed bottom-10 right-6 z-50 w-96 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
+                "fixed bottom-10 right-6 z-50 w-96 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
                 isMinimized ? "h-12" : "max-h-[80vh]",
               )}
             >
@@ -737,18 +741,18 @@ export default function AttachmentPage() {
 
                         {(stagedFile.status === "waiting" ||
                           stagedFile.status === "error") && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                            onClick={() =>
-                              handleCancelUpload(stagedFile.id as string)
-                            }
-                            title="Remove file"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                              onClick={() =>
+                                handleCancelUpload(stagedFile.id as string)
+                              }
+                              title="Remove file"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
 
                         {stagedFile.status === "success" && (
                           <div className="h-8 w-8 flex items-center justify-center">
@@ -801,7 +805,7 @@ export default function AttachmentPage() {
           >
             {isDragging && (
               <div className="absolute inset-0 z-50 bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-lg flex flex-col items-center justify-center backdrop-blur-[1px]">
-                <div className="bg-white dark:bg-zinc-900 p-4 rounded-full shadow-lg mb-4">
+                <div className="bg-white dark:bg-zinc-900 p-4 rounded-full mb-4">
                   <UploadCloud className="h-10 w-10 text-blue-800" />
                 </div>
                 <h3 className="text-xl font-bold text-blue-800 dark:text-blue-400">
@@ -848,13 +852,13 @@ export default function AttachmentPage() {
                 {activeDragItem ? (
                   <div className="pointer-events-none">
                     {selectedIds.has(activeDragItem.id) &&
-                    selectedIds.size > 1 ? (
+                      selectedIds.size > 1 ? (
                       <div className="relative">
                         <FileDragPreview
                           file={activeDragItem}
                           targetFolderName={dragOverTargetName}
                         />
-                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-md">
+                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white">
                           +{selectedIds.size - 1}
                         </div>
                       </div>
@@ -900,7 +904,7 @@ export default function AttachmentPage() {
                   }
                   disabled={
                     paginationState.pageIndex + 1 >=
-                      (pagination?.totalPages || 1) || isLoading
+                    (pagination?.totalPages || 1) || isLoading
                   }
                 >
                   Next

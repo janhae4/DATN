@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 
 import {
     Clock3,
@@ -84,9 +84,10 @@ const formatDate = (date: Date) => {
 
 export function MeetingHistory() {
     const router = useRouter()
+    const { teamId } = useParams()
 
     const handleRowClick = (callId: string) => {
-        router.push(`/meeting/summary/${callId}`)
+        router.push(`/${teamId}/meeting/summary/${callId}`)
     }
 
     return (

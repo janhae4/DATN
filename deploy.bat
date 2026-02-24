@@ -1,7 +1,7 @@
 @echo off
-docker compose up -d rabbitmq redis postgres pgadmin meili-search chroma ollama minio mongo_db mongo_rs_init mongo-express
+@REM docker compose up -d rabbitmq redis postgres pgadmin meili-search chroma ollama minio mongo_db mongo_rs_init mongo-express
 
-docker compose up -d --build chatbot frontend
+@REM docker compose up -d --build chatbot frontend
 
 docker compose up -d --build api_gateway auth_service user_service
 

@@ -34,7 +34,7 @@ export class UserService {
     return this.amqpConnection.request({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_ONE,
-      payload: id,
+      payload: {id},
     });
   }
 

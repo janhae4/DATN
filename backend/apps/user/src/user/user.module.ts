@@ -18,6 +18,7 @@ import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
+
     ClientConfigModule,
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
@@ -28,14 +29,10 @@ import { RedisServiceModule } from '@app/redis-service';
       }),
     }),
     TypeOrmModule.forFeature([User, Account, Follow, UserSkill]),
-    RmqModule.register({
-      exchanges: [
-        { name: USER_EXCHANGE, type: 'direct' },
-      ]
-    }),
+    RmqModule.register(),
     RedisServiceModule
   ],
   controllers: [UserController],
-  providers: [UserService, UserController],
+  providers: [UserService],
 })
 export class UserModule { }

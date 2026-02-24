@@ -9,6 +9,7 @@ import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
+
     ClientConfigModule,
     TypeOrmModule.forRootAsync({
       useFactory: (cfg: ClientConfigService) => ({
@@ -26,7 +27,7 @@ import { RmqModule } from '@app/common';
       inject: [ClientConfigService],
     }),
     TypeOrmModule.forFeature([Notification]),
-    RmqModule.register({ exchanges: [{ name: NOTIFICATION_EXCHANGE, type: 'direct' }] }),
+    RmqModule.register(),
   ],
   providers: [NotificationService, NotificationController, NotificationGateway],
   controllers: [NotificationController],

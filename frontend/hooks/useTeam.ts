@@ -68,7 +68,7 @@ export const useTeams = () => {
 
 export const useTeam = (teamId: string | null) => {
   return useQuery({
-    queryKey: ["team"],
+    queryKey: ["team", teamId],
     queryFn: () => teamService.getTeam(teamId as string),
     enabled: !!teamId,
   });

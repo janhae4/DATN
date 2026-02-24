@@ -21,7 +21,7 @@ export class TeamService {
     return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_BY_USER_ID,
-      payload: id,
+      payload: { id },
     }));
   }
 
@@ -54,7 +54,7 @@ export class TeamService {
     return unwrapRpcResult(await this.amqpConnection.request({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.ADD_MEMBER,
-      payload: payload,
+      payload
     }));
   }
 

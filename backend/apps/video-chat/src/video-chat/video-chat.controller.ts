@@ -32,7 +32,14 @@ export class VideoChatController {
   })
   async createCall(createCallDto: CreateCallDto) {
     this.logger.log(`Handling Create Call for Room: ${createCallDto.teamId}`);
-    return this.videoChatService.createOrJoinCall(createCallDto.userId || "", createCallDto.teamId, createCallDto.refId, createCallDto.refType);
+    return this.videoChatService.createOrJoinCall(
+      createCallDto.userId || "",
+      createCallDto.teamId,
+      createCallDto.refId,
+      createCallDto.refType,
+      createCallDto.password,
+      createCallDto.isLobbyEnabled
+    );
   }
 
   /**
@@ -196,5 +203,18 @@ export class VideoChatController {
   }) {
     this.logger.log(`RabbitMQ: Client ${data.clientId} disconnected`);
     return { success: true, clientId: data.clientId };
+  }
+
+  @RabbitRPC({
+    exchange: VIDEO_CHAT_EXCHANGE,
+    routingKey: VIDEO_CHAT_PATTERN.GET_CALL,
+    queue: VIDEO_CHAT_PATTERN.GET_CALL,
+  })
+
+  async getCallInfo(payload: {
+    roomId: string,
+    userId: string
+  }) {
+    return await this.videoChatService.getCallInfo(payload.roomId, payload.userId);
   }
 }

@@ -68,7 +68,9 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
       newSocket.on("file_status", (data) => {
         if (data.status === "completed") {
-          toast.success(`File ${data.name} has been processed by AI! You are now able to chat!`);
+          toast.success(
+            `File ${data.name} has been processed by AI! You are now able to chat!`,
+          );
         } else if (data.status === "failed") {
           toast.error(`File ${data.name} processing failed!`);
         }

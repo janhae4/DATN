@@ -38,7 +38,7 @@ export class UserCacheService {
         const fetchData = await fetcher?.() || await this.amqp.request({
             exchange: USER_EXCHANGE,
             routingKey: USER_PATTERNS.FIND_ONE,
-            payload: userId,
+            payload: { id: userId },
         })
 
         console.log("fetchData in getUserInfo: ", fetchData)
@@ -52,25 +52,11 @@ export class UserCacheService {
     async handleUserLogin(user: User) {
         if (!user || !user.id) return;
 
-        this.logger.log(`Received login event, caching for user: ${user.id}`);
-
+        this.logger.log(`Received login event, invalidating cache for user: ${user.id}`);
         try {
-            const pipe = this.redisService.getClient().pipeline();
-
-            const profileKey = this.getUserInfoKey(user.id);
-            const profileData = { id: user.id, name: user.name, avatar: user.avatar };
-            pipe.set(
-                profileKey,
-                JSON.stringify(profileData),
-                'EX',
-                TTL_24_HOURS,
-            );
-            await pipe.exec();
-
-            this.logger.log(`Successfully executed cache pipeline for user ${user.id}`);
-
+            await this.delete(user.id);
         } catch (redisError) {
-            this.logger.error(`Failed to execute cache pipeline for user ${user.id}`, redisError);
+            this.logger.error(`Failed to execute cache deletion for user ${user.id}`, redisError);
         }
     }
 
@@ -136,15 +122,10 @@ export class UserCacheService {
 
         this.logger.log(`Updating cached profile for user: ${user.id}`);
         const key = this.getUserInfoKey(user.id);
-        const profileData = {
-            id: user.id,
-            name: user.name,
-            avatar: user.avatar,
-        };
 
         await this.redisService.set(
             key,
-            JSON.stringify(profileData),
+            user,
             TTL_24_HOURS,
         );
     }

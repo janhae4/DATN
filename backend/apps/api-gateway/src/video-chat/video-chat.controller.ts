@@ -4,6 +4,8 @@ import {
   Body,
   Get,
   UseGuards,
+  Param,
+  Query,
 } from '@nestjs/common';
 import { VideoChatService } from './video-chat.service';
 import { CreateCallDto } from '@app/contracts/video-chat/dto/create-call.dto';
@@ -14,6 +16,7 @@ import { RoleGuard } from '../common/role/role.guard';
 import { Roles } from '../common/role/role.decorator';
 
 @UseGuards(RoleGuard)
+@Roles(Role.USER, Role.ADMIN)
 @Controller('video-call')
 export class VideoChatController {
   constructor(private readonly videoChatService: VideoChatService) { }
@@ -42,6 +45,47 @@ export class VideoChatController {
   @Roles(Role.USER, Role.ADMIN)
   getCallHistory(@CurrentUser('id') userId: string) {
     return this.videoChatService.getCallHistory(userId);
+  }
+
+  @Get('team/:teamId/history')
+  @Roles(Role.USER, Role.ADMIN)
+  getTeamCallHistory(
+    @Param('teamId') teamId: string,
+    @CurrentUser('id') userId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.videoChatService.getCallHistoryByTeamId(teamId, userId, page, limit);
+  }
+
+  @Get(':callId/action-items')
+  @Roles(Role.USER, Role.ADMIN)
+  getActionItems(
+    @Param('callId') callId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.videoChatService.getActionItems(callId, page, limit);
+  }
+
+  @Get(':callId/recordings')
+  @Roles(Role.USER, Role.ADMIN)
+  getRecordings(
+    @Param('callId') callId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.videoChatService.getRecordings(callId, page, limit);
+  }
+
+  @Get(':callId/transcripts')
+  @Roles(Role.USER, Role.ADMIN)
+  getTranscripts(
+    @Param('callId') callId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+  ) {
+    return this.videoChatService.getTranscripts(callId, page, limit);
   }
 
   @Post('kick')
@@ -139,5 +183,43 @@ export class VideoChatController {
     } catch (error) {
       return { error: error.message };
     }
+  }
+
+  @Get(':roomId')
+  async getCallInfo(@Param('roomId') roomId: string, @CurrentUser('id') userId: string) {
+    return this.videoChatService.getCallInfo(roomId, userId);
+  }
+
+  @Post('action-item/:itemId')
+  @Roles(Role.USER, Role.ADMIN)
+  async updateActionItem(
+    @Param('itemId') itemId: string,
+    @Body() body: any
+  ) {
+    return this.videoChatService.updateActionItem(itemId, body);
+  }
+
+  @Get('action-item/delete/:itemId')
+  @Roles(Role.USER, Role.ADMIN)
+  async deleteActionItem(
+    @Param('itemId') itemId: string
+  ) {
+    return this.videoChatService.deleteActionItem(itemId);
+  }
+
+  @Post('action-items/bulk-update')
+  @Roles(Role.USER, Role.ADMIN)
+  async bulkUpdateActionItems(
+    @Body() body: { callId: string, status: string }
+  ) {
+    return this.videoChatService.bulkUpdateActionItems(body.callId, body.status);
+  }
+
+  @Post('action-items/bulk-delete')
+  @Roles(Role.USER, Role.ADMIN)
+  async bulkDeleteActionItems(
+    @Body() body: { callId: string }
+  ) {
+    return this.videoChatService.bulkDeleteActionItems(body.callId);
   }
 }

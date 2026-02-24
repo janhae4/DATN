@@ -17,10 +17,10 @@ interface TranscriptPanelProps {
 }
 
 // 2. Main Component
-export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ 
-  isOpen, 
-  onClose, 
-  messages 
+export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
+  isOpen,
+  onClose,
+  messages
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -34,14 +34,14 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="w-80 h-full flex flex-col bg-neutral-900 border-l border-neutral-800 shrink-0">
-      
+    <div className="w-80 h-full flex-shrink-0 bg-neutral-900/95 backdrop-blur-md border-l border-white/10 flex flex-col z-10 animate-in slide-in-from-right duration-300">
+
       {/* Minimal Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800">
         <h3 className="text-sm font-medium text-neutral-200 tracking-wide">
           Transcript
         </h3>
-        <button 
+        <button
           onClick={onClose}
           className="text-neutral-500 hover:text-white transition-colors duration-200"
           aria-label="Close"
@@ -51,8 +51,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
       </div>
 
       {/* Content Area */}
-      <div 
-        ref={scrollRef} 
+      <div
+        ref={scrollRef}
         className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth"
       >
         {messages.length === 0 ? (
@@ -71,7 +71,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                   {msg.timestamp}
                 </span>
               </div>
-              
+
               {/* Content - No bubble, just clean text */}
               <p className="text-sm text-neutral-400 leading-relaxed font-light">
                 {msg.content}

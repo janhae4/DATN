@@ -18,6 +18,7 @@ import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
     imports: [
+
         ClientConfigModule,
         MailerModule.forRootAsync({
             imports: [ClientConfigModule],
@@ -36,9 +37,7 @@ import { RedisServiceModule } from '@app/redis-service';
                 },
             }),
         }),
-        RmqModule.register({
-            exchanges: [{ name: GMAIL_EXCHANGE, type: 'direct' }],
-        }),
+        RmqModule.register(),
         RedisServiceModule
     ],
     controllers: [GmailController],

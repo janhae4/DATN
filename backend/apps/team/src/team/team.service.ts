@@ -164,7 +164,7 @@ export class TeamService {
     const ownerProfile = await this.amqp.request<User>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_ONE,
-      payload: ownerId,
+      payload: { id: ownerId },
     });
 
     if (!ownerProfile) {
@@ -323,6 +323,8 @@ export class TeamService {
       }
     };
 
+    await this.teamCache.delete(teamId);
+
     this.amqp.publish(EVENTS_EXCHANGE, EVENTS.ADD_MEMBER, eventPayload);
 
     return updatedTeam;
@@ -350,11 +352,13 @@ export class TeamService {
       const users = await this.userCacheService.getManyUserInfo([userId]);
 
       const user = users && users.length > 0 ? users[0] : null;
-      const memberState = await this.teamCache.getTeamMember(teamId, userId);
-      if (memberState) {
-        memberState.status = MemberStatus.ACCEPTED;
-        await this.teamCache.setTeamMember(teamId, userId, memberState);
-      }
+      // Update cache directly to avoid circular RPC and permission check failures
+      await this.teamCache.setTeamMember(teamId, userId, {
+        role: member.role,
+        status: MemberStatus.ACCEPTED,
+        isActive: true,
+        joinedAt: member.joinedAt || new Date()
+      });
 
       this.amqp.publish(
         EVENTS_EXCHANGE,
@@ -860,6 +864,8 @@ export class TeamService {
         isActive: true
       }
     });
+
+    console.log(isMember);
 
     if (!isMember) {
       throw new ForbiddenException('You do not have permission to view this team');

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ApiGatewayController } from './api-gateway.controller';
 import { ApiGatewayService } from './api-gateway.service';
 import { ClientConfigModule } from '@app/contracts';
-import { GatewayRabbitMQModule } from '../rabbitmq/gateway-rabbitmq.module';
 import { UserModule } from '../user/user.module';
 import { AuthModule } from '../auth/auth.module';
 import { TeamModule } from '../team/team.module';
@@ -26,7 +25,6 @@ import { RmqModule } from '@app/common';
 @Module({
   imports: [
     ClientConfigModule,
-    GatewayRabbitMQModule,
     AuthModule,
     TeamModule,
     ChatbotModule,
@@ -44,7 +42,7 @@ import { RmqModule } from '@app/common';
     WebhooksModule,
     VideoChatModule,
     GmailModule,
-    RmqModule
+    RmqModule.register(),
   ],
   controllers: [ApiGatewayController],
   providers: [RpcErrorToHttpFilter, ApiGatewayService],

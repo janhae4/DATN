@@ -619,6 +619,7 @@ export class UserService {
       await this.userCache.cacheUserProfile(user);
       this.amqp.publish(EVENTS_EXCHANGE, EVENTS.USER_UPDATED, userUpdated);
     } else {
+      console.log(user, result);
       this.logger.warn(
         `Update operation did not return a user for ID: ${id}. It might not exist.`,
       );
@@ -810,6 +811,7 @@ export class UserService {
   }
 
   async updateSkills(userId: string, skills: string[]) {
+    await this.userCache.delete(userId)
     return await this.dataSource.transaction(async (manager) => {
       await this.syncUserSkills(manager, userId, skills);
     });

@@ -1,42 +1,39 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull, In } from 'typeorm';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import {
+  Call,
+  CallActionItem,
+  CallParticipant,
+  CallSummaryBlock,
   CallTranscript,
   CHATBOT_EXCHANGE, CHATBOT_PATTERN, MemberRole, REDIS_EXCHANGE,
-  REDIS_PATTERN, SOCKET_EXCHANGE, TEAM_EXCHANGE, TEAM_PATTERN,
+  REDIS_PATTERN, RefType, SOCKET_EXCHANGE, TEAM_EXCHANGE, TEAM_PATTERN,
+  TranscriptSegment,
   User, USER_EXCHANGE, USER_PATTERNS
 } from '@app/contracts';
 
-import { unwrapRpcResult } from '@app/common';
-import { TranscriptSegment } from '@app/contracts/video-chat/dto/transcript.dto';
-import { CallActionItem } from '@app/contracts/video-chat/entities/call-action-item.entity';
-import { CallParticipant, CallRole } from '@app/contracts/video-chat/entities/call-participant.entity';
-import { CallSummaryBlock } from '@app/contracts/video-chat/entities/call-summary-block.entity';
-import { Call } from '@app/contracts/video-chat/entities/call.entity';
-import { RefType } from '@app/contracts';
+import { RmqClientService, unwrapRpcResult } from '@app/common';
+import { MeetingCacheService, TeamCacheService, UserCacheService } from '@app/redis-service';
+import { CallRole } from '@app/contracts/video-chat/entities/call-participant.entity';
 
 @Injectable()
 export class VideoChatService {
   private readonly logger = new Logger(VideoChatService.name);
 
   constructor(
-    private readonly amqpConnection: AmqpConnection,
-
+    private readonly amqpConnection: RmqClientService,
     @InjectRepository(Call)
     private readonly callRepo: Repository<Call>,
-
     @InjectRepository(CallParticipant)
     private readonly participantRepo: Repository<CallParticipant>,
-
     @InjectRepository(CallSummaryBlock)
     private readonly summaryRepo: Repository<CallSummaryBlock>,
-
     @InjectRepository(CallActionItem)
     private readonly actionItemRepo: Repository<CallActionItem>,
-
-    // Inject DataSource để dùng Transaction
+    private readonly teamCache: TeamCacheService,
+    private readonly meetingCache: MeetingCacheService,
+    private readonly userCache: UserCacheService,
     private readonly dataSource: DataSource,
   ) { }
 
@@ -50,14 +47,10 @@ export class VideoChatService {
   }
 
   private async verifyPermission(userId: string, teamId: string, roles: MemberRole[]) {
-    return unwrapRpcResult(await this.amqpConnection.request<boolean>({
-      exchange: TEAM_EXCHANGE,
-      routingKey: TEAM_PATTERN.VERIFY_PERMISSION,
-      payload: { teamId: teamId, userId: userId, roles: roles }
-    }))
+    return this.teamCache.checkPermission(teamId, userId, roles);
   }
 
-  async createOrJoinCall(userId: string, teamId: string, refId?: string, refType?: RefType) {
+  async createOrJoinCall(userId: string, teamId: string, refId?: string, refType?: RefType, password?: string, isLobbyEnabled?: boolean) {
     try {
       await this.verifyPermission(userId, teamId, [MemberRole.ADMIN, MemberRole.MEMBER, MemberRole.OWNER]);
 
@@ -75,7 +68,7 @@ export class VideoChatService {
         });
 
         if (activeCall) {
-            const participant = await this.participantRepo.findOne({
+          const participant = await this.participantRepo.findOne({
             where: { callId: activeCall.id, userId }
           });
 
@@ -91,7 +84,6 @@ export class VideoChatService {
             })
           );
 
-          // Map role từ string sang Enum của DB
           const dbRole = participantRole === 'OWNER' ? CallRole.HOST : (participantRole as CallRole);
 
           if (participant && !participant.leftAt) {
@@ -102,8 +94,6 @@ export class VideoChatService {
             };
           }
 
-          // Upsert participant (Nếu chưa có thì tạo, có rồi thì update leftAt = null)
-          // TypeORM upsert dựa trên conflict paths (unique constraint: [callId, userId])
           await this.participantRepo.upsert(
             {
               callId: activeCall.id,
@@ -121,15 +111,15 @@ export class VideoChatService {
         }
       }
 
-      // Tạo room mới
       const newRoomId = this.generateRoomCode();
       const newCall = this.callRepo.create({
         roomId: newRoomId,
         teamId,
         refId,
         refType,
+        password,
+        isLobbyEnabled: !!isLobbyEnabled,
         participants: [
-          // TypeORM cho phép tạo relation lồng nhau khi save cascade
           { userId, role: CallRole.HOST }
         ]
       });
@@ -148,11 +138,9 @@ export class VideoChatService {
   }
 
   async getCallHistory(userId: string) {
-    // Sử dụng QueryBuilder để lọc các cuộc gọi mà userId đã tham gia
-    // Logic: Select Call join với Participant(userId) -> lấy được Call ID -> Load lại Call + All Participants
     const history = await this.callRepo.createQueryBuilder('call')
       .innerJoin('call.participants', 'filterParticipant', 'filterParticipant.userId = :userId', { userId })
-      .leftJoinAndSelect('call.participants', 'allParticipants') // Load tất cả participants của call đó
+      .leftJoinAndSelect('call.participants', 'allParticipants')
       .getMany();
 
     this.logger.log(
@@ -164,7 +152,7 @@ export class VideoChatService {
   async getCallHistoryByRoomId(roomId: string) {
     const history = await this.callRepo.find({
       where: { roomId },
-      relations: ['participants'], // Load relation
+      relations: ['participants'],
     });
 
     this.logger.log(
@@ -178,7 +166,7 @@ export class VideoChatService {
     const user = unwrapRpcResult(await this.amqpConnection.request<Partial<User>>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_ONE,
-      payload: userId
+      payload: { id: userId }
     }))
 
     if (!user) {
@@ -207,88 +195,76 @@ export class VideoChatService {
     }
   }
 
- async processMeetingSummary(roomId: string) {
+  async processMeetingSummary(roomId: string) {
     this.logger.log(`Processing meeting summary for Room: ${roomId}`);
 
-    // Kiểm tra cuộc gọi có tồn tại không
     const call = await this.callRepo.findOne({ where: { roomId }, select: ['id'] });
     if (!call) {
       this.logger.error(`Call with roomId ${roomId} not found for summary processing`);
       return;
     }
 
-    // 1. Lấy dữ liệu Transcript từ Redis Buffer
-    const transcriptsRpc = await this.amqpConnection.request({
-      exchange: REDIS_EXCHANGE,
-      routingKey: REDIS_PATTERN.POP_MEETING_BUFFER,
-      payload: roomId
-    });
+    const transcriptsRpc = await this.meetingCache.popMeetingBuffer(roomId);
 
     const transcripts: TranscriptSegment[] = unwrapRpcResult(transcriptsRpc);
 
-    // Nếu không có transcript nào thì dừng
     if (!transcripts || transcripts.length === 0) {
-        this.logger.warn(`No transcripts found for room ${roomId}`);
-        return;
+      this.logger.warn(`No transcripts found for room ${roomId}`);
+      return;
     }
 
-    // 2. Sắp xếp transcript theo thời gian (Tăng dần)
     transcripts.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    // Format text để gửi cho AI (Dạng "User A: Hello world")
     const conversationText = transcripts
       .map(t => `${t.userName}: ${t.content}`)
       .join("\n");
 
     try {
-        // 3. Gọi AI để tóm tắt hội thoại
-        const result = await this.amqpConnection.request({
-            exchange: CHATBOT_EXCHANGE,
-            routingKey: CHATBOT_PATTERN.SUMMARIZE_MEETING,
-            payload: {
-                roomId,
-                content: conversationText,
-            },
-            timeout: 120000 // 2 phút timeout
+      const result = await this.amqpConnection.request({
+        exchange: CHATBOT_EXCHANGE,
+        routingKey: CHATBOT_PATTERN.SUMMARIZE_MEETING,
+        payload: {
+          roomId,
+          content: conversationText,
+        },
+      });
+
+      const { summary, actionItems } = unwrapRpcResult(result);
+
+      this.logger.log(`AI Summary generated for Room ${roomId}. Saving to DB...`);
+
+      await this.dataSource.transaction(async (manager) => {
+        const transcriptEntities = transcripts.map(t => manager.create(CallTranscript, {
+          callId: call.id,
+          userId: t.userId,
+          content: t.content,
+          timestamp: new Date(t.timestamp)
+        }));
+
+        await manager.save(transcriptEntities);
+
+        const summaryBlock = manager.create(CallSummaryBlock, {
+          callId: call.id,
+          content: summary,
         });
+        await manager.save(summaryBlock);
 
-        const { summary, actionItems } = unwrapRpcResult(result);
+        if (actionItems && actionItems.length > 0) {
+          const items = actionItems.map(item => manager.create(CallActionItem, {
+            callId: call.id,
+            content: item.content,
+            status: 'SUGGESTED',
+          }));
+          await manager.save(items);
+        }
+      });
 
-        this.logger.log(`AI Summary generated for Room ${roomId}. Saving to DB...`);
-
-        // 4. LƯU DỮ LIỆU VÀO DB (Sử dụng Transaction)
-        await this.dataSource.transaction(async (manager) => {
-            const transcriptEntities = transcripts.map(t => manager.create(CallTranscript, {
-                callId: call.id,
-                userId: t.userId,
-                content: t.content, 
-                timestamp: new Date(t.timestamp)
-            }));
-            
-            await manager.save(transcriptEntities);
-
-            const summaryBlock = manager.create(CallSummaryBlock, {
-                callId: call.id,
-                content: summary,
-            });
-            await manager.save(summaryBlock);
-
-            if (actionItems && actionItems.length > 0) {
-                const items = actionItems.map(item => manager.create(CallActionItem, {
-                    callId: call.id,
-                    content: item.content,
-                    status: 'SUGGESTED', 
-                }));
-                await manager.save(items);
-            }
-        });
-
-        this.logger.log(`✅ Đã lưu thành công Transcript, Summary & Action Items cho phòng ${roomId}`);
+      this.logger.log(`✅ Đã lưu thành công Transcript, Summary & Action Items cho phòng ${roomId}`);
 
     } catch (error) {
-        this.logger.error(`❌ Lỗi khi xử lý tổng kết cuộc họp ${roomId}:`, error);
+      this.logger.error(`❌ Lỗi khi xử lý tổng kết cuộc họp ${roomId}:`, error);
     }
-}
+  }
 
   async kickUser(requesterId: string, targetUserId: string, roomId: string) {
 
@@ -407,21 +383,12 @@ export class VideoChatService {
     if (!requesterParticipant) throw new ForbiddenException('You are not in this room');
 
     const performUnkick = async (adminName: string | undefined) => {
-      const participantRole = unwrapRpcResult(
-        await this.amqpConnection.request({
-          exchange: TEAM_EXCHANGE,
-          routingKey: TEAM_PATTERN.FIND_PARTICIPANT_ROLES,
-          payload: { roomId, userId: targetUserId }
-        })
-      );
+      const member = await this.teamCache.getTeamMember(roomId, targetUserId);
 
-      const dbRole = participantRole === 'OWNER' ? CallRole.HOST : (participantRole as CallRole);
+      const dbRole = member.role === 'OWNER' ? CallRole.HOST : (member.role as CallRole);
 
-      // Unban logic: Tìm record đang bị Banned của user trong call này và restore role
-      // Lưu ý: leftAt có thể vẫn giữ nguyên nếu logic là chỉ unban cho lần vào sau, 
-      // nhưng thường unkick nghĩa là cho phép join lại -> role hết BANNED.
       const updateResult = await this.participantRepo.update(
-        { userId: targetUserId, callId: call.id }, // Update record cũ
+        { userId: targetUserId, callId: call.id },
         { role: dbRole }
       );
 
@@ -439,13 +406,7 @@ export class VideoChatService {
       );
     };
 
-    const users = unwrapRpcResult(
-      await this.amqpConnection.request({
-        exchange: USER_EXCHANGE,
-        routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
-        payload: { userIds: [requesterId, targetUserId] }
-      })
-    );
+    const users = await this.userCache.getManyUserInfo([targetUserId, requesterId]);
     const requesterInfo = users.find(u => u.id === requesterId);
     const targetUserInfo = users.find(u => u.id === targetUserId);
 
@@ -482,7 +443,6 @@ export class VideoChatService {
   }
 
   async updateScreenShareStatus(userId: string, roomId: string, isSharing: boolean) {
-    // Cần lấy callId trước vì update query relation phức tạp
     const call = await this.callRepo.findOne({ where: { roomId }, select: ['id'] });
     if (!call) return;
 
@@ -492,5 +452,12 @@ export class VideoChatService {
     );
 
     this.logger.log(`User ${userId} in room ${roomId} is sharing screen: ${isSharing}`);
+  }
+
+  async getCallInfo(roomId: string, userId: string) {
+    const room = await this.callRepo.findOne({ where: { roomId }, relations: ['participants'] });
+    if (!room) throw new NotFoundException('Room not found');
+    await this.teamCache.checkPermission(room.teamId, userId, [MemberRole.MEMBER, MemberRole.ADMIN, MemberRole.OWNER]);
+    return room;
   }
 }

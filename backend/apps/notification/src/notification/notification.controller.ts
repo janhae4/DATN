@@ -82,7 +82,7 @@ export class NotificationController {
     routingKey: NOTIFICATION_PATTERN.FIND,
     queue: NOTIFICATION_PATTERN.FIND
   })
-  handleGetNotifications(userId: string) {
-    return this.notificationService.getNotifications(userId);
+  handleGetNotifications(payload: { userId: string }) {
+    return this.notificationService.getNotifications(payload.userId);
   }
 }

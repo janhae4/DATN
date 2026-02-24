@@ -27,6 +27,10 @@ export class TeamCacheService {
         return `team:members:${teamId}`;
     }
 
+    async delete(teamId: string) {
+        return this.redisService.del(this.getTeamRolesKey(teamId));
+    }
+
     async createTeam(payload: CreateTeamEventPayload) {
         const { members, teamSnapshot, owner } = payload;
         const teamId = teamSnapshot.id;
@@ -118,6 +122,7 @@ export class TeamCacheService {
 
 
     async setTeamMember(teamId: string, userId: string, member: CachedMemberState) {
+        console.log('setTeamMember', teamId, userId, member);
         const key = this.getTeamMembersKey(teamId);
         const data: CachedMemberState = {
             role: member.role,

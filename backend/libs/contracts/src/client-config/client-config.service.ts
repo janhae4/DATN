@@ -95,7 +95,7 @@ export class ClientConfigService {
   -------------------------
   */
   getRMQUrl(): string {
-    console.log('RMQ_URL: ', this.config.get<string>('RMQ_URL', 'amqp://admin:admin123@localhost:5672'));
+    console.log('RMQ_URL:', this.config.get<string>('RMQ_URL', 'amqp://admin:admin123@localhost:5672'));
     return this.config.get<string>('RMQ_URL', 'amqp://admin:admin123@localhost:5672');
   }
 

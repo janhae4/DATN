@@ -6,6 +6,7 @@ import { List } from '@app/contracts/list/list/list.entity';
 
 @Module({
   imports: [
+    
     TypeOrmModule.forFeature([List])
   ],
   controllers: [ListController],

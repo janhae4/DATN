@@ -1,0 +1,6 @@
+package genai // import "google.golang.org/genai"
+
+func (m Models) GenerateContentStream(ctx context.Context, model string, contents []*Content, config *GenerateContentConfig) iter.Seq2[*GenerateContentResponse, error]
+    GenerateContentStream generates a stream of content based on the provided
+    model, contents, and configuration.
+

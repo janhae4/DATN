@@ -35,11 +35,13 @@ export class AuthService {
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: true,
+      path: '/',
       maxAge: 24 * 60 * 60 * 1000,
     });
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: true,
+      path: '/',
       maxAge: 24 * 60 * 60 * 1000 * 14,
     });
   }
@@ -134,11 +136,12 @@ export class AuthService {
     }
   }
 
-  getInfo(id: string) {
-    return this.amqp.request<Partial<User>>({
+  async getInfo(id: string) {
+    console.log("Get INFO")
+    return await this.amqp.request<Partial<User>>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_ONE,
-      payload: id
+      payload: { id }
     });
   }
 
@@ -179,17 +182,23 @@ export class AuthService {
     return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
-      payload: token
+      payload: { token }
     });
   }
 
   async handleGoogleCallback(user: GoogleAccountDto, response: Response) {
-    await this.amqp.request<LoginResponseDto>({
+    const token = await this.amqp.request<LoginResponseDto>({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.GOOGLE_CALLBACK,
       payload: user
     });
-    return response.redirect(`${process.env.CLIENT_URL || 'http://localhost:5000'}/dashboard`);
+
+    if (token.accessToken && token.refreshToken) {
+      this.setCookies(token.accessToken, token.refreshToken, response);
+    }
+
+    console.log()
+    return response.redirect(`${process.env.CLIENT_URL || 'http://127.0.0.1:5000'}/dashboard`);
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {

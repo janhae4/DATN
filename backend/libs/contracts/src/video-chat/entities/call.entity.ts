@@ -33,6 +33,12 @@ export class Call {
   @Column({ type: 'enum', enum: RefType, nullable: true })
   refType: RefType;
 
+  @Column({ nullable: true })
+  password?: string;
+
+  @Column({ default: false })
+  isLobbyEnabled: boolean;
+
   @OneToMany(() => CallParticipant, (participant) => participant.call)
   participants: CallParticipant[];
 

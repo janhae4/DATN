@@ -58,6 +58,10 @@ export function ProfileHeaderAndGeneral() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   React.useEffect(() => {
+    refreshUser()
+  }, [])
+
+  React.useEffect(() => {
     if (user) {
       setName(user.name || "");
       setPhone(user.phone || "");

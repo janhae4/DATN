@@ -1,21 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ClientsModule } from '@nestjs/microservices';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
 import {
   ClientConfigModule,
   ClientConfigService,
-  EVENTS_EXCHANGE,
-  REDIS_EXCHANGE,
-  TASK_EXCHANGE,
   Task,
-  USER_EXCHANGE,
-  LABEL_CLIENT,
-  PROJECT_CLIENT,
-  LIST_CLIENT
 } from '@app/contracts';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
 import { AiStreamService } from './ai-stream.service';
 import { RmqModule } from '@app/common';
@@ -33,15 +24,10 @@ import { RedisServiceModule } from '@app/redis-service';
         synchronize: true,
       })
     }),
-
     TypeOrmModule.forFeature([Task, TaskLabel]),
     RedisServiceModule,
     ClientConfigModule,
-    RmqModule.register({
-      exchanges: [
-        { name: TASK_EXCHANGE, type: 'direct' }
-      ]
-    })
+    RmqModule.register()
   ],
   controllers: [TasksController],
   providers: [TasksService, TasksController, AiStreamService],

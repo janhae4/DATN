@@ -44,7 +44,7 @@ export const ChatInput = ({ input, setInput, onSend, isStreaming }: ChatInputPro
                     "focus-within:border-zinc-300 dark:focus-within:border-zinc-700",
                     "focus-within:shadow-[0_2px_20px_rgba(0,0,0,0.05)] dark:focus-within:shadow-none"
                 )}>
-                 
+
 
                     {/* Text Area */}
                     <Textarea

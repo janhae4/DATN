@@ -10,12 +10,9 @@ import { MinioService } from '@app/minio';
 
 @Module({
   imports: [
+
     ClientConfigModule,
-    RmqModule.register({
-      exchanges: [
-        { name: FILE_EXCHANGE, type: 'direct' },
-      ],
-    }),
+    RmqModule.register(),
     MongooseModule.forRootAsync({
 
       useFactory: (configService: ClientConfigService) => ({

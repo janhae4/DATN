@@ -42,6 +42,7 @@ interface AuthenticatedSocket extends Socket {
     user?: JwtDto;
     accumulatedMessage?: string;
     streamMetadata?: any;
+    videoRoomId?: string;
   };
 }
 @WebSocketGateway({
@@ -82,7 +83,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const user = await this.amqpConnection.request<JwtDto>({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
-      payload: accessToken,
+      payload: { token: accessToken },
     });
 
     if (!user) {
@@ -113,6 +114,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: AuthenticatedSocket) {
     const user = client.data.user as JwtDto;
+    const videoRoomId = client.data.videoRoomId;
+
+    if (videoRoomId) {
+      this.server.to(videoRoomId).emit('user_left_video', {
+        socketId: client.id,
+        userId: user?.id
+      });
+      this.logger.log(`Client ${client.id} left video room ${videoRoomId}`);
+    }
+
     if (user) {
       this.logger.log(`Client disconnected: ${client.id} (User: ${user.id})`);
     } else {
@@ -120,72 +131,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  async sendKickRequestToHost(hostUserId: string, message: string, roomId: string, targetUserId: string) {
-    this.server.to(hostUserId).emit(
-      'request-kick',
-      { message, roomId, targetUserId }
-    );
-    this.logger.log(`Sent kick request to host ${hostUserId}`);
-  }
-
-  async sendUnKickRequestToHost(hostUserId: string, message: string, roomId: string, targetUserId: string) {
-    this.server.to(hostUserId).emit(
-      'request-unkick',
-      { message, roomId, targetUserId }
-    );
-    this.logger.log(`Sent unkick request to host ${hostUserId}`);
-  }
-
-  async notifyUserKicked(targetUserId: string, message: string, roomId: string) {
-    this.server.to(targetUserId).emit(
-      'you-are-kicked',
-      { message }
-    );
-
-    this.server.to(roomId).emit('user_left_video', {
-      userId: targetUserId,
-      socketId: null,
-      reason: 'KICKED'
-    });
-
-    const sockets = await this.server.in(targetUserId).fetchSockets();
-    for (const socket of sockets) {
-      socket.leave(roomId);
-    }
-
-    this.logger.log(`User ${targetUserId} was kicked from room ${roomId}`);
-  }
-
-  async notifyUserUnKicked(targetUserId: string, message: string, roomId: string) {
-    this.server.to(targetUserId).emit(
-      'you-are-unkicked',
-      { message }
-    );
-    this.logger.log(`User ${targetUserId} was un-kicked from room ${roomId}`);
-  }
-
-  @SubscribeMessage("join_room")
-  async joinRoom(
-    client: AuthenticatedSocket,
-    payload: { roomId: string }
-  ) {
-    const user = await this._validateToken(client);
-    if (!user) return
-    const rooms = Array.from(client.rooms);
-    console.log(123, rooms, payload.roomId)
-    const currentRooms = rooms.filter(r => r !== user.id);
-    currentRooms.forEach(r => client.leave(r));
-    client.join(payload.roomId);
-  }
-
-  @SubscribeMessage('leave_room')
-  async handleRoomDisconnect(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() payload: { roomId: string }
-  ) {
-    await client.leave(payload.roomId);
-    this.logger.log(`Client ${client.id} left room ${payload.roomId}`);
-  }
 
   async notifyTaskUpdate(payload: SendTaskNotificationDto) {
     this.server.to(payload.teamId).emit('task_update', payload);
@@ -242,123 +187,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       } as CreateNotificationDto
     });
-  }
-
-  @SubscribeMessage('join_video_room')
-  async handleJoinVideoRoom(
-    client: AuthenticatedSocket,
-    payload: { roomId: string; teamId: string; userInfo: User; role: string }) {
-    const user = await this._validateToken(client);
-    if (!user) return
-
-    const { roomId, userInfo, role } = payload;
-
-    client.join(roomId);
-    this.logger.log(`User ${user.id} joining video room ${roomId}`);
-
-    client.to(roomId).emit('user_joined_video', {
-      userInfo,
-      socketId: client.id,
-      role
-    });
-  }
-
-  @SubscribeMessage('user_toggle_audio')
-  async handleUserToggleAudio(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { roomId: string; userId: string; isMuted: boolean }
-  ) {
-    client.to(data.roomId).emit('user_toggle_audio', {
-      userId: data.userId,
-      isMuted: data.isMuted
-    });
-  }
-
-  @SubscribeMessage('offer')
-  handleOffer(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: {
-      sdp: any; targetUserId: string; roomId: string, userInfo: Partial<User>
-    }
-  ) {
-    this.logger.debug(`Signaling: Offer from ${client.id} to ${data.targetUserId}`);
-
-    client.to(data.targetUserId).emit('offer', {
-      sdp: data.sdp,
-      senderId: client.data.user?.id,
-      senderSocketId: client.id,
-      roomId: data.roomId,
-      userInfo: data.userInfo
-    });
-  }
-
-  @SubscribeMessage('answer')
-  handleAnswer(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { sdp: any; targetUserId: string; roomId: string }
-  ) {
-    client.to(data.targetUserId).emit('answer', {
-      sdp: data.sdp,
-      senderId: client.data.user?.id,
-      senderSocketId: client.id,
-      roomId: data.roomId
-    });
-  }
-
-  @SubscribeMessage('ice_candidate')
-  handleIceCandidate(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { candidate: any; targetUserId: string; roomId: string }
-  ) {
-    client.to(data.targetUserId).emit('ice_candidate', {
-      candidate: data.candidate,
-      senderId: client.data.user?.id,
-      senderSocketId: client.id,
-      roomId: data.roomId
-    });
-  }
-
-  @SubscribeMessage('req_start_speech_ai')
-  handleReqStartSpeechAi(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() payload: { roomId: string }
-  ) {
-    console.log(payload);
-    client.to(payload.roomId).emit('req_start_speech_ai');
-  }
-
-  @SubscribeMessage('send_transcript')
-  async handleSendTranscript(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() payload: { content: string; roomId: string, userId: string }
-  ) {
-    const user = await this._validateToken(client);
-    if (!user) return;
-
-    this.amqpConnection.publish(
-      VIDEO_CHAT_EXCHANGE,
-      VIDEO_CHAT_PATTERN.RECEIVE_TRANSCRIPT,
-      {
-        roomId: payload.roomId,
-        userId: user.id,
-        content: payload.content,
-        timestamp: new Date().toISOString()
-      }
-    );
-  }
-
-  @SubscribeMessage('end_call')
-  handleEndCall(
-    @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() payload: { roomId: string }
-  ) {
-    this.amqpConnection.publish(
-      VIDEO_CHAT_EXCHANGE,
-      'video_chat.call.end',
-      {
-        roomId: payload.roomId
-      }
-    );
   }
 
   @SubscribeMessage(CHATBOT_PATTERN.ASK_QUESTION)
@@ -522,26 +350,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private summaryBuffer = new Map<string, string>();
-  async handleMeetingSummaryStream(payload: MeetingSummaryResponseDto) {
-    const { roomId, event, data } = payload;
-    if (data.status === 'start') {
-      this.logger.log(`Start streaming summary for Room: ${roomId}`);
-      this.summaryBuffer.set(roomId, "");
-    } else if (data.status === 'chunk') {
-      const currentText = this.summaryBuffer.get(roomId) || "";
-      this.summaryBuffer.set(roomId, currentText + data.content);
-    }
-    else if (data.status === 'end') {
-      const fullMessage = this.summaryBuffer.get(roomId);
-      this.logger.log(`End streaming Room ${roomId}. Full Message:`);
-      console.log('Summary Buffer', fullMessage);
-      this.summaryBuffer.delete(roomId);
-    }
-
-    this.server.to(roomId).emit(event, data);
-  }
-
   async publishNotification(dto: CreateNotificationDto) {
     this.logger.log(`Publishing notification: ${dto.metadata}`);
     this.server.to(dto.targetId).emit('notification', dto);
@@ -549,7 +357,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       exchange: NOTIFICATION_EXCHANGE,
       routingKey: NOTIFICATION_PATTERN.CREATE,
       payload: dto
-    }); 
+    });
   }
 
   handleNewMessage(payload: SendMessageEventPayload) {

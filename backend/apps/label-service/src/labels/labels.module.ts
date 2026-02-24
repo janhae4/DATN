@@ -9,6 +9,7 @@ import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
+
     ClientConfigModule,
     TypeOrmModule.forRootAsync({
       imports: [ClientConfigModule],
@@ -21,11 +22,7 @@ import { RmqModule } from '@app/common';
       }),
     }),
     TypeOrmModule.forFeature([Label]),
-    RmqModule.register({
-      exchanges: [
-        {name: LABEL_EXCHANGE, type: 'direct'}
-      ]
-    })
+    RmqModule.register()
   ],
   controllers: [LabelsController],
   providers: [LabelsService],

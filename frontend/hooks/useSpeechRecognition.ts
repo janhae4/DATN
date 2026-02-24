@@ -6,44 +6,71 @@ export const useSpeechRecognition = (
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // Store the latest callback to avoid recreating SpeechRecognition on every render
+  const onResultRef = useRef(onResult);
   useEffect(() => {
-    const SpeechRecognition = 
+    onResultRef.current = onResult;
+  }, [onResult]);
+
+  useEffect(() => {
+    const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = false; 
-    recognition.lang = 'en-US'; 
+    recognition.interimResults = false;
+    recognition.lang = 'vi-VN'; // Support Vietnamese
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[event.results.length - 1][0].transcript;
+      const current = event.resultIndex;
+      const transcript = event.results[current][0].transcript;
       if (transcript.trim()) {
-        onResult(transcript);
+        onResultRef.current(transcript);
       }
     };
 
     recognition.onerror = (event: any) => {
-      console.error("Speech error:", event.error);
+      console.warn("⚠️ Ghi âm hội thoại lỗi (Speech error):", event.error);
+      if (event.error === 'not-allowed' || event.error === 'audio-capture') {
+        setIsListening(false); // Ngắt lặp vô hạn nếu không có mic hoặc bị từ chối
+      }
+    };
+
+    // Auto-restart if it stops unexpectedly (due to silence limit) but intended to be listening
+    recognition.onend = () => {
+      if (isListening) {
+        try {
+          recognition.start();
+        } catch (e) {
+          // ignore already started errors
+        }
+      }
     };
 
     recognitionRef.current = recognition;
-  }, [onResult]);
 
-  const startListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.start();
-      setIsListening(true);
-    }
-  };
+    return () => {
+      recognition.stop();
+    };
+  }, []); // Run only once to setup the instance
 
-  const stopListening = () => {
+  // Effect to manage starting and stopping based on isListening
+  useEffect(() => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+      if (isListening) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) { }
+      } else {
+        recognitionRef.current.stop();
+      }
     }
-  };
+  }, [isListening]);
+
+  const startListening = () => setIsListening(true);
+  const stopListening = () => setIsListening(false);
 
   return { isListening, startListening, stopListening };
 };

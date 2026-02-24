@@ -34,8 +34,8 @@ export class TeamController {
     queue: TEAM_PATTERN.FIND_BY_USER_ID,
     errorHandler: customErrorHandler,
   })
-  async findByUserId(userId: string) {
-    return await this.teamService.findByUserId(userId);
+  async findByUserId(payload: { id: string }) {
+    return await this.teamService.findByUserId(payload.id);
   }
 
   @RabbitRPC({
@@ -54,8 +54,8 @@ export class TeamController {
     queue: TEAM_PATTERN.FIND_ROOMS_BY_USER_ID,
     errorHandler: customErrorHandler,
   })
-  async findByName(userId: string) {
-    return await this.teamService.findRoomsByUserId(userId);
+  async findByName(payload: { userId: string }) {
+    return await this.teamService.findRoomsByUserId(payload.userId);
   }
 
   @RabbitRPC({

@@ -7,4 +7,9 @@ async function bootstrap() {
   app.useGlobalInterceptors(new RpcResponseInterceptor());
   await app.init();
 }
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 bootstrap();

@@ -15,6 +15,7 @@ import { RmqModule } from '@app/common';
 
 @Module({
   imports: [
+
     TypeOrmModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],
@@ -26,12 +27,7 @@ import { RmqModule } from '@app/common';
       }),
     }),
     TypeOrmModule.forFeature([Project]),
-    RmqModule.register({
-      exchanges: [{
-        name: PROJECT_EXCHANGE,
-        type: 'direct',
-      }],
-    }),
+    RmqModule.register(),
   ],
 
   controllers: [ProjectsController],

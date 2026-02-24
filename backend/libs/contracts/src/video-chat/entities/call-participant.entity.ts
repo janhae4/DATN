@@ -8,6 +8,12 @@ export enum CallRole {
   BANNED = 'BANNED',
 }
 
+export enum ParticipantStatus {
+  JOINED = 'JOINED',
+  PENDING = 'PENDING',
+  REJECTED = 'REJECTED',
+}
+
 @Entity()
 @Unique(['callId', 'userId'])
 export class CallParticipant {
@@ -32,6 +38,9 @@ export class CallParticipant {
 
   @Column({ type: 'enum', enum: CallRole, default: CallRole.MEMBER })
   role: CallRole;
+
+  @Column({ type: 'enum', enum: ParticipantStatus, default: ParticipantStatus.JOINED })
+  status: ParticipantStatus;
 
   @Column({ default: false })
   isSharingScreen: boolean;

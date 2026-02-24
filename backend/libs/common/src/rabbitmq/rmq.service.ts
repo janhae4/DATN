@@ -3,7 +3,9 @@ import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class RmqClientService {
-    constructor(private readonly amqp: AmqpConnection) { }
+    constructor(
+        private readonly amqp: AmqpConnection,
+    ) { }
 
     async request<T>({
         exchange,
@@ -17,15 +19,15 @@ export class RmqClientService {
         } | string
     }): Promise<T> {
         try {
+
             const response = await this.amqp.request<any>({
                 exchange,
                 routingKey,
                 payload,
-                timeout: 10000,
             });
 
             if (response && response.error) {
-                console.log(response);  
+                console.log(response);
                 console.error(`RPC Error [${routingKey}]:`, response.message);
 
                 throw new HttpException(

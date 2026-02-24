@@ -133,8 +133,9 @@ export class UserController {
     queue: USER_PATTERNS.FIND_ONE,
     errorHandler: customErrorHandler
   })
-  findOne(id: string) {
-    return this.userService.findOne(id);
+  findOne(payload: { id: string }) {
+    console.log(payload);
+    return this.userService.findOne(payload.id);
   }
 
   @RabbitRPC({

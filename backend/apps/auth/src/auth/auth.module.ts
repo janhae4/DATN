@@ -9,6 +9,7 @@ import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
+
     PassportModule,
     ClientConfigModule,
     JwtModule.registerAsync({
@@ -18,14 +19,10 @@ import { RedisServiceModule } from '@app/redis-service';
         secret: cfg.getJWTSecret(),
       }),
     }),
-    RmqModule.register({
-      exchanges: [
-        { name: AUTH_EXCHANGE, type: 'direct' },
-      ]
-    }),
+    RmqModule.register(),
     RedisServiceModule
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthController],
+  providers: [AuthService],
 })
 export class AuthModule { }

@@ -18,6 +18,7 @@ import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
+
     TypeOrmModule.forRootAsync({
       imports: [ClientConfigModule],
       inject: [ClientConfigService],
@@ -30,14 +31,7 @@ import { RedisServiceModule } from '@app/redis-service';
     }),
     TypeOrmModule.forFeature([Team, TeamMember]),
     ClientConfigModule,
-    RmqModule.register({
-      exchanges: [
-        {
-          name: TEAM_EXCHANGE,
-          type: 'direct'
-        }
-      ]
-    }),
+    RmqModule.register(),
     RedisServiceModule
   ],
   controllers: [TeamController],

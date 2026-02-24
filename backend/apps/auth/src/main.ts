@@ -5,6 +5,7 @@ import { RpcResponseInterceptor } from '@app/common/interceptor/rpc-response.int
 async function bootstrap() {
   const app = await NestFactory.create(AuthModule);
   app.useGlobalInterceptors(new RpcResponseInterceptor())
+
   await app.init();
   console.log('Auth microservice is listening (RPC Mode)');
 }

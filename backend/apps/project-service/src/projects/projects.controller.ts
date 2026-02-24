@@ -7,6 +7,7 @@ import {
   PROJECT_EXCHANGE,
 } from '@app/contracts';
 import { ProjectsService } from './projects.service';
+import { customErrorHandler } from '@app/common';
 
 @Controller()
 export class ProjectsController {
@@ -16,6 +17,7 @@ export class ProjectsController {
     exchange: PROJECT_EXCHANGE,
     routingKey: PROJECT_PATTERNS.CREATE,
     queue: PROJECT_PATTERNS.CREATE,
+    errorHandler: customErrorHandler
   })
   create(createProjectDto: CreateProjectDto) {
     return this.projectService.create(createProjectDto);
@@ -25,6 +27,7 @@ export class ProjectsController {
     exchange: PROJECT_EXCHANGE,
     routingKey: PROJECT_PATTERNS.GET_BY_ID,
     queue: PROJECT_PATTERNS.GET_BY_ID,
+    errorHandler: customErrorHandler
   })
   findOne(payload: { id: string }) {
     return this.projectService.findOne(payload.id);
@@ -34,6 +37,7 @@ export class ProjectsController {
     exchange: PROJECT_EXCHANGE,
     routingKey: PROJECT_PATTERNS.UPDATE,
     queue: PROJECT_PATTERNS.UPDATE,
+    errorHandler: customErrorHandler
   })
   update(payload: { id: string; updateProjectDto: UpdateProjectDto }) {
     return this.projectService.update(payload.id, payload.updateProjectDto);
@@ -43,8 +47,8 @@ export class ProjectsController {
     exchange: PROJECT_EXCHANGE,
     routingKey: PROJECT_PATTERNS.REMOVE,
     queue: PROJECT_PATTERNS.REMOVE,
+    errorHandler: customErrorHandler
   })
-
   remove(payload: { id: string }) {
     return this.projectService.remove(payload.id);
   }
@@ -53,6 +57,7 @@ export class ProjectsController {
     exchange: PROJECT_EXCHANGE,
     routingKey: PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID,
     queue: PROJECT_PATTERNS.FIND_ALL_BY_TEAM_ID,
+    errorHandler: customErrorHandler
   })
   findAllByTeamId(payload: { teamId: string }) {
     return this.projectService.findAllByTeamId(payload.teamId);

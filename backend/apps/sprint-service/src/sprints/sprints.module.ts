@@ -8,6 +8,7 @@ import { RmqModule } from '@app/common';
 import { RedisServiceModule } from '@app/redis-service';
 @Module({
   imports: [
+
     TypeOrmModule.forFeature([Sprint]),
     TypeOrmModule.forRootAsync({
       imports: [ClientConfigModule],
@@ -19,14 +20,7 @@ import { RedisServiceModule } from '@app/redis-service';
         synchronize: true,
       })
     }),
-    RmqModule.register({
-      exchanges: [
-        {
-          name: SPRINT_EXCHANGE,
-          type: 'direct'
-        }
-      ]
-    }),
+    RmqModule.register(),
     RedisServiceModule
   ],
   controllers: [SprintsController],

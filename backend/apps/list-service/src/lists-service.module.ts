@@ -7,6 +7,7 @@ import { List } from '@app/contracts/list/list/list.entity';
 import { RmqModule } from '@app/common';
 @Module({
   imports: [
+
     ClientConfigModule,
     TypeOrmModule.forRootAsync({
       imports: [ClientConfigModule],
@@ -20,9 +21,7 @@ import { RmqModule } from '@app/common';
     }),
     TypeOrmModule.forFeature([List]),
     ListModule,
-    RmqModule.register({
-      exchanges: [{ name: LIST_EXCHANGE, type: 'direct' }]
-    })
+    RmqModule.register()
   ],
 })
 export class ListServiceModule { }

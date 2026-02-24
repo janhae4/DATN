@@ -6,23 +6,13 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { Call, CallActionItem, CallParticipant, CallSummaryBlock, CallTranscript, ClientConfigService, VIDEO_CHAT_EXCHANGE } from '@app/contracts';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { RmqModule } from '../../../../libs/common/src/rabbitmq/rmq.module';
+import { RedisServiceModule } from '@app/redis-service';
 @Module({
   imports: [
-    RabbitMQModule.forRootAsync({
-      imports: [ClientConfigModule],
-      inject: [ClientConfigService],
-      useFactory: (config: ClientConfigService) => ({
-        exchanges: [
-          {
-            name: VIDEO_CHAT_EXCHANGE,
-            type: 'direct',
-          },
-        ],
-        uri: config.getRMQUrl(),
-        enableControllerDiscovery: true
-      }),
-    }),
-    ClientConfigModule, 
+    RmqModule.register(),
+    RedisServiceModule,
+    ClientConfigModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -30,10 +20,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         type: 'postgres',
         url: configService.get<string>('DATABASE_VIDEO_CHAT_URL', 'postgres://postgres:postgres@localhost:5432/video_chat_db'),
         entities: [
-          Call, 
-          CallParticipant, 
-          CallSummaryBlock, 
-          CallActionItem, 
+          Call,
+          CallParticipant,
+          CallSummaryBlock,
+          CallActionItem,
           CallTranscript
         ],
         synchronize: true,
@@ -42,9 +32,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     }),
 
     TypeOrmModule.forFeature([
-      Call, 
-      CallParticipant, 
-      CallSummaryBlock, 
+      Call,
+      CallParticipant,
+      CallSummaryBlock,
       CallActionItem,
       CallTranscript
     ]),

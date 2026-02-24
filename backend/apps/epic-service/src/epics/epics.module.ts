@@ -14,6 +14,7 @@ import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
+
     ClientConfigModule,
     TypeOrmModule.forRootAsync({
       imports: [ClientConfigModule],
@@ -27,7 +28,7 @@ import { RedisServiceModule } from '@app/redis-service';
     }),
     RedisServiceModule,
     TypeOrmModule.forFeature([Epic]),
-    RmqModule.register({ exchanges: [{ name: EPIC_EXCHANGE, type: 'direct' }] }),
+    RmqModule.register(),
   ],
   controllers: [EpicsController],
   providers: [EpicsService],

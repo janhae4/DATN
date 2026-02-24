@@ -8,8 +8,9 @@ import { RedisServiceModule } from '@app/redis-service';
 
 @Module({
   imports: [
+
     ConfigModule.forRoot({ isGlobal: true }),
-    RmqModule.register({ exchanges: [{ name: CALENDAR_EXCHANGE, type: 'direct' }] }),
+    RmqModule.register(),
     RedisServiceModule
   ],
   controllers: [CalendarController],

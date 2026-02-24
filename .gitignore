@@ -11,3 +11,16 @@ chroma_db
 
 # MeiliSearch Data
 meili-data/
+
+# Environment files
+.env
+.env.*
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+node_modules/
+dist/
+build/

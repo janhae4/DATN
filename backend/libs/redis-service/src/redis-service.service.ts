@@ -22,8 +22,12 @@ export class RedisService implements OnModuleDestroy {
 
     async set(key: string, value: any, ttl?: number, callback?: () => void): Promise<void> {
         const valStr = typeof value === 'string' ? value : JSON.stringify(value);
-        if (ttl && callback) {
-            await this.redis.set(key, valStr, 'EX', ttl, callback);
+        if (ttl) {
+            if (callback) {
+                await this.redis.set(key, valStr, 'EX', ttl, callback);
+            } else {
+                await this.redis.set(key, valStr, 'EX', ttl);
+            }
         } else {
             await this.redis.set(key, valStr);
         }

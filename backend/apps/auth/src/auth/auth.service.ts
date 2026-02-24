@@ -443,13 +443,9 @@ export class AuthService {
     return await this.handleRegisterGoogle(data);
   }
 
-  getInfo(id: string) {
+  async getInfo(id: string) {
     this.logger.log(`Fetching info for user ${id}.`);
-    return this.amqp.request<User>({
-      exchange: USER_EXCHANGE,
-      routingKey: USER_PATTERNS.FIND_ONE,
-      payload: id,
-    });
+    return await this.userCacheService.getUserInfo(id);
   }
 
 
@@ -543,7 +539,7 @@ export class AuthService {
     return await this.amqp.request<User>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_ONE,
-      payload: id,
+      payload: { id },
     })
   }
 }

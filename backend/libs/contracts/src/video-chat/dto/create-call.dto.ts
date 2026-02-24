@@ -1,4 +1,4 @@
-import { IsArray, IsEmpty, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsEmpty, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { RefType } from '../enum';
 
 export class CreateCallDto {
@@ -22,4 +22,12 @@ export class CreateCallDto {
   @IsString()
   @IsOptional()
   refId?: string
+
+  @IsString()
+  @IsOptional()
+  password?: string
+
+  @IsBoolean()
+  @IsOptional()
+  isLobbyEnabled?: boolean
 }

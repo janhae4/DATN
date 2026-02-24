@@ -48,22 +48,22 @@ const data: {
       icon: Bot,
       isActive: true,
     },
-    // {
-    //   title: "Meeting",
-    //   url: "meeting",
-    //   icon: SquareTerminal,
-    //   isActive: true,
-    //   items: [
-    //     {
-    //       title: "Join a meeting",
-    //       url: "meeting",
-    //     },
-    //     {
-    //       title: "Meeting history",
-    //       url: "meeting/summary",
-    //     },
-    //   ],
-    // },
+    {
+      title: "Meeting",
+      url: "meeting",
+      icon: SquareTerminal,
+      isActive: true,
+      items: [
+        {
+          title: "Join a meeting",
+          url: "meeting",
+        },
+        {
+          title: "Meeting history",
+          url: "meeting/history",
+        },
+      ],
+    },
     {
       title: "Documentation",
       url: "documentation",

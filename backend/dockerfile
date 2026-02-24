@@ -13,6 +13,8 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 ARG APP_NAME
+ENV SERVICE_NAME=${APP_NAME}
+
 RUN if [ "$APP_NAME" = "gmail" ]; then \
     npm install --no-save @css-inline/css-inline-linux-x64-musl; \
     else \
