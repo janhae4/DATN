@@ -9,23 +9,25 @@ export class RmqClientService {
         exchange,
         routingKey,
         payload,
+        timeout = 10000,
     }: {
         exchange: string;
         routingKey: string;
         payload: {
             [key: string]: any
-        } | string
+        } | string;
+        timeout?: number;
     }): Promise<T> {
         try {
             const response = await this.amqp.request<any>({
                 exchange,
                 routingKey,
                 payload,
-                timeout: 10000,
+                timeout,
             });
 
             if (response && response.error) {
-                console.log(response);  
+                console.log(response);
                 console.error(`RPC Error [${routingKey}]:`, response.message);
 
                 throw new HttpException(

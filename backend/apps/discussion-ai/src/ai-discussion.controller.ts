@@ -1,7 +1,7 @@
 import { CHATBOT_PATTERN } from '@app/contracts/chatbot/chatbot.pattern';
 import { Controller } from '@nestjs/common';
-import { CHATBOT_EXCHANGE} from '@app/contracts';
-import type {MessageMetadataDto, MessageUserChatbot} from '@app/contracts';
+import { CHATBOT_EXCHANGE } from '@app/contracts';
+import type { MessageMetadataDto, MessageUserChatbot } from '@app/contracts';
 import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 import { customErrorHandler } from '@app/common';
 import { AiDiscussionService } from './ai-discussion.service';

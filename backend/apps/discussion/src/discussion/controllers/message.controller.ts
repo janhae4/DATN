@@ -51,6 +51,43 @@ export class MessageController {
     }
 
     /**
+     * RPC handler to retrieve recent messages for AI analysis.
+     * Used by task generation feature to analyze chat context.
+     * @param payload Contains discussionId and optional limit.
+     * @returns Array of recent messages with sender information.
+     */
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.GET_RECENT_MESSAGES,
+        queue: DISCUSSION_PATTERN.GET_RECENT_MESSAGES,
+        errorHandler: customErrorHandler,
+    })
+    async getRecentMessages(payload: { discussionId: string; limit?: number }) {
+        const { discussionId, limit = 50 } = payload;
+        return this.messageService.getRecentMessages(discussionId, limit);
+    }
+
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.GET_MESSAGE_BY_ID,
+        queue: DISCUSSION_PATTERN.GET_MESSAGE_BY_ID,
+        errorHandler: customErrorHandler,
+    })
+    async getMessageById(payload: { messageId: string }) {
+        return this.messageService.getMessageById(payload.messageId);
+    }
+
+    @RabbitRPC({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.SUMMARIZE,
+        queue: DISCUSSION_PATTERN.SUMMARIZE,
+        errorHandler: customErrorHandler,
+    })
+    async summarizeDiscussion(payload: { discussionId: string; limit?: number }) {
+        return this.messageService.summarizeDiscussion(payload.discussionId, payload.limit ?? 50);
+    }
+
+    /**
      * RPC handler to search for messages within a specific conversation.
      * @param payload Contains the search query, conversationId, userId, and pagination options.
      * @returns A list of messages matching the search criteria.

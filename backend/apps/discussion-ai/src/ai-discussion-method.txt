@@ -1,0 +1,79 @@
+﻿async generateTasksFromChat(payload: {
+    userId: string;
+    channelId: string;
+    serverId: string;
+    teamId?: string;
+    messageLimit?: number;
+  }) {
+    const { userId, channelId, serverId, teamId, messageLimit = 30 } = payload;
+    
+    this.logger.log(Generating tasks from chat for user , channel );
+
+    try {
+      // Fetch recent messages from discussion service
+      const messagesResponse = await this.amqp.request<any>({
+        exchange: 'discussion_exchange',
+        routingKey: 'chat.getMessagesFromDiscussion',
+        payload: {
+          userId,
+          channelId,
+          page: 1,
+          limit: messageLimit,
+        },
+      });
+
+      if (!messagesResponse || !messagesResponse.data || messagesResponse.data.length === 0) {
+        throw new BadRequestException('No messages found in this channel');
+      }
+
+      const messages = messagesResponse.data;
+      
+      // Format messages for AI context
+      const chatContext = messages.map((msg: any) => ({
+        content: msg.content,
+        sender: {
+          id: msg.sender._id || msg.sender.id,
+          name: msg.sender.name,
+        },
+        timestamp: msg.createdAt || msg.timestamp,
+      }));
+
+      // Get team members if teamId is provided
+      let teamMembers = [];
+      if (teamId) {
+        try {
+          teamMembers = await this.amqp.request<any[]>({
+            exchange: 'team_exchange',
+            routingKey: 'team.findParticipant',
+            payload: { teamId },
+          });
+        } catch (error) {
+          this.logger.warn(Failed to fetch team members: );
+        }
+      }
+
+      // Publish to Python chatbot service for AI task generation
+      this.amqp.publish(
+        CHATBOT_EXCHANGE,
+        CHATBOT_PATTERN.GENERATE_TASKS_FROM_CHAT,
+        {
+          userId,
+          channelId,
+          serverId,
+          teamId,
+          chatContext,
+          teamMembers,
+        },
+      );
+
+      return {
+        success: true,
+        message: 'Task generation started. You will receive tasks shortly.',
+        messageCount: messages.length,
+      };
+    } catch (error) {
+      this.logger.error(Failed to generate tasks from chat: );
+      throw new BadRequestException(Task generation failed: );
+    }
+  }
+}

@@ -95,7 +95,7 @@ export const ChatHeader: React.FC<ChatHeaderProps & { onOpenMobileMenu?: () => v
                             {canSummarize ? (
                                 <p>AI Summarize Conversation</p>
                             ) : (
-                                <p>Need at least 20 messages to summarize</p>
+                                <p>Need at least 10 messages to summarize</p>
                             )}
                         </TooltipContent>
                     </Tooltip>

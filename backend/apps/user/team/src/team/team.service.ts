@@ -736,7 +736,7 @@ export class TeamService {
     const visibleUserIds = Object.keys(membersRolesMap).filter(userId => {
       if (isManager) return true;
       return membersRolesMap[userId].status === MemberStatus.ACCEPTED;
-    });
+    }).filter(id => id && id.trim() !== '');
     console.log("visibleUserIds", visibleUserIds);
     if (visibleUserIds.length === 0) return [];
     const userProfiles = await this.fetchUserProfiles(visibleUserIds);

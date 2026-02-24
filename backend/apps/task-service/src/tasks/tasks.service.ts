@@ -1,15 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, In, SelectQueryBuilder, Not, Brackets, FindOptionsWhere } from 'typeorm';
-import { CreateTaskDto, UpdateTaskDto, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS, BaseTaskFilterDto, MemberDto, Error, ApprovalStatus, ForbiddenException, NotificationType, SendTeamNotificationDto, TASK_PATTERNS, SendTaskNotificationDto, TeamMember, User } from '@app/contracts';
+import { CreateTaskDto, UpdateTaskDto, LABEL_PATTERNS, AUTH_PATTERN, JwtDto, TEAM_PATTERN, USER_PATTERNS, MemberRole, PROJECT_PATTERNS, Project, ListCategoryEnum, LIST_PATTERNS, BaseTaskFilterDto, MemberDto, ApprovalStatus, ForbiddenException, NotificationType, SendTeamNotificationDto, TASK_PATTERNS, SendTaskNotificationDto, TeamMember, User, DISCUSSION_PATTERN, EPIC_PATTERNS, N8N_PATTERNS } from '@app/contracts';
 import { Task } from '@app/contracts/task/entity/task.entity';
-import { AUTH_EXCHANGE, CHATBOT_EXCHANGE, LABEL_EXCHANGE, LIST_EXCHANGE, PROJECT_EXCHANGE, SOCKET_EXCHANGE, TEAM_EXCHANGE, USER_EXCHANGE } from '@app/contracts/constants';
+import { AUTH_EXCHANGE, CHATBOT_EXCHANGE, LABEL_EXCHANGE, LIST_EXCHANGE, PROJECT_EXCHANGE, SOCKET_EXCHANGE, TEAM_EXCHANGE, USER_EXCHANGE, DISCUSSION_EXCHANGE, EPIC_EXCHANGE, N8N_EXCHANGE } from '@app/contracts/constants';
 import { Label } from '@app/contracts/label/entity/label.entity';
 import { TaskLabel } from '@app/contracts/task/entity/task-label.entity';
 import { RmqClientService, } from '@app/common';
 import { List } from '@app/contracts/list/list/list.entity';
 import { UpdateResult } from 'typeorm/browser';
 import { TeamCacheService } from '@app/redis-service';
+import axios from 'axios';
 
 @Injectable()
 export class TasksService {
@@ -343,8 +344,8 @@ export class TasksService {
     if (sprintId) {
       const memberIds = await this.amqpConnection.request<MemberDto[]>({
         exchange: TEAM_EXCHANGE,
-        routingKey: TEAM_PATTERN.FIND_PARTICIPANT,
-        payload: teamId,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
+        payload: { teamId, userId },
       });
 
       members = await this.amqpConnection.request({
@@ -360,6 +361,9 @@ export class TasksService {
       members
     });
   }
+
+
+
 
   async findAllByProject(userId: string, filters: BaseTaskFilterDto) {
     const project = await this.amqpConnection.request<Project>({
@@ -489,6 +493,14 @@ export class TasksService {
       }).setParameter('labelIds', labelIds);
     }
 
+    if (filters.reporterIds && filters.reporterIds.length > 0) {
+      query.andWhere('task.reporterId IN (:...reporterIds)', { reporterIds: filters.reporterIds });
+    }
+
+    if (filters.approvalStatus) {
+      query.andWhere('task.approvalStatus = :approvalStatus', { approvalStatus: filters.approvalStatus });
+    }
+
     if (sortBy && sortBy.length > 0) {
       const sortMap = {
         'createdAt': 'task.createdAt',
@@ -599,14 +611,26 @@ export class TasksService {
 
     const isAdminOrOwner = [MemberRole.ADMIN, MemberRole.OWNER].includes(member.role as MemberRole);
 
+    const isReporter = task.reporterId === userId;
+    const isAssignee = task.assigneeIds.includes(userId);
+
     if (!isAdminOrOwner) {
-      if (updatePayload.approvalStatus !== undefined) throw new ForbiddenException("Only Owner/Admin can change approval status.");
+      // Allow reporter to resubmit REJECTED task to PENDING
+      const isResubmitting = isReporter &&
+        task.approvalStatus === ApprovalStatus.REJECTED &&
+        updatePayload.approvalStatus === ApprovalStatus.PENDING;
+
+      if (updatePayload.approvalStatus !== undefined && !isResubmitting) {
+        throw new ForbiddenException("Only Owner/Admin can change approval status.");
+      }
+
       if (updatePayload.assigneeIds) throw new ForbiddenException("Members cannot change assignees.");
 
-      if (task.approvalStatus !== ApprovalStatus.APPROVED) throw new ForbiddenException("Task must be approved before it can be edited.");
+      // If not resubmitting, task must be approved to be edited
+      if (!isResubmitting && task.approvalStatus !== ApprovalStatus.APPROVED) {
+        throw new ForbiddenException("Task must be approved before it can be edited.");
+      }
 
-      const isReporter = task.reporterId === userId;
-      const isAssignee = task.assigneeIds.includes(userId);
       if (!isReporter && !isAssignee) throw new ForbiddenException("You can only edit tasks you created or are assigned to.");
     }
 
@@ -708,8 +732,6 @@ export class TasksService {
           await this.taskLabelRepository.save(newLinks);
         }
       } catch (error) {
-        // Nếu RPC lỗi (Label Service chết), ta log lại nhưng KHÔNG crash flow tạo Task.
-        // Task vẫn được tạo nhưng tạm thời không có label (Fail-safe).
         console.error('Error fetching label details via RPC:', error);
       }
     }
@@ -939,5 +961,168 @@ export class TasksService {
         tasksCompleted: parseInt(a.tasksCompleted || '0'),
       })),
     };
+  }
+
+  async generateFromChat(
+    userId: string,
+    discussionId: string,
+    teamId: string,
+    messageLimit: number = 50
+  ) {
+    // 1. Check permission (Admin/Owner only)
+    await this.teamCache.checkPermission(
+      teamId,
+      userId,
+      [MemberRole.ADMIN, MemberRole.OWNER]
+    );
+
+    // 2. Fetch recent messages from discussion service
+    const messages: any = await this.amqpConnection.request({
+      exchange: DISCUSSION_EXCHANGE,
+      routingKey: DISCUSSION_PATTERN.GET_RECENT_MESSAGES,
+      payload: { discussionId, limit: messageLimit }
+    });
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      throw new BadRequestException('No messages found in this discussion');
+    }
+
+    // 3. Get team members with skills (if sprint specified)
+    let members = [];
+    if (teamId) {
+      const memberIds = await this.amqpConnection.request<MemberDto[]>({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
+        payload: { teamId, userId },
+      });
+
+      members = await this.amqpConnection.request({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+        payload: memberIds.map(m => m.id),
+      });
+    }
+
+
+
+    // 4. Build chat context
+    const chatContext = {
+      channelName: `Discussion ${discussionId.substring(0, 8)}`,
+      messages: messages,
+      participants: Array.from(
+        new Set(messages.map((m: any) => m.senderId))
+      ).map((id: string) => ({
+        id,
+        name: messages.find((m: any) => m.senderId === id)?.senderName || 'Unknown'
+      }))
+    };
+
+    const payload = {
+      objective: `Generate tasks from chat conversation.`,
+      chatContext: chatContext,
+      members: members,
+      currentDate: new Date().toISOString()
+    };
+
+    // 5. Call n8n service via RabbitMQ
+    try {
+      console.log("Calling n8n-service with payload");
+      const suggestedTasks: any = await this.amqpConnection.request({
+        exchange: N8N_EXCHANGE,
+        routingKey: N8N_PATTERNS.GENERATE_TASKS,
+        payload: payload,
+        timeout: 60000
+      });
+
+      console.log("=============response from n8n-service: ", JSON.stringify(suggestedTasks, null, 2));
+
+      return suggestedTasks;
+
+    } catch (error) {
+      console.error("Error calling n8n-service:", error);
+      throw new BadRequestException("Failed to generate tasks from AI");
+    }
+  }
+
+  async generateFromMessage(
+    userId: string,
+    messageId: string,
+    teamId: string,
+  ) {
+    // 1. Check permission
+    await this.teamCache.checkPermission(
+      teamId,
+      userId,
+      [MemberRole.ADMIN, MemberRole.OWNER] // Only Admin/Owner can generate tasks
+    );
+
+    // 2. Fetch specific message from discussion service
+    let message: any;
+    try {
+      message = await this.amqpConnection.request({
+        exchange: DISCUSSION_EXCHANGE,
+        routingKey: DISCUSSION_PATTERN.GET_MESSAGE_BY_ID,
+        payload: { messageId }
+      });
+    } catch (error) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (!message) {
+      throw new BadRequestException('Message not found or deleted');
+    }
+
+    const messages = [message]; // Treat as a single message conversation
+
+    // 3. Get team members with skills
+    let members = [];
+    if (teamId) {
+      const memberIds = await this.amqpConnection.request<MemberDto[]>({
+        exchange: TEAM_EXCHANGE,
+        routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
+        payload: { teamId, userId },
+      });
+
+      members = await this.amqpConnection.request({
+        exchange: USER_EXCHANGE,
+        routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+        payload: memberIds.map(m => m.id),
+      });
+    }
+
+
+    // 5. Build chat context for AI
+    const chatContext = {
+      channelName: `Message ${messageId.substring(0, 8)}`,
+      messages: messages,
+      participants: [{
+        id: message.senderId,
+        name: message.senderName || 'Unknown'
+      }]
+    };
+
+    const payload = {
+      objective: `Generate actionable tasks from this specific message.`,
+      chatContext: chatContext,
+      members: members,
+      currentDate: new Date().toISOString()
+    };
+
+    // 6. Call N8n
+    try {
+      console.log("Calling n8n-service for single message");
+      const suggestedTasks: any = await this.amqpConnection.request({
+        exchange: N8N_EXCHANGE,
+        routingKey: N8N_PATTERNS.GENERATE_TASKS,
+        payload: payload,
+        timeout: 60000
+      });
+
+      return suggestedTasks;
+
+    } catch (error) {
+      console.error("Error calling n8n-service for message:", error);
+      throw new BadRequestException("Failed to generate tasks from message");
+    }
   }
 }

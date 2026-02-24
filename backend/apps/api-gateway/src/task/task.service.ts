@@ -177,4 +177,35 @@ export class TaskService {
       payload: { userId, filters },
     });
   }
+
+  async generateFromChat(
+    userId: string,
+    discussionId: string,
+    teamId: string,
+    projectId?: string,
+    sprintId?: string,
+    messageLimit: number = 50
+  ) {
+    return await this.amqp.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.GENERATE_FROM_CHAT,
+      payload: { userId, discussionId, teamId, projectId, sprintId, messageLimit },
+      timeout: 60000,
+    });
+  }
+
+  async generateFromMessage(
+    userId: string,
+    messageId: string,
+    teamId: string,
+    projectId?: string,
+    sprintId?: string
+  ) {
+    return await this.amqp.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.GENERATE_FROM_MESSAGE,
+      payload: { userId, messageId, teamId, projectId, sprintId },
+      timeout: 60000,
+    });
+  }
 }

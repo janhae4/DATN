@@ -15,6 +15,7 @@ import {
   ApiParam,
   ApiResponse,
   ApiTags,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/role/current-user.decorator';
 import { RequestPaginationDto, Role, User } from '@app/contracts';
@@ -131,6 +132,17 @@ export class DiscussionController {
   ) {
     const { page = 1, limit = 20 } = options;
     return this.discussionService.getDiscussionAttachments(discussionId, page, limit);
+  }
+
+  @Post(':discussionId/summarize')
+  @ApiOperation({ summary: 'Summarize discussion chat' })
+  @ApiParam({ name: 'discussionId' })
+  @ApiQuery({ name: 'limit', required: false, example: 50 })
+  summarizeDiscussion(
+    @Param('discussionId') discussionId: string,
+    @Query('limit') limit: number = 50,
+  ) {
+    return this.discussionService.summarizeDiscussion(discussionId, limit);
   }
 
   @Get('teams/:teamId')

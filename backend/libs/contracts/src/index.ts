@@ -217,6 +217,13 @@ export * from './file/file.enum'
 export * from './file/dto/create-file-folder.dto'
 export * from './file/dto/download-file.dto'
 
+/*----
+N8N
+-----*/
+export * from './n8n/n8n.patterns';
+export * from './n8n/n8n.dto';
+
+
 
 
 

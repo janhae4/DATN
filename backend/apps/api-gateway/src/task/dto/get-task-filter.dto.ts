@@ -92,4 +92,16 @@ export class BaseTaskFilterDto {
     @IsUUID()
     @IsOptional()
     projectId?: string;
+
+    @IsOptional()
+    @IsIn(['PENDING', 'APPROVED', 'REJECTED'])
+    approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+
+    @IsOptional()
+    @IsUUID('4', { each: true })
+    @Transform(({ value }) => {
+        if (typeof value === 'string') return value.split(',');
+        return value;
+    })
+    reporterIds?: string[];
 }

@@ -167,5 +167,13 @@ export const discussionService = {
       params: { page, limit }
     });
     return data;
-  }
+  },
+
+  summarizeDiscussion: async (discussionId: string, limit: number = 50): Promise<{ summary: string }> => {
+    const { data } = await apiClient.post<{ summary: string }>(`/discussions/${discussionId}/summarize`, {}, {
+      params: { limit }
+    });
+    return data;
+  },
+
 };

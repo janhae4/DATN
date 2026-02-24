@@ -42,6 +42,7 @@ interface MessageListProps {
     onUpdateMessage: (messageId: string, content: string, attachments?: AttachmentDto[]) => void;
     onDeleteMessage: (messageId: string) => void;
     onReply: (message: MessageSnapshot) => void;
+    onGenerateTask?: (messageId?: string) => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -59,7 +60,8 @@ export const MessageList: React.FC<MessageListProps> = ({
     voiceParticipants,
     onUpdateMessage,
     onDeleteMessage,
-    onReply
+    onReply,
+    onGenerateTask
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -205,6 +207,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                                     console.log('Message not found in current view');
                                 }
                             }}
+                            onGenerateTask={() => onGenerateTask?.(msg._id)}
                         />
                     );
                 })}

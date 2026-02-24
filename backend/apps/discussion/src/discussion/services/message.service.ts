@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, Types } from 'mongoose';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
@@ -24,6 +24,8 @@ import {
     MemberRole,
     FILE_EXCHANGE,
     FILE_PATTERN,
+    N8N_EXCHANGE,
+    N8N_PATTERNS,
 } from '@app/contracts';
 import { Discussion, DiscussionDocument, LatestMessageSnapshot, Membership, MembershipDocument, ReadReceipt, ReadReceiptDocument } from '../schema/discussion.schema';
 import { Attachment, Message, ReplySnapshot, SenderSnapshot } from '../schema/message.schema';
@@ -215,6 +217,99 @@ export class MessageService {
      */
     async getAllMessages() {
         return await this.messageModel.find().exec();
+    }
+
+    /**
+     * Fetches recent messages from a discussion for AI analysis.
+     * Used by task generation feature to analyze chat context.
+     * 
+     * @param discussionId The ID of the discussion
+     * @param limit Maximum number of messages to fetch (default: 50)
+     * @returns Array of recent messages with sender information
+     */
+    async getRecentMessages(discussionId: string, limit: number = 50) {
+        const discussion = await this.discussionModel.findById(discussionId);
+        if (!discussion || discussion.isDeleted) {
+            throw new NotFoundException('Discussion not found or deleted');
+        }
+
+        const messages = await this.messageModel
+            .find({
+                discussionId: new Types.ObjectId(discussionId),
+                isDeleted: { $ne: true }
+            })
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .lean()
+            .exec();
+
+        return messages.reverse().map(msg => ({
+            id: msg._id.toString(),
+            content: msg.content,
+            senderId: msg.sender._id,
+            senderName: msg.sender.name,
+            senderAvatar: msg.sender.avatar,
+            createdAt: msg.createdAt,
+            attachments: msg.attachments || [],
+            replyTo: msg.replyTo
+        }));
+    }
+
+    async getMessageById(messageId: string) {
+        const message = await this.messageModel.findById(messageId).lean();
+        if (!message) {
+            throw new NotFoundException('Message not found');
+        }
+        return {
+            id: message._id.toString(),
+            content: message.content,
+            senderId: message.sender._id,
+            senderName: message.sender.name,
+            senderAvatar: message.sender.avatar,
+            createdAt: message.createdAt,
+            attachments: message.attachments || [],
+            discussionId: message.discussionId.toString()
+        };
+    }
+
+    async summarizeDiscussion(discussionId: string, limit: number = 50) {
+        const messages = await this.getRecentMessages(discussionId, limit);
+
+        if (!messages || messages.length === 0) {
+            return { summary: 'No messages to summarize.' };
+        }
+
+        const discussion = await this.discussionModel.findById(discussionId).lean();
+        const channelName = (discussion as any)?.name || `Discussion ${discussionId.substring(0, 8)}`;
+
+        try {
+            const result: any = await this.amqp.request({
+                exchange: N8N_EXCHANGE,
+                routingKey: N8N_PATTERNS.SUMMARIZE_CONVERSATION,
+                payload: {
+                    messages,
+                    channelName,
+                    currentDate: new Date().toISOString(),
+                },
+                timeout: 60000,
+            });
+
+            // Ensure summary is always a plain string
+            const summary = typeof result === 'string'
+                ? result
+                : typeof result?.summary === 'string'
+                    ? result.summary
+                    : null;
+
+            if (!summary) {
+                throw new Error('Invalid summary response from AI');
+            }
+
+            return { summary };
+        } catch (error) {
+            this.logger.error('Failed to summarize discussion via n8n:', error);
+            throw new BadRequestException('Failed to summarize conversation. Please try again.');
+        }
     }
 
     /**
@@ -606,4 +701,5 @@ export class MessageService {
             }
         };
     }
+
 }

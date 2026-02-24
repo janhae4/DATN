@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ClientConfigModule, ClientConfigService, DISCUSSION_EXCHANGE, EVENTS_EXCHANGE } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, DISCUSSION_EXCHANGE, EVENTS_EXCHANGE, N8N_EXCHANGE } from '@app/contracts';
 import { RmqModule } from '@app/common';
 
 import { Discussion, DiscussionSchema, Membership, MembershipSchema, ReadReceipt, ReadReceiptSchema } from './schema/discussion.schema';
@@ -47,6 +47,10 @@ import { PermissionController } from './controllers/permission.controller';
         {
           name: EVENTS_EXCHANGE,
           type: 'topic'
+        },
+        {
+          name: N8N_EXCHANGE,
+          type: 'direct'
         }
       ],
     }),

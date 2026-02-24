@@ -414,4 +414,15 @@ export class DiscussionService {
       timeout: this.rpcTimeout,
     })
   }
+
+  // AI Summarization
+  summarizeDiscussion(discussionId: string, limit: number = 50) {
+    return this.amqp.request({
+      exchange: DISCUSSION_EXCHANGE,
+      routingKey: DISCUSSION_PATTERN.SUMMARIZE,
+      payload: { discussionId, limit },
+      timeout: 60000, 
+    })
+  }
+
 }

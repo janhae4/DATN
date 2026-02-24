@@ -32,6 +32,7 @@ interface MessageActionsProps {
     onReply: (message: MessageSnapshot) => void;
     onDelete?: (messageId: string) => void;
     onStartEdit: () => void;
+    onGenerateTask?: () => void;
 }
 
 export const MessageActions: React.FC<MessageActionsProps> = ({
@@ -42,7 +43,8 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
     onReact,
     onReply,
     onDelete,
-    onStartEdit
+    onStartEdit,
+    onGenerateTask
 }) => {
     if (isDeleted) return null;
 
@@ -94,6 +96,24 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
                 </Tooltip>
             </TooltipProvider>
 
+            <TooltipProvider>
+                <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-zinc-500 dark:text-zinc-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            onClick={onGenerateTask}
+                        >
+                            <Icon icon="lucide:sparkles" width="16" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-zinc-900 border-zinc-800 text-zinc-300 text-xs">
+                        <p>Generate tasks from here</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+
             <DropdownMenu>
                 <TooltipProvider>
                     <Tooltip delayDuration={300}>
@@ -110,6 +130,9 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
                     </Tooltip>
                 </TooltipProvider>
                 <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300">
+                    <DropdownMenuItem onClick={onGenerateTask} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-indigo-600 dark:focus:text-indigo-400">
+                        <Icon icon="lucide:sparkles" className="mr-2 text-indigo-500" width="16" /> Generate Tasks
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigator.clipboard.writeText(msg.content)} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-zinc-900 dark:focus:text-zinc-200">
                         <Icon icon="lucide:copy" className="mr-2" width="16" /> Copy Text
                     </DropdownMenuItem>

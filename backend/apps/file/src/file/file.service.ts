@@ -433,7 +433,7 @@ export class FileService {
     ) {
 
         let currentUserRole = MemberRole.MEMBER;
-        if (teamId && projectId) {
+        if (teamId) {
             const user = await this.teamCache.getTeamMember(teamId, userId);
             if (!user) {
                 throw new ForbiddenException('You are not a member of this team.');
@@ -483,10 +483,17 @@ export class FileService {
             _id: { $in: fileIds }
         };
 
-        if (teamId) query.teamId = teamId;
-        if (projectId) query.projectId = projectId;
-
-        if (currentUserRole === MemberRole.MEMBER) {
+        if (teamId) {
+            if (currentUserRole === MemberRole.ADMIN || currentUserRole === MemberRole.OWNER) {
+                query.$or = [
+                    { teamId: teamId },
+                    { userId: userId }
+                ];
+            } else {
+                query.teamId = teamId;
+                query.userId = userId;
+            }
+        } else {
             query.userId = userId;
         }
 
@@ -509,7 +516,7 @@ export class FileService {
             ).exec();
 
             if (result.matchedCount === 0) {
-                throw new BadRequestException('No files found or you do not have permission to update these files');
+                throw new BadRequestException('You do not have permission to update these files');
             }
 
             return {
@@ -520,6 +527,9 @@ export class FileService {
             };
 
         } catch (error) {
+            if (error instanceof BadRequestException || error instanceof ForbiddenException) {
+                throw error;
+            }
             this.logger.error(`Failed to update files: ${error.message}`);
             throw new BadRequestException('Failed to update files');
         }
@@ -671,7 +681,7 @@ export class FileService {
         teamId: string,
         projectId?: string
     ) {
-      
+
         const effectiveTeamId = (!teamId || teamId === 'dm' || teamId === '@me') ? 'dm' : teamId;
 
         const extension = path.extname(originalName);

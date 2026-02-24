@@ -6,6 +6,7 @@ export const DISCUSSION_PATTERN = {
   GET_DISCUSSION_BY_ID: 'chat.getDiscussionById',
   GET_DISCUSSION_BY_TEAM_ID: 'chat.getDiscussionByTeamId',
   GET_MESSAGES: 'chat.getMessagesFromDiscussion',
+  GET_RECENT_MESSAGES: 'chat.getRecentMessages',
   GET_ALL_MESSAGES: 'chat.getAllMessages',
   UPDATE_USER: 'chat.updateUser',
   DELETE_SERVER: 'chat.deleteServer',
@@ -37,4 +38,6 @@ export const DISCUSSION_PATTERN = {
   GET_ATTACHMENTS: 'chat.getAttachments',
   CHECK_SERVER_MEMBERSHIP: 'chat.checkServerMembership',
   GET_CHANNELS_BY_SERVER: 'chat.getChannelsByServer',
+  SUMMARIZE: 'chat.summarizeDiscussion',
+  GET_MESSAGE_BY_ID: 'chat.getMessageById',
 };

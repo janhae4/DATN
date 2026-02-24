@@ -16,4 +16,6 @@ export class BaseTaskFilterDto {
     limit?: number;
     projectId?: string;
     teamId: string;
+    approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+    reporterIds?: string[];
 }

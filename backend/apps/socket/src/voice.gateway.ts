@@ -262,6 +262,24 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  // Relay closed-caption transcript to all others in the room.
+  @SubscribeMessage('cc_transcript')
+  handleCCTranscript(
+    @ConnectedSocket() client: socketGateway.AuthenticatedSocket,
+    @MessageBody() data: { roomId: string; userId: string; name: string; text: string; isFinal: boolean }
+  ) {
+    const user = client.data.user;
+    if (!user || !data.roomId) return;
+
+    // Broadcast to everyone else in the room (exclude sender)
+    client.to(data.roomId).emit('cc_transcript', {
+      userId: data.userId,
+      name: data.name,
+      text: data.text,
+      isFinal: data.isFinal,
+    });
+  }
+
   // --- CÁC TÍNH NĂNG KHÁC (Kick, Transcript, AI Speech) ---
 
   // Request speech-to-text AI for the room.

@@ -10,6 +10,11 @@ import { MessageInput } from "../messages/MessageInput";
 import { MessageSnapshot, AttachmentDto } from "@/types";
 import { HOME_SERVER_ID } from "@/constants/chat";
 import { SummaryBox } from "./SummaryBox";
+import { ChatTaskProposalDialog } from "../dialogs/ChatTaskProposalDialog";
+import { taskService } from "@/services/taskService";
+import { discussionService } from "@/services/discussionService";
+import { CaptionEntry } from "@/hooks/chat/useVoiceSocket";
+
 
 interface TypingUser {
     userId: string;
@@ -72,6 +77,8 @@ interface ChatAreaProps {
     onOpenMobileMenu?: () => void;
     isOnline?: boolean;
     lastSeen?: Date | null;
+    ccCaptions?: Map<string, CaptionEntry>;
+    onEmitCCTranscript?: (text: string, isFinal: boolean) => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -106,12 +113,80 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     onJoinVoice,
     activeVoiceChannelId,
     isOnline,
-    lastSeen
+    lastSeen,
+    ccCaptions,
+    onEmitCCTranscript,
 }) => {
     const [inputMsg, setInputMsg] = React.useState("");
     const [isUploading, setIsUploading] = useState(false);
     const [replyingTo, setReplyingTo] = React.useState<MessageSnapshot | null>(null);
     const [showSummary, setShowSummary] = useState(false);
+
+    // Summary state (shared between ChatHeader button & /summarize slash command)
+    const [summaryText, setSummaryText] = useState<string | null>(null);
+    const [isSummarizing, setIsSummarizing] = useState(false);
+
+    const handleSummarize = async () => {
+        if (!selectedChannelId) {
+            toast.error("No channel selected");
+            return;
+        }
+        setIsSummarizing(true);
+        setSummaryText(null);
+        try {
+            const result = await discussionService.summarizeDiscussion(selectedChannelId, 50);
+            const text =
+                typeof result === "string"
+                    ? result
+                    : typeof result?.summary === "string"
+                        ? result.summary
+                        : null;
+            setSummaryText(text || "Failed to generate summary. Please try again.");
+        } catch {
+            toast.error("Failed to summarize conversation");
+        } finally {
+            setIsSummarizing(false);
+        }
+    };
+
+    const [showTaskProposal, setShowTaskProposal] = useState(false);
+    const [proposedTasks, setProposedTasks] = useState<any[]>([]);
+
+    const handleGenerateTask = async (messageId?: string) => {
+        if (!selectedChannelId || !selectedTeamId) {
+            toast.error("Cannot create task: Missing context");
+            return;
+        }
+
+        const toastId = toast.loading("Analyzing conversation...");
+        try {
+            let tasks;
+            if (messageId) {
+                tasks = await taskService.generateFromMessage({
+                    messageId,
+                    teamId: selectedTeamId
+                });
+            } else {
+                tasks = await taskService.generateFromChat({
+                    discussionId: selectedChannelId,
+                    teamId: selectedTeamId,
+                    messageLimit: 50
+                });
+            }
+
+            if (tasks && tasks.length > 0) {
+                setProposedTasks(tasks);
+                setShowTaskProposal(true);
+                toast.dismiss(toastId);
+            } else {
+                toast.error("No tasks could be generated.", { id: toastId });
+            }
+        } catch (error) {
+            console.error("Failed to generate tasks:", error);
+            toast.error("Failed to generate tasks", { id: toastId });
+        }
+    };
+
 
     const handleAttachFiles = async (files: File[]) => {
         if (!selectedChannelId) return;
@@ -227,6 +302,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 speakingUsers={speakingUsers}
                 onToggleMute={onToggleMute}
                 onToggleVideo={onToggleVideo}
+                ccCaptions={ccCaptions}
+                onEmitCCTranscript={onEmitCCTranscript}
             />
         );
     }
@@ -241,8 +318,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 isDirectMessage={selectedServerId === HOME_SERVER_ID}
                 isOnline={isOnline}
                 lastSeen={lastSeen}
-                onSummarize={() => setShowSummary(true)}
-                canSummarize={messages.length >= 20}
+                onSummarize={handleSummarize}
+                canSummarize={messages.length >= 10}
             />
 
             <MessageList
@@ -261,6 +338,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 onUpdateMessage={onUpdateMessage}
                 onDeleteMessage={onDeleteMessage}
                 onReply={handleReply}
+                onGenerateTask={handleGenerateTask}
             />
 
             <MessageInput
@@ -272,9 +350,31 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 replyingTo={replyingTo}
                 onCancelReply={() => setReplyingTo(null)}
                 selectedServerId={selectedServerId}
+                selectedChannelId={selectedChannelId}
+                selectedTeamId={selectedTeamId}
+                onGenerateTask={() => handleGenerateTask()}
+                summaryText={summaryText}
+                isSummarizing={isSummarizing}
+                onSummarize={handleSummarize}
+                onCloseSummary={() => setSummaryText(null)}
             />
 
-            <SummaryBox open={showSummary} onClose={() => setShowSummary(false)} />
+            {/* SummaryBox kept but no longer primary — banner in MessageInput is used */}
+            <SummaryBox
+                open={showSummary}
+                onClose={() => setShowSummary(false)}
+                discussionId={selectedChannelId}
+                messageLimit={50}
+            />
+
+            {selectedTeamId && (
+                <ChatTaskProposalDialog
+                    open={showTaskProposal}
+                    onOpenChange={setShowTaskProposal}
+                    initialTasks={proposedTasks}
+                    teamId={selectedTeamId}
+                />
+            )}
         </div>
     );
 };

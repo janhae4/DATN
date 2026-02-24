@@ -6,6 +6,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { fileService } from "@/services/fileService";
 import { AttachmentDto } from "@/types";
 import { SlashCommandMenu, SlashCommand } from "./SlashCommandMenu";
+import { taskService } from "@/services/taskService";
+import { discussionService } from "@/services/discussionService";
+import { toast } from "sonner";
+import { AISummaryBanner } from "./AISummaryBanner";
 
 const ReplyPreviewImage = ({ att, serverId }: { att: AttachmentDto; serverId?: string | null }) => {
     const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -41,6 +45,8 @@ const ReplyPreviewImage = ({ att, serverId }: { att: AttachmentDto; serverId?: s
     );
 };
 
+
+
 interface MessageInputProps {
     inputMsg: string;
     onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -54,6 +60,14 @@ interface MessageInputProps {
     } | null;
     onCancelReply?: () => void;
     selectedServerId?: string | null;
+    selectedChannelId: string | null;
+    selectedTeamId: string | null;
+    onGenerateTask?: (messageId?: string) => void;
+    // Summary — controlled from parent (ChatArea)
+    summaryText?: string | null;
+    isSummarizing?: boolean;
+    onSummarize?: () => void;
+    onCloseSummary?: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -64,7 +78,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     onAttachFiles,
     replyingTo,
     onCancelReply,
-    selectedServerId
+    selectedServerId,
+    selectedChannelId,
+    selectedTeamId,
+    onGenerateTask,
+    summaryText,
+    isSummarizing,
+    onSummarize,
+    onCloseSummary,
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textInputRef = useRef<HTMLInputElement>(null);
@@ -78,46 +99,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         }
     }, [replyingTo]);
 
-    // Define slash commands
     const slashCommands: SlashCommand[] = [
         {
             id: "task",
             label: "/task",
             description: "Create a task from this conversation",
             icon: "lucide:check-square",
-            action: () => {
-                console.log("Create task from chat context");
-                // TODO: Open task creation dialog with chat context
-            }
-        },
-        {
-            id: "meeting",
-            label: "/meeting",
-            description: "Schedule a meeting with participants",
-            icon: "lucide:calendar",
-            action: () => {
-                console.log("Schedule meeting");
-                // TODO: Open meeting scheduler
-            }
-        },
-        {
-            id: "poll",
-            label: "/poll",
-            description: "Create a quick poll",
-            icon: "lucide:bar-chart-3",
-            action: () => {
-                console.log("Create poll");
-                // TODO: Open poll creator
-            }
-        },
-        {
-            id: "remind",
-            label: "/remind",
-            description: "Set a reminder for this channel",
-            icon: "lucide:bell",
-            action: () => {
-                console.log("Set reminder");
-                // TODO: Open reminder dialog
+            action: async () => {
+                if (onGenerateTask) {
+                    onGenerateTask();
+                } else {
+                    toast.error("Task generation not available");
+                }
             }
         },
         {
@@ -126,69 +119,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             description: "AI summarize recent messages",
             icon: "lucide:sparkles",
             action: () => {
-                console.log("Summarize conversation");
-                // TODO: Call AI to summarize
+                if (onSummarize) {
+                    onSummarize();
+                } else {
+                    toast.error("Summarize not available");
+                }
             }
-        },
-        {
-            id: "decision",
-            label: "/decision",
-            description: "Log an important decision",
-            icon: "lucide:lightbulb",
-            action: () => {
-                console.log("Log decision");
-                // TODO: Create decision log
-            }
-        },
-        {
-            id: "action",
-            label: "/action",
-            description: "Create action items from discussion",
-            icon: "lucide:list-checks",
-            action: () => {
-                console.log("Create action items");
-                // TODO: Extract action items
-            }
-        },
-        {
-            id: "file",
-            label: "/file",
-            description: "Attach a file",
-            icon: "lucide:paperclip",
-            action: () => {
-                fileInputRef.current?.click();
-            }
-        },
-        {
-            id: "code",
-            label: "/code",
-            description: "Insert a code block",
-            icon: "lucide:code",
-            action: () => {
-                const event = {
-                    target: { value: "```\n\n```" }
-                } as React.ChangeEvent<HTMLInputElement>;
-                onInputChange(event);
-                setTimeout(() => {
-                    if (textInputRef.current) {
-                        textInputRef.current.setSelectionRange(4, 4);
-                        textInputRef.current.focus();
-                    }
-                }, 0);
-            }
-        },
-        {
-            id: "shrug",
-            label: "/shrug",
-            description: "¯\\_(ツ)_/¯",
-            icon: "lucide:smile",
-            action: () => {
-                const event = {
-                    target: { value: inputMsg.replace("/", "") + "¯\\_(ツ)_/¯" }
-                } as React.ChangeEvent<HTMLInputElement>;
-                onInputChange(event);
-            }
-        },
+        }
     ];
 
     const handleInputChangeWithSlash = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,11 +133,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         const cursorPosition = e.target.selectionStart || 0;
         onInputChange(e);
 
-        // Find the last / before cursor position
         const textBeforeCursor = value.substring(0, cursorPosition);
         const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
 
-        // Show menu if there's a / before cursor and no space after it
         if (lastSlashIndex !== -1) {
             const textAfterSlash = value.substring(lastSlashIndex + 1, cursorPosition);
             const hasSpace = textAfterSlash.includes(' ');
@@ -305,7 +240,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
     return (
         <div className="p-4 bg-white dark:bg-zinc-950 shrink-0">
+            {/* AI Summary Banner */}
+            <AISummaryBanner
+                isLoading={!!isSummarizing}
+                summary={summaryText}
+                onClose={onCloseSummary}
+            />
             {replyingTo && (
+
                 <div className="mb-2 flex items-center justify-between bg-zinc-100 dark:bg-zinc-900/50 p-2 py-3 rounded-lg border-l-2 border-zinc-300 dark:border-zinc-800 border-y border-r border-zinc-200 dark:border-zinc-800/50">
                     <div className="flex items-center gap-2 overflow-hidden">
                         <Icon icon="lucide:reply" className="text-zinc-500 shrink-0" width="16" />

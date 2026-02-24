@@ -25,6 +25,7 @@ interface MessageItemProps {
     formatTime: (dateString: string | Date) => string;
     onReply: (message: MessageSnapshot) => void;
     onReplyClick?: (messageId: string) => void;
+    onGenerateTask?: () => void;
 }
 
 export const MessageItem: React.FC<MessageItemProps> = ({
@@ -40,7 +41,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     getUserName,
     formatTime,
     onReply,
-    onReplyClick
+    onReplyClick,
+    onGenerateTask
 }) => {
     const isMe = msg.sender?._id === userId;
     const [isEditing, setIsEditing] = useState(false);
@@ -194,6 +196,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                         onReply={onReply}
                         onDelete={onDelete}
                         onStartEdit={() => setIsEditing(true)}
+                        onGenerateTask={onGenerateTask}
                     />
                 </div>
             </div>

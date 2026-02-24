@@ -92,6 +92,7 @@ export const useChatPageLogic = (teamId: string) => {
         }
     }, [selectedServerId, selectedDirectMessageUserId, servers, loadingServers]);
 
+
     useEffect(() => {
         if (selectedDirectMessageUserId) return;
 
@@ -139,7 +140,9 @@ export const useChatPageLogic = (teamId: string) => {
         toggleMute,
         isVideoOn,
         toggleVideo,
-        speakingUsers
+        speakingUsers,
+        ccCaptions,
+        emitCCTranscript,
     } = useVoiceSocket(
         activeVoiceChannelId,
         selectedServerId,
@@ -254,6 +257,12 @@ export const useChatPageLogic = (teamId: string) => {
             setSelectedDirectMessageUserId(null);
         }
     };
+
+    useEffect(() => {
+        if (selectedDirectMessageUserId && !selectedChannelId && !loadingTeamMembers) {
+            handleSelectDirectMessage(selectedDirectMessageUserId);
+        }
+    }, [selectedDirectMessageUserId, loadingTeamMembers]);
 
     // Wrapper to clear DM mode when selecting a server
     const handleSelectServer = (serverId: string | null) => {
@@ -474,6 +483,9 @@ export const useChatPageLogic = (teamId: string) => {
             isMuted,
             isVideoOn,
             speakingUsers,
+            ccCaptions,
+            emitCCTranscript,
+
             loadingServers,
             loadingChannels,
             loadingMembers,
@@ -494,7 +506,7 @@ export const useChatPageLogic = (teamId: string) => {
             setShowMembers,
             toggleCategory,
             handleCreateServer,
-            handleCreateChannel,                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+            handleCreateChannel,
             handleCreateCategory,
             handleSendMessage,
             handleUpdateServer,

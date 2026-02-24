@@ -1,5 +1,13 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
+
+export interface CaptionEntry {
+    userId: string;
+    name: string;
+    text: string;
+    isFinal: boolean;
+    timestamp: number;
+}
 
 export const useVoiceSocket = (
     selectedChannelId: string | null,
@@ -17,9 +25,23 @@ export const useVoiceSocket = (
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOn, setIsVideoOn] = useState(false);
     const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
+    const [ccCaptions, setCCCaptions] = useState<Map<string, CaptionEntry>>(new Map());
     const audioContextRef = useRef<AudioContext | null>(null);
     const analysersRef = useRef<Map<string, AnalyserNode>>(new Map());
     const sourceNodesRef = useRef<Map<string, MediaStreamAudioSourceNode>>(new Map());
+
+    // Emit local CC transcript to all peers in the room
+    const emitCCTranscript = useCallback((text: string, isFinal: boolean) => {
+        if (!voiceSocket || !selectedChannelId || !userId || !user) return;
+        voiceSocket.emit('cc_transcript', {
+            roomId: selectedChannelId,
+            userId,
+            name: user.name || 'Unknown',
+            text,
+            isFinal,
+        });
+    }, [voiceSocket, selectedChannelId, userId, user]);
+
 
     const cleanup = () => {
         if (selectedChannelId && voiceSocket) {
@@ -310,12 +332,38 @@ export const useVoiceSocket = (
             }
         };
 
+        const handleCCTranscript = (data: { userId: string; name: string; text: string; isFinal: boolean }) => {
+            setCCCaptions(prev => {
+                const next = new Map(prev);
+                next.set(data.userId, {
+                    userId: data.userId,
+                    name: data.name,
+                    text: data.text,
+                    isFinal: data.isFinal,
+                    timestamp: Date.now(),
+                });
+                return next;
+            });
+            // Clear final captions after 5 seconds
+            if (data.isFinal) {
+                setTimeout(() => {
+                    setCCCaptions(prev => {
+                        const next = new Map(prev);
+                        const entry = next.get(data.userId);
+                        if (entry && entry.text === data.text) next.delete(data.userId);
+                        return next;
+                    });
+                }, 5000);
+            }
+        };
+
         voiceSocket.on("user_joined_video", handleUserJoined);
         voiceSocket.on("all_users_in_room", handleAllUsers);
         voiceSocket.on("offer", handleOffer);
         voiceSocket.on("answer", handleAnswer);
         voiceSocket.on("ice_candidate", handleIceCandidate);
         voiceSocket.on("user_left_video", handleUserLeft);
+        voiceSocket.on("cc_transcript", handleCCTranscript);
 
         return () => {
             voiceSocket.off("user_joined_video", handleUserJoined);
@@ -324,6 +372,7 @@ export const useVoiceSocket = (
             voiceSocket.off("answer", handleAnswer);
             voiceSocket.off("ice_candidate", handleIceCandidate);
             voiceSocket.off("user_left_video", handleUserLeft);
+            voiceSocket.off("cc_transcript", handleCCTranscript);
             if (selectedChannelId) voiceSocket.emit("leave_video_room", { roomId: selectedChannelId });
             cleanup();
         };
@@ -336,6 +385,8 @@ export const useVoiceSocket = (
         toggleMute,
         isVideoOn,
         toggleVideo,
-        speakingUsers // Set<userId>
+        speakingUsers,
+        ccCaptions,
+        emitCCTranscript,
     };
 };
