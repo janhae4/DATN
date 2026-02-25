@@ -28,7 +28,6 @@ func InitMinio() error {
 		endpoint = "localhost:9000"
 	}
 
-	// Strip protocol if present (minio.New expects host:port)
 	if len(endpoint) > 7 && endpoint[:7] == "http://" {
 		endpoint = endpoint[7:]
 	} else if len(endpoint) > 8 && endpoint[:8] == "https://" {
@@ -67,7 +66,6 @@ func InitMinio() error {
 
 	ctx := context.Background()
 
-	// Create bucket if not exists
 	exists, err := client.BucketExists(ctx, bucketName)
 	if err != nil {
 		return fmt.Errorf("failed to check bucket existence: %w", err)
@@ -78,7 +76,6 @@ func InitMinio() error {
 			return fmt.Errorf("failed to create bucket: %w", err)
 		}
 
-		// Set bucket policy to public read
 		policy := fmt.Sprintf(`{
 			"Version": "2012-10-17",
 			"Statement": [{

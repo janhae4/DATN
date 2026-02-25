@@ -29,15 +29,13 @@ func InitRedis() {
 
 	redisClient = redis.NewClient(&redis.Options{
 		Addr:     addr,
-		Password: password, // no password set
-		DB:       0,        // use default DB
+		Password: password,
+		DB:       0,
 	})
 
 	_, err := redisClient.Ping(context.Background()).Result()
 	if err != nil {
 		log.Printf("Failed to connect to Redis: %v\n", err)
-		// Don't fatal, maybe Redis is optional or will recover?
-		// But CheckPermission relies on it.
 	} else {
 		log.Println("Redis connected successfully")
 	}

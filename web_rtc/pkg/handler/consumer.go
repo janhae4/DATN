@@ -39,13 +39,13 @@ const ExchangeName = "video_chat_exchange"
 
 func (c *VideoChatConsumer) Start() {
 	err := c.channel.ExchangeDeclare(
-		ExchangeName, // name
-		"direct",     // type
-		true,         // durable
-		false,        // auto-deleted
-		false,        // internal
-		false,        // no-wait
-		nil,          // arguments
+		ExchangeName,
+		"direct",
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		log.Printf("Failed to declare exchange %s: %v", ExchangeName, err)
@@ -298,12 +298,12 @@ func (c *VideoChatConsumer) Start() {
 func (c *VideoChatConsumer) consumeQueue(qName string, handler func([]byte) (interface{}, error)) {
 	// Declare queue to ensure it exists
 	_, err := c.channel.QueueDeclare(
-		qName, // name
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
+		qName,
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		log.Printf("Failed to declare queue %s: %v", qName, err)
@@ -312,30 +312,24 @@ func (c *VideoChatConsumer) consumeQueue(qName string, handler func([]byte) (int
 
 	// Bind queue to exchange
 	err = c.channel.QueueBind(
-		qName,        // queue name
-		qName,        // routing key
-		ExchangeName, // exchange
+		qName,
+		qName,
+		ExchangeName,
 		false,
 		nil,
 	)
 	if err != nil {
 		log.Printf("Failed to bind queue %s to exchange %s: %v", qName, ExchangeName, err)
-		// Continue anyway? Usually consume fails if bind fails? No, consume works on queue.
-		// But if bind fails, messages won't arrive ideally.
-		// However, maybe exchange doesn't exist?
-		// We should declare exchange too?
-		// Assuming exchange exists (created by other services or manually).
-		// If not, we can declare it.
 	}
 
 	msgs, err := c.channel.Consume(
-		qName, // queue
-		"",    // consumer
-		false, // auto-ack
-		false, // exclusive
-		false, // no-local
-		false, // no-wait
-		nil,   // args
+		qName,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		log.Printf("Failed to register consumer for queue %s: %v", qName, err)
@@ -371,10 +365,10 @@ func (c *VideoChatConsumer) consumeQueue(qName string, handler func([]byte) (int
 			}
 
 			c.channel.Publish(
-				"",        // exchange
-				d.ReplyTo, // routing key
-				false,     // mandatory
-				false,     // immediate
+				"",
+				d.ReplyTo,
+				false,
+				false,
 				amqp.Publishing{
 					ContentType:   "application/json",
 					CorrelationId: d.CorrelationId,

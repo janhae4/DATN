@@ -432,7 +432,7 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_RECORDING_BUCKET=meeting-recordings
-      - GEMINI_API_KEY=AIzaSyDlRvjqWRoaeJ4Nt0QRHj_BYZ-ix_191fc
+      - GEMINI_API_KEY=key
     depends_on:
       rabbitmq:
         condition: service_healthy

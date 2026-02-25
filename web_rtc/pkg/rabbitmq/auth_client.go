@@ -30,7 +30,6 @@ type ValidateTokenRequest struct {
 	Token string `json:"token"`
 }
 
-// NewAuthClient creates a new RabbitMQ client for auth validation
 func NewAuthClient(rabbitURL string) (*AuthClient, error) {
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
@@ -43,14 +42,13 @@ func NewAuthClient(rabbitURL string) (*AuthClient, error) {
 		return nil, fmt.Errorf("failed to open channel: %w", err)
 	}
 
-	// Declare a temporary queue for receiving responses
 	queue, err := channel.QueueDeclare(
-		"",    // name (empty = auto-generated)
-		false, // durable
-		true,  // delete when unused
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
+		"",
+		false,
+		true,
+		true,
+		false,
+		nil,
 	)
 	if err != nil {
 		channel.Close()
@@ -65,15 +63,14 @@ func NewAuthClient(rabbitURL string) (*AuthClient, error) {
 		responses: make(map[string]chan []byte),
 	}
 
-	// Start consuming from reply queue immediately
 	msgs, err := channel.Consume(
-		queue.Name, // queue
-		"",         // consumer
-		true,       // auto-ack
-		false,      // exclusive
-		false,      // no-local
-		false,      // no-wait
-		nil,        // args
+		queue.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		channel.Close()
@@ -81,7 +78,6 @@ func NewAuthClient(rabbitURL string) (*AuthClient, error) {
 		return nil, fmt.Errorf("failed to register consumer: %w", err)
 	}
 
-	// Background goroutine to handle responses
 	go func() {
 		for d := range msgs {
 			client.mu.Lock()
@@ -98,21 +94,17 @@ func NewAuthClient(rabbitURL string) (*AuthClient, error) {
 	return client, nil
 }
 
-// ValidateToken validates a JWT token via RabbitMQ auth service
 func (c *AuthClient) ValidateToken(token string) (*JwtDto, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Generate correlation ID
 	corrID := uuid.New().String()
 
-	// Prepare request payload
 	payload, err := json.Marshal(ValidateTokenRequest{Token: token})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Create response channel
 	respCh := make(chan []byte, 1)
 	c.mu.Lock()
 	c.responses[corrID] = respCh
@@ -124,13 +116,12 @@ func (c *AuthClient) ValidateToken(token string) (*JwtDto, error) {
 		c.mu.Unlock()
 	}()
 
-	// Publish request to auth exchange
 	err = c.channel.PublishWithContext(
 		ctx,
-		"auth_exchange",       // exchange
-		"auth.validateToken", // routing key
-		false,                 // mandatory
-		false,                 // immediate
+		"auth_exchange",
+		"auth.validateToken",
+		false,
+		false,
 		amqp.Publishing{
 			ContentType:   "application/json",
 			CorrelationId: corrID,
@@ -144,7 +135,6 @@ func (c *AuthClient) ValidateToken(token string) (*JwtDto, error) {
 
 	log.Printf("Sent token validation request with correlation ID: %s", corrID)
 
-	// Wait for response
 	select {
 	case body := <-respCh:
 		var user JwtDto
@@ -158,7 +148,6 @@ func (c *AuthClient) ValidateToken(token string) (*JwtDto, error) {
 	}
 }
 
-// Close closes the RabbitMQ connection
 func (c *AuthClient) Close() error {
 	if c.channel != nil {
 		c.channel.Close()

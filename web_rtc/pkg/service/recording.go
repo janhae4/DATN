@@ -19,15 +19,11 @@ import (
 
 // RecordingPermission describes what a user can do with recording in a room
 type RecordingPermission struct {
-	CanRecordDirectly bool   // true = HOST/ADMIN in team or call HOST → can start without request
-	CallRole          string // HOST, ADMIN, MEMBER, BANNED (from call_participant DB)
-	TeamRole          string // OWNER, ADMIN, MEMBER (from Redis / Team Service)
+	CanRecordDirectly bool   // true = HOST/ADMIN in team or call HOST
+	CallRole          string // HOST, ADMIN, MEMBER, BANNED
+	TeamRole          string // OWNER, ADMIN, MEMBER
 }
 
-// GetUserRecordingPermission checks Redis (team role) + DB (call role) to determine recording rights.
-//   - Team OWNER / ADMIN → can record directly
-//   - Call HOST (the person who started the meeting) → can record directly
-//   - Team MEMBER → must send a request to the room's HOST/ADMIN
 func (s *VideoChatService) GetUserRecordingPermission(roomID, userID string) RecordingPermission {
 	perm := RecordingPermission{CallRole: "MEMBER", TeamRole: "MEMBER"}
 
@@ -107,7 +103,6 @@ func (s *VideoChatService) GetRoomPrivilegedUserIDs(roomID string) []string {
 	return privileged
 }
 
-// GetActiveRecording returns the currently active recording in a room (status = RECORDING), or nil
 func (s *VideoChatService) GetActiveRecording(roomID string) (*models.CallRecording, error) {
 	var call models.Call
 	if err := s.db.Where("\"roomCode\" = ?", roomID).First(&call).Error; err != nil {
@@ -123,8 +118,6 @@ func (s *VideoChatService) GetActiveRecording(roomID string) (*models.CallRecord
 	return &rec, nil
 }
 
-// RequestRecording - MEMBER gửi yêu cầu record
-// Trả về recording ID để track
 func (s *VideoChatService) RequestRecording(roomID, requestedByUserID string) (*models.CallRecording, error) {
 	var call models.Call
 	if err := s.db.Where("\"roomCode\" = ?", roomID).First(&call).Error; err != nil {
@@ -144,7 +137,7 @@ func (s *VideoChatService) RequestRecording(roomID, requestedByUserID string) (*
 	rec := &models.CallRecording{
 		CallID:      call.ID,
 		RequestedBy: requestedByUserID,
-		Status:      "PENDING", // Waiting for approval
+		Status:      "PENDING",
 	}
 	if err := s.db.Create(rec).Error; err != nil {
 		return nil, fmt.Errorf("failed to create recording record: %w", err)
@@ -154,7 +147,6 @@ func (s *VideoChatService) RequestRecording(roomID, requestedByUserID string) (*
 	return rec, nil
 }
 
-// ApproveRecording - HOST/ADMIN đồng ý cho record
 func (s *VideoChatService) ApproveRecording(recordingID, approverID string) (*models.CallRecording, error) {
 	uid, err := uuid.Parse(recordingID)
 	if err != nil {
@@ -219,7 +211,6 @@ func (s *VideoChatService) ApproveRecording(recordingID, approverID string) (*mo
 	return &rec, nil
 }
 
-// RejectRecording - HOST/ADMIN từ chối record
 func (s *VideoChatService) RejectRecording(recordingID, rejectorID string) error {
 	uid, err := uuid.Parse(recordingID)
 	if err != nil {
@@ -238,7 +229,6 @@ func (s *VideoChatService) RejectRecording(recordingID, rejectorID string) error
 	return nil
 }
 
-// EndRecording - Mark recording as STOPPED when user clicks stop
 func (s *VideoChatService) EndRecording(recordingID, stoppedBy string) error {
 	uid, err := uuid.Parse(recordingID)
 	if err != nil {
@@ -260,11 +250,11 @@ func (s *VideoChatService) EndRecording(recordingID, stoppedBy string) error {
 		return fmt.Errorf("failed to fetch user permissions: %w", err)
 	}
 
-	// 1. Kiểm tra Team Role (Owner hoặc Admin team được phép)
+	// 1. Kiểm tra Team Role
 	teamRole, _ := s.getMemberRole(participant.Call.TeamID, stoppedBy)
 	isTeamPrivileged := teamRole == models.MemberRoleOwner || teamRole == models.MemberRoleAdmin
 
-	// 2. Kiểm tra Call Role (Chỉ Host mới được phép)
+	// 2. Kiểm tra Call Role
 	isHost := participant.Role == models.CallRoleHost
 
 	if !isTeamPrivileged && !isHost {
@@ -291,7 +281,6 @@ func (s *VideoChatService) EndRecording(recordingID, stoppedBy string) error {
 	return nil
 }
 
-// FinishRecording - CLIENT upload xong, lưu URL và đánh dấu COMPLETED
 func (s *VideoChatService) FinishRecording(recordingID string, fileData []byte, mimeType string) (*models.CallRecording, error) {
 	uid, err := uuid.Parse(recordingID)
 	if err != nil {
@@ -365,7 +354,6 @@ func (s *VideoChatService) FinishRecording(recordingID string, fileData []byte, 
 	return &rec, nil
 }
 
-// GetRecordingsByRoom - lấy danh sách recordings của 1 room
 func (s *VideoChatService) GetRecordingsByRoom(roomID string) ([]models.CallRecording, error) {
 	var call models.Call
 	if err := s.db.Where("\"roomCode\" = ?", roomID).First(&call).Error; err != nil {
@@ -382,7 +370,6 @@ func (s *VideoChatService) GetRecordingsByRoom(roomID string) ([]models.CallReco
 	return recordings, nil
 }
 
-// HandleLiveKitWebhook processes events from LiveKit Egress/Room services
 func (s *VideoChatService) HandleLiveKitWebhook(event map[string]interface{}) error {
 	eventStr, _ := event["event"].(string)
 	log.Printf("📥 LiveKit Webhook received: %s", eventStr)

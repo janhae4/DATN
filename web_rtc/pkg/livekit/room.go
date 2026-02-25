@@ -46,7 +46,6 @@ func (rm *RoomManager) GetJoinToken(roomName, identity, name string) (string, er
 func (rm *RoomManager) StartRoomRecording(roomName string, filepath string) (string, error) {
 	ctx := context.Background()
 
-	// Configuration for MinIO (Egress service runs in Docker, so use service name)
 	minioEndpoint := os.Getenv("MINIO_ENDPOINT_INTERNAL")
 	if minioEndpoint == "" {
 		minioEndpoint = "http://minio:9000"

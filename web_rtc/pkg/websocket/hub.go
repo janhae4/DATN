@@ -30,12 +30,12 @@ type Client struct {
 	userID   string
 	userName string
 	roomID   string
-	role     string // string to avoid dependency cycle if any, or use models.CallRole
+	role     string
 }
 
 type Hub struct {
-	clients          map[string]*Client            // userID -> Client
-	rooms            map[string]map[string]*Client // roomID -> userID -> Client
+	clients          map[string]*Client
+	rooms            map[string]map[string]*Client
 	broadcast        chan *Message
 	register         chan *Client
 	unregister       chan *Client
@@ -113,7 +113,6 @@ func (h *Hub) Run() {
 					}
 				}
 
-				// Publish Leave event to RabbitMQ
 				h.mqClient.PublishToExchange("video_chat_exchange", "video_chat.room.leave", map[string]string{
 					"roomId": client.roomID,
 					"userId": client.userID,
@@ -232,23 +231,18 @@ func (c *Client) readPump() {
 			msg.Payload["userName"] = c.userName
 
 			if targetID, ok := msg.Payload["targetUserId"].(string); ok && targetID != "" {
-				// Private message mode
 				msg.Payload["isPrivate"] = true
 
-				// Find target name
 				c.hub.mu.RLock()
 				if targetClient, ok := c.hub.clients[targetID]; ok {
 					msg.Payload["targetUserName"] = targetClient.userName
 				}
 				c.hub.mu.RUnlock()
 
-				// Send to the target user
 				c.hub.SendToUser(targetID, &msg)
 
-				// Also send back to the sender
 				c.hub.SendToUser(c.userID, &msg)
 			} else {
-				// Broadcast chat message to room
 				c.hub.broadcast <- &msg
 			}
 
@@ -256,20 +250,17 @@ func (c *Client) readPump() {
 			// Update client's room
 			if roomID, ok := msg.Payload["roomId"].(string); ok {
 				c.hub.mu.Lock()
-				// Remove from old room
 				if oldRoom, exists := c.hub.rooms[c.roomID]; exists {
 					delete(oldRoom, c.userID)
 					if len(oldRoom) == 0 {
 						delete(c.hub.rooms, c.roomID)
 					}
 				}
-				// Add to new room
 				c.roomID = roomID
 				if c.hub.rooms[roomID] == nil {
 					c.hub.rooms[roomID] = make(map[string]*Client)
 				}
 				c.hub.rooms[roomID][c.userID] = c
-				// Extract userName from userInfo if available
 				if userInfo, ok := msg.Payload["userInfo"].(map[string]interface{}); ok {
 					if name, ok := userInfo["name"].(string); ok {
 						c.userName = name
@@ -354,7 +345,6 @@ func (c *Client) readPump() {
 					continue
 				}
 
-				// 3. Proceed with joining
 				c.hub.mu.Lock()
 				if c.roomID != roomID {
 					if oldRoom, exists := c.hub.rooms[c.roomID]; exists {
@@ -372,7 +362,6 @@ func (c *Client) readPump() {
 
 				c.hub.mu.Unlock()
 
-				// Mark as joined in DB
 				c.hub.recordingService.MarkParticipantJoined(roomID, c.userID)
 
 				// Determine Role
@@ -541,7 +530,6 @@ func (c *Client) readPump() {
 				event := map[string]interface{}{
 					"roomId": roomID,
 				}
-				// Exchange: video_chat_exchange, Key: video_chat.call.end
 				c.hub.mqClient.PublishToExchange("video_chat_exchange", "video_chat.call.end", event)
 			}
 
@@ -599,10 +587,7 @@ func (c *Client) readPump() {
 				c.hub.SendToUser(targetID, unkickMsg)
 			}
 
-		// ── Recording signaling ──────────────────────────────────────
-
 		case "request_recording":
-			// Any member can request - server checks and routes to privileged users only
 			if c.hub.recordingService == nil {
 				break
 			}

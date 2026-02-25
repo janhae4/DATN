@@ -27,12 +27,12 @@ func NewRabbitMQClient(url string, queueName string) (*RabbitMQClient, error) {
 	}
 
 	q, err := ch.QueueDeclare(
-		queueName, // name
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
+		queueName,
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -55,10 +55,10 @@ func (c *RabbitMQClient) PublishEvent(event interface{}) error {
 	}
 
 	err = c.channel.PublishWithContext(ctx,
-		"",           // exchange
-		c.queue.Name, // routing key
-		false,        // mandatory
-		false,        // immediate
+		"",
+		c.queue.Name,
+		false,
+		false,
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        body,
@@ -81,10 +81,10 @@ func (c *RabbitMQClient) PublishToExchange(exchange, routingKey string, event in
 	}
 
 	err = c.channel.PublishWithContext(ctx,
-		exchange,   // exchange
-		routingKey, // routing key
-		false,      // mandatory
-		false,      // immediate
+		exchange,
+		routingKey,
+		false,
+		false,
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        body,

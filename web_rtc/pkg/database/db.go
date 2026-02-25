@@ -29,7 +29,6 @@ func InitDB() {
 
 	log.Println("Database connected successfully")
 
-	// AutoMigrate - automatically create/update schema
 	if err := DB.AutoMigrate(
 		&models.Call{},
 		&models.CallParticipant{},

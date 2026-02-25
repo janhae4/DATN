@@ -57,7 +57,6 @@ func (s *VideoChatService) getMemberRole(teamID, userID string) (models.MemberRo
 
 	var memberState *CachedMemberState
 
-	// 1. Try to get from Redis
 	jsonData, err := s.redisClient.HGet(ctx, key, userID).Result()
 	log.Println("jsonData", jsonData)
 	if err == nil {
@@ -66,7 +65,6 @@ func (s *VideoChatService) getMemberRole(teamID, userID string) (models.MemberRo
 		}
 	}
 
-	// 2. If Redis is missing (Nil) or Unmarshal error, call RPC to Team Service
 	if memberState == nil {
 		log.Printf("Cache miss for team %s, user %s. Calling RPC...", teamID, userID)
 
@@ -154,26 +152,22 @@ func (s *VideoChatService) CreateOrJoinCall(userID string, teamID string, refID 
 	result := query.First(&call)
 
 	if result.Error == nil {
-		// Call exists, join it
 		var participant models.CallParticipant
 		err := s.db.Where(&models.CallParticipant{CallID: call.ID, UserID: userID}).First(&participant).Error
 		if err == nil {
 			if participant.Role == models.CallRoleBanned {
 				return nil, errors.New("you are banned from this call")
 			}
-			// Reset LeftAt if rejoining
 			if participant.LeftAt != nil {
 				participant.LeftAt = nil
 				s.db.Save(&participant)
 			}
 		} else {
-			// Determine role for new participant joining existing call
 			role := models.CallRoleMember
 			if teamRole == models.MemberRoleOwner || teamRole == models.MemberRoleAdmin {
 				role = models.CallRoleAdmin
 			}
 
-			// Add participant
 			newParticipant := models.CallParticipant{
 				CallID: call.ID,
 				UserID: userID,
@@ -198,7 +192,6 @@ func (s *VideoChatService) CreateOrJoinCall(userID string, teamID string, refID 
 		var existingCall models.Call
 		if err := s.db.Where("\"roomCode\" = ?", roomCode).First(&existingCall).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				// ID is unique
 				newCall = models.Call{
 					RoomCode:       roomCode,
 					TeamID:         teamID,
@@ -232,7 +225,6 @@ func (s *VideoChatService) CreateOrJoinCall(userID string, teamID string, refID 
 
 func (s *VideoChatService) GetCallHistory(userID string) ([]models.Call, error) {
 	var calls []models.Call
-	// Join with participants to filter by userID
 	err := s.db.Table("call").
 		Joins("JOIN call_participant ON call_participant.\"callId\" = call.id").
 		Where("call_participant.\"userId\" = ?", userID).
@@ -242,12 +234,9 @@ func (s *VideoChatService) GetCallHistory(userID string) ([]models.Call, error) 
 		Order("\"createdAt\" DESC").
 		Find(&calls).Error
 
-	// Also fetch recordings for each call manually if Preload fails or for clarity
 	for i := range calls {
 		var recs []models.CallRecording
 		s.db.Where("\"callId\" = ?", calls[i].ID).Find(&recs)
-		// We can add a field to Call model if we want, or just return them as part of the structure if GORM preloads correctly
-		// Let's rely on GORM Preload if we add CallRecordings to the Call struct.
 	}
 
 	return calls, err
@@ -265,29 +254,23 @@ func (s *VideoChatService) GetCallInfo(roomID, userID string) (*models.Call, err
 			Preload("Recordings")
 	}
 
-	// 1. Try to find by UUID first
 	if parsedID, err := uuid.Parse(roomID); err == nil {
 		if err := preloaded().First(&call, "id = ?", parsedID).Error; err == nil {
 			goto found
 		}
 	}
 
-	// 2. Then try by RoomCode (human code)
-	// Usage of "roomCode" with quotes to match exactly if CamelCase in DB
 	if err := preloaded().First(&call, "\"roomCode\" = ?", roomID).Error; err != nil {
 		return nil, errors.New("room not found")
 	}
 
 found:
-	// Verify permission first to get team/call roles
 	if err := s.checkPermission(call.TeamID, userID, []string{string(models.MemberRoleAdmin), string(models.MemberRoleMember), string(models.MemberRoleOwner)}); err != nil {
 		return nil, err
 	}
 
-	// Determine if password is required FOR THIS USER
 	hasPassword := call.Password != ""
 	if hasPassword {
-		// 1. Check if user is already joined
 		isAlreadyJoined := false
 		var userPart *models.CallParticipant
 		for i := range call.Participants {
@@ -304,11 +287,9 @@ found:
 		if isAlreadyJoined {
 			hasPassword = false
 		} else {
-			// 2. Check for privileged roles (bypass password)
 			if userPart != nil && (userPart.Role == models.CallRoleHost || userPart.Role == models.CallRoleAdmin) {
 				hasPassword = false
 			} else {
-				// 3. Check Team Role
 				teamRole, errRole := s.getMemberRole(call.TeamID, userID)
 				if errRole == nil && (teamRole == models.MemberRoleOwner || teamRole == models.MemberRoleAdmin) {
 					hasPassword = false
@@ -437,7 +418,6 @@ func (s *VideoChatService) ValidateJoinRoom(roomID, userID, password string) (*m
 		return &call, nil, errors.New("call_ended")
 	}
 
-	// 1. Participant check first (to allow password bypass for rejoining)
 	var participant *models.CallParticipant
 	for i := range call.Participants {
 		if call.Participants[i].UserID == userID {
@@ -446,16 +426,13 @@ func (s *VideoChatService) ValidateJoinRoom(roomID, userID, password string) (*m
 		}
 	}
 
-	// 2. Password check (bypass if already joined OR is privileged)
 	isAlreadyJoined := participant != nil && participant.Status == models.ParticipantStatusJoined && participant.LeftAt == nil
 	canBypass := isAlreadyJoined
 
 	if !canBypass && call.TeamID != "" {
-		// Check call-level role
 		if participant != nil && (participant.Role == models.CallRoleHost || participant.Role == models.CallRoleAdmin) {
 			canBypass = true
 		} else {
-			// Check team-level role
 			teamRole, errRole := s.getMemberRole(call.TeamID, userID)
 			if errRole == nil && (teamRole == models.MemberRoleOwner || teamRole == models.MemberRoleAdmin) {
 				canBypass = true
@@ -507,7 +484,6 @@ func (s *VideoChatService) ApproveJoin(requesterID, targetUserID, roomID string)
 	}
 
 	if target == nil {
-		// Create participant if missing (guest/knocker scenario)
 		teamRole, _ := s.getMemberRole(call.TeamID, targetUserID)
 		role := models.CallRoleMember
 		if teamRole == models.MemberRoleOwner || teamRole == models.MemberRoleAdmin {
@@ -593,7 +569,6 @@ func (s *VideoChatService) KickUser(requesterID, targetUserID, roomID string) (m
 		return nil, errors.New("room not found")
 	}
 
-	// Find target regardless of LeftAt (so we can ban offline users)
 	var requester, target *models.CallParticipant
 	for i := range call.Participants {
 		p := &call.Participants[i]
@@ -614,7 +589,6 @@ func (s *VideoChatService) KickUser(requesterID, targetUserID, roomID string) (m
 
 	if requester.Role == models.CallRoleHost || requester.Role == models.CallRoleAdmin {
 		now := time.Now()
-		// If already left, we just update Role. If not left, update LeftAt too.
 		if target.LeftAt == nil {
 			target.LeftAt = &now
 		}
@@ -623,8 +597,6 @@ func (s *VideoChatService) KickUser(requesterID, targetUserID, roomID string) (m
 			return nil, err
 		}
 
-		// Notify via RabbitMQ (Socket Service)
-		// Exchange: socket_exchange, Key: socket.video-call.user-kicked
 		payload := map[string]interface{}{
 			"targetUserId": targetUserID,
 			"message":      fmt.Sprintf("You have been kicked from room %s", roomID),
@@ -644,17 +616,12 @@ func (s *VideoChatService) UnKickUser(requesterID, targetUserID, roomID string) 
 		return nil, errors.New("room not found")
 	}
 
-	// Logic similar to KickUser but setting Role back to MEMBER/etc and LeftAt to nil?
-	// Or simply authorizing re-join.
-	// Original code updates role back to dbRole.
-
 	var target models.CallParticipant
 	if err := s.db.Where(&models.CallParticipant{CallID: call.ID, UserID: targetUserID}).First(&target).Error; err != nil {
 		return nil, errors.New("user record not found")
 	}
 
-	target.Role = models.CallRoleMember // Simplified
-	// target.LeftAt = nil // Do we reset leftAt? usually unban allows re-join.
+	target.Role = models.CallRoleMember
 
 	if err := s.db.Save(&target).Error; err != nil {
 		return nil, err
@@ -717,7 +684,6 @@ func (s *VideoChatService) LeaveCall(roomID, userID string) error {
 func (s *VideoChatService) HandleTranscriptReceive(roomID, userID, userName, content string) error {
 	ctx := context.Background()
 
-	// 1. Save sentence to Redis Buffer directly using redisClient
 	transcriptData := map[string]interface{}{
 		"userId":    userID,
 		"userName":  userName,

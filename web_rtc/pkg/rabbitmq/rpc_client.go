@@ -32,14 +32,13 @@ func NewRPCClient(url string) (*RPCClient, error) {
 		return nil, fmt.Errorf("failed to open channel: %w", err)
 	}
 
-	// Declare a temporary exclusive queue for replies
 	q, err := ch.QueueDeclare(
-		"",    // name (empty = auto-generated)
-		false, // durable
-		true,  // delete when unused
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
+		"",
+		false,
+		true,
+		true,
+		false,
+		nil,
 	)
 	if err != nil {
 		ch.Close()
@@ -54,15 +53,14 @@ func NewRPCClient(url string) (*RPCClient, error) {
 		responses: make(map[string]chan []byte),
 	}
 
-	// Start consuming from reply queue
 	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+		q.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		ch.Close()
@@ -70,7 +68,6 @@ func NewRPCClient(url string) (*RPCClient, error) {
 		return nil, fmt.Errorf("failed to register consumer: %w", err)
 	}
 
-	// Background goroutine to handle responses
 	go func() {
 		for d := range msgs {
 			client.mu.Lock()
@@ -98,7 +95,6 @@ func (c *RPCClient) Call(exchange, routingKey string, payload interface{}, respo
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	// Create response channel
 	respCh := make(chan []byte, 1)
 	c.mu.Lock()
 	c.responses[corrID] = respCh
@@ -112,10 +108,10 @@ func (c *RPCClient) Call(exchange, routingKey string, payload interface{}, respo
 
 	err = c.channel.PublishWithContext(
 		ctx,
-		exchange,   // exchange
-		routingKey, // routing key
-		false,      // mandatory
-		false,      // immediate
+		exchange,
+		routingKey,
+		false,
+		false,
 		amqp.Publishing{
 			ContentType:   "application/json",
 			CorrelationId: corrID,
