@@ -98,6 +98,7 @@ export default function Backlogs() {
       sprintId: targetSprintIds,
       limit: 10,
       page: sprintPage,
+      approvalStatus: 'APPROVED'
     };
   }, [projectId, debouncedSearch, filters, sprintPage, visibleSprints]);
 
@@ -115,6 +116,7 @@ export default function Backlogs() {
       parentId: "null",
       sprintId: "null",
       limit: 10,
+      approvalStatus: 'APPROVED'
     };
   }, [projectId, debouncedSearch, filters]);
 
@@ -207,7 +209,7 @@ export default function Backlogs() {
   };
 
   const handlePriorityChange = (taskId: string, priority: Task["priority"]) => {
-    // updateTask(taskId, { priority });
+    updateTask(taskId, { priority });
   };
 
   const handleListChange = (taskId: string, listId: string) => {

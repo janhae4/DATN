@@ -2,11 +2,11 @@ import { FileVisibility } from "@app/contracts"
 import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator"
 
 class UpdateFile {
-    @IsUUID()
+    @IsString()
     @IsOptional()
     projectId?: string
 
-    @IsUUID()
+    @IsString()
     @IsOptional()
     teamId?: string
 }

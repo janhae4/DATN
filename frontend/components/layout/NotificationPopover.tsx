@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/pagination";
 import { useNotifications } from "@/hooks/useNotifications"; // Hook của bạn
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDistanceToNow } from "date-fns";
+import { addHours, formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useTeams } from "@/hooks/useTeam";
@@ -67,7 +67,9 @@ export function NotificationPopover() {
 
     try {
       switch (metadata.action) {
+        case "MEMBER_INVITED":
         case "ADD_MEMBER_TARGET":
+        case "MEMBER_ADDED":
           if (actionType === "ACCEPT") {
             console.log("Accept invite");
             await acceptInvite({
@@ -204,9 +206,7 @@ export function NotificationPopover() {
                     )}
 
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(new Date(notification.createdAt).getTime() + 7 * 60 * 60 * 1000), {
-                        addSuffix: true,
-                      })}
+                      {formatDistanceToNow(addHours(notification.createdAt, -7), { addSuffix: true })}
                     </p>
                   </div>
                 ))

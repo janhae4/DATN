@@ -271,4 +271,33 @@ export class TaskController {
       }),
     );
   }
+
+  @Post('generate-from-chat')
+  async generateFromChat(
+    @Body() body: { discussionId: string, teamId: string, projectId?: string, sprintId?: string, messageLimit?: number },
+    @CurrentUser('id') userId: string
+  ) {
+    return this.taskService.generateFromChat(
+      userId,
+      body.discussionId,
+      body.teamId,
+      body.projectId,
+      body.sprintId,
+      body.messageLimit
+    );
+  }
+
+  @Post('generate-from-message')
+  async generateFromMessage(
+    @Body() body: { messageId: string, teamId: string, projectId?: string, sprintId?: string },
+    @CurrentUser('id') userId: string
+  ) {
+    return this.taskService.generateFromMessage(
+      userId,
+      body.messageId,
+      body.teamId,
+      body.projectId,
+      body.sprintId
+    );
+  }
 }

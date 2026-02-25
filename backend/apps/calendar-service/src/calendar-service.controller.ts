@@ -35,12 +35,14 @@ export class CalendarController {
     description: string;
     startTime: string;
     endTime: string;
+    calendarId?: string;
   }) {
     return this.calendarService.createEvent(data.userId, {
       summary: data.summary,
       description: data.description,
       startTime: data.startTime,
-      endTime: data.endTime
+      endTime: data.endTime,
+      calendarId: data.calendarId
     });
   }
 
@@ -77,13 +79,16 @@ export class CalendarController {
     description?: string;
     startTime?: string;
     endTime?: string;
-    calendarId?: string
+    calendarId?: string;
+    destinationCalendarId?: string;
   }) {
     return this.calendarService.updateEvent(data.userId, data.eventId, {
       summary: data.summary,
       description: data.description,
       startTime: data.startTime,
-      endTime: data.endTime
+      endTime: data.endTime,
+      calendarId: data.calendarId,
+      destinationCalendarId: data.destinationCalendarId
     });
   }
 

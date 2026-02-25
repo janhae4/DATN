@@ -26,7 +26,7 @@ export default function Home() {
             <div className="bg-primary text-primary-foreground p-1 rounded-lg">
               <Zap size={20} fill="currentColor" />
             </div>
-            <span>Taskora</span>
+            <span>Team Power</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">

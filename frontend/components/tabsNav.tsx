@@ -28,19 +28,16 @@ const GanttChart = dynamic(() => import("./shared/ganttchart/ganttChart"), {
   ssr: false,
 });
 
-// const TimelineView = dynamic(() => import("./features/timeline/TimelineView"), { ssr: false })
 
 function getInitialTab(): string {
   if (typeof window === "undefined") return "summary";
 
-  // Try search params first
   const searchParams = new URLSearchParams(window.location.search);
   const tabParam = searchParams.get("tab");
   if (tabParam && ["backlogs", "summary", "boards", "timeline"].includes(tabParam)) {
     return tabParam;
   }
 
-  // Try hash second
   const hash = window.location.hash.replace("#", "");
   if (["backlogs", "summary", "boards", "timeline"].includes(hash)) {
     return hash;
@@ -63,7 +60,6 @@ export function TabsNav() {
   const [activeTab, setActiveTab] = React.useState<string>("summary");
 
   React.useEffect(() => {
-    // Set initial tab on mount
     setActiveTab(getInitialTab());
 
     const handleHashChange = () => {
@@ -88,7 +84,7 @@ export function TabsNav() {
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
-        className="h-full flex flex-col w-full"
+        className="h-full flex flex-col w-full gap-3!"
       >
         <TabsList>
           <TabsTrigger value="summary">Summary</TabsTrigger>

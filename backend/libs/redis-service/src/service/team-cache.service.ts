@@ -88,6 +88,13 @@ export class TeamCacheService {
         pipe.expire(teamRolesKey, TTL_24_HOURS);
 
         await pipe.exec();
+
+        const memberState = await this.getTeamMember(teamId, userId);
+        if (memberState) {
+            memberState.role = newRole;
+            await this.setTeamMember(teamId, userId, memberState);
+        }
+
         this.logger.log(`Changed role for ${userId} in team ${teamId} to ${newRole}`);
     }
 
@@ -95,12 +102,19 @@ export class TeamCacheService {
         if (!teamId || !userId) return;
         const teamRolesKey = this.getTeamRolesKey(teamId);
         await this.redisService.getClient().hdel(teamRolesKey, userId);
+
+        const key = this.getTeamMembersKey(teamId);
+        await this.redisService.getClient().hdel(key, userId);
     }
 
     async removeTeam(teamId: string) {
         if (!teamId) return;
         const teamRolesKey = this.getTeamRolesKey(teamId);
+        const teamMembersKey = this.getTeamMembersKey(teamId);
+
         await this.redisService.getClient().del(teamRolesKey);
+        await this.redisService.getClient().del(teamMembersKey);
+
         this.logger.log(`Removed team cache ${teamId}`);
     }
 
@@ -108,15 +122,27 @@ export class TeamCacheService {
         if (!teamId) return;
 
         const teamRolesKey = this.getTeamRolesKey(teamId);
-
         const pipe = this.redisService.getClient().pipeline();
 
-        pipe.hset(teamRolesKey, requesterId, MemberRole.MEMBER);
+        pipe.hset(teamRolesKey, requesterId, MemberRole.ADMIN);
         pipe.hset(teamRolesKey, newOwnerId, MemberRole.OWNER);
 
         pipe.expire(teamRolesKey, TTL_24_HOURS);
 
         await pipe.exec();
+
+        const oldOwnerState = await this.getTeamMember(teamId, requesterId);
+        if (oldOwnerState) {
+            oldOwnerState.role = MemberRole.ADMIN;
+            await this.setTeamMember(teamId, requesterId, oldOwnerState);
+        }
+
+        const newOwnerState = await this.getTeamMember(teamId, newOwnerId);
+        if (newOwnerState) {
+            newOwnerState.role = MemberRole.OWNER;
+            await this.setTeamMember(teamId, newOwnerId, newOwnerState);
+        }
+
         this.logger.log(`Transferred ownership of team ${teamId} to ${newOwnerId}`);
     }
 
@@ -151,10 +177,13 @@ export class TeamCacheService {
         const rawData = await this.redisService.getClient().hget(key, userId);
 
         if (rawData) return JSON.parse(rawData);
-        const fetcher = fetcherRPC || (() => this.amqp.request({
+        const fetcher = fetcherRPC || (() => this.amqp.request<CachedMemberState>({
             exchange: TEAM_EXCHANGE,
             routingKey: TEAM_PATTERN.FIND_PARTICIPANT,
             payload: { teamId, userId },
+        }).catch(err => {
+            console.error(`TeamCacheService: Failed to fetch participant via RPC for team ${teamId}, user ${userId}`, err);
+            return null;
         }));
 
         const freshData = await fetcher();

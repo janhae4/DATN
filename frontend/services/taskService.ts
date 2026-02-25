@@ -42,6 +42,9 @@ export interface BaseTaskFilterDto {
   limit?: number;
   projectId?: string;
   teamId?: string;
+  parentId?: string | "null";
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reporterIds?: string[];
 }
 
 // --- Service ---
@@ -56,10 +59,15 @@ export const taskService = {
     return response.data;
   },
 
-  // getTasksByTeam: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
-  //   const response = await apiClient.get(`/tasks/by-team`, { data: { teamId: params.teamId } });
-  //   return response.data;
-  // },
+  getTasksByTeam: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
+    const response = await apiClient.get(`/tasks/by-team`, { params });
+    return response.data;
+  },
+
+  getTasksAssignToMe: async (params: BaseTaskFilterDto): Promise<Pagination<Task>> => {
+    const response = await apiClient.get(`/tasks/assign-to-me`, { params });
+    return response.data;
+  },
 
   /**
    * Lấy chi tiết Task
@@ -171,5 +179,17 @@ export const taskService = {
    */
   deleteLabelFromTask: async (taskId: string, labelId: string): Promise<void> => {
     await apiClient.delete(`/tasks/${taskId}/label?labelId=${labelId}`);
-  }
+  },
+
+  generateFromChat: async (data: { discussionId: string, teamId: string, messageLimit?: number }): Promise<any[]> => {
+    console.log("generateFromChat data: ", data);
+    const response = await apiClient.post('/tasks/generate-from-chat', data);
+    return response.data;
+  },
+
+  generateFromMessage: async (data: { messageId: string, teamId: string, projectId?: string, sprintId?: string }): Promise<any[]> => {
+    console.log("generateFromMessage data: ", data);
+    const response = await apiClient.post('/tasks/generate-from-message', data);
+    return response.data;
+  },
 };

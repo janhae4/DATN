@@ -11,12 +11,14 @@ export class RmqClientService {
         exchange,
         routingKey,
         payload,
+        timeout = 10000,
     }: {
         exchange: string;
         routingKey: string;
         payload: {
             [key: string]: any
-        } | string
+        } | string;
+        timeout?: number;
     }): Promise<T> {
         try {
 

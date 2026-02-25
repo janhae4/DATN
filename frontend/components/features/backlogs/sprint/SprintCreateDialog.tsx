@@ -55,7 +55,6 @@ export function SprintCreateDialog({
     }
 
     try {
-      // Gọi API tạo Sprint mới KHÔNG CÓ start_date/end_date
       await createSprint({
         title: title.trim(),
         goal: goal.trim() || undefined,

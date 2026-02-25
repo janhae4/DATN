@@ -1,6 +1,4 @@
 import {
-  ConnectedSocket,
-  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
@@ -19,25 +17,20 @@ import {
   CreateNotificationDto,
   FileStatus,
   JwtDto,
-  MeetingSummaryResponseDto,
   MessageSnapshot,
   NOTIFICATION_EXCHANGE,
   NOTIFICATION_PATTERN,
   NotificationResource,
   NotificationTargetType,
   ResponseMessageDto,
-  ResponseStreamDto,
   SendMessageEventPayload,
   SendTaskNotificationDto,
   SummarizeDocumentDto,
-  User,
-  VIDEO_CHAT_EXCHANGE,
-  VIDEO_CHAT_PATTERN,
 } from '@app/contracts';
 import * as cookie from 'cookie';
 import { RmqClientService } from '@app/common';
 
-interface AuthenticatedSocket extends Socket {
+export interface AuthenticatedSocket extends Socket {
   data: {
     user?: JwtDto;
     accumulatedMessage?: string;
@@ -130,7 +123,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(`Client disconnected: ${client.id} (User: N/A)`);
     }
   }
-
 
   async notifyTaskUpdate(payload: SendTaskNotificationDto) {
     this.server.to(payload.teamId).emit('task_update', payload);
@@ -278,77 +270,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
   }
 
-  async handleStreamResponse(response: ResponseStreamDto) {
-    const { discussionId, socketId, content, type, membersToNotify, teamId } = response;
-
-    const client = this.server.sockets.sockets.get(socketId) as
-      | AuthenticatedSocket
-      | undefined;
-
-    if (!client) {
-      this.logger.warn(`Client ${socketId} not found.`);
-      return;
-    }
-
-    if (!membersToNotify || membersToNotify.length === 0) {
-      this.logger.warn(`Invalid 'membersToNotify' list for stream on ${socketId}.`);
-      client.emit(CHATBOT_PATTERN.RESPONSE_ERROR, { content: "Lỗi: Không tìm thấy người nhận stream (stream session error)." });
-      return;
-    }
-
-    const emitToAll = (event: string, data: any) => {
-      membersToNotify.forEach(userId => {
-        this.server.to(userId).emit(event, {
-          ...data,
-          discussionId,
-          teamId
-        });
-      });
-    };
-
-    if (type === 'chunk') {
-      const currentMessage = client.data.accumulatedMessage || '';
-      client.data.accumulatedMessage = currentMessage + content;
-      emitToAll(CHATBOT_PATTERN.RESPONSE_CHUNK, { content });
-    } else if (type === 'start') {
-      emitToAll(CHATBOT_PATTERN.RESPONSE_START, content);
-    } else if (type === 'error') {
-      emitToAll(CHATBOT_PATTERN.RESPONSE_ERROR, { content });
-    } else if (type === "metadata") {
-      try {
-        client.data.streamMetadata = JSON.parse(content);
-      } catch (e) {
-        this.logger.warn(`Failed to parse metadata: ${content}`);
-        client.data.streamMetadata = { error: "Invalid metadata received" };
-      }
-    } else if (type === 'end') {
-
-      const fullMessage = client.data.accumulatedMessage || '';
-      console.log("fullMessage", fullMessage);
-
-      if (fullMessage.trim().length > 0) {
-        const savedMessage = await this.amqpConnection.request<AiDiscussionDto>({
-          exchange: CHATBOT_EXCHANGE,
-          routingKey: CHATBOT_PATTERN.CREATE,
-          payload: {
-            discussionId,
-            message: fullMessage,
-            metadata: client.data.streamMetadata,
-          },
-        });
-
-
-        emitToAll(CHATBOT_PATTERN.RESPONSE_END, { id: savedMessage._id });
-
-        this.logger.log(
-          `Saved streamed AI message for ${socketId} to discussion ${discussionId}.`,
-        );
-      }
-
-      delete client.data.accumulatedMessage;
-      delete client.data.streamMetadata;
-    }
-  }
 
   async publishNotification(dto: CreateNotificationDto) {
     this.logger.log(`Publishing notification: ${dto.metadata}`);
@@ -402,11 +323,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         offlineUsers.push(userId);
       }
     });
-
-    if (offlineUsers.length) {
-      this.logger.log(`Offline users: ${offlineUsers.join(', ')}`);
-    }
   }
+
 
 
 

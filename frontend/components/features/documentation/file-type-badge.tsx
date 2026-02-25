@@ -33,7 +33,7 @@ const getBadgeStyle = (fileType: string, fileName: string): { className: string;
   if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".gif") || type.startsWith("image/")) {
     return {
       className: "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100",
-      label: "Image", // Label chung cho gọn
+      label: "Image", 
     };
   }
   if (name.endsWith(".pptx") || type.includes("powerpoint") || type.includes("presentation")) {

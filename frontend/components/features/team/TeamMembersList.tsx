@@ -54,6 +54,7 @@ import {
 import { Member, MemberStatus, TeamMember } from "@/types/social";
 import { MemberRole } from "@/types/common/enums";
 import { AddMemberDialog } from "./AddMemberDialog";
+import { useRouter } from "next/navigation";
 import {
   useChangeMemberRole,
   useRemoveMember,
@@ -75,6 +76,7 @@ export function TeamMembersList({
   isLoading,
   teamId,
 }: TeamMembersListProps) {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const { mutate: removeMember } = useRemoveMember();
   const { mutate: changeMemberRole } = useChangeMemberRole();
@@ -139,10 +141,7 @@ export function TeamMembersList({
     );
   };
 
-  const showActionsColumn =
-    currentUserRole &&
-    currentUserRole !== MemberRole.MEMBER &&
-    members.length > 1;
+  const showActionsColumn = true;
 
   const canInvite =
     currentUserRole === MemberRole.OWNER ||
@@ -415,83 +414,83 @@ export function TeamMembersList({
                       {member.status && getStatusBadge(member.status)}
                     </TableCell>
 
-                    {showActionsColumn &&
-                      (member.id == currentUserId ? (
-                        <TableCell className="text-right pr-6 opacity-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 h-8 w-8"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      ) : (
-                        <TableCell className="text-right pr-6">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Open menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuLabel>
-                                Member Actions
-                              </DropdownMenuLabel>
+                    {showActionsColumn && (
+                      <TableCell className="text-right pr-6">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuLabel>
+                              Member Actions
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                              className="cursor-pointer font-medium"
+                              onClick={() => router.push(`/profile/${member.id}`)}
+                            >
+                              <User className="mr-2 h-4 w-4" />
+                              View Profile
+                            </DropdownMenuItem>
+
+                            {(showTransferOwnership || showChangeRole || showRemove) && (
                               <DropdownMenuSeparator />
-                              {showTransferOwnership && (
-                                <DropdownMenuItem
-                                  className="cursor-pointer"
-                                  onClick={() =>
-                                    handleTransferOwnershipRequest(member.id)
-                                  }
-                                >
-                                  <Crown className="mr-2 h-4 w-4 text-amber-500" />
-                                  Transfer Ownership
-                                </DropdownMenuItem>
-                              )}
+                            )}
 
-                              {showChangeRole && (
-                                <DropdownMenuSub>
-                                  <DropdownMenuSubTrigger>
-                                    <ArrowUpCircle className="mr-2 h-4 w-4" />
-                                    Change Role
-                                  </DropdownMenuSubTrigger>
-                                  <DropdownMenuSubContent>
-                                    <DropdownMenuRadioGroup
-                                      value={member.role}
-                                      onValueChange={(value) =>
-                                        handleRoleChange(
-                                          member.id,
-                                          value as MemberRole,
-                                        )
-                                      }
+                            {showTransferOwnership && (
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={() =>
+                                  handleTransferOwnershipRequest(member.id)
+                                }
+                              >
+                                <Crown className="mr-2 h-4 w-4 text-amber-500" />
+                                Transfer Ownership
+                              </DropdownMenuItem>
+                            )}
+
+                            {showChangeRole && (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <ArrowUpCircle className="mr-2 h-4 w-4" />
+                                  Change Role
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                  <DropdownMenuRadioGroup
+                                    value={member.role}
+                                    onValueChange={(value) =>
+                                      handleRoleChange(
+                                        member.id,
+                                        value as MemberRole,
+                                      )
+                                    }
+                                  >
+                                    <DropdownMenuRadioItem
+                                      value={MemberRole.ADMIN}
                                     >
-                                      <DropdownMenuRadioItem
-                                        value={MemberRole.ADMIN}
-                                      >
-                                        Admin
-                                      </DropdownMenuRadioItem>
-                                      <DropdownMenuRadioItem
-                                        value={MemberRole.MEMBER}
-                                      >
-                                        Member
-                                      </DropdownMenuRadioItem>
-                                    </DropdownMenuRadioGroup>
-                                  </DropdownMenuSubContent>
-                                </DropdownMenuSub>
-                              )}
+                                      Admin
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem
+                                      value={MemberRole.MEMBER}
+                                    >
+                                      Member
+                                    </DropdownMenuRadioItem>
+                                  </DropdownMenuRadioGroup>
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                            )}
 
-                              {(showRemove || showChangeRole) && (
+                            {showRemove && (
+                              <>
                                 <DropdownMenuSeparator />
-                              )}
-
-                              {showRemove && (
                                 <DropdownMenuItem
                                   className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
                                   onClick={() => handleRemove(member.id)}
@@ -499,11 +498,12 @@ export function TeamMembersList({
                                   <ShieldAlert className="mr-2 h-4 w-4" />{" "}
                                   Remove from Team
                                 </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      ))}
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })

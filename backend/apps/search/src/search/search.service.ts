@@ -67,7 +67,7 @@ export class SearchService implements OnModuleInit {
             discussionId,
             messageSnapshot,
             teamSnapshot,
-            participantIds
+            membersToNotify: participantIds
         } = payload;
         this.logger.log(`Received new discussion message for ${discussionId}`);
 
@@ -187,7 +187,7 @@ export class SearchService implements OnModuleInit {
             while (true) {
                 const batch = await index.getDocuments({
                     filter: [filter],
-                    fields: ['id', 'participant_ids'],
+                    fields: ['id', 'participantIds'],
                     limit: BATCH_SIZE,
                     offset: offset
                 });
@@ -199,7 +199,7 @@ export class SearchService implements OnModuleInit {
 
                 const updatedDocsBatch = batch.results.map(doc => ({
                     id: doc.id,
-                    participant_ids: [...new Set([...(doc.participant_ids || []), userId])]
+                    participantIds: [...new Set([...(doc.participantIds || []), userId])]
                 }));
 
                 if (updatedDocsBatch.length > 0) {
@@ -229,7 +229,7 @@ export class SearchService implements OnModuleInit {
             while (true) {
                 const batch = await index.getDocuments({
                     filter: [filter],
-                    fields: ['id', 'participant_ids'],
+                    fields: ['id', 'participantIds'],
                     limit: BATCH_SIZE,
                     offset: offset
                 });
@@ -240,7 +240,7 @@ export class SearchService implements OnModuleInit {
 
                 const updatedDocsBatch = batch.results.map(doc => ({
                     id: doc.id,
-                    participant_ids: (doc.participant_ids as string[] || []).filter(id => id !== userId)
+                    participantIds: (doc.participantIds as string[] || []).filter(id => id !== userId)
                 }));
 
                 if (updatedDocsBatch.length > 0) {

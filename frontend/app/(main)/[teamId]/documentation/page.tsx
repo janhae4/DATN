@@ -518,7 +518,7 @@ export default function AttachmentPage() {
 
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <Select
-                value={selectedProjectId}
+                value={selectedProjectId || "unassigned"}
                 onValueChange={(val) => {
                   if (val === "unassigned") {
                     setSelectedProjectId("");
@@ -818,61 +818,63 @@ export default function AttachmentPage() {
                 </p>
               </div>
             )}
+            <div className="h-100">
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
-              {files.map((file) => {
-                return (
-                  <DndItemWrapper
-                    key={file.id}
-                    activeDragItem={activeDragItem}
-                    dragOverTargetName={dragOverTargetName}
-                    file={file}
-                    onToggleSelect={handleToggleSelect}
-                    selectedIds={selectedIds}
-                  >
-                    <FileCard
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
+                {files.map((file) => {
+                  return (
+                    <DndItemWrapper
+                      key={file.id}
+                      activeDragItem={activeDragItem}
+                      dragOverTargetName={dragOverTargetName}
                       file={file}
-                      projectId={selectedProjectId}
-                      teamId={teamId}
-                      onPreview={handleItemClick}
-                      onDownload={(f) => downloadFile(f)}
-                      onDelete={(f) => deleteFile(f)}
+                      onToggleSelect={handleToggleSelect}
                       selectedIds={selectedIds}
-                      setSelectedIds={setSelectedIds}
-                      onBulkDelete={deleteFiles}
-                      onBulkDownload={downloadFiles}
-                      onBulkVisibilityChange={changeVisibility}
-                    />
-                  </DndItemWrapper>
-                );
-              })}
-            </div>
-            {createPortal(
-              <DragOverlay dropAnimation={activeDragItem ? null : undefined}>
-                {activeDragItem ? (
-                  <div className="pointer-events-none">
-                    {selectedIds.has(activeDragItem.id) &&
-                      selectedIds.size > 1 ? (
-                      <div className="relative">
+                    >
+                      <FileCard
+                        file={file}
+                        projectId={selectedProjectId}
+                        teamId={teamId}
+                        onPreview={handleItemClick}
+                        onDownload={(f) => downloadFile(f)}
+                        onDelete={(f) => deleteFile(f)}
+                        selectedIds={selectedIds}
+                        setSelectedIds={setSelectedIds}
+                        onBulkDelete={deleteFiles}
+                        onBulkDownload={downloadFiles}
+                        onBulkVisibilityChange={changeVisibility}
+                      />
+                    </DndItemWrapper>
+                  );
+                })}
+              </div>
+              {createPortal(
+                <DragOverlay dropAnimation={activeDragItem ? null : undefined}>
+                  {activeDragItem ? (
+                    <div className="pointer-events-none">
+                      {selectedIds.has(activeDragItem.id) &&
+                        selectedIds.size > 1 ? (
+                        <div className="relative">
+                          <FileDragPreview
+                            file={activeDragItem}
+                            targetFolderName={dragOverTargetName}
+                          />
+                          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-md">
+                            +{selectedIds.size - 1}
+                          </div>
+                        </div>
+                      ) : (
                         <FileDragPreview
                           file={activeDragItem}
                           targetFolderName={dragOverTargetName}
                         />
-                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white">
-                          +{selectedIds.size - 1}
-                        </div>
-                      </div>
-                    ) : (
-                      <FileDragPreview
-                        file={activeDragItem}
-                        targetFolderName={dragOverTargetName}
-                      />
-                    )}
-                  </div>
-                ) : null}
-              </DragOverlay>,
-              document.body,
-            )}
+                      )}
+                    </div>
+                  ) : null}
+                </DragOverlay>,
+                document.body,
+              )}
+            </div>
             <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm flex items-center justify-between shrink-0">
               <div className="text-sm text-zinc-500 font-medium">
                 Page {paginationState.pageIndex + 1} of{" "}

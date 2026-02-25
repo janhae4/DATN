@@ -145,8 +145,18 @@ export class AuthService {
       expiresIn: 15 * 60,
     });
 
-    const urlSegment = typeCode === 'reset' ? 'reset/password' : 'verify/token';
-    const url = `${process.env.HOST_URL || 'http://localhost:3000'}/auth/${urlSegment}?token=${token}`;
+    const urlSegment = typeCode === 'reset' ? 'reset-password' : 'verify-email';
+
+    let host = process.env.FRONTEND_URL;
+    if (!host) {
+      host = process.env.HOST_URL || 'http://localhost:3000';
+      if (!host.startsWith('http')) {
+        host = `http://${host}`;
+      }
+    }
+
+    const baseUrl = host.endsWith('/') ? host.slice(0, -1) : host;
+    const url = `${baseUrl}/auth/${urlSegment}?token=${token}`;
 
     this.logger.log(`Emitting email pattern '${pattern}' for user ${user.id}.`);
     const emailPayload = {
@@ -298,6 +308,7 @@ export class AuthService {
     if (user instanceof User) {
       await this.userCacheService.cacheUserProfile(user)
     }
+
 
     if (!accessToken || !refreshToken) throw new NotFoundException('Failed to generate tokens');
 

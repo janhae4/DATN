@@ -137,6 +137,15 @@
         "tsConfigPath": "libs/minio/tsconfig.lib.json"
       }
     },
+    "n8n-service": {
+      "type": "application",
+      "root": "apps/n8n-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/n8n-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/n8n-service/tsconfig.app.json"
+      }
+    },
     "notification": {
       "type": "application",
       "root": "apps/notification",

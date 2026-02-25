@@ -1,13 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 import { NotificationType } from '@app/contracts/enums/notification-type.enum';
-import { NotificationTargetType } from '@app/contracts';
-
-export enum NotificationResource {
-    TASK = 'TASK',
-    COMMENT = 'COMMENT',
-    TEAM = 'TEAM',
-    SYSTEM = 'SYSTEM'
-}
+import { NotificationResource, NotificationTargetType } from '@app/contracts';
 
 @Entity()
 export class Notification {

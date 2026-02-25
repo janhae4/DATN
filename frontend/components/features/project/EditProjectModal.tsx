@@ -118,7 +118,7 @@ export function EditProjectModal({ project, open, onOpenChange }: EditProjectMod
                         )}
                     </div>
 
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                         <Label htmlFor="edit-visibility">Visibility <HelpTooltip text="Who can see this project" /></Label>
                         <Select
                             onValueChange={(value) => setValue("visibility", value as ProjectVisibility)}
@@ -133,7 +133,7 @@ export function EditProjectModal({ project, open, onOpenChange }: EditProjectMod
                                 <SelectItem value={ProjectVisibility.TEAM}>👥 Team</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
+                    </div> */}
 
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

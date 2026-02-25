@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUUID } from "class-validator";
+import { IsOptional, IsString, IsUUID, IsBoolean } from "class-validator";
 
 export class UploadFilePayload {
     @IsString()
@@ -14,4 +14,7 @@ export class UploadFilePayload {
     @IsUUID()
     @IsOptional()
     parentId?: string | null = null;
+    @IsOptional()
+    @IsBoolean()
+    isChatAttachment?: boolean;
 }

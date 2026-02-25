@@ -78,17 +78,24 @@ export class UserCacheService {
         const foundIds = new Set(cachedUsers.map((u) => u.id));
         const missingIds = uniqueIds.filter((id) => !foundIds.has(id));
 
-        if (missingIds.length > 0 && fetcher) {
-            this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from Source...`);
+        if (missingIds.length > 0) {
+            if (fetcher) {
+                this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from Source...`);
 
-            try {
-                const freshUsers = await fetcher(missingIds);
-                if (freshUsers && freshUsers.length > 0) {
-                    await this.setManyUserInfo(freshUsers);
-                    cachedUsers.push(...freshUsers);
+                try {
+                    const freshUsers = await fetcher(missingIds);
+                    if (freshUsers && freshUsers.length > 0) {
+                        await this.setManyUserInfo(freshUsers);
+                        cachedUsers.push(...freshUsers);
+                    }
+                } catch (error) {
+                    this.logger.error('Error fetching missing users', error);
                 }
-            } catch (error) {
-                this.logger.error('Error fetching missing users', error);
+            } else {
+                this.logger.warn(`Cache miss for ${missingIds.length} users, but no fetcher provided.`);
+                // Fallback: try to fetch one by one if no bulk fetcher? OR just ignore.
+                // For now, let's try to fetch via RPC as a default fallback if amqp is available 
+                // BUT amqp is private. We should probably rely on the caller providing a fetcher.
             }
         }
 
@@ -128,6 +135,15 @@ export class UserCacheService {
             user,
             TTL_24_HOURS,
         );
+    }
+
+    async deleteManyUsers(userIds: string[]) {
+        const pipe = this.redisService.getClient().pipeline();
+        userIds.forEach((userId) => {
+            const key = this.getUserInfoKey(userId);
+            pipe.del(key);
+        });
+        await pipe.exec();
     }
 
 }

@@ -15,19 +15,19 @@ export const useVideoCall = () => {
     setError(null);
     try {
       const data = await videoChatService.createOrJoinCall(payload);
-      
+
       setRoomId(data.roomId);
-      
+
       if (data.action === 'CREATED') {
-        toast.success(`Đã tạo phòng họp mới: ${data.roomId}`);
+        toast.success(`Created new meeting room: ${data.roomId}`);
       } else {
-        toast.info(`Đã tham gia phòng: ${data.roomId}`);
+        toast.info(`Joined room: ${data.roomId}`);
       }
 
       return data; // Trả về data để component xử lý tiếp (vd: redirect)
     } catch (err: any) {
       // Backend ném lỗi 403 Forbidden nếu user bị BANNED
-      const message = err.response?.data?.message || 'Không thể tham gia cuộc gọi';
+      const message = err.response?.data?.message || 'Unable to join video call';
       setError(message);
       toast.error(message);
       throw err;
@@ -40,9 +40,9 @@ export const useVideoCall = () => {
   const kickMember = async (payload: KickUserPayload) => {
     try {
       await videoChatService.kickUser(payload);
-      toast.success('Đã đuổi thành viên khỏi phòng');
+      toast.success('Member kicked successfully');
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Lỗi khi kick thành viên';
+      const message = err.response?.data?.message || 'Failed to kick member';
       toast.error(message);
     }
   };

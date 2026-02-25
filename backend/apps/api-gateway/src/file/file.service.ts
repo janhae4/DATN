@@ -28,7 +28,8 @@ export class FileService {
         userId: string,
         projectId?: string,
         teamId?: string,
-        parentId: string | null = null
+        parentId: string | null = null,
+        isChatAttachment?: boolean
     ) {
         return await this.sendRpcRequest(FILE_PATTERN.INITIAL_UPLOAD, {
             fileName,
@@ -36,7 +37,24 @@ export class FileService {
             userId,
             projectId,
             teamId,
-            parentId
+            parentId,
+            isChatAttachment
+        });
+    }
+
+    async initiateChatUpload(
+        fileName: string,
+        fileType: string,
+        userId: string,
+        teamId: string,
+        projectId?: string,
+    ) {
+        return await this.sendRpcRequest(FILE_PATTERN.INITIAL_CHAT_UPLOAD, {
+            fileName,
+            fileType,
+            userId,
+            projectId,
+            teamId,
         });
     }
 
@@ -130,11 +148,12 @@ export class FileService {
         }
     }
 
-    async getPreviewUrl(fileId: string, userId: string, projectId?: string) {
+    async getPreviewUrl(fileId: string, userId: string, projectId?: string, teamId?: string) {
         return await this.sendRpcRequest(FILE_PATTERN.GET_PREVIEW_URL, {
             fileId,
             userId,
             projectId,
+            teamId,
         })
     }
 
@@ -189,5 +208,15 @@ export class FileService {
             projectId,
             teamId
         })
+    }
+
+    async saveFromChat(payload: {
+        storageKey: string,
+        userId: string,
+        fileName: string,
+        teamId?: string,
+        projectId?: string,
+    }) {
+        return await this.sendRpcRequest(FILE_PATTERN.SAVE_FROM_CHAT, payload);
     }
 }

@@ -72,6 +72,9 @@ export function AssigneePicker({
                   "cursor-pointer outline-none flex items-center justify-center",
                   className
                 )}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                 }}

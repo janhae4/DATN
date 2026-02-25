@@ -1,14 +1,14 @@
-import { IsOptional, IsUUID } from "class-validator";
+import { IsOptional, IsString } from "class-validator";
 
 export class DeleteFiles {
-    @IsUUID('4', { each: true })
+    @IsString({ each: true })
     fileIds: string[]
 
     @IsOptional()
-    @IsUUID()
+    @IsString()
     teamId?: string
 
     @IsOptional()
-    @IsUUID()
+    @IsString()
     projectId?: string
 }

@@ -82,12 +82,12 @@ const data: {
       icon: CalendarDays,
       isActive: true,
     },
-    // {
-    //   title: "Messages",
-    //   url: "chat",
-    //   icon: MessageCircle,
-    //   isActive: true
-    // },
+    {
+      title: "Messages",
+      url: "chat",
+      icon: MessageCircle,
+      isActive: true
+    },
     {
       title: "AI Assistant",
       url: "ai-assistant",
@@ -98,13 +98,26 @@ const data: {
 }
 
 import { useProjects } from "@/hooks/useProjects";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const params = useParams();
+  const pathname = usePathname();
+  const { setOpen } = useSidebar();
   const teamId = params.teamId as string;
   const projectId = params.projectId as string | undefined;
   const { projects } = useProjects(teamId);
+
+  const isChat = pathname.includes("/chat");
+
+  React.useEffect(() => {
+    if (isChat) {
+      setOpen(false);
+    } else {
+      setOpen(true);
+    }
+  }, [isChat, setOpen]);
 
   const formattedProjects = React.useMemo(() => {
     return projects
@@ -146,6 +159,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         resolvedUrl = `/${teamId}/ai-assistant`
       } else if (item.url === "dashboard" && item.title === "Project management") {
         resolvedUrl = `/${teamId}`
+      } else if (item.url === "chat") {
+        resolvedUrl = `/${teamId}/chat`
       } else {
         // Routes that need both teamId and projectId
         resolvedUrl = basePath ? `${basePath}/${item.url}` : `/${teamId}`

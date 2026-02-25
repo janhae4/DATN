@@ -25,7 +25,7 @@ export function TaskSubtasks({
   lists,
   onRowClick,
 }: TaskSubtasksProps) {
-  const { data: tasks, updateTask } = useTaskManagement(projectId, teamId);
+  const { data: tasks, updateTask, isTaskLoading: isLoading } = useTaskManagement(projectId, teamId);
 
   const [isAdding, setIsAdding] = React.useState(false);
 
@@ -46,6 +46,12 @@ export function TaskSubtasks({
           {subtasks.length}
         </span>
       </div>
+
+      {isLoading && subtasks.length === 0 && (
+        <div className="flex justify-center p-4">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+        </div>
+      )}
 
       <div className="rounded-md border">
         {subtasks.length === 0 && !isAdding ? (

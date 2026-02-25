@@ -247,7 +247,7 @@ export function BacklogFilterBar({
               id="ai-suggest-btn"
               variant="outline"
               size="sm"
-              className="h-11 px-4 hover:text-white transition-all duration-300 rounded-lg gap-2 font-medium shadow-sm hover:shadow-violet-500/20"
+              className="h-11 px-4 hover:text-white transition-all duration-300 rounded-lg gap-2 font-medium shadow-sm"
             >
               <SparkleIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Suggest with AI</span>

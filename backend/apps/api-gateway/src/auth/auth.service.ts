@@ -32,6 +32,7 @@ export class AuthService {
     refreshToken: string,
     response: Response,
   ) {
+    console.log("setting cookies in setCookies: ", accessToken, refreshToken);
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: true,
@@ -187,18 +188,16 @@ export class AuthService {
   }
 
   async handleGoogleCallback(user: GoogleAccountDto, response: Response) {
-    const token = await this.amqp.request<LoginResponseDto>({
+    const tokens = await this.amqp.request<LoginResponseDto>({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.GOOGLE_CALLBACK,
       payload: user
     });
-
-    if (token.accessToken && token.refreshToken) {
-      this.setCookies(token.accessToken, token.refreshToken, response);
+    if (tokens.accessToken && tokens.refreshToken) {
+      this.setCookies(tokens.accessToken, tokens.refreshToken, response);
     }
-
-    console.log()
-    return response.redirect(`${process.env.CLIENT_URL || 'http://127.0.0.1:5000'}/dashboard`);
+    const callbackUrl = `${process.env.CLIENT_URL || 'http://localhost:5000'}`;
+    return response.redirect(callbackUrl);
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
@@ -213,7 +212,7 @@ export class AuthService {
     return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.RESET_PASSWORD_CONFIRM,
-      payload: confirmResetPasswordDto
+      payload: { ...confirmResetPasswordDto, code: confirmResetPasswordDto.code || '' }
     });
   }
 

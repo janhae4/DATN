@@ -1,4 +1,5 @@
 import { MemberShip } from '@app/contracts/enums/membership.enum';
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -6,6 +7,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsIn,
   ValidateNested,
 } from 'class-validator';
 
@@ -23,7 +25,15 @@ class AttachmentDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsIn(['image', 'file', 'video'])
   type: 'image' | 'file' | 'video';
+
+  @IsString()
+  @IsNotEmpty()
+  fileName: string;
+
+  @IsOptional()
+  size?: number;
 }
 
 export class SenderSnapshotDto {
@@ -60,6 +70,10 @@ export class CreateMessageDto {
   @IsString()
   @IsOptional()
   teamId?: string;
+
+  @IsOptional()
+  @IsString()
+  replyToId?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

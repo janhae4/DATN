@@ -3,7 +3,7 @@ import { NotificationService } from './notification.service';
 import { ClientConfigModule } from '@app/contracts/client-config/client-config.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Notification } from './entity/notification.entity';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { RmqClientService } from '@app/common';
 
 describe('NotificationService', () => {
   let service: NotificationService;
@@ -24,9 +24,10 @@ describe('NotificationService', () => {
           },
         },
         {
-          provide: AmqpConnection,
+          provide: RmqClientService,
           useValue: {
             request: jest.fn(),
+            publish: jest.fn(),
           }
         }
       ],

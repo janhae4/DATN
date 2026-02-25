@@ -73,7 +73,7 @@ export class MinioService implements OnModuleInit {
     ) {
         try {
             const command = new PutObjectCommand({
-                Bucket: 'documents',
+                Bucket: this.bucketName,
                 Key: key,
             });
             return await getSignedUrl(this.s3Signer, command, { expiresIn: 300 });
@@ -83,25 +83,13 @@ export class MinioService implements OnModuleInit {
         }
     }
 
-    async getPreSignedUpdateUrl(key: string, expiry: number = 60 * 5) {
-        try {
-            const url = await this.minioClient.presignedPutObject(
-                this.bucketName,
-                key,
-                expiry,
-            );
-            return url;
-        } catch (err) {
-            this.logger.error(`Minio getPreSignedUpdateUrl failed for key ${key}:`, err);
-            throw new BadRequestException('Get pre-signed update URL failed');
-        }
-    }
     async getPreSignedViewUrl(
         storageKey: string,
         viewFilename: string,
         expiry: number = 60 * 5,
     ): Promise<string> {
         try {
+            // Check file exist uses internal client
             await this.minioClient.statObject(this.bucketName, storageKey);
             const command = new GetObjectCommand({
                 Bucket: this.bucketName,
@@ -162,6 +150,17 @@ export class MinioService implements OnModuleInit {
         } catch (err) {
             this.logger.error(`Failed to get file stream for ${key}:`, err);
             return null;
+        }
+    }
+
+    async copyObject(sourceKey: string, destinationKey: string) {
+        try {
+            const conds = new Minio.CopyConditions();
+            await this.minioClient.copyObject(this.bucketName, destinationKey, `/${this.bucketName}/${sourceKey}`, conds);
+            this.logger.log(`Copied ${sourceKey} to ${destinationKey}`);
+        } catch (err) {
+            this.logger.error(`Failed to copy object from ${sourceKey} to ${destinationKey}:`, err);
+            throw new Error(`Minio copy failed: ${err.message}`);
         }
     }
 }

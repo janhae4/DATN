@@ -44,6 +44,7 @@ export * from './discussion/dto/send-message.dto';
 export * from './discussion/dto/response-message.dto'
 export * from './discussion/dto/message.dto'
 export * from './discussion/discussion.pattern.dto';
+export * from './discussion/dto/channel.dto';
 
 /*----
 CHATBOT
@@ -196,6 +197,7 @@ export * from './video-chat/index';
 EVENT
 -----*/
 export * from './events/events.pattern';
+export * from './events/project.events';
 
 
 /*----
@@ -214,6 +216,13 @@ export * from './file/dto/upload-file.dto';
 export * from './file/file.enum'
 export * from './file/dto/create-file-folder.dto'
 export * from './file/dto/download-file.dto'
+
+/*----
+N8N
+-----*/
+export * from './n8n/n8n.patterns';
+export * from './n8n/n8n.dto';
+
 
 
 

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SocketController } from './socket.controller';
 import { SocketGateway } from './socket.gateway';
-import { ClientConfigModule, EVENTS_EXCHANGE, SOCKET_EXCHANGE, CHATBOT_EXCHANGE } from '@app/contracts';
+import { ClientConfigModule} from '@app/contracts';
 import { RmqModule } from '@app/common';
 
 @Module({

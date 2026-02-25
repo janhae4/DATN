@@ -1,6 +1,8 @@
 // types/user.interface.ts
 import { Role, Provider } from "../common/enums";
 
+import { IAccount } from "./account.interface";
+
 export interface UserSkill {
   id: string;
   skillName: string;
@@ -25,4 +27,5 @@ export interface User {
   createdAt: string;
   jobTitle?: string | null;
   skills?: UserSkill[];
+  accounts?: IAccount[];
 }

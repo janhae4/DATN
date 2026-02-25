@@ -232,4 +232,45 @@ export class TasksController {
     return this.tasksService.suggestTask(payload.userId, payload.query, payload.projectId, payload.sprintId, payload.teamId);
   }
 
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.GENERATE_FROM_CHAT,
+    queue: TASK_PATTERNS.GENERATE_FROM_CHAT,
+    errorHandler: customErrorHandler,
+  })
+  generateFromChat(payload: {
+    userId: string;
+    discussionId: string;
+    teamId: string;
+    projectId?: string;
+    sprintId?: string;
+    messageLimit?: number;
+  }) {
+    return this.tasksService.generateFromChat(
+      payload.userId,
+      payload.discussionId,
+      payload.teamId,
+    );
+  }
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.GENERATE_FROM_MESSAGE,
+    queue: TASK_PATTERNS.GENERATE_FROM_MESSAGE,
+    errorHandler: customErrorHandler,
+  })
+  generateFromMessage(payload: {
+    userId: string;
+    messageId: string;
+    teamId: string;
+    projectId?: string;
+    sprintId?: string;
+  }) {
+    return this.tasksService.generateFromMessage(
+      payload.userId,
+      payload.messageId,
+      payload.teamId,
+    );
+  }
 }

@@ -51,7 +51,23 @@ export class FileController {
     @Body() body: InitiateUploadDto,
     @CurrentUser('id') userId: string,
   ) {
-    return this.fileService.initiateUpload(body.fileName, body.fileType, userId, body.projectId, body.teamId, body.parentId);
+    if (body.isChatAttachment && body.teamId) {
+      if (!body.teamId) throw new Error("TeamId is required")
+      return this.fileService.initiateChatUpload(body.fileName, body.fileType, userId, body.teamId, body.projectId);
+    }
+    return this.fileService.initiateUpload(body.fileName, body.fileType, userId, body.projectId, body.teamId, body.parentId, body.isChatAttachment);
+  }
+
+  @Post('initiate-upload-chat')
+  @ApiOperation({ summary: '1. Get Pre-signed URL for a new file' })
+  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
+  @ApiBody({ type: InitiateUploadDto })
+  @ApiResponse({ status: 201, description: 'Returns the Pre-signed URL and fileId' })
+  initiateUploadChat(
+    @Body() body: InitiateUploadDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.initiateChatUpload(body.fileName, body.fileType, userId, body.teamId || '', body.projectId);
   }
 
   @Post('folder')
@@ -106,8 +122,9 @@ export class FileController {
     @Param('fileId') fileId: string,
     @CurrentUser('id') userId: string,
     @Query('projectId') projectId?: string,
+    @Query('teamId') teamId?: string,
   ) {
-    return this.fileService.getPreviewUrl(fileId, userId, projectId);
+    return this.fileService.getPreviewUrl(fileId, userId, projectId, teamId);
   }
 
   @Get(':fileId/download')
@@ -176,7 +193,7 @@ export class FileController {
   }
 
 
-  @Patch('visibility/bulk') 
+  @Patch('visibility/bulk')
   @ApiOperation({ summary: 'Change visibility for multiple files' })
   async changeVisibilityBulk(
     @Body() body: BulkVisibility,
@@ -239,5 +256,22 @@ export class FileController {
     @Query('projectId') projectId?: string,
   ) {
     return this.fileService.confirmUpload(fileId, userId, projectId);
+  }
+
+  @Post('save-from-chat')
+  @ApiOperation({ summary: '8. Save a file from chat to workspace/project' })
+  saveFromChat(
+    @Body() body: {
+      storageKey: string;
+      fileName: string;
+      teamId?: string;
+      projectId?: string;
+    },
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.saveFromChat({
+      ...body,
+      userId,
+    });
   }
 }

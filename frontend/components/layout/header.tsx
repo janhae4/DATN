@@ -7,11 +7,13 @@ import { SearchBar } from './searchbar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationPopover from './NotificationPopover';
+import { TaskApprovalModal } from '@/components/features/backlogs/task/TaskApprovalModal';
+import { TaskRequestModal } from '@/components/features/backlogs/task/TaskRequestModal';
 
 // Dynamically import components that use client-side features
 const ProfileButton = dynamic(
-  () => import('./profile-button').then((mod) => mod.ProfileButton),
-  { ssr: false }
+    () => import('./profile-button').then((mod) => mod.ProfileButton),
+    { ssr: false }
 );
 
 // const NotificationPopover = dynamic(
@@ -36,6 +38,8 @@ const Header = () => {
             <div className='flex gap-2 items-center'>
                 <ProjectTogglerCombobox />
                 <SearchBar />
+                <TaskApprovalModal />
+                <TaskRequestModal />
                 <NotificationPopover />
                 <ProfileButton />
             </div>

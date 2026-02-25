@@ -21,7 +21,6 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from "./ThemeToggle";
 
-// A helper function for simple navigation to make the code cleaner.
 const navigateTo = (path: string) => {
   window.location.href = path;
 }
@@ -73,10 +72,6 @@ export function ProfileButton() {
           <DropdownMenuItem onSelect={() => navigateTo('/profile')}>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigateTo('/settings')}>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogoutClick} className="text-red-600">

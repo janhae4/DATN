@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { DiscussionService } from './discussion.service';
 import { DiscussionController } from './discussion.controller';
-import { DISCUSSION_EXCHANGE, ClientConfigModule, ClientConfigService } from '@app/contracts';
+import { ClientConfigModule } from '@app/contracts';
 import { AuthModule } from '../auth/auth.module';
-import { RmqModule } from '@app/common';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
     ClientConfigModule,
     AuthModule,
-    RmqModule.register()
+    UserModule,
   ],
   controllers: [DiscussionController],
   providers: [DiscussionService],

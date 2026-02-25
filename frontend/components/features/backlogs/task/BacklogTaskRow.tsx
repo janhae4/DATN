@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import LabelTag from "@/components/shared/label/LabelTag";
 import { AddNewTaskRow } from "./AddNewTaskRow";
-import { TaskApprovalControl } from "./TaskApprovalControl";
+
 
 // Hooks & Services
 import { UpdateTaskDto } from "@/services/taskService";
@@ -199,7 +199,7 @@ function _BacklogTaskRow({
       if (targetEl && targetEl.releasePointerCapture) {
         try {
           targetEl.releasePointerCapture(e.pointerId);
-        } catch (e) {}
+        } catch (e) { }
       }
     }, 400);
   };
@@ -254,9 +254,9 @@ function _BacklogTaskRow({
         className={cn(
           "group cursor-pointer hover:bg-muted/50 transition-colors select-none p-2",
           isDragging &&
-            "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale",
+          "opacity-40 bg-muted/50 border-dashed border-2 border-primary/20 grayscale",
           selected &&
-            "bg-primary/5 hover:bg-primary/15 data-[state=selected]:bg-primary/5 rounded-lg p-10"
+          "bg-primary/5 hover:bg-primary/15 data-[state=selected]:bg-primary/5 rounded-lg p-10"
         )}
         onClick={(e) => {
           const target = e.target as HTMLElement;
@@ -355,14 +355,7 @@ function _BacklogTaskRow({
               </div>
             ) : (
               <div className="flex-1 min-w-0 flex items-center gap-3">
-                <TaskApprovalControl
-                  task={task}
-                  currentRole={currentRole}
-                  user={user || null}
-                  onUpdateTask={onUpdateTask}
-                  onDeleteTask={onDeleteTask}
-                  stopPropagation={stopPropagation}
-                />
+
 
                 <span
                   className={cn(
@@ -370,8 +363,8 @@ function _BacklogTaskRow({
                     task.approvalStatus === "PENDING"
                       ? "text-muted-foreground italic font-normal"
                       : task.approvalStatus === "REJECTED"
-                      ? "text-red-400 line-through decoration-red-400/50"
-                      : "font-medium"
+                        ? "text-red-400 line-through decoration-red-400/50"
+                        : "font-medium"
                   )}
                 >
                   {task.title}

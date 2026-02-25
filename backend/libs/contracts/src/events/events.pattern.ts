@@ -3,7 +3,7 @@ export const EVENTS = {
   LOGIN: 'events.login',
   USER_UPDATED: 'events.user.updated',
   CREATE_TEAM: 'events.create.team',
-  CREATE_CONVERSATION:'events.create.conversation',
+  CREATE_CONVERSATION: 'events.create.conversation',
   ADD_MEMBER: 'events.add.member',
   JOIN_TEAM: 'events.join.team',
   REMOVE_MEMBER: 'events.remove.member',
@@ -12,6 +12,9 @@ export const EVENTS = {
   MEMBER_ROLE_CHANGED: 'events.member.role.changed',
   OWNERSHIP_TRANSFERRED: 'events.ownership.transferred',
   NEW_MESSAGE: 'events.new.message',
+  MESSAGE_UPDATED: 'events.message.updated',
+  MESSAGE_DELETED: 'events.message.deleted',
   DELETE_DOCUMENT: 'events.delete.document',
   RENAME_TEAM: 'events.rename.team',
+  TEAM_UPDATED: 'events.team.updated',
 };

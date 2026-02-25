@@ -24,6 +24,8 @@ import {
   UserSkill,
   UserOnboardingDto,
   EVENTS,
+  REDIS_EXCHANGE,
+  REDIS_PATTERN,
 } from '@app/contracts';
 import { randomInt } from 'crypto';
 import { RmqClientService } from '@app/common';
@@ -398,9 +400,32 @@ export class UserService {
   }
 
   async findManyByIds(ids: string[], forDiscussion?: boolean) {
-    return await this.userCache.getManyUserInfo(
-      ids,
-      async (missingIds) => await this.userRepo.find({ where: { id: In(missingIds) } }))
+    if (!ids || ids.length === 0) return [];
+
+    const allUsers = await this.userCache.getManyUserInfo(ids, async (missingIds) => {
+      this.logger.log(`Cache miss for ${missingIds.length} users. Fetching from DB...`);
+      return await this.userRepo.find({
+        where: {
+          id: In(missingIds)
+        },
+        relations: {
+          skills: true
+        }
+      });
+    });
+
+    this.logger.log(`Returning ${allUsers.length} users`);
+    if (forDiscussion) {
+      allUsers.forEach(user => {
+        if (user.id !== undefined) {
+          (user as any)._id = user.id;
+          delete (user as any).id;
+        }
+      })
+      this.logger.log(`Returning ${allUsers.length} users for discussion`);
+    }
+
+    return allUsers;
   }
 
   async validate(loginDto: LoginDto) {
@@ -832,6 +857,8 @@ export class UserService {
   }
 
   async handleBulkSkillIncrement(data: Array<{ userId: string, skills: { skillName: string, exp: number }[] }>) {
+    const userIds = data.map(d => d.userId);
+    await this.userCache.deleteManyUsers(userIds);
     return await this.dataSource.transaction(async (manager) => {
       for (const { userId, skills } of data) {
         for (const { skillName, exp } of skills) {

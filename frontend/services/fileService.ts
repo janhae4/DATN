@@ -58,15 +58,38 @@ export const fileService = {
   },
 
   initiateUpload: async (
-    data: { fileName: string; fileType: string, parentId: string | null },
+    data: { fileName: string; fileType: string, parentId: string | null, isChatAttachment?: boolean },
     projectId?: string,
     teamId?: string
   ): Promise<PresignedUrlResponse> => {
+    if (data.isChatAttachment) {
+      return fileService.initiateChatUpload({
+        fileName: data.fileName,
+        fileType: data.fileType,
+      }, teamId || '', projectId);
+    }
     const payload: any = { ...data };
     if (projectId) payload.projectId = projectId;
     if (teamId) payload.teamId = teamId;
+
     const response = await apiClient.post<PresignedUrlResponse>(
       "/files/initiate-upload",
+      payload
+    );
+    return response.data;
+  },
+
+  initiateChatUpload: async (
+    data: { fileName: string; fileType: string },
+    teamId: string,
+    projectId?: string,
+  ): Promise<PresignedUrlResponse> => {
+    const payload: any = { ...data, teamId };
+    if (projectId) payload.projectId = projectId;
+    payload.isChatAttachment = true;
+
+    const response = await apiClient.post<PresignedUrlResponse>(
+      "/files/initiate-upload-chat",
       payload
     );
     return response.data;
@@ -100,10 +123,12 @@ export const fileService = {
     }
   },
 
-  getPreviewUrl: async (fileId: string, projectId?: string): Promise<{ viewUrl: string }> => {
-    const params = projectId ? { projectId } : {};
+  getPreviewUrl: async (fileId: string, projectId?: string, teamId?: string): Promise<{ viewUrl: string }> => {
+    const params: any = {};
+    if (projectId) params.projectId = projectId;
+    if (teamId) params.teamId = teamId;
     const response = await apiClient.get<{ viewUrl: string }>(
-      `/files/${fileId}/preview`,
+      `/files/${encodeURIComponent(fileId)}/preview`,
       { params }
     );
     return response.data;
@@ -111,7 +136,7 @@ export const fileService = {
 
   deleteFile: async (fileId: string, projectId?: string): Promise<void> => {
     console.log("FileId, projectId", fileId, projectId);
-    await apiClient.delete(`/files/${fileId}`, { params: { projectId } });
+    await apiClient.delete(`/files/${encodeURIComponent(fileId)}`, { params: { projectId } });
   },
 
   confirmUpload: async (fileId: string): Promise<void> => {
@@ -188,4 +213,14 @@ export const fileService = {
   changeVisibility: async (fileIds: string[], visibility: FileVisibility, allowedUserIds?: string[], projectId?: string, teamId?: string) => {
     await apiClient.patch(`/files/visibility/bulk`, { fileIds, visibility, allowedUserIds, projectId, teamId });
   },
+
+  saveFromChat: async (data: {
+    storageKey: string;
+    fileName: string;
+    teamId?: string;
+    projectId?: string;
+  }) => {
+    const response = await apiClient.post('/files/save-from-chat', data);
+    return response.data;
+  }
 };

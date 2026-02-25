@@ -6,5 +6,6 @@ export enum FileType {
 export enum FileVisibility {
     PRIVATE = 'PRIVATE',
     TEAM = 'TEAM',
-    SPECIFIC = 'SPECIFIC'
+    SPECIFIC = 'SPECIFIC',
+    PUBLIC = 'PUBLIC'
 }

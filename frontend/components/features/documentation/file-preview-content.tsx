@@ -59,6 +59,11 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
     return validExts.includes(extension) || mimeType.startsWith("image/");
   }, [extension, mimeType]);
 
+  const isVideo = useMemo(() => {
+    const validExts = ["mp4", "webm", "ogg", "mov"];
+    return validExts.includes(extension) || mimeType.startsWith("video/");
+  }, [extension, mimeType]);
+
   useEffect(() => {
     if ((!isDocx && !isExcel) || !fileUrl) return;
 
@@ -155,6 +160,21 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
           className="object-contain"
           unoptimized
         />
+      </div>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-black p-4">
+        <video
+          src={fileUrl}
+          controls
+          className="max-h-full max-w-full"
+          autoPlay
+        >
+          Your browser does not support the video tag.
+        </video>
       </div>
     );
   }

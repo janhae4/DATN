@@ -47,6 +47,9 @@ export class File {
 
     @Prop({ type: String, default: null })
     pendingNewName?: string;
+
+    @Prop({ type: Boolean, default: false, index: true })
+    isChatAttachment?: boolean;
 }
 
 export const FileSchema = SchemaFactory.createForClass(File);

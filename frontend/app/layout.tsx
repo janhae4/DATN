@@ -16,7 +16,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Taskora",
+  title: "Team Power",
   description: "",
 };
 

@@ -84,10 +84,17 @@ export default function CalendarContent({ onToggleTaskList, isTaskListOpen }: { 
     }, [createEvent]);
 
     const handleUpdate = useCallback((id: string, data: any) => {
-        const payload = {
+        const sourceCalendarId = modalData?.calendarId;
+        const destinationCalendarId = data.calendarId;
+
+        const payload: any = {
             ...data,
-            calendarId: modalData?.calendarId
+            calendarId: sourceCalendarId
         };
+
+        if (destinationCalendarId && sourceCalendarId && destinationCalendarId !== sourceCalendarId) {
+            payload.destinationCalendarId = destinationCalendarId;
+        }
 
         updateEvent.mutate({ id, updates: payload }, {
             onSuccess: () => setIsModalOpen(false),

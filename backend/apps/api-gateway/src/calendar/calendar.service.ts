@@ -26,7 +26,7 @@ export class CalendarService {
     return this.rmqClient.request({
       exchange: CALENDAR_EXCHANGE,
       routingKey: CALENDAR_PATTERN.CREATE_EVENT,
-      payload: { userId, dto },
+      payload: { userId, ...dto },
     });
   }
 
@@ -50,7 +50,7 @@ export class CalendarService {
     return this.rmqClient.request({
       exchange: CALENDAR_EXCHANGE,
       routingKey: CALENDAR_PATTERN.UPDATE_EVENT,
-      payload: { userId, eventId, dto },
+      payload: { userId, eventId, ...dto },
     });
   }
 
@@ -58,7 +58,7 @@ export class CalendarService {
     return this.rmqClient.request({
       exchange: CALENDAR_EXCHANGE,
       routingKey: CALENDAR_PATTERN.GET_CALENDARS,
-      payload: userId, 
+      payload: userId,
     });
   }
 }
