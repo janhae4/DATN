@@ -7,16 +7,20 @@ import React from 'react'
 const AIAssistantUI = dynamic(() => import('@/components/AI-assistant/AI-assistant'), {
   loading: () => (
     <div className="flex h-screen w-full items-center justify-center">
-        {/* <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> */}
+      {/* <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> */}
     </div>
   ),
-  ssr: false 
+  ssr: false
 })
 
 export default function page() {
   return (
-    <div>     
-        <AIAssistantUI/>
-    </div>
+    <React.Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <AIAssistantUI />
+    </React.Suspense>
   )
 }

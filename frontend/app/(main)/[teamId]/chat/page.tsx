@@ -8,5 +8,9 @@ export default function ChatPage() {
   const params = useParams();
   const teamId = params.teamId as string;
 
-  return <ChatContainer teamId={teamId} />;
+  return (
+    <React.Suspense fallback={<div className="p-10">Loading chat...</div>}>
+      <ChatContainer teamId={teamId} />
+    </React.Suspense>
+  );
 }

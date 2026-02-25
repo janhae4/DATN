@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Image from "next/image";
 import styles from "./auth.module.css";
 
@@ -29,8 +29,12 @@ export default function AuthPage() {
           }`}
       >
         <div className={styles.form_wrapper}>
-          <LoginForm isActive={isLoginView} onToggle={toggleView} />
-          <SignupForm isActive={!isLoginView} onToggle={toggleView} />
+          <Suspense fallback={null}>
+            <LoginForm isActive={isLoginView} onToggle={toggleView} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <SignupForm isActive={!isLoginView} onToggle={toggleView} />
+          </Suspense>
         </div>
       </div>
 

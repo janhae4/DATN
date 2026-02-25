@@ -1,0 +1,9 @@
+components/auth/EmailVerification.tsx:  const searchParams = useSearchParams();
+components/auth/loginForm.tsx:  const searchParams = useSearchParams();
+components/auth/ResetPasswordForm.tsx:  const searchParams = useSearchParams();
+components/auth/signupForm.tsx:  const searchParams = useSearchParams();
+components/layout/searchbar.tsx:  const searchParams = useSearchParams();
+hooks/chat/useChatPageLogic.ts:    const searchParams = useSearchParams();
+hooks/useNotifications.ts:    const searchParams = useSearchParams();
+app/(secondary)/auth/reset-password/page.tsx:  const searchParams = useSearchParams();
+app/(secondary)/auth/verify-email/page.tsx:  const searchParams = useSearchParams();

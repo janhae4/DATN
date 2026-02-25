@@ -1,7 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { BellIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ProjectTogglerCombobox } from './ProjectTogglerCombobox';
 import { SearchBar } from './searchbar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -40,7 +42,9 @@ const Header = () => {
                 <SearchBar />
                 <TaskApprovalModal />
                 <TaskRequestModal />
-                <NotificationPopover />
+                <Suspense fallback={<Button variant="outline" size="icon"><BellIcon className="h-4 w-4 opacity-50" /></Button>}>
+                    <NotificationPopover />
+                </Suspense>
                 <ProfileButton />
             </div>
         </header>

@@ -100,7 +100,7 @@ export default function CreateVideoCallPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 sm:p-8 relative overflow-hidden bg-background">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 sm:p-8 py-10 sm:py-20 relative bg-background">
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10 animate-in fade-in zoom-in duration-700">
 
         {/* Left Col: Hero Text & Create */}

@@ -27,4 +27,3 @@ export { MessageAttachments } from './messages/MessageAttachments';
 // ============================================
 // TYPES
 // ============================================
-export type { Member } from './sidebar/MemberItem';

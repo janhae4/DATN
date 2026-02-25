@@ -455,11 +455,11 @@ export default function SummaryPage() {
 
                 <div className=" min-h-[250px] max-h-[400px] overflow-y-auto custom-scrollbar relative">
                   {recordings.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {recordings.map((rec: any) => (
                         <Card key={rec.id} className="bg-card border border-muted-foreground/10 rounded-xl overflow-hidden hover:border-muted-foreground/30 hover:shadow-sm transition-all duration-300 group">
                           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 min-w-0">
                               {/* Video Thumbnail Placeholder */}
                               <div className="relative shrink-0 h-16 w-24 bg-muted/50 rounded-lg flex items-center justify-center border border-muted-foreground/5 overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -467,7 +467,7 @@ export default function SummaryPage() {
                               </div>
 
                               {/* Info */}
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <h5 className="text-sm font-medium text-foreground truncate">Meeting Recording</h5>
                                 <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] font-medium text-muted-foreground/80">
                                   <span className="flex items-center gap-1 bg-muted/30 px-1.5 py-0.5 rounded-md border border-transparent">
@@ -486,7 +486,7 @@ export default function SummaryPage() {
                             <Button
                               variant="secondary"
                               size="sm"
-                              className="shrink-0 rounded-lg h-8 px-4 text-[11px] font-medium bg-muted/50 hover:bg-primary hover:text-white transition-all duration-300 border border-transparent hover:border-primary/20"
+                              className="shrink-0 w-full sm:w-auto rounded-lg h-8 px-4 text-[11px] font-medium bg-muted/50 hover:bg-primary hover:text-white transition-all duration-300 border border-transparent hover:border-primary/20"
                               disabled={!rec.fileUrl}
                               onClick={() => window.open(rec.fileUrl, '_blank')}
                             >

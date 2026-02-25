@@ -13,7 +13,7 @@ export default function MainLayout({
     <TeamProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className=" h-screen w-screen overflow-x-hidden relative">
+        <SidebarInset className="h-screen w-screen overflow-x-hidden overflow-y-auto relative">
           <div className={styles.mainLayout}>
             <main className={styles.content}>
               <Header />

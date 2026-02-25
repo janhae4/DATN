@@ -5,7 +5,7 @@ rtc:
   tcp_port: 7881
   port_range_start: 50000
   port_range_end: 50050
-  use_external_ip: false # Set thành true nếu chạy trên VPS
+  use_external_ip: false
 
 # KHÓA BẢO MẬT: Dùng để tạo Token sau này
 keys:

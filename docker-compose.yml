@@ -115,7 +115,7 @@ services:
       - "7880:7880"
       - "7881:7881"
       - "50000-50050:50000-50050/udp"
-    command: --config /etc/livekit.yml
+    command: --config /etc/livekit.yml --node-ip 192.168.1.4
     volumes:
       - ./web_rtc/livekit.yml:/etc/livekit.yml
     networks:
@@ -130,6 +130,8 @@ services:
       - ./web_rtc/livekit-egress.yml:/etc/egress.yml
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - livekit
       - redis
@@ -221,7 +223,7 @@ services:
     #   minio:
     #     condition: service_healthy
     entrypoint: >
-      /bin/sh -c " until (mc alias set myminio http://minio:9000 minioadmin minioadmin); do echo '...waiting...' && sleep 1; done; mc event add myminio/documents arn:minio:sqs::PRIMARY:webhook --event put; echo 'MinIO Webhook Setup Complete!'; exit 0; "
+      /bin/sh -c " until (mc alias set myminio http://minio:9000 minioadmin minioadmin); do echo '...waiting...' && sleep 1; done; mc mb myminio/meeting-recordings; mc event add myminio/documents arn:minio:sqs::PRIMARY:webhook --event put; echo 'MinIO Webhook Setup Complete!'; exit 0; "
     networks:
       - app-network
 
@@ -425,9 +427,12 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MINIO_ENDPOINT=minio:9000
-      - MINIO_PUBLIC_URL=http://localhost:9000
+      - MINIO_ENDPOINT_PUBLIC=http://127.0.0.1:9000
       - MINIO_ENDPOINT_INTERNAL=http://minio:9000
-      - GEMINI_API_KEY=key
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_RECORDING_BUCKET=meeting-recordings
+      - GEMINI_API_KEY=AIzaSyDlRvjqWRoaeJ4Nt0QRHj_BYZ-ix_191fc
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -461,7 +466,7 @@ services:
         NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
         NEXT_PUBLIC_SOCKET_URL: ws://127.0.0.1:4001
         NEXT_PUBLIC_WEBRTC_WS_URL: ws://127.0.0.1:8005/ws
-        NEXT_PUBLIC_LIVEKIT_URL: http://127.0.0.1:7880
+        NEXT_PUBLIC_LIVEKIT_URL: http://192.168.1.4:7880
     container_name: nextjs_frontend
     restart: always
     ports:
