@@ -930,6 +930,7 @@ Absolutely do not use markdown (like ` + "```json" + `), only return the raw val
 			tx.Create(&models.CallTranscript{
 				CallID:    call.ID,
 				UserID:    t.UserID,
+				UserName:  t.UserName,
 				Content:   t.Content,
 				Timestamp: t.Timestamp,
 			})

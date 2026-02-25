@@ -17,6 +17,9 @@ export class CallTranscript {
   @Column()
   userId: string;
 
+  @Column({ nullable: true })
+  userName: string;
+
   @Column('text')
   content: string;
 

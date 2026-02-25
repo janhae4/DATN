@@ -99,6 +99,7 @@ type CallTranscript struct {
 	CallID    uuid.UUID `gorm:"type:uuid;not null;column:callId" json:"callId"`
 	Call      Call      `gorm:"foreignKey:CallID" json:"-"`
 	UserID    string    `gorm:"column:userId" json:"userId"`
+	UserName  string    `gorm:"column:userName" json:"userName"`
 	Content   string    `gorm:"column:content" json:"content"`
 	Timestamp time.Time `gorm:"column:timestamp" json:"timestamp"`
 	CreatedAt time.Time `gorm:"autoCreateTime;column:createdAt" json:"createdAt"`

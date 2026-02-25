@@ -237,6 +237,7 @@ export class VideoChatService {
         const transcriptEntities = transcripts.map(t => manager.create(CallTranscript, {
           callId: call.id,
           userId: t.userId,
+          userName: t.userName,
           content: t.content,
           timestamp: new Date(t.timestamp)
         }));

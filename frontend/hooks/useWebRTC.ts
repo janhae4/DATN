@@ -13,7 +13,6 @@ import {
 } from 'livekit-client';
 
 const WS_URL = process.env.NEXT_PUBLIC_WEBRTC_WS_URL || 'ws://127.0.0.1:8005/ws';
-// LiveKit URL (inside browser should use the public one, or localhost if testing)
 const LIVEKIT_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'http://127.0.0.1:7880';
 
 interface WebSocketMessage {
@@ -59,7 +58,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
     const [isMicOn, setIsMicOn] = useState(true);
     const [isCamOn, setIsCamOn] = useState(true);
 
-    // Recording & Role states
+
     const [pendingRecordingRequest, setPendingRecordingRequest] = useState<{
         recordingId: string; requestedBy: string; requestedName: string; roomId: string;
     } | null>(null);
@@ -70,7 +69,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
     const [myCallRole, setMyCallRole] = useState<'HOST' | 'ADMIN' | 'MEMBER' | 'BANNED'>('MEMBER');
     const [canRecordDirectly, setCanRecordDirectly] = useState(false);
 
-    // Misc states
+
     const [toasts, setToasts] = useState<{ id: string; type: 'info' | 'success' | 'error' | 'recording'; message: string }[]>([]);
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -94,7 +93,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
     const [isKicked, setIsKicked] = useState(false);
     const [kickedMessage, setKickedMessage] = useState<string | null>(null);
 
-    // Refs
+
     const socketRef = useRef<WebSocket | null>(null);
     const listenersRef = useRef<Map<string, ((data: any) => void)[]>>(new Map());
     const roomRef = useRef<Room | null>(null);
@@ -131,7 +130,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         emitEvent('chat_message', { roomId, content, targetUserId });
     }, [emitEvent, roomId]);
 
-    // --- Media Initialization for Preview ---
+
     const initLocalMedia = useCallback(async () => {
         if (localStream) return;
 
@@ -140,7 +139,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         let cam = false;
 
         try {
-            // 1. Thử xin cả hai
+
             stream = await navigator.mediaDevices.getUserMedia({
                 audio: true, video: {
                     width: { ideal: 1280 },
@@ -152,7 +151,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         } catch (err: any) {
             console.warn('⚠️ Both Mic+Cam failed, trying fallbacks...', err.name);
 
-            // 2. Thử chỉ Video
+
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
@@ -165,7 +164,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
                 console.warn('⚠️ No Camera found');
             }
 
-            // 3. Thử chỉ Audio (Nếu chưa có stream từ bước 2)
+
             try {
                 const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mic = true;
@@ -194,25 +193,25 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         }
     }, [roomId, user, initLocalMedia]);
 
-    // Helper: Sync tracks to MediaStreams
+
     const syncRemoteStreams = useCallback((participant: Participant) => {
         const userId = participant.identity;
 
-        // Skip local participant to avoid duplication in UI
+
         if (roomRef.current?.localParticipant.identity === userId) {
             return;
         }
 
         const publications = Array.from(participant.trackPublications.values());
 
-        // Handling Camera
+
         const camPub = publications.find(p => p.source === Track.Source.Camera);
         if (camPub?.track && camPub.isSubscribed) {
             const stream = new MediaStream([camPub.track.mediaStreamTrack!]);
             setRemoteStreams(prev => new Map(prev).set(userId, stream));
             setRemoteTracks(prev => new Map(prev).set(userId, [camPub.track!]));
         } else {
-            // Check if user has any audio tracks if camera is off
+
             const audioPubs = publications.filter(p => p.kind === 'audio' && p.track && p.isSubscribed);
             if (audioPubs.length > 0) {
                 const lkAudioTracks = audioPubs.map(p => p.track!);
@@ -229,7 +228,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
             }
         }
 
-        // Handling Screen Share
+
         const screenPub = publications.find(p => p.source === Track.Source.ScreenShare);
         if (screenPub?.track && screenPub.isSubscribed) {
             const stream = new MediaStream([screenPub.track.mediaStreamTrack!]);
@@ -249,12 +248,12 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         setPeerCamStates(prev => new Map(prev).set(userId, participant.isCameraEnabled));
     }, []);
 
-    // Helper: Refresh local MediaStream
+
     const refreshLocalStream = useCallback(() => {
         const room = roomRef.current;
         if (!room) return;
 
-        // Get native tracks
+
         const camTrack = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track?.mediaStreamTrack;
         const screenTrack = room.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track?.mediaStreamTrack;
         const micTracks = Array.from(room.localParticipant.trackPublications.values())
@@ -262,7 +261,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
             .map(p => p.track?.mediaStreamTrack)
             .filter((t): t is MediaStreamTrack => !!t);
 
-        // Update local camera stream with stabilization to avoid flickering
+
         setLocalStream(prev => {
             const newTracks = camTrack ? [camTrack, ...micTracks] : (micTracks.length > 0 ? micTracks : []);
             if (newTracks.length === 0) return null;
@@ -271,12 +270,12 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
                 const prevTracks = prev.getTracks();
                 const isSame = prevTracks.length === newTracks.length &&
                     prevTracks.every((t, i) => t.id === newTracks[i].id);
-                if (isSame) return prev; // Avoid setting new MediaStream object
+                if (isSame) return prev;
             }
             return new MediaStream(newTracks);
         });
 
-        // Update local screen share stream with stabilization
+
         setLocalScreenStream(prev => {
             if (!screenTrack) return null;
             if (prev && prev.getTracks().some(t => t.id === screenTrack.id)) return prev;
@@ -284,7 +283,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         });
     }, []);
 
-    // Connect to LiveKit Room
+
     const connectToLiveKit = useCallback(async (token: string) => {
         if (isConnectingRef.current) return;
 
@@ -341,7 +340,17 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
                         m.delete(p.identity);
                         return m;
                     });
+                    setRemoteScreenStreams(prev => {
+                        const m = new Map(prev);
+                        m.delete(p.identity);
+                        return m;
+                    });
                     setRemoteTracks(prev => {
+                        const m = new Map(prev);
+                        m.delete(p.identity);
+                        return m;
+                    });
+                    setRemoteScreenTracks(prev => {
                         const m = new Map(prev);
                         m.delete(p.identity);
                         return m;
@@ -356,18 +365,17 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
                     if (speakers.length > 0) setActiveSpeakerId(speakers[0].identity);
                     else setActiveSpeakerId(null);
                 })
+                .on(RoomEvent.TrackPublished, (pub, p) => syncRemoteStreams(p))
+                .on(RoomEvent.TrackUnpublished, (pub, p) => syncRemoteStreams(p))
                 .on(RoomEvent.LocalTrackPublished, refreshLocalStream)
                 .on(RoomEvent.LocalTrackUnpublished, refreshLocalStream);
 
-            // 1. CONNECT TỚI LIVEKIT
             await room.connect(LIVEKIT_URL, token);
             console.log('✅ Connected to LiveKit');
 
-            // 2. SET ENABLE DỰA VÀO STREAM ĐÃ CÓ (Hoặc xin mới nếu chưa có)
             let camPermitted = isCamOn;
             let micPermitted = isMicOn;
 
-            // 3. SET ENABLE DỰA VÀO QUYỀN ĐÃ XIN
             if (camPermitted) {
                 try {
                     await room.localParticipant.setCameraEnabled(true, {
@@ -404,7 +412,6 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         }
     }, [syncRemoteStreams, refreshLocalStream, addToast]);
 
-    // WebSocket handling for signaling/chat
     useEffect(() => {
         if (!user || socketRef.current) return;
 
@@ -427,7 +434,6 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
                 type: 'join_video_room',
                 roomId,
                 payload: { roomId, userInfo: { id: user.id, name: user.name }, role: 'MEMBER' }
-                // Note: password can be added here if we want to auto-join with a saved password
             };
             ws.send(JSON.stringify(joinMsg));
         };
@@ -436,7 +442,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
             const message: WebSocketMessage = JSON.parse(event.data);
             const { type, payload } = message;
 
-            // Dispatch to external listeners
+
             listenersRef.current.get(type)?.forEach(cb => cb(payload));
 
             switch (type) {
@@ -453,7 +459,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
                     break;
                 }
                 case 'join_approved': {
-                    // Try joining again now that we are approved
+
                     const joinMsg: WebSocketMessage = {
                         type: 'join_video_room',
                         roomId,
@@ -544,7 +550,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
                 case 'you-are-kicked': {
                     setIsKicked(true);
                     setKickedMessage(payload.message || "You have been removed from the meeting by an administrator.");
-                    // Don't redirect immediately, let the UI show a modal first
+
                     if (roomRef.current) {
                         roomRef.current.disconnect();
                         roomRef.current = null;
@@ -615,15 +621,15 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         const nextState = !isMicOn;
         const room = roomRef.current;
 
-        // 1. Update local UI state
+
         setIsMicOn(nextState);
 
-        // 2. Update local stream tracks (for preview)
+
         if (localStream) {
             localStream.getAudioTracks().forEach(t => t.enabled = nextState);
         }
 
-        // 3. Update LiveKit if connected
+
         if (room) {
             try {
                 await room.localParticipant.setMicrophoneEnabled(nextState);
@@ -632,7 +638,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
             }
         }
 
-        // 4. Notify others via WebSocket
+
         emitEvent('user_toggle_audio', { userId: user?.id, isMuted: !nextState });
     }, [isMicOn, localStream, emitEvent, user]);
 
@@ -640,15 +646,15 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
         const nextState = !isCamOn;
         const room = roomRef.current;
 
-        // 1. Update local UI state
+
         setIsCamOn(nextState);
 
-        // 2. Update local stream tracks (for preview)
+
         if (localStream) {
             localStream.getVideoTracks().forEach(t => t.enabled = nextState);
         }
 
-        // 3. Update LiveKit if connected
+
         if (room) {
             try {
                 await room.localParticipant.setCameraEnabled(nextState, {
@@ -659,7 +665,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
             }
         }
 
-        // 4. Notify others via WebSocket
+
         emitEvent('user_toggle_video', { userId: user?.id, isVideoOn: nextState });
     }, [isCamOn, localStream, user, emitEvent]);
 
@@ -738,7 +744,7 @@ export const useWebRTC = (roomId: string, initialCallInfo?: any) => {
             setAiSummaryStream('');
             setIsSummaryStreaming(false);
         },
-        // Lobby & Password
+
         joinStatus,
         knockingUsers,
         joinErrorMessage,
