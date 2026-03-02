@@ -1,0 +1,50 @@
+﻿[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tasks/generate-from-message, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProjectController {/project}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/project, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/project/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/project/:id/stat, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/project/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/project/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/project, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCalendarController {/calendar}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/calendar, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/calendar/list, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/calendar/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/calendar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/calendar/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/calendar/:id, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mWebhooksController {/webhooks}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/webhooks/upload-completed, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mVideoChatController {/video-call}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/join, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/call-history, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/team/:teamId/history, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/:callId/action-items, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/:callId/recordings, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/:callId/transcripts, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/kick, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/unkick, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/seed, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/trigger-summary, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/:roomId, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/action-item/:itemId, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/action-item/delete/:itemId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/action-items/bulk-update, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/video-call/action-items/bulk-delete, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mGmailGatewayController {/gmail}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/gmail/status, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/gmail/unread, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/gmail/mails, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/gmail/mails/:messageId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/gmail/send, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/gmail/reply, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mInitializing RabbitMQ Handlers[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mSearching for RabbitMQ Handlers in Controllers. You can not use NestJS HTTP-Requests in these controllers![39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +3ms[39m
+bucketExist true
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[AmqpConnection] [39m[32mSuccessfully connected to RabbitMQ broker (default)[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[AmqpConnection] [39m[32mSuccessfully connected to RabbitMQ broker (default)[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[AmqpConnection] [39m[32mSuccessfully connected a RabbitMQ channel "default"[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:02:14 PM [32m    LOG[39m [38;5;3m[AmqpConnection] [39m[32mSuccessfully connected a RabbitMQ channel "default"[39m
+LoginDto { username: 'nguyennee', password: '123123' }
+setting cookies in setCookies:  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxMTJiMDNkLTI5MWEtNDE4NC05MzJmLWE5YzBhNTM2ZDBkMyIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcyNDUzMDEwLCJleHAiOjE3NzI1Mzk0MTB9.N0xGb0GSBWClvjMQJvxjPSWIKT-psnWeq417olfr--c eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxMTJiMDNkLTI5MWEtNDE4NC05MzJmLWE5YzBhNTM2ZDBkMyIsInJvbGUiOiJVU0VSIiwic2Vzc2lvbklkIjoiMzdjY2IyNGItYmYyOC00MTM0LWExMTQtZDRkNzM0MGMxZjFhIiwiaWF0IjoxNzcyNDUzMDEwLCJleHAiOjE3NzM2NjI2MTB9.1zoovFvhsKO80LOI50lDlIS_qf4uXaIIXmyce33XnSU

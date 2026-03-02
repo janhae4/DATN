@@ -18,7 +18,7 @@ export class RoleGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private readonly authService: AuthService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
@@ -31,10 +31,18 @@ export class RoleGuard implements CanActivate {
     }
 
     const contextRequest: Request = context.switchToHttp().getRequest();
-    const cookies = contextRequest.cookies;
-    if (!cookies.accessToken) throw new UnauthorizedException('No token found');
+    let token = contextRequest.cookies?.accessToken;
+
+    if (!token) {
+      const authHeader = contextRequest.headers?.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+    }
+
+    if (!token) throw new UnauthorizedException('No token found');
     try {
-      const user = await this.authService.validateToken(cookies.accessToken as string)
+      const user = await this.authService.validateToken(token as string)
       if (!user) throw new UnauthorizedException('Invalid token');
       contextRequest.user = user;
       if (!requiredRoles || requiredRoles.length === 0) {

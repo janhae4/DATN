@@ -1,0 +1,100 @@
+﻿  jobTitle: null,
+  bio: null,
+  lastLogin: undefined,
+  createdAt: 2026-03-02T11:42:07.578Z,
+  updatedAt: undefined,
+  accounts: [
+    Account {
+      id: 'f1fd3a41-9155-485a-a894-699a74b565ce',
+      provider: 'LOCAL',
+      providerId: undefined,
+      email: 'nguyennguyen8345@gmail.com',
+      password: undefined,
+      createdAt: undefined,
+      updatedAt: undefined,
+      user: undefined
+    }
+  ],
+  following: undefined,
+  followers: undefined,
+  skills: []
+}
+{ id: '21a804e4-5024-4757-b340-ecde3f3584f7' }
+{ id: '21a804e4-5024-4757-b340-ecde3f3584f7' }
+{
+  userIds: [ '21a804e4-5024-4757-b340-ecde3f3584f7' ],
+  forDiscussion: true
+}
+[32m[Nest] 1  - [39m03/02/2026, 12:28:13 PM [32m    LOG[39m [38;5;3m[UserService] [39m[32mReturning 1 users[39m
+[32m[Nest] 1  - [39m03/02/2026, 12:28:13 PM [32m    LOG[39m [38;5;3m[UserService] [39m[32mReturning 1 users for discussion[39m
+21a804e4-5024-4757-b340-ecde3f3584f7
+fetchData in getUserInfo:  User {
+  id: '18182b0f-b3b4-4a36-a111-7bc2ce269f50',
+  email: 'nguyennguyen8345@gmail.com',
+  name: 'Ngoc Linh',
+  avatar: null,
+  phone: null,
+  role: 'USER',
+  isBan: undefined,
+  isActive: undefined,
+  isVerified: false,
+  verifiedCode: undefined,
+  expiredCode: undefined,
+  resetCode: undefined,
+  jobTitle: null,
+  bio: null,
+  lastLogin: undefined,
+  createdAt: 2026-03-02T11:42:07.578Z,
+  updatedAt: undefined,
+  accounts: [
+    Account {
+      id: 'f1fd3a41-9155-485a-a894-699a74b565ce',
+      provider: 'LOCAL',
+      providerId: undefined,
+      email: 'nguyennguyen8345@gmail.com',
+      password: undefined,
+      createdAt: undefined,
+      updatedAt: undefined,
+      user: undefined
+    }
+  ],
+  following: undefined,
+  followers: undefined,
+  skills: []
+}
+21a804e4-5024-4757-b340-ecde3f3584f7
+fetchData in getUserInfo:  User {
+  id: '18182b0f-b3b4-4a36-a111-7bc2ce269f50',
+  email: 'nguyennguyen8345@gmail.com',
+  name: 'Ngoc Linh',
+  avatar: null,
+  phone: null,
+  role: 'USER',
+  isBan: undefined,
+  isActive: undefined,
+  isVerified: false,
+  verifiedCode: undefined,
+  expiredCode: undefined,
+  resetCode: undefined,
+  jobTitle: null,
+  bio: null,
+  lastLogin: undefined,
+  createdAt: 2026-03-02T11:42:07.578Z,
+  updatedAt: undefined,
+  accounts: [
+    Account {
+      id: 'f1fd3a41-9155-485a-a894-699a74b565ce',
+      provider: 'LOCAL',
+      providerId: undefined,
+      email: 'nguyennguyen8345@gmail.com',
+      password: undefined,
+      createdAt: undefined,
+      updatedAt: undefined,
+      user: undefined
+    }
+  ],
+  following: undefined,
+  followers: undefined,
+  skills: []
+}
+{ id: '21a804e4-5024-4757-b340-ecde3f3584f7' }

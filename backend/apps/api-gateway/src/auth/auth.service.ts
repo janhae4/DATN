@@ -33,15 +33,18 @@ export class AuthService {
     response: Response,
   ) {
     console.log("setting cookies in setCookies: ", accessToken, refreshToken);
+    const isProduction = process.env.NODE_ENV === 'production';
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
+      sameSite: 'lax',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000,
     });
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
+      sameSite: 'lax',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000 * 14,
     });
