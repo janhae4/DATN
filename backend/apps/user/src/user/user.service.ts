@@ -134,7 +134,14 @@ export class UserService {
 
     console.log("user when linking account or creating account: ", partial)
     const account = this.accountRepo.create(partial);
-    return await this.accountRepo.save(account);
+    const savedAccount = await this.accountRepo.save(account);
+
+    if (partial.user?.id) {
+      this.logger.debug(`Invalidating user cache for user ${partial.user.id} after account link`);
+      await this.userCache.delete(partial.user.id);
+    }
+
+    return savedAccount;
   }
 
   async createOAuth(data: CreateAuthOAuthDto) {
