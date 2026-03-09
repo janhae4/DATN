@@ -67,6 +67,25 @@ export class MinioService implements OnModuleInit {
         }
     }
 
+    async uploadBuffer(
+        key: string,
+        buffer: Buffer,
+        contentType: string = 'application/octet-stream',
+    ): Promise<void> {
+        try {
+            await this.minioClient.putObject(
+                this.bucketName,
+                key,
+                buffer,
+                buffer.length,
+                { 'Content-Type': contentType },
+            );
+        } catch (err) {
+            this.logger.error(`Minio uploadBuffer failed for key ${key}:`, err);
+            throw new Error(`Minio upload failed: ${err.message}`);
+        }
+    }
+
     async getPreSignedUploadUrl(
         key: string,
         expiry: number = 60 * 5,

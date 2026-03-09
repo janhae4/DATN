@@ -195,7 +195,8 @@ export class FileService {
                 projectId: file.projectId,
                 fileId: file._id,
                 status: FileStatus.UPLOADED,
-                userId: file.userId
+                userId: file.userId,
+                size: size
             }
         );
 

@@ -58,7 +58,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const user = await this.amqpConnection.request<JwtDto>({
                 exchange: AUTH_EXCHANGE,
                 routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
-                payload: accessToken,
+                payload: { token: accessToken },
             });
 
             if (!user) {
@@ -130,6 +130,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             discussionId,
             _id,
             messageSnapshot,
+            membersToNotify,
         } = payload;
 
         const senderId = messageSnapshot.sender?._id;
@@ -146,8 +147,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         this.logger.log(`Received new message for ${discussionId}. Sender: ${senderId}`);
 
-        // SINGLE EFFICIENT BROADCAST TO ROOM
-        this.server.to(discussionId).emit('new_message', messageDoc);
+        if (membersToNotify && membersToNotify.length > 0) {
+            membersToNotify.forEach((userId) => {
+                this.server.to(userId).emit('new_message', messageDoc);
+            });
+        } else {
+            // Fallback: Nếu không có membersToNotify, broadcast tới room discussionId
+            this.server.to(discussionId).emit('new_message', messageDoc);
+        }
     }
 
 

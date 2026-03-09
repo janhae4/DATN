@@ -47,7 +47,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const user = await this.amqpConnection.request<JwtDto>({
         exchange: AUTH_EXCHANGE,
         routingKey: AUTH_PATTERN.VALIDATE_TOKEN,
-        payload: accessToken,
+        payload: { token: accessToken },
       });
 
       if (!user) {
@@ -107,6 +107,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId: (s.data as any).user.id,
         userInfo: (s.data as any).user,
         roomId: (s.data as any).currentRoomId,
+        isMuted: (s.data as any).isMuted || false,
         socketId: s.id
       }));
 
@@ -117,7 +118,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('join_video_room')
   async handleJoinVideoRoom(
     client: socketGateway.AuthenticatedSocket,
-    payload: { roomId: string; teamId: string; userInfo: User; role: string }
+    payload: { roomId: string; teamId: string; userInfo: User; role: string; isMuted?: boolean }
   ) {
     client.join(payload.roomId);
     client.join(payload.teamId); // Ensure they are in the team room
@@ -130,8 +131,11 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.to(payload.roomId).emit('user_joined_video', {
       userInfo: payload.userInfo,
       socketId: client.id,
-      role: payload.role
+      role: payload.role,
+      isMuted: payload.isMuted || false
     });
+
+    (client.data as any).isMuted = payload.isMuted || false;
 
     (client.data as any).user = {
       ...(client.data as any).user,
@@ -173,18 +177,18 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     (client.data as any).currentRoomId = null;
   }
 
-  // WebRTC SDP offer relay (caller -> callee).
   @SubscribeMessage('offer')
   handleOffer(
     @ConnectedSocket() client: socketGateway.AuthenticatedSocket,
-    @MessageBody() data: { sdp: any; targetUserId: string; roomId: string, userInfo: Partial<User> }
+    @MessageBody() data: { sdp: any; targetUserId: string; roomId: string, userInfo: Partial<User>, isMuted?: boolean }
   ) {
     client.to(data.targetUserId).emit('offer', {
       sdp: data.sdp,
       senderId: client.data.user?.id,
       senderSocketId: client.id,
       roomId: data.roomId,
-      userInfo: data.userInfo
+      userInfo: data.userInfo,
+      isMuted: data.isMuted || false
     });
   }
 
@@ -222,6 +226,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: socketGateway.AuthenticatedSocket,
     @MessageBody() data: { roomId: string; isMuted: boolean }
   ) {
+    (client.data as any).isMuted = data.isMuted;
     client.to(data.roomId).emit('user_toggle_audio', {
       userId: client.data.user?.id,
       isMuted: data.isMuted

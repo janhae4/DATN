@@ -19,7 +19,7 @@ docker compose up -d --build api_gateway auth_service user_service team_service 
 
 echo.
 echo [4/5] Dang build va khoi dong Feature Services (Socket, Notification, AI, RTC)...
-docker compose up -d --build socket_service notification_service calendar_service gmail_service file_service ai_discussion_service web_rtc_service chatbot
+docker compose up -d --build socket_service notification_service calendar_service gmail_service file_service ai_discussion_service discussion_service web_rtc_service chatbot
 
 echo.
 echo [5/5] Dang build va khoi dong Frontend...

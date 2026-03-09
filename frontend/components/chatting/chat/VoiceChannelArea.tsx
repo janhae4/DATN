@@ -14,6 +14,7 @@ interface VoiceParticipant {
         avatar?: string;
     };
     isSpeaking?: boolean;
+    isMuted?: boolean;
 }
 
 interface CurrentUser {
@@ -32,10 +33,8 @@ interface VoiceChannelAreaProps {
     remoteStreams: Map<string, MediaStream>;
     onLeaveVoice: () => void;
     isMuted: boolean;
-    isVideoOn: boolean;
     speakingUsers: Set<string>;
     onToggleMute: () => void;
-    onToggleVideo: () => void;
     ccCaptions?: Map<string, CaptionEntry>;
     onEmitCCTranscript?: (text: string, isFinal: boolean) => void;
 }
@@ -51,10 +50,8 @@ export const VoiceChannelArea: React.FC<VoiceChannelAreaProps> = ({
     remoteStreams,
     onLeaveVoice,
     isMuted,
-    isVideoOn,
     speakingUsers,
     onToggleMute,
-    onToggleVideo,
     ccCaptions,
     onEmitCCTranscript,
 }) => {
@@ -111,6 +108,7 @@ export const VoiceChannelArea: React.FC<VoiceChannelAreaProps> = ({
                             avatar={user?.avatar}
                             isMe={true}
                             isSpeaking={speakingUsers.has(userId || "")}
+                            isMuted={isMuted}
                         />
                     </div>
                     {voiceParticipants
@@ -121,6 +119,7 @@ export const VoiceChannelArea: React.FC<VoiceChannelAreaProps> = ({
                                     name={p.userInfo.name}
                                     avatar={p.userInfo.avatar}
                                     isSpeaking={speakingUsers.has(p.userInfo.id)}
+                                    isMuted={p.isMuted}
                                 />
                             </div>
                         ))}
@@ -131,10 +130,8 @@ export const VoiceChannelArea: React.FC<VoiceChannelAreaProps> = ({
 
             <VoiceControlDock
                 isMuted={isMuted}
-                isVideoOn={isVideoOn}
                 isCCOn={isCCOn}
                 onToggleMute={onToggleMute}
-                onToggleVideo={onToggleVideo}
                 onToggleCC={() => setIsCCOn((p) => !p)}
                 onLeaveVoice={onLeaveVoice}
             />

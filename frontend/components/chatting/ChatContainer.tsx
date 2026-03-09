@@ -156,12 +156,10 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ teamId }) => {
                     onLeaveVoice={actions.handleLeaveVoice}
                     onJoinVoice={actions.handleJoinVoice}
                     isMuted={state.isMuted}
-                    isVideoOn={state.isVideoOn}
                     speakingUsers={state.speakingUsers}
                     ccCaptions={state.ccCaptions}
                     onEmitCCTranscript={state.emitCCTranscript}
                     onToggleMute={actions.toggleMute}
-                    onToggleVideo={actions.toggleVideo}
                     onReact={async (params) => {
                         await actions.toggleReaction({
                             discussionId: state.selectedChannelId || "",

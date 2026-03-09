@@ -366,6 +366,15 @@ services:
     ports:
       - "4001:4001"
 
+  discussion_service:
+    <<: *nest-service
+    container_name: discussion_service
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: discussion
+
   notification_service:
     <<: *nest-service
     build:
@@ -417,6 +426,8 @@ services:
     container_name: web_rtc_service
     ports:
       - "8005:8005"
+    env_file:
+      - ./web_rtc/.env
     environment:
       - LIVEKIT_URL=http://livekit:7880
       - LIVEKIT_API_KEY=devkey
@@ -432,7 +443,6 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_RECORDING_BUCKET=meeting-recordings
-      - GEMINI_API_KEY=key
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -466,7 +476,7 @@ services:
         NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
         NEXT_PUBLIC_SOCKET_URL: ws://127.0.0.1:4001
         NEXT_PUBLIC_WEBRTC_WS_URL: ws://127.0.0.1:8005/ws
-        NEXT_PUBLIC_LIVEKIT_URL: http://192.168.1.4:7880
+        NEXT_PUBLIC_LIVEKIT_URL: http://127.0.0.1:7880
     container_name: nextjs_frontend
     restart: always
     ports:

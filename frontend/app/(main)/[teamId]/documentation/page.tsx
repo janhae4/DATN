@@ -21,6 +21,10 @@ import {
   Check,
   Square,
   Sparkles,
+  CheckCircle2,
+  XCircle,
+  Brain,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,11 +61,14 @@ import { FileDragPreview } from "./file-row-preview";
 import { Progress } from "@/components/ui/progress";
 import { useSelectionBox } from "@/hooks/useSelectionBox";
 import { DndItemWrapper } from "@/components/features/documentation/dnd-item-wrapper";
+import { useSocket } from "@/contexts/SocketContext";
 
 interface StagedFile {
   file: File;
-  status: "waiting" | "uploading" | "success" | "error";
+  status: "waiting" | "uploading" | "success" | "error" | "processing" | "completed";
   id?: string;
+  /** fileId returned by the server after a successful upload — used to match socket events */
+  fileId?: string;
   progress: number;
   signal: AbortSignal;
 }
@@ -133,6 +140,12 @@ export default function AttachmentPage() {
   const [isMinimized, setIsMinimized] = useState(false);
   const [hiddenFileIds, setHiddenFileIds] = useState<string[]>([]);
 
+  // Socket for file_status AI-processing events
+  const { socket, isConnected } = useSocket();
+  // Maps server fileId → local staged entry id
+  const fileIdToStagedId = useRef<Map<string, string>>(new Map());
+
+
   const handleCreateFolder = async (name: string) => {
     await createFolder(name);
   };
@@ -179,6 +192,7 @@ export default function AttachmentPage() {
     changeVisibility,
     pagination,
     isLoading,
+    refreshFiles,
   } = useFiles(
     selectedProjectId,
     teamId,
@@ -186,6 +200,32 @@ export default function AttachmentPage() {
     paginationState.pageSize,
     currentFolderId,
   );
+
+  React.useEffect(() => {
+    if (!socket || !isConnected) return;
+    const handleFileStatus = (data: { id: string; name: string; status: string; size?: number }) => {
+      const stagedId = fileIdToStagedId.current.get(data.id);
+
+      // If this is an upload completion event (not AI processing yet)
+      if (data.status === "UPLOADED" || data.status === "success" || data.status === "UPLOADED_SUCCESS") {
+        refreshFiles(); // Refresh DB list to get the real size and state
+      }
+
+      if (!stagedId) return;
+      setStagedFiles((prev) =>
+        prev.map((f) => {
+          if (f.id !== stagedId) return f;
+          if (data.status === "processing") return { ...f, status: "processing" };
+          if (data.status === "completed") return { ...f, status: "completed" };
+          if (data.status === "failed") return { ...f, status: "error" };
+          if (data.status === "UPLOADED" || data.status === "success" || data.status === "UPLOADED_SUCCESS") return { ...f, status: "success" };
+          return f;
+        })
+      );
+    };
+    socket.on("file_status", handleFileStatus);
+    return () => { socket.off("file_status", handleFileStatus); };
+  }, [socket, isConnected, refreshFiles]);
 
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -378,17 +418,17 @@ export default function AttachmentPage() {
     setStagedFiles((prev) =>
       prev.map((item) => ({
         ...item,
-        status: item.status === "success" ? "success" : "uploading",
-        progress: 0,
-      })),
+        status: item.status === "success" || item.status === "processing" || item.status === "completed" ? item.status : "uploading",
+        progress: item.status === "uploading" ? 0 : item.progress,
+      }))
     );
 
     const uploadPromises = stagedFiles.map(async (stagedItem) => {
-      if (stagedItem.status === "success") return;
+      if (stagedItem.status === "success" || stagedItem.status === "processing" || stagedItem.status === "completed") return;
       const controller = new AbortController();
       abortControllers.current[stagedItem.id as string] = controller;
       try {
-        (await uploadFile({
+        const fileId = await uploadFile({
           file: stagedItem.file,
           onProgress: (percent) => {
             setStagedFiles((prev) =>
@@ -400,14 +440,20 @@ export default function AttachmentPage() {
             );
           },
           signal: controller.signal,
-        }),
-          setStagedFiles((prev) =>
-            prev.map((item) =>
-              item.id === stagedItem.id
-                ? { ...item, status: "success", progress: 100 }
-                : item,
-            ),
-          ));
+        });
+
+        // Register fileId mapping for socket tracking
+        if (fileId && stagedItem.id) {
+          fileIdToStagedId.current.set(fileId, stagedItem.id);
+        }
+
+        setStagedFiles((prev) =>
+          prev.map((item) =>
+            item.id === stagedItem.id
+              ? { ...item, status: "success", progress: 100, fileId: fileId || undefined }
+              : item,
+          ),
+        );
       } catch (e: any) {
         const isCanceled = e.message === "Canceled";
         setStagedFiles((prev) =>
@@ -429,9 +475,8 @@ export default function AttachmentPage() {
     await Promise.allSettled(uploadPromises);
     setIsUploading(false);
 
-    setTimeout(() => {
-      setStagedFiles((prev) => prev.filter((f) => f.status !== "success"));
-    }, 3000);
+    // Auto-minimize after upload finished so it doesn't block the view
+    setIsMinimized(true);
   };
 
   const handleCancelUpload = (fileId: string) => {
@@ -624,10 +669,11 @@ export default function AttachmentPage() {
           {stagedFiles.length > 0 && (
             <div
               className={cn(
-                "fixed bottom-10 right-6 z-50 w-96 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
+                "fixed bottom-10 right-6 z-50 w-96 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out shadow-xl",
                 isMinimized ? "h-12" : "max-h-[80vh]",
               )}
             >
+              {/* Header */}
               <div
                 className="bg-zinc-900 text-zinc-50 dark:bg-zinc-800 px-4 h-12 flex items-center justify-between cursor-pointer select-none"
                 onClick={() => setIsMinimized(!isMinimized)}
@@ -636,9 +682,14 @@ export default function AttachmentPage() {
                   {isUploading ? (
                     <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
                   ) : (
-                    <span className="text-sm font-medium">
-                      {stagedFiles.length} uploads ready
-                    </span>
+                    <>
+                      <UploadCloud className="h-4 w-4 text-zinc-400" />
+                      <span className="text-sm font-medium">
+                        {stagedFiles.filter(f => f.status === "completed").length > 0
+                          ? `${stagedFiles.filter(f => f.status === "completed").length} AI-ready · ${stagedFiles.length} total`
+                          : `${stagedFiles.length} file${stagedFiles.length > 1 ? "s" : ""}`}
+                      </span>
+                    </>
                   )}
                 </div>
 
@@ -667,6 +718,7 @@ export default function AttachmentPage() {
                     onClick={(e) => {
                       e.stopPropagation();
                       setStagedFiles([]);
+                      fileIdToStagedId.current.clear();
                     }}
                   >
                     <X className="h-4 w-4" />
@@ -674,126 +726,169 @@ export default function AttachmentPage() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950">
-                <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {stagedFiles.map((stagedFile, i) => (
-                    <li
-                      key={stagedFile.id || i}
-                      className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 group border-b last:border-0 border-zinc-100 dark:border-zinc-800 transition-colors"
+              {/* File list & Footer - Hide when minimized to ensure only header shows */}
+              {!isMinimized && (
+                <>
+                  <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950">
+                    <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      {stagedFiles.map((stagedFile, i) => (
+                        <li
+                          key={stagedFile.id || i}
+                          className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 group border-b last:border-0 border-zinc-100 dark:border-zinc-800 transition-colors"
+                        >
+                          {/* File icon */}
+                          <div className={cn(
+                            "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+                            stagedFile.status === "completed" ? "bg-emerald-50 dark:bg-emerald-900/30" :
+                              stagedFile.status === "processing" ? "bg-amber-50 dark:bg-amber-900/30" :
+                                stagedFile.status === "error" ? "bg-red-50 dark:bg-red-900/30" :
+                                  "bg-zinc-100 dark:bg-zinc-800"
+                          )}>
+                            {stagedFile.status === "completed" ? (
+                              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                            ) : stagedFile.status === "processing" ? (
+                              <Brain className="h-5 w-5 text-amber-500 animate-pulse" />
+                            ) : stagedFile.status === "error" ? (
+                              <XCircle className="h-5 w-5 text-red-500" />
+                            ) : (
+                              <FileIcon className="h-5 w-5 text-zinc-500" />
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                            <div className="flex justify-between items-center">
+                              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate pr-2">
+                                {stagedFile.file.name}
+                              </p>
+                              <span className="text-xs text-zinc-400 shrink-0 font-mono">
+                                {stagedFile.status === "uploading"
+                                  ? `${stagedFile.progress}%`
+                                  : formatFileSize(stagedFile.file.size)}
+                              </span>
+                            </div>
+
+                            {/* Status row */}
+                            {stagedFile.status === "uploading" ? (
+                              <Progress
+                                value={stagedFile.progress}
+                                className="h-1.5 w-full bg-zinc-100 dark:bg-zinc-800"
+                              />
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                {stagedFile.status === "waiting" && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
+                                    Ready to upload
+                                  </span>
+                                )}
+                                {stagedFile.status === "success" && (
+                                  <span className="inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                    <Check className="h-3 w-3" /> Uploaded
+                                  </span>
+                                )}
+                                {stagedFile.status === "processing" && (
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-medium px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 animate-pulse">
+                                    <Loader2 className="h-3 w-3 animate-spin" /> AI Processing...
+                                  </span>
+                                )}
+                                {stagedFile.status === "completed" && (
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-medium px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                    <CheckCircle2 className="h-3 w-3" /> AI Ready
+                                  </span>
+                                )}
+                                {stagedFile.status === "error" && (
+                                  <span className="inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                    <XCircle className="h-3 w-3" /> Failed
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action button */}
+                          <div className="shrink-0 flex items-center gap-1">
+                            {stagedFile.status === "uploading" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                onClick={() =>
+                                  handleCancelUpload(stagedFile.id as string)
+                                }
+                                title="Cancel upload"
+                              >
+                                <Square className="h-3.5 w-3.5 fill-current" />
+                              </Button>
+                            )}
+
+                            {(stagedFile.status === "waiting" ||
+                              stagedFile.status === "error") && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                                  onClick={() =>
+                                    handleCancelUpload(stagedFile.id as string)
+                                  }
+                                  title="Remove file"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                            {(stagedFile.status === "success" || stagedFile.status === "processing") && (
+                              <div className="h-8 w-8 flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 text-zinc-400 animate-spin" />
+                              </div>
+                            )}
+
+                            {stagedFile.status === "completed" && (
+                              <div className="h-8 w-8 flex items-center justify-center">
+                                <Check className="h-5 w-5 text-emerald-500" />
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Footer actions */}
+                  <div className="p-3 border-t bg-zinc-50 dark:bg-zinc-900 flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-8 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                      disabled={isUploading}
+                      onClick={() => {
+                        setStagedFiles([]);
+                        fileIdToStagedId.current.clear();
+                      }}
                     >
-                      <div className="h-10 w-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 text-zinc-500">
-                        <FileIcon className="h-5 w-5" />
-                      </div>
+                      Clear all
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-xs h-8 bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 px-4 font-medium"
+                      onClick={handleUpload}
+                      disabled={isUploading || stagedFiles.every(f => f.status === "success" || f.status === "processing" || f.status === "completed")}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-3 w-3 mr-1.5" />
+                          Start Upload
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
 
-                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate pr-2">
-                            {stagedFile.file.name}
-                          </p>
-
-                          <span className="text-xs text-zinc-400 shrink-0 font-mono">
-                            {stagedFile.status === "uploading"
-                              ? `${stagedFile.progress}%`
-                              : formatFileSize(stagedFile.file.size)}
-                          </span>
-                        </div>
-
-                        {stagedFile.status === "uploading" ? (
-                          <Progress
-                            value={stagedFile.progress}
-                            className="h-1.5 w-full bg-zinc-100 dark:bg-zinc-800"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-1.5 h-1.5">
-                            {stagedFile.status === "error" && (
-                              <span className="text-xs text-red-500 flex items-center gap-1">
-                                Upload failed
-                              </span>
-                            )}
-                            {stagedFile.status === "success" && (
-                              <span className="text-xs text-green-500 flex items-center gap-1">
-                                Completed
-                              </span>
-                            )}
-                            {stagedFile.status === "waiting" && (
-                              <span className="text-xs text-zinc-400">
-                                Ready to upload
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="shrink-0 flex items-center gap-1">
-                        {stagedFile.status === "uploading" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            onClick={() =>
-                              handleCancelUpload(stagedFile.id as string)
-                            }
-                            title="Cancel upload"
-                          >
-                            <Square className="h-3.5 w-3.5 fill-current" />
-                          </Button>
-                        )}
-
-                        {(stagedFile.status === "waiting" ||
-                          stagedFile.status === "error") && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                              onClick={() =>
-                                handleCancelUpload(stagedFile.id as string)
-                              }
-                              title="Remove file"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-
-                        {stagedFile.status === "success" && (
-                          <div className="h-8 w-8 flex items-center justify-center">
-                            <Check className="h-5 w-5 text-green-500" />
-                          </div>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="p-3 border-t bg-zinc-50 dark:bg-zinc-900 flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setStagedFiles([])}
-                  disabled={isUploading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleUpload}
-                  disabled={
-                    isUploading ||
-                    stagedFiles.length === 0 ||
-                    stagedFiles.every((item) => item.status === "success")
-                  }
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                      Uploading...
-                    </>
-                  ) : (
-                    "Start Upload"
-                  )}
-                </Button>
-              </div>
             </div>
           )}
 

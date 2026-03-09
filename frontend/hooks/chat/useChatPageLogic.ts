@@ -138,8 +138,6 @@ export const useChatPageLogic = (teamId: string) => {
         remoteStreams,
         isMuted,
         toggleMute,
-        isVideoOn,
-        toggleVideo,
         speakingUsers,
         ccCaptions,
         emitCCTranscript,
@@ -481,7 +479,6 @@ export const useChatPageLogic = (teamId: string) => {
             globalVoiceParticipants,
             remoteStreams,
             isMuted,
-            isVideoOn,
             speakingUsers,
             ccCaptions,
             emitCCTranscript,
@@ -526,8 +523,7 @@ export const useChatPageLogic = (teamId: string) => {
             handleLeaveVoice,
             handleJoinVoice,
             handleSelectDirectMessage,
-            toggleMute,
-            toggleVideo
+            toggleMute
         }
     };
 };

@@ -15,6 +15,7 @@ import {
   Res,
   Sse,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -22,7 +23,7 @@ import { ChatbotService } from './chatbot.service';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { REDIS_CLIENT, Role } from '@app/contracts';
 import { Roles } from '../common/role/role.decorator';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
 import type { Response } from 'express';
 import { RoleGuard } from '../common/role/role.guard';
@@ -45,32 +46,60 @@ export class ChatbotController {
   @ApiConsumes('multipart/form-data')
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
   @UseInterceptors(
-    FileInterceptor('file', {
+    FilesInterceptor('files', 10, { // Allow up to 10 files at once
       storage: multer.memoryStorage(),
     }),
   )
   async processDocument(
-    @UploadedFile(
+    @UploadedFiles(
       new ParseFilePipe({
         validators: [new MaxFileSizeValidator({ maxSize: 10000000 })],
       }),
     )
-    file: Express.Multer.File,
+    files: Express.Multer.File[],
     @CurrentUser('id') userId: string,
     @Query('teamId') teamId?: string,
   ) {
-    if (file.buffer.length === 0 || !file) {
-      throw new BadRequestException('File is empty.');
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Files are empty.');
     }
 
-    const fileName = await this.chatbotService.uploadFile(file, userId, teamId);
-    this.chatbotService.processDocument(fileName, userId, teamId);
+    const results = await Promise.all(
+      files.map(async (file) => {
+        if (file.buffer.length === 0) {
+           return {
+             status: 'error',
+             originalName: file.originalname,
+             message: 'File is empty'
+           }
+        }
+        try {
+          const uploadResult = await this.chatbotService.uploadFile(file, userId, teamId);
+          this.chatbotService.processDocument({
+            fileId: uploadResult.fileId,
+            storageKey: uploadResult.storageKey,
+            originalName: uploadResult.originalName,
+            userId,
+            teamId,
+          });
+          return {
+            status: 'processing',
+            message: 'File is being processed',
+            fileId: uploadResult.fileId,
+            fileName: uploadResult.storageKey,
+            originalName: uploadResult.originalName,
+          };
+        } catch (error) {
+           return {
+             status: 'error',
+             originalName: file.originalname,
+             message: error.message || 'Failed to process file'
+           }
+        }
+      })
+    );
 
-    return {
-      message: 'File is processing',
-      fileName,
-      originalName: file.originalname,
-    };
+    return results;
   }
 
   @Get('files')

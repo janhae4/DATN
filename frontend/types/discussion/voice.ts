@@ -5,4 +5,5 @@ export interface VoiceParticipant {
         avatar?: string;
     };
     isSpeaking?: boolean;
+    isMuted?: boolean;
 }

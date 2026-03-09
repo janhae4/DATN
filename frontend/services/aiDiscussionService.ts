@@ -1,6 +1,14 @@
 import { AiDiscussion, AiMessage, Pagination, PaginationMeta } from "@/types";
 import apiClient from "./apiClient";
 
+export interface AiFileUploadResult {
+    status: 'processing' | 'error';
+    fileId?: string;
+    fileName?: string;
+    originalName: string;
+    message?: string;
+}
+
 export const aiDiscussionService = {
     getDiscussions: (page: number, limit: number) =>
         apiClient.get<Pagination<AiDiscussion>>('/ai-discussions', {
@@ -20,4 +28,17 @@ export const aiDiscussionService = {
 
     deleteDiscussion: (id: string) =>
         apiClient.delete(`/ai-discussions/${id}`).then(res => res.data),
+
+    uploadAiFiles: (files: File[], teamId?: string): Promise<AiFileUploadResult[]> => {
+        const formData = new FormData();
+        files.forEach((file) => formData.append('files', file));
+        return apiClient.post<AiFileUploadResult[]>(
+            '/ai-discussions/files',
+            formData,
+            {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                params: teamId ? { teamId } : undefined,
+            }
+        ).then(res => res.data);
+    },
 };

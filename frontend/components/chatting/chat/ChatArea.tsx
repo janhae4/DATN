@@ -66,10 +66,8 @@ interface ChatAreaProps {
     onJoinVoice?: (channelId: string) => void;
     activeVoiceChannelId?: string | null;
     isMuted: boolean;
-    isVideoOn: boolean;
     speakingUsers: Set<string>;
     onToggleMute: () => void;
-    onToggleVideo: () => void;
     onReact: (params: { discussionId: string; messageId: string; emoji: string }) => void;
     members: ChatMember[];
     onUpdateMessage: (messageId: string, content: string, attachments?: AttachmentDto[]) => void;
@@ -101,10 +99,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     remoteStreams,
     onLeaveVoice,
     isMuted,
-    isVideoOn,
     speakingUsers,
     onToggleMute,
-    onToggleVideo,
     onReact,
     members,
     onUpdateMessage,
@@ -298,10 +294,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 remoteStreams={remoteStreams}
                 onLeaveVoice={onLeaveVoice}
                 isMuted={isMuted}
-                isVideoOn={isVideoOn}
                 speakingUsers={speakingUsers}
                 onToggleMute={onToggleMute}
-                onToggleVideo={onToggleVideo}
                 ccCaptions={ccCaptions}
                 onEmitCCTranscript={onEmitCCTranscript}
             />

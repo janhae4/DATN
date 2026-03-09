@@ -82,7 +82,14 @@ export default function FilePreviewContent({ file }: FilePreviewContentProps) {
         if (!isMounted) return;
 
         if (isExcel) {
-          const wb = XLSX.read(buffer, { type: "array" });
+          let wb;
+          if (extension === "csv" || mimeType === "text/csv") {
+            const decoder = new TextDecoder("utf-8");
+            const csvText = decoder.decode(buffer);
+            wb = XLSX.read(csvText, { type: "string" });
+          } else {
+            wb = XLSX.read(buffer, { type: "array" });
+          }
           if (wb.SheetNames.length === 0) throw new Error("No sheets found");
           const ws = wb.Sheets[wb.SheetNames[0]];
           const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });

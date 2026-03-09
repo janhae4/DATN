@@ -273,7 +273,7 @@ export class ChannelService {
             return existingDM;
         }
 
-        const discussion = await this.discussionModel.create({
+        const discussionDoc = await this.discussionModel.create({
             name: `${senderId}_${partnerId}`,
             type: DiscussionType.DIRECT,
             isGroup: false,
@@ -281,20 +281,47 @@ export class ChannelService {
 
         await this.membershipModel.insertMany([
             {
-                discussionId: discussion._id,
+                discussionId: discussionDoc._id,
                 userId: senderId,
                 role: MemberRole.MEMBER,
                 status: MemberShip.ACTIVE
             },
             {
-                discussionId: discussion._id,
+                discussionId: discussionDoc._id,
                 userId: partnerId,
                 role: MemberRole.MEMBER,
                 status: MemberShip.ACTIVE
             }
         ]);
 
-        this.logger.log(`Created new DM: ${discussion._id} between ${senderId} and ${partnerId}`);
-        return discussion;
+        // Return with partner info
+        let otherUser: any = null;
+        try {
+            const users = await this.amqp.request<any[]>({
+                exchange: USER_EXCHANGE,
+                routingKey: USER_PATTERNS.FIND_MANY_BY_IDs,
+                payload: { userIds: [partnerId] },
+            });
+            if (users && users.length > 0) {
+                const u = users[0];
+                otherUser = {
+                    _id: u.id || u._id,
+                    name: u.name,
+                    avatar: u.avatar,
+                    email: u.email
+                };
+            }
+        } catch (e) {
+            this.logger.error('Failed to fetch partner details for new DM', e);
+        }
+
+        const result = {
+            ...discussionDoc.toObject(),
+            partnerId,
+            otherUser
+        };
+
+        this.logger.log(`Created new DM: ${discussionDoc._id} between ${senderId} and ${partnerId}`);
+        return result;
     }
 }

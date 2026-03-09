@@ -3,8 +3,10 @@ import { ChatbotService } from './chatbot.service';
 import { ChatbotController } from './chatbot.controller';
 import { MulterModule } from '@nestjs/platform-express';
 import { AuthModule } from '../auth/auth.module';
-import {  ClientConfigModule, ClientConfigService, REDIS_CLIENT } from '@app/contracts';
+import { ClientConfigModule, ClientConfigService, REDIS_CLIENT } from '@app/contracts';
+import { MinioService } from '@app/minio';
 import Redis from 'ioredis';
+
 @Module({
   imports: [
     ClientConfigModule,
@@ -14,6 +16,7 @@ import Redis from 'ioredis';
   controllers: [ChatbotController],
   providers: [
     ChatbotService,
+    MinioService,
     {
       provide: REDIS_CLIENT,
       inject: [ClientConfigService],

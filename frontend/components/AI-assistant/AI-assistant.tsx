@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useAiDiscussion } from "@/hooks/useAiDiscussion";
 import { useAiChat } from "@/hooks/useAiChat";
+import { useAiFileUpload } from "@/hooks/useAiFileUpload";
 import { useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 
@@ -44,6 +45,14 @@ export default function AIAssistantUI() {
     hasNextPage: hasNextPageMessages,
     isFetchingNextPage: isFetchingNextPageMessages,
   } = useAiChat(activeId);
+
+  const {
+    uploadedFiles,
+    isUploading,
+    uploadFiles,
+    removeFile,
+    clearFiles: clearUploadedFiles,
+  } = useAiFileUpload();
 
   const messageViewportRef = React.useRef<HTMLDivElement>(null);
   const messageBottomRef = React.useRef<HTMLDivElement>(null);
@@ -183,6 +192,7 @@ export default function AIAssistantUI() {
     setActiveId(undefined);
     setInput("");
     setStreamingContent("");
+    clearUploadedFiles();
   };
 
   return (
@@ -239,6 +249,10 @@ export default function AIAssistantUI() {
           setInput={setInput}
           onSend={handleSend}
           isStreaming={isStreaming}
+          uploadedFiles={uploadedFiles}
+          isUploading={isUploading}
+          onUploadFiles={uploadFiles}
+          onRemoveFile={removeFile}
         />
       </main>
     </div>

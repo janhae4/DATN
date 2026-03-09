@@ -11,7 +11,15 @@ export const useChatSocket = (selectedChannelId: string | null) => {
     useEffect(() => {
         if (!chatSocket || !selectedChannelId) return;
 
-        chatSocket.emit("join_room", { roomId: selectedChannelId });
+        const handleConnect = () => {
+             chatSocket.emit("join_room", { roomId: selectedChannelId });
+        };
+
+        if (chatSocket.connected) {
+            handleConnect();
+        }
+
+        chatSocket.on("connect", handleConnect);
 
         const handleNewMessage = (newMessage: any) => {
             if (newMessage.discussionId === selectedChannelId) {
@@ -114,6 +122,7 @@ export const useChatSocket = (selectedChannelId: string | null) => {
         chatSocket.on("message_delete", handleMessageDelete);
 
         return () => {
+            chatSocket.off("connect", handleConnect);
             chatSocket.off("new_message", handleNewMessage);
             chatSocket.off("typing_start", handleTypingStart);
             chatSocket.off("typing_stop", handleTypingStop);

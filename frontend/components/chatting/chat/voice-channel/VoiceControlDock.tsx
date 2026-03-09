@@ -5,20 +5,16 @@ import { getSpeechRecognition } from "./useLocalCC";
 
 interface VoiceControlDockProps {
     isMuted: boolean;
-    isVideoOn: boolean;
     isCCOn: boolean;
     onToggleMute: () => void;
-    onToggleVideo: () => void;
     onToggleCC: () => void;
     onLeaveVoice: () => void;
 }
 
 export const VoiceControlDock: React.FC<VoiceControlDockProps> = ({
     isMuted,
-    isVideoOn,
     isCCOn,
     onToggleMute,
-    onToggleVideo,
     onToggleCC,
     onLeaveVoice,
 }) => {
@@ -35,18 +31,6 @@ export const VoiceControlDock: React.FC<VoiceControlDockProps> = ({
                         active={!isMuted}
                     />
                 </div>
-
-                {/* Video */}
-                <div onClick={onToggleVideo}>
-                    <ControlBtn
-                        icon={isVideoOn ? "lucide:video" : "lucide:video-off"}
-                        tooltip={isVideoOn ? "Turn Camera Off" : "Turn Camera On"}
-                        active={isVideoOn}
-                    />
-                </div>
-
-                {/* Screen share */}
-                <ControlBtn icon="lucide:monitor-up" tooltip="Share Screen" active={false} />
 
                 {/* Closed Captions */}
                 <div

@@ -136,7 +136,7 @@ export const useDiscussionMutations = () => {
   const createDirectMutation = useMutation({
     mutationFn: discussionService.createDirectDiscussion,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-discussions'] });
+      queryClient.invalidateQueries({ queryKey: ['user-discussions'] });
     }
   });
 

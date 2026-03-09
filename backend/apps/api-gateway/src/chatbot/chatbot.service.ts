@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import path from 'path';
+import { randomUUID } from 'crypto';
+import mime from 'mime-types';
 
 import {
   AiDiscussionDto,
@@ -9,6 +12,7 @@ import {
 } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
 import { RmqClientService } from '@app/common';
+import { MinioService } from '@app/minio';
 
 @Injectable()
 export class ChatbotService {
@@ -16,6 +20,7 @@ export class ChatbotService {
 
   constructor(
     private readonly amqp: RmqClientService,
+    private readonly minio: MinioService,
   ) {
   }
 
@@ -27,24 +32,30 @@ export class ChatbotService {
     }));
   }
 
-  processDocument(fileName: string, userId: string, teamId?: string) {
+  processDocument(payload: { fileId: string; storageKey: string; originalName: string; userId: string; teamId?: string }) {
     this.amqp.publish(CHATBOT_EXCHANGE, CHATBOT_PATTERN.PROCESS_DOCUMENT, {
-      fileName,
-      userId,
-      teamId
+      fileId: payload.fileId,
+      storageKey: payload.storageKey,
+      originalName: payload.originalName,
+      userId: payload.userId,
+      teamId: payload.teamId,
     });
-    return {
-      message: 'Tài liệu của bạn đã được tiếp nhận và đang được xử lý.',
-    };
   }
 
-  async uploadFile(file: Express.Multer.File, userId: string, teamId?: string) {
-    const fileName = await this.amqp.request<string>({
-      exchange: CHATBOT_EXCHANGE,
-      routingKey: CHATBOT_PATTERN.UPLOAD_FILE,
-      payload: { file, userId, teamId }
-    })
-    return unwrapRpcResult(fileName);
+  async uploadFile(
+    file: Express.Multer.File,
+    userId: string,
+    teamId?: string,
+  ): Promise<{ fileId: string; storageKey: string; originalName: string }> {
+    const fileId = randomUUID();
+    const extension = path.extname(file.originalname);
+    const storageKey = `${fileId}${extension}`;
+    const contentType = mime.lookup(file.originalname) as string || 'application/octet-stream';
+
+    await this.minio.uploadBuffer(storageKey, file.buffer, contentType);
+    this.logger.log(`Uploaded AI chatbot file: ${storageKey} (user: ${userId})`);
+
+    return { fileId, storageKey, originalName: file.originalname };
   }
 
   async getFilesPrefix(userId?: string, teamId?: string) {

@@ -332,7 +332,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(teamId || userId).emit('file_status', { id: fileId, status: fileStatus, name: fileName });
   }
 
-  handleUploadCompletion(fileId: string, status: FileStatus, userId: string, teamId?: string) {
-    this.server.to(teamId || userId).emit('file_status', { id: fileId, status: status });
+  handleUploadCompletion(fileId: string, status: FileStatus, userId: string, teamId?: string, size?: number) {
+    this.server.to(teamId || userId).emit('file_status', { id: fileId, status: status, size: size });
   }
 }

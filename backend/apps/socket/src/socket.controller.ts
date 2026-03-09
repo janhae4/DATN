@@ -239,17 +239,18 @@ export class SocketController {
 
   @RabbitSubscribe({
     exchange: SOCKET_EXCHANGE,
-    routingKey: FILE_PATTERN.COMPLETE_UPLOAD,
-    queue: FILE_PATTERN.COMPLETE_UPLOAD,
+    routingKey: 'socket.file.complete.upload',
+    queue: 'socket.file.complete.upload',
     errorHandler: customErrorHandler
   })
-  handleCompleteUpload(payload: { fileId: string, status: FileStatus, userId: string, teamId?: string }) {
-    this.socketGateway.handleUploadCompletion(payload.fileId, payload.status, payload.userId, payload.teamId);
+  handleCompleteUpload(payload: { fileId: string, status: FileStatus, userId: string, teamId?: string, size?: number }) {
+    this.socketGateway.handleUploadCompletion(payload.fileId, payload.status, payload.userId, payload.teamId, payload.size);
   }
 
   @RabbitSubscribe({
     exchange: EVENTS_EXCHANGE,
     routingKey: EVENTS.MESSAGE_UPDATED,
+    queue: 'events.message.updated.socket',
     errorHandler: customErrorHandler
   })
   handleMessageUpdate(payload: any) {

@@ -23,7 +23,6 @@ export const useVoiceSocket = (
     const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
 
     const [isMuted, setIsMuted] = useState(false);
-    const [isVideoOn, setIsVideoOn] = useState(false);
     const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
     const [ccCaptions, setCCCaptions] = useState<Map<string, CaptionEntry>>(new Map());
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -56,7 +55,6 @@ export const useVoiceSocket = (
         setRemoteStreams(new Map());
         setVoiceParticipants([]);
         setIsMuted(false);
-        setIsVideoOn(false);
         setSpeakingUsers(new Set());
 
         if (audioContextRef.current) {
@@ -71,15 +69,19 @@ export const useVoiceSocket = (
     // Toggle Mute
     const toggleMute = () => {
         if (localStreamRef.current) {
+            const nextMuted = !isMuted;
             localStreamRef.current.getAudioTracks().forEach(track => {
-                track.enabled = !track.enabled;
+                track.enabled = !nextMuted;
             });
-            setIsMuted(prev => !prev);
-        }
-    };
+            setIsMuted(nextMuted);
 
-    const toggleVideo = async () => {
-        setIsVideoOn(prev => !prev);
+            if (voiceSocket && selectedChannelId) {
+                voiceSocket.emit('user_toggle_audio', {
+                    roomId: selectedChannelId,
+                    isMuted: nextMuted
+                });
+            }
+        }
     };
 
     useEffect(() => {
@@ -175,15 +177,16 @@ export const useVoiceSocket = (
 
                 setVoiceParticipants(prev => {
                     const exists = prev.find(p => p.userInfo?.id === user?.id);
-                    if (exists) return prev;
-                    return [...prev, { userInfo: user, socketId: voiceSocket.id || 'me' }];
+                    if (exists) return prev.map(p => p.userInfo?.id === user?.id ? { ...p, isMuted } : p);
+                    return [...prev, { userInfo: user, socketId: voiceSocket.id || 'me', isMuted }];
                 });
 
                 voiceSocket.emit("join_video_room", {
                     roomId: selectedChannelId,
                     teamId: selectedServerId,
                     userInfo: user,
-                    role: 'MEMBER'
+                    role: 'MEMBER',
+                    isMuted: isMuted
                 });
             } catch (err) {
                 console.error("Failed to access microphone:", err);
@@ -225,7 +228,7 @@ export const useVoiceSocket = (
             return peer;
         };
 
-        const handleUserJoined = async (data: { userInfo: any, socketId: string, role: string }) => {
+        const handleUserJoined = async (data: { userInfo: any, socketId: string, role: string, isMuted: boolean }) => {
             setVoiceParticipants(prev => {
                 if (prev.find(p => p.userInfo?.id === data.userInfo?.id)) return prev;
                 return [...prev, data];
@@ -239,7 +242,8 @@ export const useVoiceSocket = (
                 sdp: offer,
                 targetUserId: data.socketId,
                 roomId: selectedChannelId,
-                userInfo: user
+                userInfo: user,
+                isMuted: isMuted
             });
         };
 
@@ -251,11 +255,11 @@ export const useVoiceSocket = (
             });
         };
 
-        const handleOffer = async (data: { sdp: any, senderSocketId: string, userInfo: any }) => {
+        const handleOffer = async (data: { sdp: any, senderSocketId: string, userInfo: any, isMuted: boolean }) => {
             if (data.userInfo) {
                 setVoiceParticipants(prev => {
                     if (prev.find(p => p.userInfo?.id === data.userInfo?.id)) return prev;
-                    return [...prev, { userInfo: data.userInfo, socketId: data.senderSocketId }];
+                    return [...prev, { userInfo: data.userInfo, socketId: data.senderSocketId, isMuted: data.isMuted }];
                 });
             }
 
@@ -357,7 +361,14 @@ export const useVoiceSocket = (
             }
         };
 
+        const handleUserMute = (data: { userId: string, isMuted: boolean }) => {
+            setVoiceParticipants(prev =>
+                prev.map(p => p.userInfo?.id === data.userId ? { ...p, isMuted: data.isMuted } : p)
+            );
+        };
+
         voiceSocket.on("user_joined_video", handleUserJoined);
+        voiceSocket.on("user_toggle_audio", handleUserMute);
         voiceSocket.on("all_users_in_room", handleAllUsers);
         voiceSocket.on("offer", handleOffer);
         voiceSocket.on("answer", handleAnswer);
@@ -367,6 +378,7 @@ export const useVoiceSocket = (
 
         return () => {
             voiceSocket.off("user_joined_video", handleUserJoined);
+            voiceSocket.off("user_toggle_audio", handleUserMute);
             voiceSocket.off("all_users_in_room", handleAllUsers);
             voiceSocket.off("offer", handleOffer);
             voiceSocket.off("answer", handleAnswer);
@@ -383,8 +395,6 @@ export const useVoiceSocket = (
         remoteStreams,
         isMuted,
         toggleMute,
-        isVideoOn,
-        toggleVideo,
         speakingUsers,
         ccCaptions,
         emitCCTranscript,

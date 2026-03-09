@@ -60,7 +60,7 @@ export const CreateChannelDialog: React.FC<CreateChannelDialogProps> = ({
                             <div className="grid grid-cols-2 gap-3">
                                 {[
                                     { id: "TEXT", icon: "lucide:hash", label: "Text", desc: "Post images, stickers, etc." },
-                                    { id: "VOICE", icon: "lucide:volume-2", label: "Voice", desc: "Hang out with voice & video." }
+                                    { id: "VOICE", icon: "lucide:volume-2", label: "Voice", desc: "Hang out with voice chat." }
                                 ].map((item) => (
                                     <button
                                         key={item.id}

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import { Icon } from "@iconify-icon/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { AudioWaveform } from "./AudioWaveform";
@@ -9,9 +9,10 @@ interface UserCardProps {
     avatar?: string;
     isMe?: boolean;
     isSpeaking: boolean;
+    isMuted?: boolean;
 }
 
-export const UserCard = ({ name, avatar, isMe = false, isSpeaking = false }: UserCardProps) => (
+export const UserCard = ({ name, avatar, isMe = false, isSpeaking = false, isMuted = false }: UserCardProps) => (
     <div className={cn(
         "relative w-full aspect-[4/4] rounded-xl flex flex-col items-center justify-center transition-all duration-200 group",
         isSpeaking
@@ -39,7 +40,12 @@ export const UserCard = ({ name, avatar, isMe = false, isSpeaking = false }: Use
                 {isMe && <span className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-600 bg-zinc-100 dark:bg-zinc-900 px-1 py-0.5 rounded ml-1 shrink-0">You</span>}
             </div>
 
-            <div className="shrink-0">
+            <div className="shrink-0 flex items-center gap-2">
+                {isMuted && (
+                    <div className="p-1 rounded bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
+                        <Icon icon="lucide:mic-off" width="12" />
+                    </div>
+                )}
                 <AudioWaveform active={isSpeaking} />
             </div>
         </div>
