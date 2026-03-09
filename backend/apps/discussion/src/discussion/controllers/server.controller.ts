@@ -11,7 +11,9 @@ export class ServerController {
     constructor(
         private readonly serverService: ServerService,
         private readonly messageService: MessageService
-    ) { }
+    ) {
+        console.log('ServerController initialized');
+    }
 
     @RabbitSubscribe({
         exchange: EVENTS_EXCHANGE,

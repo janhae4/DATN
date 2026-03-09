@@ -206,7 +206,7 @@ export function NotificationPopover() {
                     )}
 
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatDistanceToNow(addHours(notification.createdAt, -7), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                     </p>
                   </div>
                 ))

@@ -450,7 +450,7 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_RECORDING_BUCKET=meeting-recordings
-      - GEMINI_API_KEY=key
+      - GEMINI_API_KEY=AIzaSyBEexuJDfCTY-fJ4T0jHo3GbSz8FEgNCjY
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -484,7 +484,7 @@ services:
         NEXT_PUBLIC_API_URL: http://localhost:3000
         NEXT_PUBLIC_SOCKET_URL: ws://localhost:4001
         NEXT_PUBLIC_WEBRTC_WS_URL: ws://localhost:8005/ws
-        NEXT_PUBLIC_LIVEKIT_URL: http://192.168.1.4:7880
+        NEXT_PUBLIC_LIVEKIT_URL: http://127.0.0.1:7880/
     container_name: nextjs_frontend
     restart: always
     ports:

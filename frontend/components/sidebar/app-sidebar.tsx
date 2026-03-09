@@ -22,6 +22,7 @@ import {
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavProjects } from "@/components/sidebar/nav-projects";
 import { TeamSwitcher } from "@/components/sidebar/team-switcher";
+import { useTeamContext } from "@/contexts/TeamContext";
 import {
   Sidebar,
   SidebarContent,
@@ -105,7 +106,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const params = useParams();
   const pathname = usePathname();
   const { setOpen } = useSidebar();
-  const teamId = params.teamId as string;
+  const { activeTeam } = useTeamContext();
+  const teamId = (params.teamId as string) || activeTeam?.id;
   const projectId = params.projectId as string | undefined;
   const { projects } = useProjects(teamId);
 
@@ -138,7 +140,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navMainWithParams = React.useMemo(() => {
     if (!teamId) {
-      return data.navMain
+      // Fallback to absolute paths even without teamId to prevent relative path nesting
+      return data.navMain.map(item => ({
+        ...item,
+        url: item.url.startsWith("/") ? item.url : `/${item.url}`
+      }));
     }
 
     const basePath = effectiveProjectId ? `/${teamId}/${effectiveProjectId}` : null

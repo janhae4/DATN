@@ -38,22 +38,7 @@ import { PermissionController } from './controllers/permission.controller';
       { name: ReadReceipt.name, schema: ReadReceiptSchema },
       { name: Server.name, schema: ServerSchema },
     ]),
-    RmqModule.register({
-      exchanges: [
-        {
-          name: DISCUSSION_EXCHANGE,
-          type: 'direct'
-        },
-        {
-          name: EVENTS_EXCHANGE,
-          type: 'topic'
-        },
-        {
-          name: N8N_EXCHANGE,
-          type: 'direct'
-        }
-      ],
-    }),
+    RmqModule.register(),
   ],
   controllers: [
     ServerController,

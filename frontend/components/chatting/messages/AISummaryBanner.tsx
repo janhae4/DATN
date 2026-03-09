@@ -36,15 +36,15 @@ export const AISummaryBanner: React.FC<AISummaryBannerProps> = ({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1">
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500 dark:text-zinc-400 mb-1">
                         AI Summary
                     </p>
                     {isLoading ? (
-                        <p className="text-xs text-zinc-400 dark:text-zinc-500 animate-pulse">
+                        <p className="text-sm text-zinc-400 dark:text-zinc-500 animate-pulse">
                             Generating summary…
                         </p>
                     ) : (
-                        <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-100 leading-relaxed whitespace-pre-wrap">
                             {summary}
                         </p>
                     )}
@@ -54,10 +54,10 @@ export const AISummaryBanner: React.FC<AISummaryBannerProps> = ({
                 {!isLoading && (
                     <button
                         onClick={onClose}
-                        className="shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        className="shrink-0 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors p-1 rounded-lg hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
                         aria-label="Close summary"
                     >
-                        <Icon icon="lucide:x" width="14" />
+                        <Icon icon="lucide:x" width="16" />
                     </button>
                 )}
             </div>

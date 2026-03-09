@@ -36,36 +36,6 @@ export const VoiceControlDock: React.FC<VoiceControlDockProps> = ({
                     />
                 </div>
 
-                {/* Video */}
-                <div onClick={onToggleVideo}>
-                    <ControlBtn
-                        icon={isVideoOn ? "lucide:video" : "lucide:video-off"}
-                        tooltip={isVideoOn ? "Turn Camera Off" : "Turn Camera On"}
-                        active={isVideoOn}
-                    />
-                </div>
-
-                {/* Screen share */}
-                <ControlBtn icon="lucide:monitor-up" tooltip="Share Screen" active={false} />
-
-                {/* Closed Captions */}
-                <div
-                    onClick={() => { if (isCCSupported) onToggleCC(); }}
-                    title={!isCCSupported ? "Captions not supported in this browser" : undefined}
-                >
-                    <ControlBtn
-                        icon={isCCOn ? "lucide:captions" : "lucide:captions-off"}
-                        tooltip={
-                            !isCCSupported
-                                ? "Captions not supported"
-                                : isCCOn
-                                    ? "Turn Captions Off"
-                                    : "Turn Captions On"
-                        }
-                        active={isCCOn}
-                    />
-                </div>
-
                 <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800 mx-2" />
 
                 {/* Disconnect */}
