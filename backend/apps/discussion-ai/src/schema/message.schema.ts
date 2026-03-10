@@ -20,12 +20,25 @@ export class RetrievedContext {
 export const RetrievedContextSchema = SchemaFactory.createForClass(RetrievedContext);
 
 @Schema({ _id: false })
+export class AttachedFile {
+  @Prop({ required: true })
+  fileId: string;
+
+  @Prop({ required: true })
+  name: string;
+}
+export const AttachedFileSchema = SchemaFactory.createForClass(AttachedFile);
+
+@Schema({ _id: false })
 export class MessageMetadata {
   @Prop({ type: [RetrievedContextSchema], default: [] })
   retrieved_context?: RetrievedContext[];
 
   @Prop()
   error?: string;
+
+  @Prop({ type: [AttachedFileSchema], default: [] })
+  files?: AttachedFile[];
 }
 export const MessageMetadataSchema = SchemaFactory.createForClass(MessageMetadata);
 

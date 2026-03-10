@@ -84,7 +84,7 @@ export class FileService {
         parentId: string | null = null,
         isChatAttachment: boolean = false
     ) {
-        if (teamId && parentId) {
+        if (teamId) {
             await this.teamCache.checkPermission(teamId, userId);
         }
 
@@ -124,11 +124,12 @@ export class FileService {
         return {
             uploadUrl: uploadUrl,
             fileId: fileId,
+            storageKey: storageKey,
         };
     }
 
     async createFolder(name: string, parentId: string | null, userId: string, projectId?: string, teamId?: string) {
-        if (teamId && parentId) {
+        if (teamId) {
             await this.teamCache.checkPermission(teamId, userId);
         }
 
@@ -208,7 +209,8 @@ export class FileService {
                 storageKey: file.storageKey,
                 originalName: fileOriginalName,
                 userId: file.userId,
-                projectId: file.projectId
+                projectId: file.projectId,
+                teamId: file.teamId,
             }
         );
     }
@@ -235,8 +237,13 @@ export class FileService {
         const safeLimit = Number(limit) || 10;
         const skip = (safePage - 1) * safeLimit;
 
-        if (projectId && teamId) {
-            query.projectId = projectId;
+        if (teamId) {
+            query.teamId = teamId;
+            if (projectId) {
+                query.projectId = projectId;
+            } else {
+                query.projectId = { $in: [null, undefined] };
+            }
 
             const member = await this.teamCache.getTeamMember(teamId as string, userId);
             if (!member) {
@@ -254,23 +261,22 @@ export class FileService {
                     }
                 ];
             }
-
-
         } else {
             query.userId = userId;
             query.projectId = { $in: [null, undefined] };
+            query.teamId = { $in: [null, undefined] };
         }
 
         if (parentId) {
             query.parentId = parentId;
         }
 
-        query.isChatAttachment = { $ne: true };
+        // query.isChatAttachment = { $ne: true }; // Removed to allow chat attachments in Documents
 
         const [files, totalItems] = await Promise.all([
             this.fileModel
                 .find(query)
-                .select('_id originalName parentId createdAt teamId status size mimetype type visibility allowedUserIds')
+                .select('_id originalName parentId createdAt teamId userId storageKey status size mimetype type visibility allowedUserIds aiSummary')
                 .sort({ type: -1, createdAt: -1 })
                 .skip(skip)
                 .limit(safeLimit)
@@ -353,7 +359,7 @@ export class FileService {
 
         const result = await this.fileModel.deleteMany({ _id: { $in: allIds } }).exec();
 
-        this.amqp.publish(EVENTS_EXCHANGE, EVENTS.DELETE_DOCUMENT, { fileIds: allIds, userId, projectId });
+        this.amqp.publish(EVENTS_EXCHANGE, EVENTS.DELETE_DOCUMENT, { fileIds: allIds, storageKeys: allStorageKeys, userId, projectId, teamId });
 
         return { success: true, deletedCount: result.deletedCount };
     }
@@ -536,16 +542,8 @@ export class FileService {
         }
     }
 
-    async getFolder(userId: string, folderId: string, page: number = 1, limit: number = 10) {
-        const currentFolder = await this.fileModel.findOne({ _id: folderId }).exec();
-
-        if (!currentFolder) {
-            throw new NotFoundException('Folder not found');
-        }
-
-        if (currentFolder.userId.toString() !== userId) {
-            throw new ForbiddenException('You do not have permission to access this folder');
-        }
+    async getFolder(userId: string, folderId: string, page: number = 1, limit: number = 10, teamId?: string, projectId?: string) {
+        await this._verifyPermission(folderId, userId, projectId, teamId);
 
         const query = { parentId: folderId };
 
@@ -585,7 +583,7 @@ export class FileService {
     ) {
         let query: FilterQuery<FileDocument> = { _id: fileId };
         if (projectId) {
-            query = { projectId: projectId };
+            query.projectId = projectId;
         }
         await this.fileModel.findOneAndUpdate(query, { status: fileStatus }, { new: true });
     }
@@ -676,27 +674,39 @@ export class FileService {
 
         return results.flat();
     }
-    async createChatPreSignedUrl(
-        originalName: string,
-        userId: string,
-        teamId: string,
-        projectId?: string
-    ) {
 
-        const effectiveTeamId = (!teamId || teamId === 'dm' || teamId === '@me') ? 'dm' : teamId;
 
-        const extension = path.extname(originalName);
-        const randomId = randomUUID();
-        const storageKey = `chat-files/${effectiveTeamId}/${projectId || 'global'}/${randomId}${extension}`;
+    async registerFile(payload: {
+        fileId: string;
+        storageKey: string;
+        originalName: string;
+        userId: string;
+        teamId?: string;
+        projectId?: string;
+        size: number;
+        mimetype: string;
+        status: string;
+        isChatAttachment?: boolean;
+    }) {
+        const { fileId, storageKey, originalName, userId, teamId, projectId, size, mimetype, status, isChatAttachment } = payload;
+        
+        const effectiveTeamId = (!teamId || teamId === 'dm' || teamId === '@me') ? null : teamId;
 
-        const uploadUrl = await this.minioService.getPreSignedUploadUrl(storageKey);
-
-        return {
-            uploadUrl,
-            fileId: storageKey,
-            isDirectKey: true,
-            storageKey
-        };
+        return await this.fileModel.create({
+            _id: fileId,
+            storageKey,
+            originalName,
+            userId,
+            projectId: projectId || null,
+            teamId: effectiveTeamId,
+            mimetype,
+            size,
+            type: FileType.FILE,
+            status: status || FileStatus.UPLOADED,
+            createdAt: new Date(),
+            visibility: effectiveTeamId ? FileVisibility.TEAM : FileVisibility.PRIVATE,
+            isChatAttachment: isChatAttachment ?? true
+        });
     }
 
     async getChatViewUrl(storageKey: string, userId: string) {
@@ -815,5 +825,9 @@ export class FileService {
         });
 
         return newFile;
+    }
+
+    async updateSummary(fileId: string, summary: string) {
+        return await this.fileModel.findByIdAndUpdate(fileId, { $set: { aiSummary: summary } }, { new: true });
     }
 }

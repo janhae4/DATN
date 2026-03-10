@@ -41,7 +41,8 @@ export function useFiles(
           status: file.status,
           mimeType: file.mimetype,
           visibility: file.visibility,
-          allowedUserIds: file.allowedUserIds
+          allowedUserIds: file.allowedUserIds,
+          aiSummary: file.aiSummary
         };
       });
 

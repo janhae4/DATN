@@ -19,6 +19,7 @@ import {
   FolderIcon,
   Lock,
   Users,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -75,6 +76,7 @@ interface FileCardProps {
     visibility: FileVisibility,
     allowedUserIds?: string[],
   ) => void;
+  onSummarize?: (file: Attachment) => void;
 }
 
 const formatSize = (bytes: number) => {
@@ -247,6 +249,7 @@ export const DropdownFileMenuContent = ({
   setIsAssigneeModalOpen,
   onDownload,
   onDelete,
+  onSummarize,
 }: {
   file: Attachment;
   projectId?: string;
@@ -260,7 +263,11 @@ export const DropdownFileMenuContent = ({
   onDownload: (id: string) => void;
   onDelete: (id: string) => void;
   setIsAssigneeModalOpen: (open: boolean) => void;
-}) => (
+  onSummarize?: (file: Attachment) => void;
+}) => {
+  const isSummarizable = file && file.fileType !== AttachmentType.FOLDER;
+  
+  return (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <button
@@ -279,6 +286,17 @@ export const DropdownFileMenuContent = ({
       >
         <ExternalLink className="mr-2 h-3.5 w-3.5" /> Open
       </DropdownMenuItem>
+      {isSummarizable && onSummarize && (
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onSummarize(file);
+          }}
+        >
+          <Sparkles className="mr-2 h-3.5 w-3.5 text-indigo-500" /> <span className="text-indigo-600 font-medium">AI Summary</span>
+          <span className="sr-only">Summarize {file.fileName}</span>
+        </DropdownMenuItem>
+      )}
       {projectId && teamId && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
@@ -349,7 +367,8 @@ export const DropdownFileMenuContent = ({
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
-);
+  );
+};
 
 export const ContextFileMenuContent = ({
   file,
@@ -365,6 +384,7 @@ export const ContextFileMenuContent = ({
   setIsAssigneeModalOpen,
   onBulkDownload,
   onBulkDelete,
+  onSummarize,
 }: {
   file?: Attachment;
   selectedIds: Set<string>;
@@ -386,7 +406,11 @@ export const ContextFileMenuContent = ({
   onBulkDownload?: (ids: string[]) => void;
   onBulkDelete?: (ids: string[]) => void;
   setIsAssigneeModalOpen: (open: boolean) => void;
+  onSummarize?: (file: Attachment) => void;
 }) => {
+  const isSummarizable = file && file.fileType !== AttachmentType.FOLDER;
+
+
   const VisibilitySubMenuContent = () => (
     <>
       <ContextMenuRadioGroup value={currentVisibility}>
@@ -481,6 +505,17 @@ export const ContextFileMenuContent = ({
           >
             <ExternalLink className="h-4 w-4 text-zinc-500" /> Open
           </ContextMenuItem>
+          {isSummarizable && onSummarize && file && (
+            <ContextMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onSummarize(file);
+              }}
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4 text-indigo-500" /> <span className="text-indigo-600 font-medium">AI Summary</span>
+            </ContextMenuItem>
+          )}
           {projectId && teamId && (
             <ContextMenuSub>
               <ContextMenuSubTrigger className="gap-2">
@@ -535,6 +570,7 @@ export const FileCard = ({
   onBulkDelete,
   onBulkDownload,
   onBulkVisibilityChange,
+  onSummarize,
 }: FileCardProps) => {
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = React.useState(false);
   const { data: members = [] } = useTeamMembers(teamId || null);
@@ -637,6 +673,7 @@ console.log("File: ", file)
                 onDownload={() => handleDownloadAction()}
                 onDelete={() => handleDeleteAction()}
                 setIsAssigneeModalOpen={setIsAssigneeModalOpen}
+                onSummarize={onSummarize}
               />
             </div>
             <div
@@ -702,6 +739,7 @@ console.log("File: ", file)
           onBulkDelete={onBulkDelete}
           onBulkDownload={onBulkDownload}
           onBulkVisibilityChange={handleChangeVisibility}
+          onSummarize={onSummarize}
         />
       </ContextMenu>
 

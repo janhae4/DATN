@@ -51,24 +51,10 @@ export class FileController {
     @Body() body: InitiateUploadDto,
     @CurrentUser('id') userId: string,
   ) {
-    if (body.isChatAttachment && body.teamId) {
-      if (!body.teamId) throw new Error("TeamId is required")
-      return this.fileService.initiateChatUpload(body.fileName, body.fileType, userId, body.teamId, body.projectId);
-    }
     return this.fileService.initiateUpload(body.fileName, body.fileType, userId, body.projectId, body.teamId, body.parentId, body.isChatAttachment);
   }
 
-  @Post('initiate-upload-chat')
-  @ApiOperation({ summary: '1. Get Pre-signed URL for a new file' })
-  @ApiQuery({ name: 'projectId', required: false, type: 'string' })
-  @ApiBody({ type: InitiateUploadDto })
-  @ApiResponse({ status: 201, description: 'Returns the Pre-signed URL and fileId' })
-  initiateUploadChat(
-    @Body() body: InitiateUploadDto,
-    @CurrentUser('id') userId: string,
-  ) {
-    return this.fileService.initiateChatUpload(body.fileName, body.fileType, userId, body.teamId || '', body.projectId);
-  }
+
 
   @Post('folder')
   @ApiOperation({ summary: 'Create a new folder' })

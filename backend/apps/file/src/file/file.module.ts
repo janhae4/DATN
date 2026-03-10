@@ -7,14 +7,15 @@ import { FileService } from './file.service';
 import { RmqModule } from '@app/common';
 import { RedisServiceModule } from '@app/redis-service';
 import { MinioService } from '@app/minio';
+import { ScheduleModule } from '@nestjs/schedule';
+import { FileCronService } from './file-cron.service';
 
 @Module({
   imports: [
-
+    ScheduleModule.forRoot(),
     ClientConfigModule,
     RmqModule.register(),
     MongooseModule.forRootAsync({
-
       useFactory: (configService: ClientConfigService) => ({
         uri: configService.getFileDatabaseUrl()
       }),
@@ -25,6 +26,7 @@ import { MinioService } from '@app/minio';
     RedisServiceModule
   ],
   controllers: [FileController],
-  providers: [FileService, MinioService],
+  providers: [FileService, MinioService, FileCronService],
 })
+
 export class FileModule { }

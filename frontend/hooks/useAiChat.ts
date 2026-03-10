@@ -33,10 +33,10 @@ export function useAiChat(discussionId?: string) {
     }, [data]);
 
     const sendMessageMutation = useMutation({
-        mutationFn: async ({ discussionId, message, onChunk }: { discussionId: string; message: string, onChunk: (chunk: string) => void }) => {
+        mutationFn: async ({ discussionId, message, onChunk, files }: { discussionId: string; message: string, onChunk: (chunk: string) => void, files?: {fileId: string, name: string}[] }) => {
             return streamHelper(
                 `/ai-discussions/handle-message/`,
-                { discussionId, message },
+                { discussionId, message, files: files || [] },
                 onChunk
             );
         },
@@ -70,6 +70,9 @@ export function useAiChat(discussionId?: string) {
                 } as any,
                 timestamp: new Date().toISOString(),
                 discussionId: discussionId || "",
+                metadata: sendMessageMutation.variables?.files && sendMessageMutation.variables.files.length > 0 
+                  ? { files: sendMessageMutation.variables.files } 
+                  : undefined,
             };
 
             displayMessages.push(tempUserMessage);

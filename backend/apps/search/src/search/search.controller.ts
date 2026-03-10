@@ -119,7 +119,10 @@ export class SearchController {
     queue: 'events.delete.document.search',
     errorHandler: customErrorHandler
   })
-  async handleDeleteDocumentIndex(payload: { fileId: string }) {
-    return this.searchService.handleDeleteDocumentIndex(payload.fileId);
+  async handleDeleteDocumentIndex(payload: { fileIds: string[] }) {
+    if (!payload.fileIds || payload.fileIds.length === 0) return;
+    for (const fileId of payload.fileIds) {
+      this.searchService.handleDeleteDocumentIndex(fileId);
+    }
   }
 }

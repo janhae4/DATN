@@ -26,4 +26,5 @@ export interface Attachment {
   mimeType: string;
   visibility: FileVisibility
   allowedUserIds?: string[]
+  aiSummary?: string;
 }

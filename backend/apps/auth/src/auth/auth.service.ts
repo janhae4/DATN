@@ -374,7 +374,8 @@ export class AuthService {
       `Google account ${email} linked successfully to user ${user.id}.`,
     );
     await this.userCacheService.delete(user.id)
-    return { message: 'Google account linked successfully' };
+    const tokens = await this._generateTokensAndSession(user);
+    return { ...tokens, message: 'Google account linked successfully' };
   }
 
   private async handleLoginGoogle(data: GoogleAccountDto, account: Account) {

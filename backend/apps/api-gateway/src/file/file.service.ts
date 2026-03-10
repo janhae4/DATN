@@ -42,21 +42,7 @@ export class FileService {
         });
     }
 
-    async initiateChatUpload(
-        fileName: string,
-        fileType: string,
-        userId: string,
-        teamId: string,
-        projectId?: string,
-    ) {
-        return await this.sendRpcRequest(FILE_PATTERN.INITIAL_CHAT_UPLOAD, {
-            fileName,
-            fileType,
-            userId,
-            projectId,
-            teamId,
-        });
-    }
+
 
     async createFolder(name: string, parentId: string | null, userId: string, projectId?: string, teamId?: string) {
         return await this.sendRpcRequest(FILE_PATTERN.CREATE_FOLDER, {

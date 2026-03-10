@@ -8,6 +8,8 @@ import {
   CHATBOT_EXCHANGE,
   CHATBOT_PATTERN,
   ConversationResponseDto,
+  FILE_EXCHANGE,
+  FILE_PATTERN,
   MessageMetadataDto,
 } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
@@ -42,21 +44,7 @@ export class ChatbotService {
     });
   }
 
-  async uploadFile(
-    file: Express.Multer.File,
-    userId: string,
-    teamId?: string,
-  ): Promise<{ fileId: string; storageKey: string; originalName: string }> {
-    const fileId = randomUUID();
-    const extension = path.extname(file.originalname);
-    const storageKey = `${fileId}${extension}`;
-    const contentType = mime.lookup(file.originalname) as string || 'application/octet-stream';
 
-    await this.minio.uploadBuffer(storageKey, file.buffer, contentType);
-    this.logger.log(`Uploaded AI chatbot file: ${storageKey} (user: ${userId})`);
-
-    return { fileId, storageKey, originalName: file.originalname };
-  }
 
   async getFilesPrefix(userId?: string, teamId?: string) {
     const files = await this.amqp.request<string[]>({
@@ -183,13 +171,58 @@ export class ChatbotService {
     return unwrapRpcResult(result)
   }
 
-  async handleMessage(message: string, discussionId: string, userId: string, summarizeFileName?: string) {
+  async handleMessage(
+    message: string, 
+    discussionId: string, 
+    userId: string, 
+    summarizeId?: string, 
+    skipSave?: boolean, 
+    skipTrigger?: boolean,
+    fileIds?: string[],
+    metadata?: MessageMetadataDto
+  ) {
     this.logger.log(`Received new message for ${discussionId}. Sender: ${userId}`);
     console.log("User ID:", userId);
+
+    let summarizeFileName = summarizeId;
+    if (summarizeId) {
+      try {
+        const files = unwrapRpcResult(await this.amqp.request<any[]>({
+          exchange: FILE_EXCHANGE,
+          routingKey: FILE_PATTERN.GET_FILES_BY_IDS,
+          payload: { fileIds: [summarizeId] }
+        }));
+
+        if (files && files.length > 0) {
+          const file = files[0];
+          summarizeFileName = file.storageKey;
+          this.logger.log(`Resolved summarizeId ${summarizeId} to storageKey ${summarizeFileName} (originalName: ${file.originalName})`);
+          
+          return unwrapRpcResult(await this.amqp.request<AiDiscussionDto>({
+            exchange: CHATBOT_EXCHANGE,
+            routingKey: CHATBOT_PATTERN.HANDLE_MESSAGE,
+            payload: { 
+              message, 
+              discussionId, 
+              userId, 
+              summarizeFileName,
+              originalName: file.originalName,
+              skipSave,
+              skipTrigger,
+              fileIds,
+              metadata,
+            }
+          }));
+        }
+      } catch (error) {
+        this.logger.error(`Failed to resolve summarizeId ${summarizeId}: ${error.message}`);
+      }
+    }
+
     const result = await this.amqp.request<AiDiscussionDto>({
       exchange: CHATBOT_EXCHANGE,
       routingKey: CHATBOT_PATTERN.HANDLE_MESSAGE,
-      payload: { message, discussionId, userId, summarizeFileName }
+      payload: { message, discussionId, userId, summarizeFileName, skipSave, skipTrigger, fileIds, metadata }
     })
     return unwrapRpcResult(result)
   }
@@ -200,5 +233,9 @@ export class ChatbotService {
       routingKey: CHATBOT_PATTERN.CREATE,
       payload: { discussionId, message, metadata }
     }))
+  }
+
+  async updateFileSummary(fileId: string, summary: string) {
+    return this.amqp.publish(FILE_EXCHANGE, FILE_PATTERN.UPDATE_SUMMARY, { fileId, summary });
   }
 }

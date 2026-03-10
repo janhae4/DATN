@@ -32,16 +32,18 @@ export class AuthService {
     refreshToken: string,
     response: Response,
   ) {
-    console.log("setting cookies in setCookies: ", accessToken, refreshToken);
+    const isSecure = process.env.NODE_ENV === 'production' && !process.env.FRONT_END_URL?.includes('localhost') && !process.env.FRONT_END_URL?.includes('127.0.0.1');
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
+      sameSite: 'lax',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000,
     });
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
+      sameSite: 'lax',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000 * 14,
     });
@@ -196,8 +198,11 @@ export class AuthService {
     if (tokens.accessToken && tokens.refreshToken) {
       this.setCookies(tokens.accessToken, tokens.refreshToken, response);
     }
-    const callbackUrl = `${process.env.CLIENT_URL || 'http://localhost:5000'}`;
-    return response.redirect(callbackUrl);
+    const callbackUrl = process.env.FRONT_END_URL || 'http://localhost:5000';
+    const baseUrl = callbackUrl.replace(/:3000$/, ':5000'); // Ensure we go to the frontend even if FRONT_END_URL is misconfigured to port 3000
+    
+    // If it was a linking action, maybe they want to go to profile, but user said "dashboard"
+    return response.redirect(baseUrl);
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {

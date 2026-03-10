@@ -21,24 +21,48 @@ export class RmqClientService {
         timeout?: number;
     }): Promise<T> {
         try {
+            const executeRequest = async () => {
+                const response = await this.amqp.request<any>({
+                    exchange,
+                    routingKey,
+                    payload,
+                });
 
-            const response = await this.amqp.request<any>({
-                exchange,
-                routingKey,
-                payload,
-            });
+                if (response && response.error) {
+                    console.error(`RPC Error [${routingKey}]:`, response.message);
+                    throw new HttpException(
+                        response.message || 'Internal RPC Error',
+                        response.statusCode || HttpStatus.INTERNAL_SERVER_ERROR,
+                    );
+                }
+                return response as T;
+            };
 
-            if (response && response.error) {
-                console.log(response);
-                console.error(`RPC Error [${routingKey}]:`, response.message);
+            const maxRetries = 3;
+            let currentDelayMs = 1000;
+            let retries = 0;
 
-                throw new HttpException(
-                    response.message || 'Internal RPC Error',
-                    response.statusCode || HttpStatus.INTERNAL_SERVER_ERROR,
-                );
+            while (true) {
+                try {
+                    return await executeRequest();
+                } catch (error) {
+                    if (error instanceof HttpException) {
+                        const status = error.getStatus();
+                        if (status !== HttpStatus.GATEWAY_TIMEOUT && status !== HttpStatus.INTERNAL_SERVER_ERROR) {
+                            throw error;
+                        }
+                    }
+
+                    if (retries >= maxRetries - 1) {
+                        throw error;
+                    }
+
+                    retries++;
+                    console.warn(`[RMQ Retry] Request to ${routingKey} failed. Retrying in ${currentDelayMs}ms... (Attempt ${retries}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, currentDelayMs));
+                    currentDelayMs *= 2; 
+                }
             }
-
-            return response as T;
 
         } catch (error) {
             if (error instanceof HttpException) {

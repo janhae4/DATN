@@ -10,6 +10,7 @@ from services.llm_service import LLMService
 from aio_pika import Channel, Message, Exchange
 from config import INDEX_DOCUMENT_CHUNK_ROUTING_KEY
 import asyncio
+from utils_retry import retry_async, retry_sync
 
 
 class VectorStoreService:
@@ -20,10 +21,22 @@ class VectorStoreService:
 
     def _get_collection(self, name):
         return self.client.get_or_create_collection(name=name)
+
+    @retry_async(max_retries=3, delay=1, backoff=2)
+    async def delete_collection(self, collection_name: str):
+        try:
+            print(f"[VectorStore] Đang xóa collection: {collection_name}")
+            def _delete():
+                self.client.delete_collection(name=collection_name)
+            await asyncio.to_thread(_delete)
+            print(f"[VectorStore] Đã xóa thành công collection {collection_name}.")
+        except Exception as e:
+            print(f"[VectorStore] Lỗi hoặc collection không tồn tại: {e}")
     
+    @retry_async(max_retries=3, delay=1, backoff=2)
     async def delete_documents_by_source(self, collection_name: str, file_source: str):
         try:
-            collection = await self.get_collection(collection_name)
+            collection = self._get_collection(collection_name)
             print(f"[VectorStore] Đang xóa các chunk cũ của file: {file_source} trong collection {collection_name}")
             
             def _delete():
@@ -35,9 +48,11 @@ class VectorStoreService:
         except Exception as e:
             print(f"[VectorStore] Không thể xóa chunk cũ (có thể là file mới): {e}")
     
-    async def search(self, collection_name: str, query: str, k: int = 5):
+    @retry_async(max_retries=3, delay=1, backoff=2)
+    async def search(self, collection_name: str, query: str, k: int = 5, file_ids: list = None):
         """
-        Tìm kiếm vector bằng native client (không qua LangChain)
+        Tìm kiếm vector bằng native client (không qua LangChain).
+        Nếu file_ids được cung cấp, chỉ tìm trong các file đó.
         """
         try:
             collection = self.client.get_collection(name=collection_name)
@@ -47,11 +62,20 @@ class VectorStoreService:
 
         query_vec = self.llm.get_embedding(query)
 
-        results = collection.query(
-            query_embeddings=[query_vec],
-            n_results=k,
-            include=["documents", "metadatas", "distances"]
-        )
+        query_kwargs = {
+            "query_embeddings": [query_vec],
+            "n_results": k,
+            "include": ["documents", "metadatas", "distances"]
+        }
+
+        if file_ids and len(file_ids) > 0:
+            if len(file_ids) == 1:
+                query_kwargs["where"] = {"source": file_ids[0]}
+            else:
+                query_kwargs["where"] = {"source": {"$in": file_ids}}
+            print(f"[RAG] Filter theo {len(file_ids)} file(s): {file_ids}")
+
+        results = collection.query(**query_kwargs)
 
         formatted_docs = []
         if results['ids'] and results['ids'][0]:
@@ -63,15 +87,17 @@ class VectorStoreService:
                 
         return formatted_docs
             
+    @retry_async(max_retries=3, delay=2, backoff=2)
     async def process_and_store(
         self, 
         user_id: str, 
         file_id: str,
         search_exchange: Exchange,
         team_id: str | None = None,
+        original_name: str | None = None,
         ):
-        print(f"[VectorStore] Đang tải file: {file_id}")
-        raw_docs = await self.minio.load_documents(file_id)
+        print(f"[VectorStore] Đang tải file: {file_id} (original: {original_name})")
+        raw_docs = await self.minio.load_documents(file_id, original_name)
         
         if not raw_docs:
             print(f"[VectorStore] Không tải được tài liệu: {file_id}")
@@ -187,4 +213,4 @@ class VectorStoreService:
             await asyncio.gather(*tasks)
             
         print(f"[VectorStore] Hoàn tất xử lý file: {file_id}")
-        return doc
+        return raw_docs

@@ -207,6 +207,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
                 if (!fileId.startsWith('chat-files')) {
                     await fileService.confirmUpload(fileId);
+                } else if (selectedTeamId) {
+                    // Trigger AI indexing for chat files so they appear in team AI context
+                    import('@/services/aiDiscussionService').then(({ aiDiscussionService }) => {
+                        aiDiscussionService.processExistingFile(
+                            fileId,
+                            file.name,
+                            selectedTeamId
+                        ).catch((e: unknown) => console.warn('AI indexing for chat file failed (non-blocking):', e));
+                    });
                 }
 
                 attachments.push({

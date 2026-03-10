@@ -80,11 +80,13 @@ class RAGChain:
         return self.last_retrieved_context if self.last_retrieved_context else []
         
 
-    async def ask_question_for_user(self, question: str, user_id: str, team_id: str | None ,chat_history: list):
+    async def ask_question_for_user(self, question: str, user_id: str, team_id: str | None, chat_history: list, file_ids: list = None):
         collection_name = f"user_{user_id}" if team_id is None else f"team_{team_id}"
         print(f"[RAG] Đang tìm kiếm trong collection: {collection_name}")
+        if file_ids:
+            print(f"[RAG] Filter theo file_ids: {file_ids}")
         try:
-            raw_docs = await self.vectorstore_service.search(collection_name, question, k=10)
+            raw_docs = await self.vectorstore_service.search(collection_name, question, k=10, file_ids=file_ids)
         except Exception as e:
             print(f"[RAG ERROR] Lỗi tìm kiếm vector (Ollama Embedding 500?): {e}")
             raw_docs = []

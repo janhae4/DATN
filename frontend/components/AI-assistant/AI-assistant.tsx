@@ -16,6 +16,7 @@ import { Sidebar } from "./sidebar";
 import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
 
+
 export default function AIAssistantUI() {
   const queryClient = useQueryClient();
   const [activeId, setActiveId] = React.useState<string | undefined>(undefined);
@@ -47,9 +48,13 @@ export default function AIAssistantUI() {
   } = useAiChat(activeId);
 
   const {
+    allFiles,
+    hasPendingFiles,
     uploadedFiles,
     isUploading,
-    uploadFiles,
+    addPendingFiles,
+    uploadPendingFiles,
+    waitForFilesCompleted,
     removeFile,
     clearFiles: clearUploadedFiles,
   } = useAiFileUpload();
@@ -127,12 +132,43 @@ export default function AIAssistantUI() {
   }, [messages, streamingContent, isStreaming, activeId]);
 
   const handleSend = async () => {
-    if (!input.trim() || isStreaming) return;
+    const hasText = input.trim().length > 0;
+    if ((!hasText && !hasPendingFiles && allFiles.length === 0) || isStreaming || isUploading) return;
 
     const currentInput = input;
     setInput("");
     setStreamingContent("");
     const sendingDiscussionId = activeId;
+
+    let fileIds: string[] = [];
+    let filesToAttach: {fileId: string, name: string}[] = [];
+
+    // ── Step 1: Upload pending files ─────────────────────────────────────────
+    if (hasPendingFiles) {
+      const result = await uploadPendingFiles();
+      filesToAttach = result.map(r => ({ fileId: r.fileId, name: r.originalName }));
+      fileIds = filesToAttach.map(f => f.fileId);
+    } else {
+      // Take already-uploaded fileIds (completed/processing)
+      filesToAttach = uploadedFiles
+        .filter((f) => f.fileId && (f.status === "completed" || f.status === "processing"))
+        .map((f) => ({ fileId: f.fileId!, name: f.originalName }));
+      fileIds = filesToAttach.map(f => f.fileId);
+    }
+
+    // ── Step 2: Wait for AI processing via socket events ────────────────────
+    if (fileIds.length > 0) {
+      const completedIds = await waitForFilesCompleted(fileIds);
+      fileIds = completedIds.length > 0 ? completedIds : fileIds;
+      filesToAttach = filesToAttach.filter(f => fileIds.includes(f.fileId));
+    }
+
+    // Clear files now that we're done waiting
+    clearUploadedFiles();
+
+    // ── Step 3: Send message to AI RAG ───────────────────────────────────────
+
+    if (!currentInput.trim()) return; // no text? bail (files alone can't be sent as question)
 
     let buffer = "";
     let fullText = "";
@@ -142,6 +178,7 @@ export default function AIAssistantUI() {
       await sendMessage({
         discussionId: activeId || "",
         message: currentInput,
+        files: filesToAttach.length > 0 ? filesToAttach : undefined,
         onChunk: (chunk: string) => {
           if (
             activeIdRef.current !== sendingDiscussionId &&
@@ -182,6 +219,7 @@ export default function AIAssistantUI() {
           }
         },
       });
+
     } catch (error) {
       console.error("Failed to send:", error);
       setInput(currentInput);
@@ -242,6 +280,8 @@ export default function AIAssistantUI() {
           viewportRef={messageViewportRef}
           topRef={messageTopRef}
           bottomRef={messageBottomRef}
+          pendingFiles={allFiles}
+          onRemovePendingFile={removeFile}
         />
 
         <ChatInput
@@ -249,10 +289,9 @@ export default function AIAssistantUI() {
           setInput={setInput}
           onSend={handleSend}
           isStreaming={isStreaming}
-          uploadedFiles={uploadedFiles}
           isUploading={isUploading}
-          onUploadFiles={uploadFiles}
-          onRemoveFile={removeFile}
+          hasAttachments={allFiles.length > 0}
+          onAttachFiles={addPendingFiles}
         />
       </main>
     </div>

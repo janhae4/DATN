@@ -41,65 +41,28 @@ export class ChatbotController {
     @Inject(REDIS_CLIENT) private readonly redis: Redis
   ) { }
 
-  @Post('files')
+
+  @Post('files/process-existing')
   @Roles(Role.USER)
-  @ApiConsumes('multipart/form-data')
   @ApiQuery({ name: 'teamId', required: false, type: 'string' })
-  @UseInterceptors(
-    FilesInterceptor('files', 10, { // Allow up to 10 files at once
-      storage: multer.memoryStorage(),
-    }),
-  )
-  async processDocument(
-    @UploadedFiles(
-      new ParseFilePipe({
-        validators: [new MaxFileSizeValidator({ maxSize: 10000000 })],
-      }),
-    )
-    files: Express.Multer.File[],
+  async processExistingFile(
+    @Body() body: { storageKey: string; originalName: string; fileId?: string },
     @CurrentUser('id') userId: string,
     @Query('teamId') teamId?: string,
   ) {
-    if (!files || files.length === 0) {
-      throw new BadRequestException('Files are empty.');
+    const { storageKey, originalName, fileId } = body;
+    if (!storageKey || !originalName) {
+      throw new BadRequestException('storageKey and originalName are required.');
     }
-
-    const results = await Promise.all(
-      files.map(async (file) => {
-        if (file.buffer.length === 0) {
-           return {
-             status: 'error',
-             originalName: file.originalname,
-             message: 'File is empty'
-           }
-        }
-        try {
-          const uploadResult = await this.chatbotService.uploadFile(file, userId, teamId);
-          this.chatbotService.processDocument({
-            fileId: uploadResult.fileId,
-            storageKey: uploadResult.storageKey,
-            originalName: uploadResult.originalName,
-            userId,
-            teamId,
-          });
-          return {
-            status: 'processing',
-            message: 'File is being processed',
-            fileId: uploadResult.fileId,
-            fileName: uploadResult.storageKey,
-            originalName: uploadResult.originalName,
-          };
-        } catch (error) {
-           return {
-             status: 'error',
-             originalName: file.originalname,
-             message: error.message || 'Failed to process file'
-           }
-        }
-      })
-    );
-
-    return results;
+    const effectiveFileId = fileId || storageKey;
+    this.chatbotService.processDocument({
+      fileId: effectiveFileId,
+      storageKey,
+      originalName,
+      userId,
+      teamId,
+    });
+    return { status: 'processing', message: 'File is being indexed by AI.' };
   }
 
   @Get('files')
@@ -203,16 +166,30 @@ export class ChatbotController {
         message: { type: 'string' },
         discussionId: { type: 'string' },
         summarizeId: { type: 'string' },
+        files: { 
+          type: 'array', 
+          items: { 
+            type: 'object',
+            properties: {
+              fileId: { type: 'string' },
+              name: { type: 'string' }
+            }
+          }, 
+          description: 'Attached files to save with message' 
+        },
       },
     },
   })
   async handleMessageStream(
-    @Body() body: { message: string, discussionId: string, summarizeId: string },
+    @Body() body: { message: string, discussionId: string, summarizeId: string, files?: {fileId: string, name: string}[] },
     @CurrentUser('id') userId: string
   ): Promise<Observable<MessageEvent>> {
     console.log('handleMessageStream', body, userId);
+    const fileIds = body.files?.map(f => f.fileId);
+    const metadata = body.files && body.files.length > 0 ? { files: body.files } : undefined;
+    
     const result = unwrapRpcResult(
-      await this.chatbotService.handleMessage(body.message, body.discussionId, userId, body.summarizeId)
+      await this.chatbotService.handleMessage(body.message, body.discussionId, userId, body.summarizeId, false, true, fileIds, metadata)
     )
 
     const redisSub = this.redis.duplicate();
@@ -237,8 +214,8 @@ export class ChatbotController {
         else {
           console.log(`Subscribed to ${channel}, triggering Python...`);
 
-          this.chatbotService.handleMessage(body.message, body.discussionId, userId, body.summarizeId)
-            .then(() => console.log("Sent signal to Python"))
+          this.chatbotService.handleMessage(body.message, result._id, userId, body.summarizeId, true, false, fileIds, metadata)
+            .then(() => console.log("Sent signal to Python with discussionId:", result._id))
             .catch(e => console.error("Trigger Python failed", e));
         }
       });
@@ -264,8 +241,13 @@ export class ChatbotController {
             try {
               await this.chatbotService.saveAiMessage(result._id, accumulatedText, data.metadata);
               console.log('Successfully saved full message to DB');
+              
+              if (body.summarizeId && accumulatedText) {
+                await this.chatbotService.updateFileSummary(body.summarizeId, accumulatedText);
+                console.log('Successfully updated file summary in DB');
+              }
             } catch (err) {
-              console.error('Failed to save message to DB:', err);
+              console.error('Failed to save message to DB or update summary:', err);
             }
 
             observer.complete();

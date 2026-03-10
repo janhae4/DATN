@@ -17,6 +17,7 @@ export interface IFile {
   visibility: FileVisibility,
   allowedUserIds?: string[];
   parentId?: string;
+  aiSummary?: string;
 }
 
 
@@ -36,6 +37,7 @@ export interface GetFilesResponse {
 export interface PresignedUrlResponse {
   fileId: string;
   uploadUrl: string;
+  storageKey?: string;
 }
 
 
@@ -62,34 +64,12 @@ export const fileService = {
     projectId?: string,
     teamId?: string
   ): Promise<PresignedUrlResponse> => {
-    if (data.isChatAttachment) {
-      return fileService.initiateChatUpload({
-        fileName: data.fileName,
-        fileType: data.fileType,
-      }, teamId || '', projectId);
-    }
     const payload: any = { ...data };
     if (projectId) payload.projectId = projectId;
     if (teamId) payload.teamId = teamId;
 
     const response = await apiClient.post<PresignedUrlResponse>(
       "/files/initiate-upload",
-      payload
-    );
-    return response.data;
-  },
-
-  initiateChatUpload: async (
-    data: { fileName: string; fileType: string },
-    teamId: string,
-    projectId?: string,
-  ): Promise<PresignedUrlResponse> => {
-    const payload: any = { ...data, teamId };
-    if (projectId) payload.projectId = projectId;
-    payload.isChatAttachment = true;
-
-    const response = await apiClient.post<PresignedUrlResponse>(
-      "/files/initiate-upload-chat",
       payload
     );
     return response.data;

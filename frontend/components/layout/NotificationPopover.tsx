@@ -96,7 +96,11 @@ export function NotificationPopover() {
   };
 
   return (
-    <Popover>
+    <Popover onOpenChange={(open) => {
+      if (open && unreadCount > 0) {
+        markAllAsRead();
+      }
+    }}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="icon" className="relative">
           <BellIcon className="h-4 w-4" />
@@ -138,7 +142,7 @@ export function NotificationPopover() {
                 currentNotifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`flex flex-col gap-1 p-3 rounded-xl transition-colors hover:bg-muted/50 ${!notification.isRead ? "bg-muted/100" : ""
+                    className={`flex flex-col gap-1 p-3 rounded-xl transition-colors hover:bg-muted/50 ${!notification.isRead ? "bg-muted" : ""
                       }`}
                   >
                     {/* Header: Title + Actions (Read/Delete) */}

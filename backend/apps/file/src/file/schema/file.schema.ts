@@ -50,6 +50,9 @@ export class File {
 
     @Prop({ type: Boolean, default: false, index: true })
     isChatAttachment?: boolean;
+
+    @Prop({ type: String, default: null })
+    aiSummary?: string;
 }
 
 export const FileSchema = SchemaFactory.createForClass(File);

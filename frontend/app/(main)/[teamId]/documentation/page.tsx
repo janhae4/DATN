@@ -62,6 +62,8 @@ import { Progress } from "@/components/ui/progress";
 import { useSelectionBox } from "@/hooks/useSelectionBox";
 import { DndItemWrapper } from "@/components/features/documentation/dnd-item-wrapper";
 import { useSocket } from "@/contexts/SocketContext";
+import { streamHelper } from "@/services/apiClient";
+import { AISummaryDialog } from "./file-summary-dialog";
 
 interface StagedFile {
   file: File;
@@ -140,10 +142,17 @@ export default function AttachmentPage() {
   const [isMinimized, setIsMinimized] = useState(false);
   const [hiddenFileIds, setHiddenFileIds] = useState<string[]>([]);
 
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [summaryTargetFile, setSummaryTargetFile] = useState<Attachment | null>(null);
+  const [summaryContent, setSummaryContent] = useState("");
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
   // Socket for file_status AI-processing events
   const { socket, isConnected } = useSocket();
   // Maps server fileId → local staged entry id
   const fileIdToStagedId = useRef<Map<string, string>>(new Map());
+  // Cache for summaries
+  const summariesCache = useRef<Map<string, string>>(new Map());
 
 
   const handleCreateFolder = async (name: string) => {
@@ -511,6 +520,81 @@ export default function AttachmentPage() {
       }
     } catch (e) {
       toast.error("Failed to open file");
+    }
+  };
+
+  const handleSummarizeFile = async (file: Attachment, forceRefresh = false) => {
+    // Check local memory cache first
+    const localCached = summariesCache.current.get(file.id);
+    if (!forceRefresh && localCached) {
+      setSummaryTargetFile(file);
+      setSummaryContent(localCached);
+      setIsSummarizing(false);
+      setIsSummaryModalOpen(true);
+      return;
+    }
+
+    // Check pre-existing summary from DB
+    if (!forceRefresh && file.aiSummary) {
+      setSummaryTargetFile(file);
+      setSummaryContent(file.aiSummary);
+      setIsSummarizing(false);
+      setIsSummaryModalOpen(true);
+      return;
+    }
+
+    // Prevent duplicate requests if already summarizing THIS file
+    if (isSummarizing && summaryTargetFile?.id === file.id && !forceRefresh) {
+      setIsSummaryModalOpen(true);
+      return;
+    }
+
+    setSummaryTargetFile(file);
+    setSummaryContent('');
+    setIsSummarizing(true);
+    setIsSummaryModalOpen(true);
+
+    let fullContent = '';
+    try {
+      await streamHelper(
+        '/ai-discussions/handle-message',
+        {
+          message: `Hãy tóm tắt nội dung tài liệu này giúp tôi: ${file.fileName}`,
+          discussionId: "",
+          teamId,
+          summarizeId: file.id,
+        },
+        (chunk: string) => {
+          // Robust SSE parsing handles multiple objects in one chunk and filters 'data:' prefix
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data:')) continue;
+            
+            try {
+              const cleaned = trimmed.replace(/^data:\s*/, '');
+              const data = JSON.parse(cleaned);
+              
+              if (data.text) {
+                fullContent += data.text;
+                setSummaryContent(fullContent);
+              }
+            } catch (e) {
+              // Partial JSON or heartbeat lines - safe to ignore
+              console.debug("SSE Parse skip:", trimmed);
+            }
+          }
+        }
+      );
+      // Save to cache on success
+      if (fullContent) {
+        summariesCache.current.set(file.id, fullContent);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate AI summary");
+    } finally {
+      setIsSummarizing(false);
     }
   };
 
@@ -938,6 +1022,7 @@ export default function AttachmentPage() {
                         onBulkDelete={deleteFiles}
                         onBulkDownload={downloadFiles}
                         onBulkVisibilityChange={changeVisibility}
+                        onSummarize={handleSummarizeFile}
                       />
                     </DndItemWrapper>
                   );
@@ -1020,6 +1105,15 @@ export default function AttachmentPage() {
             isOpen={isPreviewOpen}
             onOpenChange={setIsPreviewOpen}
             file={previewData}
+            onSummarize={handleSummarizeFile}
+          />
+          <AISummaryDialog
+            isOpen={isSummaryModalOpen}
+            onOpenChange={setIsSummaryModalOpen}
+            file={summaryTargetFile}
+            summaryContent={summaryContent}
+            isLoading={isSummarizing}
+            onRegenerate={() => summaryTargetFile && handleSummarizeFile(summaryTargetFile, true)}
           />
         </div>
       </DndContext>

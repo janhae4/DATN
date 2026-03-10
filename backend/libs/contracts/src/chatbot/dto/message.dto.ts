@@ -12,9 +12,16 @@ export class RetrievedContextDto {
   score: number;
   snippet?: string;
 }
+
+export class AttachedFileDto {
+  fileId: string;
+  name: string;
+}
+
 export class MessageMetadataDto {
   retrieved_context?: RetrievedContextDto[];
   error?: string;
+  files?: AttachedFileDto[];
 }
 
 export class AiMessageSnapshot {

@@ -100,6 +100,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.6",
     "@nestjs/platform-socket.io": "^11.1.12",
+    "@nestjs/schedule": "^6.1.1",
     "@nestjs/swagger": "^11.2.0",
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.11",
@@ -171,7 +172,7 @@
     "prettier": "^3.6.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.1.4",
-    "ts-jest": "^29.4.5",
+    "ts-jest": "^29.4.6",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
@@ -203,7 +204,8 @@
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@app/minio(|/.*)$": "<rootDir>/libs/minio/src/$1",
       "^@app/proto(|/.*)$": "<rootDir>/libs/proto/src/$1",
-      "^@app/redis-service(|/.*)$": "<rootDir>/libs/redis-service/src/$1"
+      "^@app/redis-service(|/.*)$": "<rootDir>/libs/redis-service/src/$1",
+      "^@app/contracts(|/.*)$": "<rootDir>/libs/contracts/src/$1"
     }
   },
   "packageManager": "npm@10.8.2",

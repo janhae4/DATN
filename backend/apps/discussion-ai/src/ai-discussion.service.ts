@@ -178,6 +178,7 @@ export class AiDiscussionService {
     membersToNotify: string[],
     summarizeFileName?: string,
     socketId?: string,
+    fileIds?: string[],
   ) {
     const requestPayload = {
       userId: sender.id,
@@ -199,7 +200,7 @@ export class AiDiscussionService {
       this.amqp.publish(
         CHATBOT_EXCHANGE,
         CHATBOT_PATTERN.ASK_QUESTION,
-        { ...requestPayload, question: message, chatHistory },
+        { ...requestPayload, question: message, chatHistory, fileIds: fileIds || [] },
       );
     }
   }
@@ -228,6 +229,7 @@ export class AiDiscussionService {
     discussionId?: string,
     summarizeFileName?: string,
     socketId?: string,
+    fileIds?: string[],
   ) {
     const sender = await this.userCache.getUserInfo(userId);
 
@@ -258,6 +260,7 @@ export class AiDiscussionService {
         membersToNotify,
         summarizeFileName,
         socketId,
+        fileIds,
       );
 
       this.publishMessageEvent(
@@ -285,29 +288,43 @@ export class AiDiscussionService {
     message: string,
     metadata?: MessageMetadataDto,
     discussionId?: string,
-    summarizeFileName?: string
+    summarizeFileName?: string,
+    skipSave?: boolean,
+    skipTrigger?: boolean,
+    fileIds?: string[],
   ) {
     const sender = await this.userCache.getUserInfo(userId);
     if (!sender) {
       throw new NotFoundException('User not found');
     }
     try {
-      const aiDiscussion = await this.saveMessageToDiscussion(
-        sender,
-        message,
-        undefined,
-        metadata,
-        discussionId,
-      );
+      let aiDiscussion: AiDiscussion | null;
+      
+      if (skipSave && discussionId) {
+        aiDiscussion = await this.aiDiscussionModel.findById(discussionId);
+        if (!aiDiscussion) throw new NotFoundException('Discussion not found');
+      } else {
+        aiDiscussion = await this.saveMessageToDiscussion(
+          sender,
+          message,
+          undefined,
+          metadata,
+          discussionId,
+        );
+      }
 
-      await this.publishToChatbotService(
-        aiDiscussion,
-        sender,
-        message,
-        [],
-        summarizeFileName,
-        undefined,
-      );
+      if (!skipTrigger) {
+        await this.publishToChatbotService(
+          aiDiscussion,
+          sender,
+          message,
+          [],
+          summarizeFileName,
+          undefined,
+          fileIds,
+        );
+      }
+
       return aiDiscussion;
     } catch (error) {
       this.logger.error(`Error handling message: ${error.message}`, error.stack);

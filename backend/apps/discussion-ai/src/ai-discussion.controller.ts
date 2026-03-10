@@ -94,15 +94,18 @@ export class AiDiscussionController {
     queue: CHATBOT_PATTERN.HANDLE_MESSAGE,
     errorHandler: customErrorHandler
   })
-  async handleMessage(payload: MessageUserChatbot) {
-    const { discussionId, userId, message, metadata, summarizeFileName } = payload
+  async handleMessage(payload: MessageUserChatbot & { skipSave?: boolean; skipTrigger?: boolean; fileIds?: string[] }) {
+    const { discussionId, userId, message, metadata, summarizeFileName, skipSave, skipTrigger, fileIds } = payload
     console.log('handleMessage', payload);
     return await this.aiDiscussionService.handleMessageForUser(
       userId,
       message,
       metadata,
       discussionId,
-      summarizeFileName
+      summarizeFileName,
+      skipSave,
+      skipTrigger,
+      fileIds,
     );
   }
 

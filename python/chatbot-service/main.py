@@ -16,9 +16,10 @@ from config import (
     ASK_QUESTION_ROUTING_KEY,
     SUMMARIZE_DOCUMENT_ROUTING_KEY,
     PROCESS_DOCUMENT_ROUTING_KEY,
-    REMOVE_COLLECTION_ROUTING_KEY
+    REMOVE_TEAM_ROUTING_KEY,
+    DELETE_DOCUMENT_ROUTING_KEY
 )
-from callback import ingestion_callback, action_callback, on_team_deleted
+from callback import ingestion_callback, action_callback, on_team_deleted, on_document_deleted
 from services.llm_service import LLMService
 from services.minio_service import MinioService
 from services.vectorstore_service import VectorStoreService
@@ -83,8 +84,11 @@ async def main():
         ingestion_queue = await channel.declare_queue(INGESTION_QUEUE, durable=True)
         await ingestion_queue.bind(chatbot_exchange, routing_key=PROCESS_DOCUMENT_ROUTING_KEY)
 
-        delete_queue = await channel.declare_queue(REMOVE_QUEUE, durable=True)
-        await delete_queue.bind(events_exchange, routing_key=REMOVE_COLLECTION_ROUTING_KEY)
+        delete_team_queue = await channel.declare_queue("delete_team_queue", durable=True)
+        await delete_team_queue.bind(events_exchange, routing_key=REMOVE_TEAM_ROUTING_KEY)
+
+        delete_doc_queue = await channel.declare_queue("delete_doc_queue", durable=True)
+        await delete_doc_queue.bind(events_exchange, routing_key=DELETE_DOCUMENT_ROUTING_KEY)
 
         rag_queue = await channel.declare_queue(RAG_QUEUE, durable=True)
         await rag_queue.bind(chatbot_exchange, routing_key=ASK_QUESTION_ROUTING_KEY)
@@ -108,19 +112,25 @@ async def main():
             vectorstore_service=vectorstore_service,
             channel=channel
         )
-        remove_consumer = partial(
+        remove_team_consumer = partial(
             on_team_deleted, 
+            vector_store=vectorstore_service,
+        )
+        remove_doc_consumer = partial(
+            on_document_deleted, 
             vector_store=vectorstore_service,
         )
 
         await ingestion_queue.consume(ingestion_consumer)
         await rag_queue.consume(action_consumer)
-        await delete_queue.consume(remove_consumer)
+        await delete_team_queue.consume(remove_team_consumer)
+        await delete_doc_queue.consume(remove_doc_consumer)
         
         print(f"[*] Đã kết nối tới RabbitMQ. Đang lắng nghe trên các hàng đợi:")
         print(f"  - {INGESTION_QUEUE} (Xử lý tài liệu)")
         print(f"  - {RAG_QUEUE} (Hỏi đáp & Tóm tắt)")
-        print(f"  - {REMOVE_QUEUE} (Xóa collection)")
+        print(f"  - delete_team_queue (Xóa toàn bộ collection)")
+        print(f"  - delete_doc_queue (Xóa các tệp con riêng lẻ)")
         print(f"  - {SUGGEST_QUEUE} (Gợi ý nhiệm vụ)")
         print(" [*] Bắt đầu lắng nghe. Để thoát, nhấn CTRL+C")
         await asyncio.Future()

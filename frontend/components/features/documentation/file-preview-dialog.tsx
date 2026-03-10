@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, X, ExternalLink } from "lucide-react";
+import { Download, X, ExternalLink, Sparkles } from "lucide-react";
 import { Attachment } from "@/types";
 import FilePreviewContent from "./file-preview-content"; // Import component ở Bước 1
 
@@ -18,12 +18,14 @@ interface FilePreviewDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   file: Attachment | null; // File cần preview (đã có URL)
+  onSummarize?: (file: Attachment) => void;
 }
 
 export function FilePreviewDialog({
   isOpen,
   onOpenChange,
   file,
+  onSummarize,
 }: FilePreviewDialogProps) {
   if (!file) return null;
 
@@ -53,6 +55,17 @@ export function FilePreviewDialog({
           </div>
 
           <div className="flex items-center gap-1">
+            {onSummarize && file && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 mr-2 px-3 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
+                onClick={() => onSummarize(file)}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-bold">AI Summary</span>
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"

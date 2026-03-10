@@ -37,9 +37,18 @@ export class FileController {
   })
   async handleGetFolder(payload: {
     userId: string,
-    folderId: string
+    folderId: string,
+    teamId?: string,
+    projectId?: string
   }) {
-    return await this.fileService.getFolder(payload.userId, payload.folderId);
+    return await this.fileService.getFolder(
+      payload.userId,
+      payload.folderId,
+      undefined,
+      undefined,
+      payload.teamId,
+      payload.projectId
+    );
   }
 
   @RabbitRPC({
@@ -81,44 +90,17 @@ export class FileController {
     errorHandler: customErrorHandler
   })
   async handleInitialUpload(payload: UploadFilePayload) {
-    if (payload.isChatAttachment && payload.teamId) {
-      return await this.fileService.createChatPreSignedUrl(
-        payload.fileName,
-        payload.userId,
-        payload.teamId,
-        payload.projectId
-      );
-    }
-
     return await this.fileService.createPreSignedUrl(
       payload.fileName,
       payload.userId,
       payload.projectId,
       payload.teamId,
-      payload.parentId
+      payload.parentId,
+      payload.isChatAttachment
     );
   }
 
-  @RabbitRPC({
-    exchange: FILE_EXCHANGE,
-    routingKey: FILE_PATTERN.INITIAL_CHAT_UPLOAD,
-    queue: FILE_PATTERN.INITIAL_CHAT_UPLOAD,
-    errorHandler: customErrorHandler
-  })
-  async handleInitialChatUpload(payload: {
-    fileName: string,
-    fileType: string,
-    userId: string,
-    projectId?: string,
-    teamId: string,
-  }) {
-    return await this.fileService.createChatPreSignedUrl(
-      payload.fileName,
-      payload.userId,
-      payload.teamId,
-      payload.projectId
-    );
-  }
+
 
   @RabbitRPC({
     exchange: FILE_EXCHANGE,
@@ -247,6 +229,16 @@ export class FileController {
 
   @RabbitRPC({
     exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.REGISTER_FILE,
+    queue: FILE_PATTERN.REGISTER_FILE,
+    errorHandler: customErrorHandler
+  })
+  async registerFile(payload: any) {
+    return await this.fileService.registerFile(payload);
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
     routingKey: FILE_PATTERN.GET_FILES_BY_IDS,
     queue: FILE_PATTERN.GET_FILES_BY_IDS,
     errorHandler: customErrorHandler
@@ -263,6 +255,16 @@ export class FileController {
   })
   async confirmUpload(payload: { fileId: string, userId: string, projectId?: string }) {
     return await this.fileService.confirmUpload(payload.fileId, payload.userId, payload.projectId);
+  }
+
+  @RabbitRPC({
+    exchange: FILE_EXCHANGE,
+    routingKey: FILE_PATTERN.UPDATE_SUMMARY,
+    queue: FILE_PATTERN.UPDATE_SUMMARY,
+    errorHandler: customErrorHandler
+  })
+  async handleUpdateSummary(payload: { fileId: string, summary: string }) {
+    return await this.fileService.updateSummary(payload.fileId, payload.summary);
   }
 
   @RabbitSubscribe({

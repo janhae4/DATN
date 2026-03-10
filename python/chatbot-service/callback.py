@@ -175,19 +175,20 @@ async def ingestion_callback(
             storage_key = payload_dto.get('storageKey')
             original_name = payload_dto.get('originalName')
             
-            if not all([user_id, file_id, storage_key, original_name]):
-                raise ValueError("Payload bị thiếu các trường bắt buộc (userId, fileId, storageKey, originalName).")
+            if not all([user_id, file_id, storage_key]):
+                raise ValueError("Payload bị thiếu các trường bắt buộc (userId, fileId, storageKey).")
             
             print(f"--> Bắt đầu xử lý file '{file_id}' cho user '{user_id}'.")
-            await send_status_file(channel, user_id, file_id, original_name, "processing", team_id)
+            await send_status_file(channel, user_id, file_id, original_name or storage_key, "processing", team_id)
             await vectorstore_service.process_and_store(
                 user_id=user_id,
                 file_id=storage_key,
                 search_exchange=search_exchange,
-                team_id=team_id
+                team_id=team_id,
+                original_name=original_name
             )
             print(f"--> Xử lý file thành công!")
-            await send_status_file(channel, user_id, file_id, original_name, "completed", team_id)
+            await send_status_file(channel, user_id, file_id, original_name or storage_key, "completed", team_id)
 
         except Exception as e:
             error_message = str(e)
@@ -243,11 +244,12 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
             if pattern_from_key == 'ask_question':
                 question = payload_dto.get('question')
                 chat_history = payload_dto.get('chatHistory', [])
+                file_ids = payload_dto.get('fileIds') or None  # list of storageKeys to filter RAG
                 if not question: raise ValueError("Tin nhắn thiếu 'question'.")
 
                 print(f"--> [RAG] Câu hỏi từ user '{user_id}': {question}")
                 
-                async for chunk in rag_chain.ask_question_for_user(question, user_id, team_id, chat_history):
+                async for chunk in rag_chain.ask_question_for_user(question, user_id, team_id, chat_history, file_ids=file_ids):
                     await publish_to_redis(discussion_id, chunk, is_completed=False)
                 
                 retrieved_metadata = rag_chain.get_last_retrieved_context()
@@ -256,12 +258,19 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
 
             elif pattern_from_key == 'summarize_document':
                 file_name = payload_dto.get('summarizeFileName')
+                original_name = payload_dto.get('originalName')
                 if not file_name: raise ValueError("Tin nhắn thiếu 'summarizeFileName'.")
                 
                 print(f"--> [SUMMARIZE] Bắt đầu tóm tắt file '{file_name}' cho user '{user_id}'.")
                 
                 try:
-                    documents = await vectorstore_service.process_and_store(user_id, file_name, search_exchange=SEARCH_EXCHANGE, team_id=team_id)
+                    documents = await vectorstore_service.process_and_store(
+                        user_id, 
+                        file_name, 
+                        search_exchange=SEARCH_EXCHANGE, 
+                        team_id=team_id,
+                        original_name=original_name
+                    )
                     print(f"--> [VECTOR] Đã lưu xong!")
                     async for chunk in summarizer.summarize(documents):
                         await publish_to_redis(discussion_id, chunk, is_completed=False)
@@ -362,3 +371,35 @@ async def on_team_deleted(message: IncomingMessage, vector_store: VectorStoreSer
             
         except Exception as e:
             print(f"[DELETE] Lỗi nghiêm trọng khi xóa collection {collection_name}: {e}")
+
+async def on_document_deleted(message: IncomingMessage, vector_store: VectorStoreService):
+    """
+    Callback lắng nghe sự kiện xóa document từ NestJS để xóa các chunk liên quan trong ChromaDB.
+    """
+    print(f"\n[DELETE] Nhận được yêu cầu xóa tài liệu lẻ...")
+    async with message.process():
+        try:
+            payload = json.loads(message.body.decode())
+            print(payload)
+            storage_keys = payload.get('fileIds', [])
+            user_id = payload.get('userId')
+            team_id = payload.get('teamId')
+            
+            if storage_keys is None or not user_id:
+                print(f"[DELETE] Lỗi: Payload nhận được thiếu storageKeys hoặc userId.")
+                return 
+
+            if not storage_keys:
+                print(f"[DELETE] Bỏ qua: storageKeys rỗng (có thể là thư mục hoặc tệp lỗi chưa có storage key).")
+                return
+
+            collection_name = f"user_{user_id}" if team_id is None else f"team_{team_id}"
+            
+            print(f"[DELETE] Đang xóa {len(storage_keys)} file khỏi collection: {collection_name}")
+            for key in storage_keys:
+                await vector_store.delete_documents_by_source(collection_name, key)
+            
+            print(f"[DELETE] Xóa hoàn tất.")
+            
+        except Exception as e:
+            print(f"[DELETE] Lỗi nghiêm trọng khi xóa tài liệu lẻ: {e}")
