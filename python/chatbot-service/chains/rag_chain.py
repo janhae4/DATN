@@ -1,15 +1,9 @@
 import asyncio
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from utils.history import format_chat_history
-from typing import AsyncGenerator
-from services.llm_service import LLMService
 from services.vectorstore_service import VectorStoreService
 from services.retriever_service import RetrieverService
-import functools
 
 class RAGChain:
-    def __init__(self, llm_service: LLMService, vectorstore_service: VectorStoreService, retriever_service: RetrieverService, threadpool=None):
+    def __init__(self, llm_service, vectorstore_service: VectorStoreService, retriever_service: RetrieverService, threadpool=None):
         self.llm_service = llm_service
         self.vectorstore_service = vectorstore_service
         self.retriever_service = retriever_service
@@ -149,6 +143,5 @@ class RAGChain:
         for chunk in stream:
             content = chunk.get('message', {}).get('content', '')
             if content:
-                print(content, end="", flush=True)
+                # print(content, end="", flush=True)
                 yield content
-            

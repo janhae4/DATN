@@ -1,8 +1,6 @@
 import asyncio
-from services.llm_service import LLMService
-
 class Summarizer:
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service):
         self.llm_service = llm_service
         self.semaphore = asyncio.Semaphore(2)  # Giới hạn tối đa 2 task tóm tắt song song cho Ollama
         

@@ -6,7 +6,6 @@ python-dotenv
 pydantic-settings
 requests
 aiohttp
-ollama
 google-generativeai
 
 # LangChain & Vector (Bản core)
@@ -16,11 +15,11 @@ langchain-core
 langchain-text-splitters
 chromadb-client
 
-# Reranking bản Lite (Chỉ dùng ONNX, không dùng Torch)
+# Reranking bản Lite (Chương trình Reranker)
 flashrank
 onnxruntime
 
-# File Processing (Bản không AI - cực nhẹ)
+# File Processing
 unstructured
 pypdf
 docx2txt

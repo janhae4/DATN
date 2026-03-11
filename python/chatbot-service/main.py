@@ -20,7 +20,6 @@ from config import (
     DELETE_DOCUMENT_ROUTING_KEY
 )
 from callback import ingestion_callback, action_callback, on_team_deleted, on_document_deleted
-from services.llm_service import LLMService
 from services.gemini_service import GeminiService
 from services.minio_service import MinioService
 from services.vectorstore_service import VectorStoreService
@@ -34,8 +33,8 @@ threadpool = ThreadPoolExecutor(max_workers=THREADPOOL_MAX_WORKERS)
 
 
 async def main():
-    print("Đang khởi tạo các service...")
-    llm_service = LLMService()
+    print("Đang khởi tạo các service (Pure Gemini Mode)...")
+    # Chúng ta chuyển hoàn toàn sang GeminiService để tiết kiệm RAM (xóa Ollama)
     gemini_service = GeminiService()
     minio_service = MinioService()
     vectorstore_service = VectorStoreService(gemini_service, minio_service) 
@@ -50,12 +49,12 @@ async def main():
         reranker = None
 
     retriever_service = RetrieverService(
-        embeddings=llm_service,
+        embeddings=gemini_service,
         use_reranker=(reranker is not None)
     )
 
-    rag_chain = RAGChain(llm_service, vectorstore_service, retriever_service, threadpool=threadpool)
-    summarizer = Summarizer(llm_service)
+    rag_chain = RAGChain(gemini_service, vectorstore_service, retriever_service, threadpool=threadpool)
+    summarizer = Summarizer(gemini_service)
     suggest_summarizer = Summarizer(gemini_service)
     task_architect = TaskArchitect(gemini_service)
     
@@ -98,51 +97,31 @@ async def main():
         await rag_queue.bind(chatbot_exchange, routing_key=SUMMARIZE_DOCUMENT_ROUTING_KEY)
         await rag_queue.bind(chatbot_exchange, routing_key=SUGGEST_TASK_ROUTING_KEY)
 
-        print("-- Kết nối RabbitMQ thành công, khởi tạo consumer...")
+        suggest_queue = await channel.declare_queue(SUGGEST_QUEUE, durable=True)
+        await suggest_queue.bind(chatbot_exchange, routing_key=SUGGEST_TASK_ROUTING_KEY)
 
-        ingestion_consumer = partial(
-            ingestion_callback, 
-            vectorstore_service=vectorstore_service, 
-            channel=channel,
-            search_exchange=search_exchange
-        )
-        action_consumer = partial(
+        print(f"[*] Đang chờ tin nhắn từ RabbitMQ...")
+
+        callback_with_services = partial(
             action_callback, 
             rag_chain=rag_chain, 
-            summarizer=summarizer, 
+            summarizer=summarizer,
             suggest_summarizer=suggest_summarizer,
-            minio_service=minio_service,
-            task_architect=task_architect,
-            vectorstore_service=vectorstore_service,
-            channel=channel
+            task_architect=task_architect
         )
-        remove_team_consumer = partial(
-            on_team_deleted, 
-            vector_store=vectorstore_service,
-        )
-        remove_doc_consumer = partial(
-            on_document_deleted, 
-            vector_store=vectorstore_service,
-        )
+        await rag_queue.consume(callback_with_services)
 
-        await ingestion_queue.consume(ingestion_consumer)
-        await rag_queue.consume(action_consumer)
-        await delete_team_queue.consume(remove_team_consumer)
-        await delete_doc_queue.consume(remove_doc_consumer)
-        
-        print(f"[*] Đã kết nối tới RabbitMQ. Đang lắng nghe trên các hàng đợi:")
-        print(f"  - {INGESTION_QUEUE} (Xử lý tài liệu)")
-        print(f"  - {RAG_QUEUE} (Hỏi đáp & Tóm tắt)")
-        print(f"  - delete_team_queue (Xóa toàn bộ collection)")
-        print(f"  - delete_doc_queue (Xóa các tệp con riêng lẻ)")
-        print(f"  - {SUGGEST_QUEUE} (Gợi ý nhiệm vụ)")
-        print(" [*] Bắt đầu lắng nghe. Để thoát, nhấn CTRL+C")
+        ingestion_callback_with_services = partial(
+            ingestion_callback,
+            vectorstore_service=vectorstore_service,
+            search_exchange=search_exchange
+        )
+        await ingestion_queue.consume(ingestion_callback_with_services)
+
+        await delete_team_queue.consume(partial(on_team_deleted, vectorstore_service=vectorstore_service))
+        await delete_doc_queue.consume(partial(on_document_deleted, vectorstore_service=vectorstore_service))
+
         await asyncio.Future()
 
-
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Đã dừng worker.")
-
+    asyncio.run(main())
