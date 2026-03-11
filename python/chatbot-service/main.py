@@ -38,7 +38,7 @@ async def main():
     llm_service = LLMService()
     gemini_service = GeminiService()
     minio_service = MinioService()
-    vectorstore_service = VectorStoreService(llm_service, minio_service) 
+    vectorstore_service = VectorStoreService(gemini_service, minio_service) 
 
     reranker = None
     try:

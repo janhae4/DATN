@@ -9,6 +9,7 @@ OLLAMA_EMBEDDING_MODEL = os.environ.get("OLLAMA_EMBEDDING_MODEL", "nomic-embed-t
 CHROMA_HOST =       os.environ.get("CHROMA_HOST", "localhost")
 GEMINI_API_KEY =    os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL =      os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_EMBEDDING_MODEL = os.environ.get("GEMINI_EMBEDDING_MODEL", "models/text-embedding-004")
 CHROMA_PORT =       int(os.environ.get("CHROMA_PORT", "8000"))
 MINIO_ENDPOINT =    os.environ.get("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY =  os.environ.get("MINIO_ACCESS_KEY", "minioadmin")

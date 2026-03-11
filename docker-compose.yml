@@ -158,9 +158,6 @@ services:
       MINIO_USE_SSL: "false"
       MINIO_BUCKET_NAME: "documents"
       REDIS_HOST: "redis"
-      OLLAMA_BASE_URL: "http://ollama:11434"
-      OLLAMA_MODEL: "gemma2:2b"
-      OLLAMA_EMBEDDING_MODEL: "nomic-embed-text"
       THREADPOOL_MAX_WORKERS: "4"
       PYTHONUNBUFFERED: "1"
     depends_on:
@@ -170,29 +167,9 @@ services:
         condition: service_started
       minio:
         condition: service_started
-      ollama:
-        condition: service_started
     networks:
       - app-network
 
-  ollama:
-    image: ollama/ollama
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-      - ./init-ollama.sh:/init-ollama.sh
-    entrypoint: [ "/bin/sh", "/init-ollama.sh" ]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
-    networks:
-      - app-network
 
   minio:
     image: minio/minio

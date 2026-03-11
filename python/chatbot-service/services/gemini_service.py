@@ -1,5 +1,5 @@
 import google.generativeai as genai
-from config import GEMINI_API_KEY, GEMINI_MODEL
+from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_EMBEDDING_MODEL
 from utils_retry import retry_sync
 
 class GeminiService:
@@ -21,6 +21,15 @@ class GeminiService:
                 history.append({"role": role, "parts": [msg["content"]]})
         
         return system_content, history
+
+    @retry_sync(max_retries=3, delay=1, backoff=2)
+    def get_embedding(self, text: str):
+        result = genai.embed_content(
+            model=GEMINI_EMBEDDING_MODEL,
+            content=text,
+            task_type="retrieval_document"
+        )
+        return result['embedding']
 
     @retry_sync(max_retries=3, delay=2, backoff=2)
     def chat(self, messages):
