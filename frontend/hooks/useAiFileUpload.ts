@@ -218,11 +218,17 @@ export function useAiFileUpload(teamId?: string) {
                 if (!entry) return;
                 if (result.status === "processing" && result.fileId) {
                     fileIdToLocalKey.current.set(result.fileId, entry.localKey);
+                    
+                    // Use database fileId strictly (it shouldn't have ext)
+                    // If storageKey is returned, we strip ext just in case
+                    const cleanId = (result.fileId || result.storageKey || "").split('.')[0];
+
                     collectedFiles.push({
-                        fileId: result.storageKey || result.fileId, // Pass storageKey to AI
+                        fileId: cleanId,
                         originalName: result.originalName || entry.originalName
                     });
                 }
+
             });
 
             setUploadedFiles((prev) => {

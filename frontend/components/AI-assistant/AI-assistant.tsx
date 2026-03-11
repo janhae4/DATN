@@ -171,7 +171,10 @@ export default function AIAssistantUI() {
             (f) =>
               f.fileId && (f.status === "completed" || f.status === "processing")
           )
-          .map((f) => ({ fileId: f.fileId!, name: f.originalName }));
+          .map((f) => ({ 
+            fileId: (f.fileId || "").split('.')[0], 
+            name: f.originalName 
+          }));
         fileIds = filesToAttach.map((f) => f.fileId);
       }
 
