@@ -15,6 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Sidebar } from "./sidebar";
 import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
+import { FilePreviewDialog } from "@/components/features/documentation/file-preview-dialog";
+import { Attachment, AttachmentType, FileVisibility } from "@/types";
+import { fileService } from "@/services/fileService";
+import { AttachedFile } from "@/hooks/useAiFileUpload";
+
 
 
 export default function AIAssistantUI() {
@@ -254,12 +259,73 @@ export default function AIAssistantUI() {
   };
 
 
+  const [previewData, setPreviewData] = React.useState<Attachment | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+
+  const handlePreview = React.useCallback(async (file: any) => {
+    // If it's a standard Attachment (e.g. from history msg.metadata.files)
+    if (file.fileId && file.name) {
+      try {
+        const { viewUrl } = await fileService.getPreviewUrl(file.fileId);
+        const mockAttachment: Attachment = {
+          id: file.fileId,
+          name: file.name,
+          fileName: file.name,
+          fileUrl: viewUrl || "",
+          fileType: AttachmentType.FILE,
+          taskId: "chat",
+          uploadedById: "system",
+          uploadedAt: new Date().toISOString(),
+          fileSize: 0,
+          mimeType: file.name.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream',
+          visibility: FileVisibility.PRIVATE
+        };
+        setPreviewData(mockAttachment);
+        setIsPreviewOpen(true);
+      } catch (err) {
+        console.error("Preview failed:", err);
+      }
+    } 
+    // If it's an AttachedFile (pending or uploading/processing)
+    else if (file.localKey) {
+      const name = file.originalName || file.name || "File";
+      let url = "";
+      if (file.file instanceof File) {
+        url = URL.createObjectURL(file.file);
+      } else if (file.fileId) {
+        try {
+          const { viewUrl } = await fileService.getPreviewUrl(file.fileId);
+          url = viewUrl;
+        } catch {}
+      }
+
+      if (!url) return;
+
+      const mockAttachment: Attachment = {
+        id: file.fileId || file.localKey,
+        name: name,
+        fileName: name,
+        fileUrl: url,
+        fileType: AttachmentType.FILE,
+        taskId: "chat-preview",
+        uploadedById: "local",
+        uploadedAt: new Date().toISOString(),
+        fileSize: file.file?.size || 0,
+        mimeType: file.file?.type || (name.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
+        visibility: FileVisibility.PRIVATE
+      };
+      setPreviewData(mockAttachment);
+      setIsPreviewOpen(true);
+    }
+  }, []);
+
   const createNewChat = () => {
     setActiveId(undefined);
     setInput("");
     setStreamingContent("");
     clearUploadedFiles();
   };
+
 
   return (
     <div className="flex w-full h-[85vh] md:h-[90vh] border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 overflow-hidden relative font-sans">
@@ -279,6 +345,12 @@ export default function AIAssistantUI() {
       />
 
       <main className="flex-1 flex flex-col h-full min-w-0 bg-white dark:bg-[#09090b] relative w-full">
+        <FilePreviewDialog 
+          isOpen={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          file={previewData}
+        />
+
         <header className="flex items-center justify-between px-4 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 sticky top-0 z-30 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <Button
@@ -312,6 +384,7 @@ export default function AIAssistantUI() {
           inFlightText={inFlightText}
           isProcessing={isSending}
           onRemovePendingFile={removeFile}
+          onPreviewFile={handlePreview}
         />
 
         <ChatInput
@@ -324,6 +397,7 @@ export default function AIAssistantUI() {
           pendingFiles={allFiles.filter(f => f.status === "pending")}
           onAttachFiles={addPendingFiles}
           onRemovePendingFile={removeFile}
+          onPreviewFile={handlePreview}
         />
       </main>
     </div>

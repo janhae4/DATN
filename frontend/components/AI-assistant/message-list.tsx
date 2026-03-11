@@ -33,7 +33,9 @@ interface MessageListProps {
     inFlightText?: string;
     isProcessing?: boolean;
     onRemovePendingFile?: (localKey: string) => void;
+    onPreviewFile?: (file: any) => void;
 }
+
 
 import { AttachmentCard, getFileExt } from "./attachment-card";
 
@@ -50,48 +52,20 @@ export const MessageList = ({
     inFlightText = "",
     isProcessing = false,
     onRemovePendingFile,
+    onPreviewFile,
 }: MessageListProps) => {
     const hasPending = pendingFiles.length > 0;
+
     const hasUploadingOrProcessing = pendingFiles.some(
         (f) => f.status === "uploading" || f.status === "processing"
     );
     const hasAnyInFlight = hasPending || (isProcessing && inFlightText.trim().length > 0);
 
 
-    const [previewFile, setPreviewFile] = React.useState<Attachment | null>(null);
-    const [previewOpen, setPreviewOpen] = React.useState(false);
-    
-    const handlePreviewFile = async (fileId: string, name: string) => {
-        try {
-            const { viewUrl } = await fileService.getPreviewUrl(fileId);
-            const mockAttachment: Attachment = {
-                id: fileId,
-                name: name,
-                fileName: name,
-                fileUrl: viewUrl || "",
-                fileType: AttachmentType.FILE,
-                taskId: "chat",
-                uploadedById: "system",
-                uploadedAt: new Date().toISOString(),
-                fileSize: 0,
-                mimeType: name.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream',
-                visibility: FileVisibility.PRIVATE
-            };
-            setPreviewFile(mockAttachment);
-            setPreviewOpen(true);
-        } catch (error) {
-            console.error("Failed to get preview URL:", error);
-        }
-    };
-
     return (
         <div ref={viewportRef} className="flex-1 overflow-y-auto px-4">
             <div className="max-w-3xl mx-auto py-8">
-                <FilePreviewDialog 
-                    isOpen={previewOpen}
-                    onOpenChange={setPreviewOpen}
-                    file={previewFile}
-                />
+
                 {activeId && (
                     <div
                         ref={topRef}
@@ -156,7 +130,7 @@ export const MessageList = ({
                                                             key={f.fileId}
                                                             file={f}
                                                             isHistory
-                                                            onClick={() => handlePreviewFile(f.fileId, f.name)}
+                                                            onClick={() => onPreviewFile?.(f)}
                                                         />
                                                     ))}
                                                 </div>
@@ -244,6 +218,7 @@ export const MessageList = ({
                                                         <AttachmentCard
                                                             key={file.localKey}
                                                             file={file}
+                                                            onClick={() => onPreviewFile?.(file)}
                                                             onRemove={
                                                                 file.status === "pending"
                                                                     ? () => onRemovePendingFile?.(file.localKey)

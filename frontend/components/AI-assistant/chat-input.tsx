@@ -18,7 +18,9 @@ interface ChatInputProps {
     onAttachFiles: (files: File[]) => void;
     pendingFiles?: import("@/hooks/useAiFileUpload").AttachedFile[];
     onRemovePendingFile?: (localKey: string) => void;
+    onPreviewFile?: (file: any) => void;
 }
+
 
 export const ChatInput = ({
     input,
@@ -30,8 +32,10 @@ export const ChatInput = ({
     onAttachFiles,
     pendingFiles = [],
     onRemovePendingFile,
+    onPreviewFile,
 }: ChatInputProps) => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     React.useEffect(() => {
@@ -72,6 +76,7 @@ export const ChatInput = ({
                                 <import_attachment_card.AttachmentCard
                                     key={file.localKey}
                                     file={file}
+                                    onClick={() => onPreviewFile?.(file)}
                                     onRemove={
                                         file.status === "pending" && onRemovePendingFile
                                             ? () => onRemovePendingFile(file.localKey)
