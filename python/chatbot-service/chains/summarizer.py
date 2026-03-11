@@ -4,6 +4,7 @@ from services.llm_service import LLMService
 class Summarizer:
     def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
+        self.semaphore = asyncio.Semaphore(2)  # Giới hạn tối đa 2 task tóm tắt song song cho Ollama
         
     async def summarize(self, documents):
         if not documents:
@@ -22,55 +23,68 @@ class Summarizer:
                 text_parts.append(doc['page_content'])
                 
         full_text = "\n\n".join(text_parts)
+        text_len = len(full_text)
         
-        # Step 1: Text Splitting (Tránh vỡ Token Limit)
+        # CHIẾN THUẬT 1: "STUFFING" - Nếu văn bản đủ nhỏ (< 20k ký tự), tóm tắt luôn trong 1 bước
+        if text_len < 20000:
+            print(f"--> [SUMMARIZE STUFF] Văn bản ngắn ({text_len} ký tự), tóm tắt trực tiếp...")
+            prompt = f"""
+                Bạn là chuyên gia phân tích. Hãy viết bản tóm tắt chi tiết, rành mạch bằng Markdown cho văn bản sau:
+                VĂN BẢN:
+                {full_text}
+                TÓM TẮT:
+            """
+            messages = [{"role": "user", "content": prompt}]
+            def run_stuff_sync():
+                return self.llm_service.chat(messages)
+            
+            stream = await asyncio.to_thread(run_stuff_sync)
+            for chunk in stream:
+                content = chunk.get('message', {}).get('content', '')
+                if content:
+                    yield content
+            return
+
+        # CHIẾN THUẬT 2: MAP-REDUCE TỐI ƯU
         from langchain_text_splitters import RecursiveCharacterTextSplitter
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=15000, chunk_overlap=1500)
+        # Tăng chunk_size để giảm số lượng lần gọi LLM
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=20000, chunk_overlap=2000)
         chunks = text_splitter.split_text(full_text)
         
-        # Step 2: MAP Phase - Tóm tắt từng cục nhỏ song song
-        print(f"--> [SUMMARIZE MAP-REDUCE] Bước MAP: Bắt đầu tóm tắt {len(chunks)} Chunks nhỏ...")
+        print(f"--> [SUMMARIZE MAP-REDUCE] Bước MAP: Tóm tắt {len(chunks)} Chunks với Semaphore...")
         
+        # Ép đầu ra cực ngắn để tiết kiệm thời gian sinh token
         map_prompt_template = """
-            Tóm tắt NGẮN GỌN các ý quan trọng nhất của phần văn bản sau.
+            Trích xuất 5-10 ý chính quan trọng nhất dưới dạng đầu dòng cực ngắn gọn.
             VĂN BẢN: "{text}"
-            TRẢ LỜI:
+            TRẢ LỜI (Bullet points):
         """
         
         async def map_chunk(chunk_text):
-            messages = [{"role": "user", "content": map_prompt_template.format(text=chunk_text)}]
-            try:
-                response = await asyncio.to_thread(self.llm_service.chatWithOutStream, messages)
-                return response.get('message', {}).get('content', '')
-            except Exception as e:
-                print(f"[MAP ERROR] {e}")
-                return ""
+            async with self.semaphore: # Chờ nếu đã có 2 task đang chạy
+                messages = [{"role": "user", "content": map_prompt_template.format(text=chunk_text)}]
+                try:
+                    response = await asyncio.to_thread(self.llm_service.chatWithOutStream, messages)
+                    return response.get('message', {}).get('content', '')
+                except Exception as e:
+                    print(f"[MAP ERROR] {e}")
+                    return ""
 
         map_results = await asyncio.gather(*(map_chunk(chunk) for chunk in chunks))
-        
         combined_summaries = "\n---\n".join([res for res in map_results if res])
 
-        print(f"--> [SUMMARIZE MAP-REDUCE] Bước REDUCE: Đang tổng hợp thành tóm tắt cuối cùng...")
+        print(f"--> [SUMMARIZE MAP-REDUCE] Bước REDUCE: Tổng hợp kết quả...")
         reduce_prompt = f"""
-            Bạn là một chuyên gia AI phân tích tài liệu và họp hành. 
-            Tôi có một tập hợp các đoạn tóm tắt nhỏ được trích xuất từ một tài liệu/cuộc họp dài:
-            
-            CÁC ĐOẠN TÓM TẮT BỘ PHẬN:
+            Dựa trên các ý chính sau, hãy viết một bản tóm tắt tổng thể hoàn chỉnh bằng Markdown:
             {combined_summaries}
-            
-            YÊU CẦU:
-            Hãy viết một bản tóm tắt tổng thể (Final Summary) thống nhất, chi tiết, rành mạch và phân biệt rõ các ý chính cho toàn bộ dữ liệu trên.
-            
-            BẢN TÓM TẮT TỔNG THỂ (Dùng Markdown):
+            BẢN TÓM TẮT CUỐI CÙNG:
         """
         
         reduce_messages = [{"role": "user", "content": reduce_prompt}]
-        
-        def run_chat_sync():
+        def run_reduce_sync():
             return self.llm_service.chat(reduce_messages)
             
-        stream = await asyncio.to_thread(run_chat_sync)
-
+        stream = await asyncio.to_thread(run_reduce_sync)
         for chunk in stream:
             content = chunk.get('message', {}).get('content', '')
             if content:

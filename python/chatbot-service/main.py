@@ -21,6 +21,7 @@ from config import (
 )
 from callback import ingestion_callback, action_callback, on_team_deleted, on_document_deleted
 from services.llm_service import LLMService
+from services.gemini_service import GeminiService
 from services.minio_service import MinioService
 from services.vectorstore_service import VectorStoreService
 from services.retriever_service import RetrieverService
@@ -35,6 +36,7 @@ threadpool = ThreadPoolExecutor(max_workers=THREADPOOL_MAX_WORKERS)
 async def main():
     print("Đang khởi tạo các service...")
     llm_service = LLMService()
+    gemini_service = GeminiService()
     minio_service = MinioService()
     vectorstore_service = VectorStoreService(llm_service, minio_service) 
 
@@ -54,7 +56,8 @@ async def main():
 
     rag_chain = RAGChain(llm_service, vectorstore_service, retriever_service, threadpool=threadpool)
     summarizer = Summarizer(llm_service)
-    task_architect = TaskArchitect(llm_service)
+    suggest_summarizer = Summarizer(gemini_service)
+    task_architect = TaskArchitect(gemini_service)
     
     print("✅ Khởi tạo toàn bộ service hoàn tất.")
 
@@ -107,6 +110,7 @@ async def main():
             action_callback, 
             rag_chain=rag_chain, 
             summarizer=summarizer, 
+            suggest_summarizer=suggest_summarizer,
             minio_service=minio_service,
             task_architect=task_architect,
             vectorstore_service=vectorstore_service,

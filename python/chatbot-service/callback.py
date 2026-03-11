@@ -200,7 +200,7 @@ async def ingestion_callback(
                 team_id = payload_dto.get('teamId')
                 await send_status_file(channel, user_id, file_id ,original_name, "failed", team_id)
 
-async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, minio_service: MinioService, task_architect: TaskArchitect, vectorstore_service: VectorStoreService,channel: Channel):
+async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summarizer: Summarizer, suggest_summarizer: Summarizer, minio_service: MinioService, task_architect: TaskArchitect, vectorstore_service: VectorStoreService, channel: Channel):
     """
     Callback xử lý các tác vụ tương tác (RAG, Summarize).
     """
@@ -285,7 +285,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 print(f"--> [SUGGEST TASK] Nhận được objective: length: {len(raw_objective)}")
                 if len(raw_objective) > 20:
                     print(f"--> [SUGGEST TASK] Objective quá dài, đang tóm tắt...")
-                    objective = await summarizer.summarize_objective(raw_objective)
+                    objective = await suggest_summarizer.summarize_objective(raw_objective)
                     await publish_suggest_task_response(user_id, {"objective": objective, "type": "summarized"})
                 else: 
                     objective = raw_objective

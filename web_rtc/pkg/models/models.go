@@ -121,8 +121,9 @@ type CallActionItem struct {
 	Call       Call       `gorm:"foreignKey:CallID" json:"-"`
 	Content    string     `gorm:"type:text;column:content" json:"content"`
 	Status     string     `gorm:"default:'PENDING';column:status" json:"status"`
-	AssigneeID *string    `gorm:"column:assigneeId" json:"assigneeId"`
-	StartDate  *time.Time `gorm:"column:startDate" json:"startDate"`
+	AssigneeID   *string    `gorm:"column:assigneeId" json:"assigneeId"`
+	AssigneeName *string    `gorm:"column:assigneeName" json:"assigneeName"`
+	StartDate    *time.Time `gorm:"column:startDate" json:"startDate"`
 	EndDate    *time.Time `gorm:"column:endDate" json:"endDate"`
 	CreatedAt  time.Time  `gorm:"autoCreateTime;column:createdAt" json:"createdAt"`
 }

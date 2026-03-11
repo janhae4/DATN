@@ -771,18 +771,48 @@ func (s *VideoChatService) ProcessMeetingSummary(roomID string) error {
 		}
 	}
 
-	// Format content
+	// Format content & Extract unique participants for AI context
 	var conversationText string
+	participantMap := make(map[string]string) // UserID -> UserName
+
+	// 1. Get current speakers from the buffer
 	for _, t := range transcripts {
 		conversationText += fmt.Sprintf("%s: %s\n", t.UserName, t.Content)
+		if t.UserID != "" && t.UserName != "" {
+			participantMap[t.UserID] = t.UserName
+		}
+	}
+
+	// 2. Get historical speakers from the database for this call
+	var historicalSpeakers []struct {
+		UserID   string `gorm:"column:userId"`
+		UserName string `gorm:"column:userName"`
+	}
+	s.db.Model(&models.CallTranscript{}).
+		Select("DISTINCT \"userId\", \"userName\"").
+		Where("\"callId\" = ?", call.ID).
+		Scan(&historicalSpeakers)
+
+	for _, hs := range historicalSpeakers {
+		if hs.UserID != "" && hs.UserName != "" {
+			participantMap[hs.UserID] = hs.UserName
+		}
+	}
+
+	var participantListStr string
+	for id, name := range participantMap {
+		participantListStr += fmt.Sprintf("- ID: %s, Name: %s\n", id, name)
 	}
 
 	// RPC to Chatbot
 	var summaryResult struct {
 		Summary     string `json:"summary"`
 		ActionItems []struct {
-			Content   string  `json:"content"`
-			Assignee  *string `json:"assignee"`
+			Content   string `json:"content"`
+			Assignee  *struct {
+				ID   string `json:"id"`
+				Name string `json:"name"`
+			} `json:"assignee"`
 			StartDate *string `json:"startDate"`
 			EndDate   *string `json:"endDate"`
 		} `json:"actionItems"`
@@ -825,11 +855,16 @@ func (s *VideoChatService) ProcessMeetingSummary(roomID string) error {
 1. "summary": a string containing the main summary of the meeting.
 2. "actionItems": an array of objects, each containing the following fields:
    - "content": the next tasks to be performed (write concisely).
-   - "assignee": the name or userId of the person assigned to this task (if any, otherwise null).
-   - "startDate": expected start time in ISO 8601 format (e.g., 2026-02-23T10:00:00Z) (if any).
-   - "endDate": expected end time/deadline in ISO 8601 format (if any).
+    - "assignee": an object containing "id" (userId) and "name" (fullName) of the person assigned to this task (if any, otherwise null). Example: {"id": "user123", "name": "John Doe"}.
+    - "startDate": expected start time in ISO 8601 format (e.g., 2026-02-23T10:00:00Z) (if any).
+    - "endDate": expected end time/deadline in ISO 8601 format (if any).
+
+LIST OF AVAILABLE PARTICIPANTS IN THIS MEETING (Use these IDs for the "assignee" field):
+%s
+
 Absolutely do not use markdown (like ` + "```json" + `), only return the raw valid JSON data.
 `
+	prompt = fmt.Sprintf(prompt, participantListStr)
 
 	if hasPreviousSummary {
 		prompt += fmt.Sprintf(`IMPORTANT NOTE: This is a CONTINUATION of an ongoing meeting conversation. 
@@ -916,8 +951,13 @@ Absolutely do not use markdown (like ` + "```json" + `), only return the raw val
 				Status:  "SUGGESTED",
 			}
 
-			if item.Assignee != nil && *item.Assignee != "" {
-				actionItem.AssigneeID = item.Assignee
+			if item.Assignee != nil {
+				if item.Assignee.ID != "" {
+					actionItem.AssigneeID = &item.Assignee.ID
+				}
+				if item.Assignee.Name != "" {
+					actionItem.AssigneeName = &item.Assignee.Name
+				}
 			}
 			if item.StartDate != nil && *item.StartDate != "" {
 				if parsedStart, err := time.Parse(time.RFC3339, *item.StartDate); err == nil {

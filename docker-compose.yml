@@ -115,7 +115,7 @@ services:
       - "7880:7880"
       - "7881:7881"
       - "50000-50050:50000-50050/udp"
-    command: --config /etc/livekit.yml --node-ip 192.168.1.4
+    command: --config /etc/livekit.yml
     volumes:
       - ./web_rtc/livekit.yml:/etc/livekit.yml
     networks:
@@ -132,6 +132,7 @@ services:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    shm_size: '2gb'
     depends_on:
       - livekit
       - redis
@@ -143,6 +144,8 @@ services:
       dockerfile: Dockerfile
     container_name: python_chatbot_worker
     restart: unless-stopped
+    env_file:
+      - ./python/chatbot-service/.env
     volumes:
       - ./python/chatbot-service:/app
     environment:
