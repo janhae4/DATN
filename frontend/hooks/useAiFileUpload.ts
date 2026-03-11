@@ -24,8 +24,10 @@ export interface UploadedFile {
     originalName: string;
     /** fileId / storageKey returned by the server after upload */
     fileId?: string;
+    storageKey?: string; 
     status: FileUploadStatus;
     errorMessage?: string;
+
 }
 
 /** Union type for display in the UI */
@@ -162,7 +164,7 @@ export function useAiFileUpload(teamId?: string) {
     }, []);
 
     // ── Upload all pending files, return their storageKey IDs ────────────────
-    const uploadPendingFiles = useCallback(async (): Promise<{fileId: string, originalName: string}[]> => {
+    const uploadPendingFiles = useCallback(async (): Promise<{fileId: string, storageKey: string, originalName: string}[]> => {
         if (pendingFiles.length === 0) return [];
 
         const toUpload = [...pendingFiles];
@@ -177,7 +179,8 @@ export function useAiFileUpload(teamId?: string) {
         setUploadedFiles((prev) => [...prev, ...uploadingEntries]);
         setIsUploading(true);
 
-        const collectedFiles: {fileId: string, originalName: string}[] = [];
+        const collectedFiles: {fileId: string, storageKey: string, originalName: string}[] = [];
+
 
         try {
             const results = await Promise.all(
@@ -219,15 +222,14 @@ export function useAiFileUpload(teamId?: string) {
                 if (result.status === "processing" && result.fileId) {
                     fileIdToLocalKey.current.set(result.fileId, entry.localKey);
                     
-                    // Use database fileId strictly (it shouldn't have ext)
-                    // If storageKey is returned, we strip ext just in case
-                    const cleanId = (result.fileId || result.storageKey || "").split('.')[0];
-
                     collectedFiles.push({
-                        fileId: cleanId,
+                        fileId: result.fileId.split('.')[0], 
+                        storageKey: result.storageKey || result.fileId,
                         originalName: result.originalName || entry.originalName
                     });
                 }
+
+
 
             });
 
@@ -242,10 +244,12 @@ export function useAiFileUpload(teamId?: string) {
                     if (result.status === "processing" && result.fileId) {
                         updated[entryIdx] = {
                             ...updated[entryIdx],
-                            fileId: result.fileId,
+                            fileId: result.fileId.split('.')[0],
+                            storageKey: result.storageKey || result.fileId,
                             originalName: result.originalName || entry.originalName,
                             status: "processing",
                         };
+
                     } else {
                         updated[entryIdx] = {
                             ...updated[entryIdx],

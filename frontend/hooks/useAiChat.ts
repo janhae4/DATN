@@ -71,9 +71,15 @@ export function useAiChat(discussionId?: string) {
                 timestamp: new Date().toISOString(),
                 discussionId: discussionId || "",
                 metadata: sendMessageMutation.variables?.files && sendMessageMutation.variables.files.length > 0 
-                  ? { files: sendMessageMutation.variables.files } 
+                  ? { 
+                      files: sendMessageMutation.variables.files.map(f => ({
+                        ...f,
+                        fileId: (f.fileId || "").split('.')[0]
+                      })) 
+                    } 
                   : undefined,
             };
+
 
             displayMessages.push(tempUserMessage);
         }

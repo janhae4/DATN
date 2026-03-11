@@ -41,6 +41,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   ) {
     const { id, name, emails, photos } = profile;
 
+    console.log("State", req.query);
     const rawState = req.query.state as string | undefined;
 
     let state: StatePayload = {};

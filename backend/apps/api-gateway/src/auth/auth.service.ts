@@ -33,6 +33,7 @@ export class AuthService {
     response: Response,
   ) {
     const isSecure = process.env.NODE_ENV === 'production' && !process.env.FRONT_END_URL?.includes('localhost') && !process.env.FRONT_END_URL?.includes('127.0.0.1');
+    console.log("Cookies set successfully");
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isSecure,
@@ -50,6 +51,7 @@ export class AuthService {
   }
 
   private clearCookies(response: Response) {
+    console.log("Cookies cleared successfully");
     response.clearCookie('accessToken');
     response.clearCookie('refreshToken');
   }
@@ -195,13 +197,17 @@ export class AuthService {
       routingKey: AUTH_PATTERN.GOOGLE_CALLBACK,
       payload: user
     });
+
+    console.log("Tokens", tokens);
+
     if (tokens.accessToken && tokens.refreshToken) {
       this.setCookies(tokens.accessToken, tokens.refreshToken, response);
+      console.log("Cookies set successfully");
     }
-    const callbackUrl = process.env.FRONT_END_URL || 'http://localhost:5000';
-    const baseUrl = callbackUrl.replace(/:3000$/, ':5000'); // Ensure we go to the frontend even if FRONT_END_URL is misconfigured to port 3000
-    
-    // If it was a linking action, maybe they want to go to profile, but user said "dashboard"
+
+    console.log("Callback URL", process.env.FRONT_END_URL);
+    const baseUrl = process.env.FRONT_END_URL || 'http://localhost:5000';
+
     return response.redirect(baseUrl);
   }
 
@@ -234,7 +240,7 @@ export class AuthService {
       const user = await this.amqp.request<User>({
         exchange: USER_EXCHANGE,
         routingKey: USER_PATTERNS.FIND_ONE,
-        payload: userId,
+        payload: {id: userId},
       });
 
       console.log("user in getGoogleConnectionStatus: ", user)

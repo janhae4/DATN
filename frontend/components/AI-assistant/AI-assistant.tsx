@@ -61,7 +61,7 @@ export default function AIAssistantUI() {
     uploadedFiles,
     isUploading,
     addPendingFiles,
-    uploadPendingFiles,
+    uploadPendingFiles: uploadPendingFilesHook,
     waitForFilesCompleted,
     removeFile,
     clearFiles: clearUploadedFiles,
@@ -155,42 +155,44 @@ export default function AIAssistantUI() {
 
 
     let fileIds: string[] = [];
-    let filesToAttach: { fileId: string; name: string }[] = [];
+    let filesToAttach: { fileId: string; storageKey: string; name: string }[] = [];
 
     try {
       if (hasPendingFiles) {
-        const result = await uploadPendingFiles();
+        const result = await uploadPendingFilesHook();
         filesToAttach = result.map((r) => ({
           fileId: r.fileId,
+          storageKey: r.storageKey,
           name: r.originalName,
         }));
-        fileIds = filesToAttach.map((f) => f.fileId);
+        fileIds = filesToAttach.map((f) => f.storageKey || f.fileId);
       } else {
         filesToAttach = uploadedFiles
           .filter(
             (f) =>
               f.fileId && (f.status === "completed" || f.status === "processing")
           )
-          .map((f) => ({ 
-            fileId: (f.fileId || "").split('.')[0], 
-            name: f.originalName 
+          .map((f) => ({
+            fileId: f.fileId!.split('.')[0],
+            storageKey: f.storageKey || f.fileId!,
+            name: f.originalName
           }));
-        fileIds = filesToAttach.map((f) => f.fileId);
+        fileIds = filesToAttach.map((f) => f.storageKey || f.fileId);
       }
 
       // ── Step 2: Wait for AI processing via socket events ────────────────────
       if (fileIds.length > 0) {
-        // Smart wait: checks if files are already completed (e.g. from previous upload)
         const completedIds = await waitForFilesCompleted(fileIds);
         fileIds = completedIds.length > 0 ? completedIds : fileIds;
         filesToAttach = filesToAttach.filter((f) =>
-          fileIds.includes(f.fileId)
+          fileIds.includes(f.storageKey || f.fileId)
         );
       }
 
       // ── Step 3: Send message to AI RAG ───────────────────────────────────────
       const hasFiles = filesToAttach.length > 0;
       const messageToSend = currentInput.trim() || (hasFiles ? "Ask AI chunk cho tôi" : "");
+
 
       if (!messageToSend) {
         setIsSending(false);
@@ -210,7 +212,14 @@ export default function AIAssistantUI() {
       await sendMessage({
         discussionId: activeId || "",
         message: messageToSend,
-        files: filesToAttach.length > 0 ? filesToAttach : undefined,
+        // TRICK: Send the full storageKey as fileId for the AI to find the file,
+        // BUT the backend should ideally save only the prefix.
+        // We're passing both in case the backend is smart enough.
+        files: filesToAttach.map((f: any) => ({
+          fileId: f.storageKey || f.fileId,
+          name: f.name
+        })),
+
         onChunk: (chunk: string) => {
           if (
             activeIdRef.current !== sendingDiscussionId &&
@@ -288,7 +297,7 @@ export default function AIAssistantUI() {
       } catch (err) {
         console.error("Preview failed:", err);
       }
-    } 
+    }
     // If it's an AttachedFile (pending or uploading/processing)
     else if (file.localKey) {
       const name = file.originalName || file.name || "File";
@@ -299,7 +308,7 @@ export default function AIAssistantUI() {
         try {
           const { viewUrl } = await fileService.getPreviewUrl(file.fileId);
           url = viewUrl;
-        } catch {}
+        } catch { }
       }
 
       if (!url) return;
@@ -348,7 +357,7 @@ export default function AIAssistantUI() {
       />
 
       <main className="flex-1 flex flex-col h-full min-w-0 bg-white dark:bg-[#09090b] relative w-full">
-        <FilePreviewDialog 
+        <FilePreviewDialog
           isOpen={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
           file={previewData}
