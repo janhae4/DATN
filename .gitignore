@@ -24,3 +24,5 @@ meili-data/
 node_modules/
 dist/
 build/
+
+taskora-key-pair.pem
