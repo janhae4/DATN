@@ -82,30 +82,54 @@ export function useAiFileUpload(teamId?: string) {
      * Returns only the fileIds that completed successfully.
      * Uses the raw socket (not React state) so it is immune to state clearing.
      */
+    const uploadedFilesRef = useRef(uploadedFiles);
+    useEffect(() => {
+        uploadedFilesRef.current = uploadedFiles;
+    }, [uploadedFiles]);
+
+    /**
+     * Wait for ALL given fileIds to receive a `completed` or `failed` socket event.
+     * Returns only the fileIds that completed successfully.
+     * Checks current state first to avoid waiting for already-done files.
+     */
     const waitForFilesCompleted = useCallback(
-        (fileIds: string[], timeoutMs = 90_000): Promise<string[]> => {
+        (fileIds: string[], timeoutMs = 2_000): Promise<string[]> => {
             if (fileIds.length === 0) return Promise.resolve([]);
 
+            const current = uploadedFilesRef.current;
+            const alreadyCompleted = current
+                .filter(f => f.fileId && fileIds.includes(f.fileId) && f.status === "completed")
+                .map(f => f.fileId!);
+            
+            const alreadyFailed = current
+                .filter(f => f.fileId && fileIds.includes(f.fileId) && f.status === "error")
+                .map(f => f.fileId!);
+            
+            const remainingIds = fileIds.filter(id => !alreadyCompleted.includes(id) && !alreadyFailed.includes(id));
+
+            if (remainingIds.length === 0) {
+                return Promise.resolve(alreadyCompleted);
+            }
+
             return new Promise<string[]>((resolve) => {
-                const completed = new Set<string>();
-                const failed = new Set<string>();
-                const remaining = new Set(fileIds);
+                const completed = new Set<string>(alreadyCompleted);
+                const remaining = new Set(remainingIds);
 
                 const timer = setTimeout(() => {
                     cleanup();
-                    // Timeout – return whatever completed so far (or all, so RAG at least tries)
-                    resolve(completed.size > 0 ? [...completed] : fileIds);
+                    resolve([...completed]); 
                 }, timeoutMs);
 
                 const onStatus = (data: FileStatusSocketPayload) => {
                     if (!remaining.has(data.id)) return;
+                    
                     if (data.status === "completed") {
                         completed.add(data.id);
                         remaining.delete(data.id);
                     } else if (data.status === "failed") {
-                        failed.add(data.id);
                         remaining.delete(data.id);
                     }
+                    
                     if (remaining.size === 0) {
                         cleanup();
                         resolve([...completed]);
@@ -122,6 +146,8 @@ export function useAiFileUpload(teamId?: string) {
         },
         []
     );
+
+
 
     // ── Add files to pending list (no upload yet) ─────────────────────────────
     const addPendingFiles = useCallback((files: File[]) => {
@@ -226,15 +252,10 @@ export function useAiFileUpload(teamId?: string) {
                 return updated;
             });
 
-            // Wait for AI processing to finish if they are being processed
-            const processingIds = results
-                .filter(r => r.status === "processing" && r.fileId)
-                .map(r => r.fileId as string);
-                
-            if (processingIds.length > 0) {
-                console.log("[AI Upload] Waiting for socket 'completed' status:", processingIds);
-                await waitForFilesCompleted(processingIds);
-            }
+            // We skip waiting for socket here.
+            // The waiting will be handled by the caller (handleSend) 
+            // to ensure a single, consistent wait step.
+
 
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Upload failed";

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import * as import_attachment_card from "./attachment-card";
 
 interface ChatInputProps {
     input: string;
@@ -15,6 +16,8 @@ interface ChatInputProps {
     isUploading: boolean;
     hasAttachments: boolean;
     onAttachFiles: (files: File[]) => void;
+    pendingFiles?: import("@/hooks/useAiFileUpload").AttachedFile[];
+    onRemovePendingFile?: (localKey: string) => void;
 }
 
 export const ChatInput = ({
@@ -25,6 +28,8 @@ export const ChatInput = ({
     isUploading,
     hasAttachments,
     onAttachFiles,
+    pendingFiles = [],
+    onRemovePendingFile,
 }: ChatInputProps) => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -54,6 +59,30 @@ export const ChatInput = ({
     return (
         <div className="shrink-0 py-4 px-4 bg-white dark:bg-zinc-950">
             <div className="max-w-3xl mx-auto">
+                {/* Pending Files placed OUTSIDE and ABOVE the input textarea */}
+                <AnimatePresence>
+                    {pendingFiles.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="flex flex-wrap gap-2 mb-3 px-1"
+                        >
+                            {pendingFiles.map((file) => (
+                                <import_attachment_card.AttachmentCard
+                                    key={file.localKey}
+                                    file={file}
+                                    onRemove={
+                                        file.status === "pending" && onRemovePendingFile
+                                            ? () => onRemovePendingFile(file.localKey)
+                                            : undefined
+                                    }
+                                />
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <div
                     className={cn(
                         "relative flex items-end w-full p-2 gap-2 transition-all duration-200 ease-in-out",
