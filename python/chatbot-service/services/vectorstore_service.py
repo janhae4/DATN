@@ -1,23 +1,18 @@
 from datetime import datetime
-import json
 import os
 import chromadb
-from config import CHROMA_HOST, CHROMA_PORT
-import chromadb
+from config import CHROMA_HOST, CHROMA_PORT, INDEX_DOCUMENT_CHUNK_ROUTING_KEY
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from services.minio_service import MinioService
-from services.llm_service import LLMService
-from aio_pika import Channel, Message, Exchange
-from config import INDEX_DOCUMENT_CHUNK_ROUTING_KEY
 import asyncio
-from utils_retry import retry_async, retry_sync
-
+from utils_retry import retry_async
 
 class VectorStoreService:
-    def __init__(self, llm_service: LLMService, minio: MinioService):
+    def __init__(self, gemini_service, minio: MinioService):
+        # Sử dụng HttpClient để kết nối tới ChromaDB server (nhẹ hơn)
         self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         self.minio = minio
-        self.llm = llm_service
+        self.llm = gemini_service
 
     def _get_collection(self, name):
         return self.client.get_or_create_collection(name=name)
@@ -29,37 +24,27 @@ class VectorStoreService:
             def _delete():
                 self.client.delete_collection(name=collection_name)
             await asyncio.to_thread(_delete)
-            print(f"[VectorStore] Đã xóa thành công collection {collection_name}.")
         except Exception as e:
-            print(f"[VectorStore] Lỗi hoặc collection không tồn tại: {e}")
+            print(f"[VectorStore] Lỗi khi xóa collection: {e}")
     
     @retry_async(max_retries=3, delay=1, backoff=2)
     async def delete_documents_by_source(self, collection_name: str, file_source: str):
         try:
             collection = self._get_collection(collection_name)
-            print(f"[VectorStore] Đang xóa các chunk cũ của file: {file_source} trong collection {collection_name}")
-            
             def _delete():
                 collection.delete(where={"source": file_source})
-
             await asyncio.to_thread(_delete)
-            print(f"[VectorStore] Đã xóa thành công các chunk cũ.")
-            
         except Exception as e:
-            print(f"[VectorStore] Không thể xóa chunk cũ (có thể là file mới): {e}")
+            print(f"[VectorStore] Lỗi khi xóa document: {e}")
     
     @retry_async(max_retries=3, delay=1, backoff=2)
     async def search(self, collection_name: str, query: str, k: int = 5, file_ids: list = None):
-        """
-        Tìm kiếm vector bằng native client (không qua LangChain).
-        Nếu file_ids được cung cấp, chỉ tìm trong các file đó.
-        """
         try:
             collection = self.client.get_collection(name=collection_name)
         except Exception:
-            print(f"Collection {collection_name} chưa tồn tại.")
             return []
 
+        # Lấy embedding từ Gemini
         query_vec = self.llm.get_embedding(query)
 
         query_kwargs = {
@@ -73,144 +58,55 @@ class VectorStoreService:
                 query_kwargs["where"] = {"source": file_ids[0]}
             else:
                 query_kwargs["where"] = {"source": {"$in": file_ids}}
-            print(f"[RAG] Filter theo {len(file_ids)} file(s): {file_ids}")
 
         results = collection.query(**query_kwargs)
 
         formatted_docs = []
         if results['ids'] and results['ids'][0]:
+            from langchain_core.documents import Document
             for i in range(len(results['ids'][0])):
-                doc_content = results['documents'][0][i]
-                metadata = results['metadatas'][0][i]
-                from langchain_core.documents import Document
-                formatted_docs.append(Document(page_content=doc_content, metadata=metadata))
-                
+                formatted_docs.append(Document(
+                    page_content=results['documents'][0][i], 
+                    metadata=results['metadatas'][0][i]
+                ))
         return formatted_docs
             
-    @retry_async(max_retries=3, delay=2, backoff=2)
-    async def process_and_store(
-        self, 
-        user_id: str, 
-        file_id: str,
-        search_exchange: Exchange,
-        team_id: str | None = None,
-        original_name: str | None = None,
-        ):
-        print(f"[VectorStore] Đang tải file: {file_id} (original: {original_name})")
+    async def process_and_store(self, user_id: str, file_id: str, search_exchange, team_id: str | None = None, original_name: str | None = None):
         raw_docs = await self.minio.load_documents(file_id, original_name)
-        
-        if not raw_docs:
-            print(f"[VectorStore] Không tải được tài liệu: {file_id}")
-            return 
+        if not raw_docs: return 
 
         collection_name = f"user_{user_id}" if team_id is None else f"team_{team_id}"
         collection = self._get_collection(collection_name)
         
-        existing_docs = collection.get(
-            where={"source": file_id}, 
-            include=["metadatas"] 
-        )
-        count = 0
-        if existing_docs and 'ids' in existing_docs:
-            count = len(existing_docs['ids'])
-            
-        if count > 0:
-            print(f"--> [CACHE HIT] File '{file_id}' đã tồn tại ({count} chunks). Bỏ qua Embedding.")
+        # Check cache
+        existing = collection.get(where={"source": file_id}, include=["metadatas"])
+        if existing and existing['ids']:
+            print(f"--> [CACHE HIT] File '{file_id}' đã tồn tại.")
             return raw_docs
 
-        print(f"[VectorStore] Chưa có dữ liệu, bắt đầu Embedding mới...")
-        print(f"[VectorStore] Đã tải {len(raw_docs)} tài liệu. Đang tách...")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         docs = text_splitter.split_documents(raw_docs)
 
-        ids = []
-        embeddings = []
-        metadatas = []
-        documents_content = []
-        tasks = []
-
+        ids, embeddings, metadatas, documents_content = [], [], [], []
         processing_time = datetime.utcnow().isoformat()
         
-        print(f"[VectorStore] Đang xử lý {len(docs)} chunks (Embedding + RabbitMQ)...")
-        
         for i, doc in enumerate(docs):
-            chunk_id = f"{file_id}_{i}"
-            
-            doc_content = ""
-            doc_metadata = {}
+            content = doc.page_content if hasattr(doc, 'page_content') else str(doc)
+            if not content: continue
 
-            if hasattr(doc, 'page_content'):
-                doc_content = doc.page_content
-                doc_metadata = doc.metadata if hasattr(doc, 'metadata') else {}
-            elif isinstance(doc, tuple) and len(doc) >= 1:
-                doc_content = doc[0]
-                if len(doc) > 1:
-                    doc_metadata = doc[1]
-            else:
-                doc_content = str(doc)
-            
-            if not doc_content:
-                print(f"--> [WARNING] Chunk {i} rỗng, bỏ qua.")
-                continue
-
-            try:
-                if asyncio.iscoroutinefunction(self.llm.get_embedding):
-                    vector = await self.llm.get_embedding(doc_content)
-                else:
-                    vector = self.llm.get_embedding(doc_content)
-            except Exception as e:
-                print(f"--> [ERROR] Lỗi Embedding chunk {i}: {e}")
-                vector = None
-
+            vector = self.llm.get_embedding(content)
             if not vector: continue
 
-            final_meta = {
-                "user_id": user_id,
-                "source": file_id,
-                "chunk_id": i,
-                "processed_at": processing_time
-            }
+            final_meta = {"user_id": user_id, "source": file_id, "chunk_id": i, "processed_at": processing_time}
             if team_id: final_meta["team_id"] = team_id
-            
-            if isinstance(doc_metadata, dict):
-                final_meta.update(doc_metadata)
+            if hasattr(doc, 'metadata'): final_meta.update(doc.metadata)
 
-            ids.append(chunk_id)
+            ids.append(f"{file_id}_{i}")
             embeddings.append(vector)
             metadatas.append(final_meta)
-            documents_content.append(doc_content)
+            documents_content.append(content)
 
-            # chunk_payload = {
-            #     "chunk_id": chunk_id,
-            #     "content": doc_content,
-            #     "metadata": final_meta
-            # }
-            # message_body = json.dumps(chunk_payload, default=str).encode('utf-8')
-            # message = Message(
-            #     body=message_body,
-            #     content_type="application/json",
-            # )
-            # tasks.append(search_exchange.publish(message, routing_key=INDEX_DOCUMENT_CHUNK_ROUTING_KEY))
-        collection_name = f"user_{user_id}" if team_id is None else f"team_{team_id}"
-        collection = self._get_collection(collection_name)
-
-        print(f"[VectorStore] Đang xóa dữ liệu cũ của file {file_id}...")
-        try:
-            collection.delete(where={"source": file_id})
-        except Exception as e:
-            print(f"Lỗi khi xóa (có thể là file mới): {e}")
-
-        print(f"[VectorStore] Đang lưu {len(docs)} chunks vào ChromaDB...")
-        collection.add(
-            ids=ids,
-            embeddings=embeddings,
-            metadatas=metadatas,
-            documents=documents_content
-        )
+        if ids:
+            collection.add(ids=ids, embeddings=embeddings, metadatas=metadatas, documents=documents_content)
         
-        print(f"[VectorStore] Đang gửi {len(tasks)} tin nhắn RabbitMQ...")
-        if tasks:
-            await asyncio.gather(*tasks)
-            
-        print(f"[VectorStore] Hoàn tất xử lý file: {file_id}")
         return raw_docs

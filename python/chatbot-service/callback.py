@@ -261,7 +261,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 original_name = payload_dto.get('originalName')
                 if not file_name: raise ValueError("Tin nhắn thiếu 'summarizeFileName'.")
                 
-                print(f"--> [SUMMARIZE] Bắt đầu tóm tắt file '{file_name}' cho user '{user_id}'.")
+                print(f"--> [SUMMARIZE] Yêu cầu từ user '{user_id}' cho file: {original_name or file_name}")
                 
                 try:
                     documents = await vectorstore_service.process_and_store(
@@ -275,6 +275,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                     async for chunk in summarizer.summarize(documents):
                         await publish_to_redis(discussion_id, chunk, is_completed=False)
                     await publish_to_redis(discussion_id, "", is_completed=True)
+                    print(f"--> [SUMMARIZE] Đã gửi bản tóm tắt hoàn tất cho user '{user_id}'.")
                 except Exception as e:
                     print(f"--> [VECTOR ERROR] Lỗi lưu vector: {e}")
                     
@@ -340,6 +341,7 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                                     }
                     await publish_suggest_task_response(payload_dto.get('userId'), task_data)
                 await publish_suggest_task_response(payload_dto.get('userId'), {"type": "done"})
+                print(f"--> [SUGGEST TASK] Đã gửi toàn bộ gợi ý task cho user '{user_id}'.")
         except Exception as e:
             if pattern_from_key == 'suggest_task' and user_id:
                 await publish_suggest_task_response(user_id, {"type": "error", "message": str(e)})

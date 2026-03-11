@@ -5,7 +5,9 @@ class Summarizer:
         self.semaphore = asyncio.Semaphore(2)  # Giới hạn tối đa 2 task tóm tắt song song cho Ollama
         
     async def summarize(self, documents):
+        print(f"--> [SUMMARIZE] Bắt đầu quá trình tóm tắt tài liệu...")
         if not documents:
+            print(f"--> [SUMMARIZE] Lỗi: Không có nội dung để tóm tắt.")
             yield "Không có nội dung để tóm tắt."
             return
         
@@ -41,6 +43,7 @@ class Summarizer:
                 content = chunk.get('message', {}).get('content', '')
                 if content:
                     yield content
+            print(f"--> [SUMMARIZE] Hoàn tất tóm tắt bằng chiến thuật STUFF.")
             return
 
         # CHIẾN THUẬT 2: MAP-REDUCE TỐI ƯU
@@ -87,12 +90,14 @@ class Summarizer:
             content = chunk.get('message', {}).get('content', '')
             if content:
                 yield content
+        print(f"--> [SUMMARIZE] Hoàn tất tóm tắt bằng chiến thuật MAP_REDUCE.")
                 
     
     async def summarize_objective(self, objective: str) -> str:
         """
         Tóm tắt mục tiêu thành đúng 5 từ, không ký tự đặc biệt.
         """
+        print(f"--> [SUMMARIZE OBJECTIVE] Đang tóm tắt mục tiêu: {objective[:50]}...")
         prompt= f"""
             Bạn là một chuyên gia phân tích dự án. 
             Nhiệm vụ:  Người dùng đã nhập một yêu cầu rất chi tiết hoặc dài dòng về một mục tiêu dự án.
@@ -118,7 +123,9 @@ class Summarizer:
             )
             
             content = response.get('message', {}).get('content', '')
-            return content.strip()
+            summarized = content.strip()
+            print(f"--> [SUMMARIZE OBJECTIVE] Kết quả: {summarized}")
+            return summarized
             
         except Exception as e:
             print(f"--> [ERROR] Lỗi khi tóm tắt objective: {e}")

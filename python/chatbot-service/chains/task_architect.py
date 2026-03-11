@@ -29,6 +29,8 @@ class TaskArchitect:
         return context
 
     async def suggest_and_assign(self, objective: str, members: list):
+        print(f"--> [SUGGEST TASK] Bắt đầu quá trình gợi ý task...")
+        print(f"--> [SUGGEST TASK] Mục tiêu: {objective[:100]}...")
         print(f"--> [SUGGEST TASK] Xây dựng ngữ cảnh thành viên...")
         has_members = members is not None and len(members) > 0
         members_context = self._build_members_context(members)
@@ -90,16 +92,17 @@ class TaskArchitect:
             {"role": "user", "content": f"Hãy lập kế hoạch cho mục tiêu: {objective}"}
         ]
 
-        print(f"--> [SUGGEST TASK] Đang gọi LLM (Native Ollama)...")
+        print(f"--> [SUGGEST TASK] Đang gọi Gemini AI để lập kế hoạch...")
         def run_chat_sync():
             return self.llm_service.chat(messages)
             
         stream = await asyncio.to_thread(run_chat_sync)
-        print(f"--> [SUGGEST TASK] Gợi ý task với mục tiêu: {objective}")
+        print(f"--> [SUGGEST TASK] Đang nhận phản hồi từ Gemini...")
 
 
         for chunk in stream:
             content = chunk.get('message', {}).get('content', '')
             if content:
-                print(f"Chunk: {content}", end="", flush=True)
+                print(f"{content}", end="", flush=True)
                 yield content
+        print(f"\n--> [SUGGEST TASK] Hoàn tất quá trình gợi ý task.")

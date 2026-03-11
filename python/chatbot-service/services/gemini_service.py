@@ -1,50 +1,57 @@
-import google.generativeai as genai
-from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_EMBEDDING_MODEL
+from google import genai
+from config import AI_GEMINI_API_KEY, GEMINI_MODEL, GEMINI_EMBEDDING_MODEL
 from utils_retry import retry_sync
 
 class GeminiService:
     def __init__(self):
-        if not GEMINI_API_KEY:
-            print("⚠️ Warning: GEMINI_API_KEY is not set.")
-        genai.configure(api_key=GEMINI_API_KEY)
-        self.default_model = genai.GenerativeModel(GEMINI_MODEL)
+        if not AI_GEMINI_API_KEY:
+            print("⚠️ Warning: AI_GEMINI_API_KEY is not set.")
+        # SDK mới sử dụng Client object thay vì configure
+        self.client = genai.Client(api_key=AI_GEMINI_API_KEY)
+        self.model_name = GEMINI_MODEL
 
     def _convert_messages(self, messages):
-        system_content = None
-        history = []
+        """
+        Chuyển đổi sang format của google-genai SDK v1
+        """
+        system_instruction = None
+        contents = []
         
         for msg in messages:
             if msg["role"] == "system":
-                system_content = msg["content"]
+                system_instruction = msg["content"]
             else:
                 role = "user" if msg["role"] == "user" else "model"
-                history.append({"role": role, "parts": [msg["content"]]})
+                contents.append({"role": role, "parts": [{"text": msg["content"]}]})
         
-        return system_content, history
+        return system_instruction, contents
 
     @retry_sync(max_retries=3, delay=1, backoff=2)
     def get_embedding(self, text: str):
-        result = genai.embed_content(
+        # SDK mới: client.models.embed_content
+        result = self.client.models.embed_content(
             model=GEMINI_EMBEDDING_MODEL,
-            content=text,
-            task_type="retrieval_document"
+            contents=text,
+            config={"task_type": "RETRIEVAL_DOCUMENT"}
         )
-        return result['embedding']
+        # Truy cập embedding: result.embeddings[0].values
+        return result.embeddings[0].values
 
     @retry_sync(max_retries=3, delay=2, backoff=2)
     def chat(self, messages):
-        system_content, history = self._convert_messages(messages)
+        system_instruction, contents = self._convert_messages(messages)
         
-        model = self.default_model
-        if system_content:
-            model = genai.GenerativeModel(GEMINI_MODEL, system_instruction=system_content)
-        
-        if not history:
-             return
-             
-        last_msg = history.pop()
-        chat_session = model.start_chat(history=history)
-        response = chat_session.send_message(last_msg["parts"][0], stream=True)
+        # SDK mới: generate_content_stream
+        # model = model_name, config = {'system_instruction': ...}
+        config = {}
+        if system_instruction:
+            config['system_instruction'] = system_instruction
+
+        response = self.client.models.generate_content_stream(
+            model=self.model_name,
+            contents=contents,
+            config=config
+        )
         
         for chunk in response:
             try:
@@ -56,15 +63,15 @@ class GeminiService:
 
     @retry_sync(max_retries=3, delay=2, backoff=2)
     def chatWithOutStream(self, messages):
-        system_content, history = self._convert_messages(messages)
-        model = self.default_model
-        if system_content:
-            model = genai.GenerativeModel(GEMINI_MODEL, system_instruction=system_content)
+        system_instruction, contents = self._convert_messages(messages)
+        
+        config = {}
+        if system_instruction:
+            config['system_instruction'] = system_instruction
             
-        if not history:
-            return {'message': {'content': ""}}
-
-        last_msg = history.pop()
-        chat_session = model.start_chat(history=history)
-        response = chat_session.send_message(last_msg["parts"][0])
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=contents,
+            config=config
+        )
         return {'message': {'content': response.text}}

@@ -145,7 +145,7 @@ services:
     container_name: python_chatbot_worker
     restart: unless-stopped
     env_file:
-      - ./python/chatbot-service/.env
+      - ./python/chatbot-service/chatbot.env
     volumes:
       - ./python/chatbot-service:/app
     environment:
