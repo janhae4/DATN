@@ -242,6 +242,9 @@ services:
         APP_NAME: api-gateway
     ports:
       - "3000:3000"
+    environment:
+      - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - NODE_ENV=production
     networks:
       app-network:
         aliases:

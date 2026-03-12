@@ -26,7 +26,7 @@ VPS_IP=$VPS_IP
 DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
 REDIS_HOST=redis
 REDIS_PORT=6379
-RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+RMQ_URL=amqp://guest:guest@rabbitmq:5672/
 MINIO_ENDPOINT=minio
 MINIO_PORT=9000
 MINIO_ACCESS_KEY=minioadmin
@@ -51,14 +51,14 @@ LIVEKIT_URL=http://livekit:7880
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=$LK_SECRET
 DATABASE_VIDEO_CHAT_URL=postgresql://postgres:postgres@postgres:5432/call
-RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+RMQ_URL=amqp://guest:guest@rabbitmq:5672/
 EOT
 echo "[OK] Đã tạo ./web_rtc/.env"
 
 # --- Tạo file ./python/chatbot-service/chatbot.env ---
 # Giữ nguyên các biến cũ, chỉ cập nhật API Key nếu có nhập
 cat <<EOT > ./python/chatbot-service/chatbot.env
-RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+RMQ_URL=amqp://guest:guest@rabbitmq:5672/
 CHROMA_HOST=chroma
 CHROMA_PORT=8000
 MINIO_ENDPOINT=minio:9000
