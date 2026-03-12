@@ -493,6 +493,17 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_tunnel
+    restart: always
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - app-network
+    depends_on:
+      - frontend
+      - api_gateway
+
 volumes:
   postgres-data:
   redis-data:

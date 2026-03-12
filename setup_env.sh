@@ -15,6 +15,9 @@ read -p "Nhập Gemini/OpenAI API Key (bỏ qua nếu đã có trong chatbot.env
 read -p "Nhập Livekit API Secret (mặc định: 4msnddOg...): " LK_SECRET
 if [ -z "$LK_SECRET" ]; then LK_SECRET="4msnddOgHpRlhfN1P2uVM0akISxFJJPY"; fi
 
+# 4. Lấy thông tin Cloudflare Tunnel Token
+read -p "Nhập Cloudflare Tunnel Token (Lấy từ Zero Trust Dashboard): " CF_TOKEN
+
 echo ""
 echo "--- Đang tạo các file .env ---"
 
@@ -104,6 +107,7 @@ NEXT_PUBLIC_SOCKET_URL=wss://$VPS_IP/socket
 NEXT_PUBLIC_WEBRTC_WS_URL=wss://$VPS_IP/webrtc
 NEXT_PUBLIC_LIVEKIT_URL=https://$VPS_IP/livekit
 NEXT_PUBLIC_MINIO_URL=https://$VPS_IP/minio
+CLOUDFLARE_TUNNEL_TOKEN=$CF_TOKEN
 EOT
 echo "[OK] Đã tạo file .env gốc"
 
