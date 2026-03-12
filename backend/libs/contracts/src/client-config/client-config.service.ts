@@ -170,10 +170,10 @@ export class ClientConfigService {
   */
 
   getRedisHost(): string {
-    return this.config.get<string>('REDIS_HOST', 'localhost');
+    return this.config.get<string>('REDIS_CLIENT_HOST') || this.config.get<string>('REDIS_HOST', 'redis');
   }
   getRedisClientPort(): number {
-    return this.config.get<number>('REDIS_CLIENT_PORT', 6379);
+    return Number(this.config.get<number>('REDIS_CLIENT_PORT')) || Number(this.config.get<number>('REDIS_PORT', 6379));
   }
   getRedisQueue(): string {
     return this.config.get<string>('REDIS_QUEUE', 'redis_service_queue');
