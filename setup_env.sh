@@ -63,7 +63,7 @@ echo "[OK] Đã tạo ./python/chatbot-service/chatbot.env"
 # --- Tạo file ./frontend/.env ---
 cat <<EOT > ./frontend/.env
 PORT=5000
-NEXT_PUBLIC_API_URL=http://$VPS_IP:3001
+NEXT_PUBLIC_API_URL=http://$VPS_IP:3000
 NEXT_PUBLIC_SOCKET_URL=ws://$VPS_IP:4001
 NEXT_PUBLIC_WEBRTC_WS_URL=ws://$VPS_IP:8005/ws
 NEXT_PUBLIC_LIVEKIT_URL=http://$VPS_IP:7880
