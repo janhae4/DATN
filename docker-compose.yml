@@ -173,7 +173,6 @@ services:
     networks:
       - app-network
 
-
   minio:
     image: minio/minio
     container_name: minio_service
