@@ -33,6 +33,14 @@ MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 # AI Config
 GEMINI_API_KEY=$AI_API_KEY
+
+GOOGLE_CLIENT_ID=324234234234-example.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-example
+GOOGLE_CALLBACK_URL=https://$VPS_IP/api/auth/google/callback
+JWT_ACCESS_SECRET=your_jwt_secret_key
+JWT_REFRESH_SECRET=your_jwt_refresh_key
+SMTP_TRANSPORT=smtps://user:pass@smtp.gmail.com
+SMTP_FROM="Taskora <noreply@gmail.com>"
 EOT
 echo "[OK] Đã tạo ./backend/.env.dev"
 
@@ -75,11 +83,11 @@ echo "[OK] Đã tạo ./frontend/.env"
 # --- Tạo file .env gốc (cho Docker Compose) ---
 cat <<EOT > .env
 VPS_IP=$VPS_IP
-NEXT_PUBLIC_API_URL=http://$VPS_IP:3000
-NEXT_PUBLIC_SOCKET_URL=ws://$VPS_IP:4001
-NEXT_PUBLIC_WEBRTC_WS_URL=ws://$VPS_IP:8005/ws
-NEXT_PUBLIC_LIVEKIT_URL=http://$VPS_IP:7880
-NEXT_PUBLIC_MINIO_URL=http://$VPS_IP:9000
+NEXT_PUBLIC_API_URL=https://$VPS_IP/api
+NEXT_PUBLIC_SOCKET_URL=wss://$VPS_IP/socket
+NEXT_PUBLIC_WEBRTC_WS_URL=wss://$VPS_IP/webrtc
+NEXT_PUBLIC_LIVEKIT_URL=https://$VPS_IP/livekit
+NEXT_PUBLIC_MINIO_URL=https://$VPS_IP/minio
 EOT
 echo "[OK] Đã tạo file .env gốc"
 
