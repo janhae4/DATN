@@ -2,7 +2,7 @@ import asyncio
 class Summarizer:
     def __init__(self, llm_service):
         self.llm_service = llm_service
-        self.semaphore = asyncio.Semaphore(2)  # Giới hạn tối đa 2 task tóm tắt song song cho Ollama
+        self.semaphore = asyncio.Semaphore(10)  # Tăng lên 10 task song song cho Gemini API
         
     async def summarize(self, documents):
         print(f"--> [SUMMARIZE] Bắt đầu quá trình tóm tắt tài liệu...")
@@ -24,12 +24,13 @@ class Summarizer:
                 
         full_text = "\n\n".join(text_parts)
         text_len = len(full_text)
+        print(f"--> [SUMMARIZE] Tổng độ dài văn bản: {text_len} ký tự.")
         
-        # CHIẾN THUẬT 1: "STUFFING" - Nếu văn bản đủ nhỏ (< 20k ký tự), tóm tắt luôn trong 1 bước
-        if text_len < 20000:
+        if text_len < 100000:
             print(f"--> [SUMMARIZE STUFF] Văn bản ngắn ({text_len} ký tự), tóm tắt trực tiếp...")
             prompt = f"""
-                Bạn là chuyên gia phân tích. Hãy viết bản tóm tắt chi tiết, rành mạch bằng Markdown cho văn bản sau:
+                Bạn là chuyên gia phân tích. 
+                Hãy viết bản tóm tắt chi tiết, rành mạch bằng Markdown cho văn bản sau và không có câu dẫn vào trực tiếp trả lời:
                 VĂN BẢN:
                 {full_text}
                 TÓM TẮT:
@@ -46,32 +47,36 @@ class Summarizer:
             print(f"--> [SUMMARIZE] Hoàn tất tóm tắt bằng chiến thuật STUFF.")
             return
 
-        # CHIẾN THUẬT 2: MAP-REDUCE TỐI ƯU
         from langchain_text_splitters import RecursiveCharacterTextSplitter
-        # Tăng chunk_size để giảm số lượng lần gọi LLM
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=20000, chunk_overlap=2000)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=50000, chunk_overlap=5000)
         chunks = text_splitter.split_text(full_text)
         
-        print(f"--> [SUMMARIZE MAP-REDUCE] Bước MAP: Tóm tắt {len(chunks)} Chunks với Semaphore...")
+        print(f"--> [SUMMARIZE MAP-REDUCE] Bước MAP: Phân mảnh tài liệu thành {len(chunks)} Chunks...")
         
-        # Ép đầu ra cực ngắn để tiết kiệm thời gian sinh token
+        chunk_count = len(chunks)
+        completed_chunks = 0
+        
         map_prompt_template = """
             Trích xuất 5-10 ý chính quan trọng nhất dưới dạng đầu dòng cực ngắn gọn.
             VĂN BẢN: "{text}"
             TRẢ LỜI (Bullet points):
         """
         
-        async def map_chunk(chunk_text):
-            async with self.semaphore: # Chờ nếu đã có 2 task đang chạy
+        async def map_chunk(index, chunk_text):
+            nonlocal completed_chunks
+            async with self.semaphore:
+                print(f"--> [SUMMARIZE MAP] Đang xử lý chunk {index+1}/{chunk_count}...")
                 messages = [{"role": "user", "content": map_prompt_template.format(text=chunk_text)}]
                 try:
                     response = await asyncio.to_thread(self.llm_service.chatWithOutStream, messages)
+                    completed_chunks += 1
+                    print(f"--> [SUMMARIZE MAP] Hoàn tất chunk {index+1}/{chunk_count} ({completed_chunks}/{chunk_count}).")
                     return response.get('message', {}).get('content', '')
                 except Exception as e:
-                    print(f"[MAP ERROR] {e}")
+                    print(f"[MAP ERROR] Lỗi chunk {index+1}: {e}")
                     return ""
 
-        map_results = await asyncio.gather(*(map_chunk(chunk) for chunk in chunks))
+        map_results = await asyncio.gather(*(map_chunk(i, chunk) for i, chunk in enumerate(chunks)))
         combined_summaries = "\n---\n".join([res for res in map_results if res])
 
         print(f"--> [SUMMARIZE MAP-REDUCE] Bước REDUCE: Tổng hợp kết quả...")

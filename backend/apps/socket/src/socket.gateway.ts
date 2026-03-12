@@ -329,10 +329,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
 
   handleFileStatus(fileId: string, fileName: string, fileStatus: FileStatus, userId: string, teamId?: string) {
-    this.server.to(teamId || userId).emit('file_status', { id: fileId, status: fileStatus, name: fileName });
+    this.server.to(userId).emit('file_status', { id: fileId, status: fileStatus, name: fileName });
+    if (teamId && teamId !== userId) {
+      this.server.to(teamId).emit('file_status', { id: fileId, status: fileStatus, name: fileName });
+    }
   }
 
   handleUploadCompletion(fileId: string, status: FileStatus, userId: string, teamId?: string, size?: number) {
-    this.server.to(teamId || userId).emit('file_status', { id: fileId, status: status, size: size });
+    this.server.to(userId).emit('file_status', { id: fileId, status: status, size: size });
+    if (teamId && teamId !== userId) {
+      this.server.to(teamId).emit('file_status', { id: fileId, status: status, size: size });
+    }
   }
 }

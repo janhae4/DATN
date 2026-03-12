@@ -9,8 +9,8 @@ docker compose up -d rabbitmq redis postgres pgadmin mongo_db mongo-express meil
 docker compose up -d mongo_rs_init
 
 echo.
-echo [2/5] Dang khoi dong cac dich vu ho tro (Livekit, Minio, Ollama)...
-docker compose up -d minio livekit livekit-egress ollama
+echo [2/5] Dang khoi dong cac dich vu ho tro (Livekit, Minio)...
+docker compose up -d minio livekit livekit-egress
 docker compose up -d minio-setup
 
 echo.

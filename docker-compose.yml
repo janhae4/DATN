@@ -142,6 +142,7 @@ services:
     build:
       context: ./python/chatbot-service
       dockerfile: Dockerfile
+    image: chanhhyy197/taskora-chatbot:latest
     container_name: python_chatbot_worker
     restart: unless-stopped
     env_file:
@@ -183,7 +184,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       MINIO_NOTIFY_WEBHOOK_ENABLE_PRIMARY: "on"
-      MINIO_NOTIFY_WEBHOOK_ENDPOINT_PRIMARY: "http://api_gateway:3000/webhooks/upload-completed"
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_PRIMARY: "http://api-gateway:3000/webhooks/upload-completed"
       MINIO_API_CORS_ALLOW_ORIGIN: '*'
     command: [ "server", "--console-address", ":9001", "/data" ]
     healthcheck:
@@ -233,6 +234,7 @@ services:
   api_gateway:
     <<: *nest-service
     container_name: api-gateway
+    image: chanhhyy197/taskora-api-gateway:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -248,6 +250,7 @@ services:
   auth_service:
     <<: *nest-service
     container_name: auth_service
+    image: chanhhyy197/taskora-auth-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -256,6 +259,7 @@ services:
 
   user_service:
     <<: *nest-service
+    image: chanhhyy197/taskora-user-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -266,6 +270,7 @@ services:
   project_service:
     <<: *nest-service
     container_name: project_service
+    image: chanhhyy197/taskora-project-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -275,6 +280,7 @@ services:
   task_service:
     <<: *nest-service
     container_name: task_service
+    image: chanhhyy197/taskora-task-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -284,6 +290,7 @@ services:
   sprint_service:
     <<: *nest-service
     container_name: sprint_service
+    image: chanhhyy197/taskora-sprint-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -293,6 +300,7 @@ services:
   epic_service:
     <<: *nest-service
     container_name: epic_service
+    image: chanhhyy197/taskora-epic-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -302,6 +310,7 @@ services:
   label_service:
     <<: *nest-service
     container_name: label_service
+    image: chanhhyy197/taskora-label-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -311,6 +320,7 @@ services:
   list_service:
     <<: *nest-service
     container_name: list_service
+    image: chanhhyy197/taskora-list-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -320,24 +330,17 @@ services:
   team_service:
     <<: *nest-service
     container_name: team_service
+    image: chanhhyy197/taskora-team-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
       args:
         APP_NAME: team
 
-  # search_service:
-  #   <<: *nest-service
-  #   container_name: search_service
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #     args:
-  #         APP_NAME: search-service
-
   socket_service:
     <<: *nest-service
     container_name: socket_service
+    image: chanhhyy197/taskora-socket-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -349,6 +352,7 @@ services:
   discussion_service:
     <<: *nest-service
     container_name: discussion_service
+    image: chanhhyy197/taskora-discussion-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -357,6 +361,7 @@ services:
 
   notification_service:
     <<: *nest-service
+    image: chanhhyy197/taskora-notification-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -366,6 +371,7 @@ services:
   ai_discussion_service:
     <<: *nest-service
     container_name: ai_discussion_service
+    image: chanhhyy197/taskora-ai-discussion-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -375,6 +381,7 @@ services:
   calendar_service:
     <<: *nest-service
     container_name: calendar_service
+    image: chanhhyy197/taskora-calendar-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -384,6 +391,7 @@ services:
   gmail_service:
     <<: *nest-service
     container_name: gmail_service
+    image: chanhhyy197/taskora-gmail-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -393,6 +401,7 @@ services:
   file_service:
     <<: *nest-service
     container_name: file_service
+    image: chanhhyy197/taskora-file-service:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -400,6 +409,7 @@ services:
         APP_NAME: file
 
   web_rtc_service:
+    image: chanhhyy197/taskora-web-rtc-service:latest
     build:
       context: ./web_rtc
       dockerfile: Dockerfile
@@ -449,6 +459,7 @@ services:
       - mongo_db
 
   frontend:
+    image: chanhhyy197/taskora-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -477,7 +488,6 @@ volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
-  ollama-data:
   minio-data:
   chroma-data:
   mongo-data:

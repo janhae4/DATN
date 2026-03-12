@@ -3,7 +3,6 @@ import sys
 
 for key in list(os.environ.keys()):
     if "gemini" in key.lower():
-        print(f"--- [CLEANUP] Removing conflicting env var: {key}")
         del os.environ[key]
 
 import asyncio
@@ -11,13 +10,13 @@ from aio_pika import connect_robust, ExchangeType
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
-# Import các thành phần sau khi môi trường đã sạch
+# Import config
 from config import (
     SEARCH_EXCHANGE, EVENTS_EXCHANGE, RABBITMQ_URL, SUGGEST_QUEUE,
     SUGGEST_TASK_ROUTING_KEY, THREADPOOL_MAX_WORKERS, INGESTION_QUEUE,
-    RAG_QUEUE, CHATBOT_EXCHANGE, ASK_QUESTION_ROUTING_KEY,
+    REMOVE_QUEUE, RAG_QUEUE, CHATBOT_EXCHANGE, ASK_QUESTION_ROUTING_KEY,
     SUMMARIZE_DOCUMENT_ROUTING_KEY, PROCESS_DOCUMENT_ROUTING_KEY,
-    REMOVE_QUEUE, REMOVE_TEAM_ROUTING_KEY, DELETE_DOCUMENT_ROUTING_KEY
+    REMOVE_TEAM_ROUTING_KEY, DELETE_DOCUMENT_ROUTING_KEY
 )
 from callback import ingestion_callback, action_callback, on_team_deleted, on_document_deleted
 from services.gemini_service import GeminiService
@@ -32,9 +31,9 @@ from models.reranker import FlashRankRerank
 threadpool = ThreadPoolExecutor(max_workers=THREADPOOL_MAX_WORKERS)
 
 async def main():
-    print("🚀 Khởi tạo Chatbot (Pure Gemini Mode - Ultra Light)...")
+    print("🚀 Khởi tạo Chatbot (Pure Gemini Mode - FIX CONSUMER)...")
     
-    # Khởi tạo các service
+    # Initialize services
     gemini_service = GeminiService()
     minio_service = MinioService()
     vectorstore_service = VectorStoreService(gemini_service, minio_service) 
@@ -62,42 +61,77 @@ async def main():
         channel = await connection.channel()
         await channel.set_qos(prefetch_count=1)
 
-        chatbot_exchange = await channel.declare_exchange(CHATBOT_EXCHANGE, type=ExchangeType.DIRECT, durable=True)
-        search_exchange = await channel.declare_exchange(SEARCH_EXCHANGE, type=ExchangeType.DIRECT, durable=True)
-        events_exchange = await channel.declare_exchange(EVENTS_EXCHANGE, type=ExchangeType.TOPIC, durable=True)
-
-        # Queues setup
-        rag_queue = await channel.declare_queue(RAG_QUEUE, durable=True)
-        for rk in [ASK_QUESTION_ROUTING_KEY, SUMMARIZE_DOCUMENT_ROUTING_KEY, SUGGEST_TASK_ROUTING_KEY]:
-            await rag_queue.bind(chatbot_exchange, routing_key=rk)
+        chatbot_exchange = await channel.declare_exchange(
+            CHATBOT_EXCHANGE, 
+            type= ExchangeType.DIRECT, 
+            durable=True
+        )
+        
+        search_exchange = await channel.declare_exchange(
+            SEARCH_EXCHANGE,
+            type=ExchangeType.DIRECT,
+            durable=True
+        )
+        
+        events_exchange = await channel.declare_exchange(
+            EVENTS_EXCHANGE,
+            type=ExchangeType.TOPIC,
+            durable=True
+        )
 
         ingestion_queue = await channel.declare_queue(INGESTION_QUEUE, durable=True)
         await ingestion_queue.bind(chatbot_exchange, routing_key=PROCESS_DOCUMENT_ROUTING_KEY)
 
-        # Consumers
-        await rag_queue.consume(partial(
+        delete_team_queue = await channel.declare_queue("delete_team_queue", durable=True)
+        await delete_team_queue.bind(events_exchange, routing_key=REMOVE_TEAM_ROUTING_KEY)
+
+        delete_doc_queue = await channel.declare_queue("delete_doc_queue", durable=True)
+        await delete_doc_queue.bind(events_exchange, routing_key=DELETE_DOCUMENT_ROUTING_KEY)
+
+        rag_queue = await channel.declare_queue(RAG_QUEUE, durable=True)
+        await rag_queue.bind(chatbot_exchange, routing_key=ASK_QUESTION_ROUTING_KEY)
+        await rag_queue.bind(chatbot_exchange, routing_key=SUMMARIZE_DOCUMENT_ROUTING_KEY)
+        await rag_queue.bind(chatbot_exchange, routing_key=SUGGEST_TASK_ROUTING_KEY)
+
+        print("-- Kết nối RabbitMQ thành công, khởi tạo consumer...")
+
+        ingestion_consumer = partial(
+            ingestion_callback, 
+            vectorstore_service=vectorstore_service, 
+            channel=channel,
+            search_exchange=search_exchange
+        )
+        action_consumer = partial(
             action_callback, 
             rag_chain=rag_chain, 
-            summarizer=summarizer,
-            suggest_summarizer=summarizer, 
-            task_architect=task_architect,
+            summarizer=summarizer, 
+            suggest_summarizer=summarizer,
             minio_service=minio_service,
+            task_architect=task_architect,
             vectorstore_service=vectorstore_service,
             channel=channel
-        ))
+        )
+        remove_team_consumer = partial(
+            on_team_deleted, 
+            vector_store=vectorstore_service,
+        )
+        remove_doc_consumer = partial(
+            on_document_deleted, 
+            vector_store=vectorstore_service,
+        )
 
-        await ingestion_queue.consume(partial(
-            ingestion_callback,
-            vectorstore_service=vectorstore_service,
-            search_exchange=search_exchange,
-            channel=channel
-        ))
-
-        # Task gợi ý
-        suggest_queue = await channel.declare_queue(SUGGEST_QUEUE, durable=True)
-        await suggest_queue.bind(chatbot_exchange, routing_key=SUGGEST_TASK_ROUTING_KEY)
-
-        print(f"[*] Chatbot is ON and waiting for messages...")
+        await ingestion_queue.consume(ingestion_consumer)
+        await rag_queue.consume(action_consumer)
+        await delete_team_queue.consume(remove_team_consumer)
+        await delete_doc_queue.consume(remove_doc_consumer)
+        
+        print(f"[*] Đã kết nối tới RabbitMQ. Đang lắng nghe trên các hàng đợi:")
+        print(f"  - {INGESTION_QUEUE} (Xử lý tài liệu)")
+        print(f"  - {RAG_QUEUE} (Hỏi đáp & Tóm tắt)")
+        print(f"  - delete_team_queue (Xóa toàn bộ collection)")
+        print(f"  - delete_doc_queue (Xóa các tệp con riêng lẻ)")
+        print(f"  - {SUGGEST_QUEUE} (Gợi ý nhiệm vụ)")
+        print(" [*] Bắt đầu lắng nghe. Để thoát, nhấn CTRL+C")
         await asyncio.Future()
 
 if __name__ == "__main__":

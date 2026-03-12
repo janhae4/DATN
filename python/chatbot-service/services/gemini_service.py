@@ -28,21 +28,20 @@ class GeminiService:
 
     @retry_sync(max_retries=3, delay=1, backoff=2)
     def get_embedding(self, text: str):
-        # SDK mới: client.models.embed_content
         result = self.client.models.embed_content(
             model=GEMINI_EMBEDDING_MODEL,
             contents=text,
-            config={"task_type": "RETRIEVAL_DOCUMENT"}
+            config={
+                "task_type": "RETRIEVAL_DOCUMENT",
+                "output_dimensionality": 768
+            }
         )
-        # Truy cập embedding: result.embeddings[0].values
         return result.embeddings[0].values
 
     @retry_sync(max_retries=3, delay=2, backoff=2)
     def chat(self, messages):
         system_instruction, contents = self._convert_messages(messages)
         
-        # SDK mới: generate_content_stream
-        # model = model_name, config = {'system_instruction': ...}
         config = {}
         if system_instruction:
             config['system_instruction'] = system_instruction

@@ -11,12 +11,11 @@ from config import (
     ASK_QUESTION_ROUTING_KEY,
     SEARCH_EXCHANGE,
     SEND_FILE_STATUS_ROUTING_KEY,
-    SEND_NOTIFICATION_ROUTING_KEY,
     SUGGEST_TASK_ROUTING_KEY,
-    SUMMARIZE_DOCUMENT_ROUTING_KEY,
     STREAM_RESPONSE_ROUTING_KEY,
-    SOCKET_EXCHANGE,
-    REDIS_HOST
+    REDIS_HOST,
+    SUMMARIZE_DOCUMENT_ROUTING_KEY,
+    HANDLE_MESSAGE_ROUTING_KEY
 )
 
 redis_client = redis.Redis(host=REDIS_HOST, port=6379, db=0)
@@ -86,51 +85,6 @@ async def publish_suggest_task_response(user_id: str, content: dict):
     await redis_client.publish(f"task_suggest:{user_id}", message_json)
     print(f"--> [Py->SSE] Gửi task cho {user_id}: {content.get('title', 'SIGNAL')}")
 
-# async def send_notification(channel: Channel, user_id, file_id, original_name, status, message, team_id=None):
-
-#     try:
-#         noti_type = NotificationType.INFO
-#         title = "Processing Document"
-        
-#         if status == "success":
-#             noti_type = NotificationType.SUCCESS
-#             title = "Document Processed"
-#         elif status == "failed":
-#             noti_type = NotificationType.ERROR
-#             title = "Processing Failed"
-#         elif status == "processing":
-#             noti_type = NotificationType.INFO
-#             title = "Processing Started"
-
-#         notification_body = {
-#             "title": title,
-#             "message": message,
-#             "type": noti_type,
-
-#             "targetType": "USER", 
-#             "targetId": user_id,
-
-#             "resourceType": "FILE", 
-#             "resourceId": file_id,
-#             "actorId": user_id, 
-#             "metadata": {
-#                 "originalName": original_name,
-#                 "teamId": team_id,
-#                 "status": status
-#             }
-#         }
-
-#         socket = await channel.get_exchange(SOCKET_EXCHANGE)
-#         await socket.publish(
-#             message=Message(
-#                 json.dumps(notification_body).encode(),
-#             ),
-#             routing_key=SEND_NOTIFICATION_ROUTING_KEY
-#         )
-#         print(f"--> [Notification] Sent '{status}' for file: {original_name}")
-
-#     except Exception as e:
-#         print(f"Lỗi khi gửi thông báo Python: {e}")
 
 async def send_status_file(channel: Channel, user_id, file_id, fileName,status, teamId: str = None):
     try:
@@ -219,6 +173,8 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
         pattern_from_key = "summarize_document"
     elif actual_routing_key == SUGGEST_TASK_ROUTING_KEY:
         pattern_from_key = "suggest_task"
+    elif actual_routing_key == HANDLE_MESSAGE_ROUTING_KEY:
+        pattern_from_key = "handle_message"
     
     async with message.process():
         try:
@@ -232,22 +188,38 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
 
             print(f"Socket ID: {socket_id}, User ID: {user_id}, Discussion ID: {discussion_id}, Team ID: {team_id}")
             print(f"--> [RAG] Bắt đầu tương tác...")
-            print(f"--> [RAG] Pattern from key: {pattern_from_key == 'ask_question'}")
+
+            # Nếu là handle_message, ta kiểm tra payload để phân loại cụ thể
+            if pattern_from_key == "handle_message":
+                if payload_dto.get("summarizeFileName"):
+                    pattern_from_key = "summarize_document"
+                elif payload_dto.get("query") and "projectId" in payload_dto:
+                    pattern_from_key = "suggest_task"
+                else:
+                    pattern_from_key = "ask_question"
+            
+            print(f"--> [RAG] Pattern thực tế: {pattern_from_key}")
 
             if pattern_from_key == 'suggest_task':
                 if not user_id: raise ValueError("Thiếu userId cho luồng gợi ý task.")
+            elif pattern_from_key == 'summarize_document':
+                if not user_id: raise ValueError("Thiếu userId cho luồng tóm tắt.")
             else:
                 if not all([user_id, discussion_id]):
                     raise ValueError("Thiếu socketId hoặc discussionId cho luồng chat.")
 
 
             if pattern_from_key == 'ask_question':
-                question = payload_dto.get('question')
+                question = payload_dto.get('question') or payload_dto.get('message')
                 chat_history = payload_dto.get('chatHistory', [])
                 file_ids = payload_dto.get('fileIds') or None  # list of storageKeys to filter RAG
-                if not question: raise ValueError("Tin nhắn thiếu 'question'.")
+                if not question: raise ValueError("Tin nhắn thiếu 'question' hoặc 'message'.")
 
                 print(f"--> [RAG] Câu hỏi từ user '{user_id}': {question}")
+                
+                # Biến lưu trữ kết quả để trả về RPC
+                final_response_dto = None
+                
                 
                 async for chunk in rag_chain.ask_question_for_user(question, user_id, team_id, chat_history, file_ids=file_ids):
                     await publish_to_redis(discussion_id, chunk, is_completed=False)
@@ -255,6 +227,12 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                 retrieved_metadata = rag_chain.get_last_retrieved_context()
                 await publish_to_redis(discussion_id, "", is_completed=True, metadata=retrieved_metadata)
                 print(f"--> [RAG] Đã lấy được metadata: {retrieved_metadata}")
+                
+                final_response_dto = {
+                    "id": discussion_id,
+                    "title": "AI Reply",
+                    "messages": []
+                }
 
             elif pattern_from_key == 'summarize_document':
                 file_name = payload_dto.get('summarizeFileName')
@@ -272,15 +250,18 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                         original_name=original_name
                     )
                     print(f"--> [VECTOR] Đã lưu xong!")
+                    stream_id = discussion_id if discussion_id else f"summary:{user_id}"
                     async for chunk in summarizer.summarize(documents):
-                        await publish_to_redis(discussion_id, chunk, is_completed=False)
-                    await publish_to_redis(discussion_id, "", is_completed=True)
+                        await publish_to_redis(stream_id, chunk, is_completed=False)
+                    await publish_to_redis(stream_id, "", is_completed=True)
                     print(f"--> [SUMMARIZE] Đã gửi bản tóm tắt hoàn tất cho user '{user_id}'.")
+                    final_response_dto = {"status": "success"}
                 except Exception as e:
                     print(f"--> [VECTOR ERROR] Lỗi lưu vector: {e}")
                     
             
             elif pattern_from_key == 'suggest_task':
+                print(f"--> [SUGGEST TASK] Bắt đầu tương tác...")
                 raw_objective = payload_dto.get('objective')
                 members = payload_dto.get('members', [])
                 print(f"--> [SUGGEST TASK] Nhận được objective: length: {len(raw_objective)}")
@@ -342,12 +323,60 @@ async def action_callback(message: IncomingMessage, rag_chain: RAGChain, summari
                     await publish_suggest_task_response(payload_dto.get('userId'), task_data)
                 await publish_suggest_task_response(payload_dto.get('userId'), {"type": "done"})
                 print(f"--> [SUGGEST TASK] Đã gửi toàn bộ gợi ý task cho user '{user_id}'.")
+                final_response_dto = {"status": "success"}
+
+            # --- QUAN TRỌNG: GỬI PHẢN HỒI RPC CHO NESTJS ---
+            if message.reply_to:
+                print(f"--> [RPC] Gửi kết quả về hàng đợi: {message.reply_to}")
+                await channel.default_exchange.publish(
+                    Message(
+                        body=json.dumps({"data": final_response_dto}).encode(),
+                        correlation_id=message.correlation_id
+                    ),
+                    routing_key=message.reply_to
+                )
+
         except Exception as e:
+            print(f"--> [ACTION ERROR] Fatal error in action_callback: {e}")
+            import traceback
+            traceback.print_exc()
+            
             if pattern_from_key == 'suggest_task' and user_id:
                 await publish_suggest_task_response(user_id, {"type": "error", "message": str(e)})
             elif socket_id and discussion_id:
-                await publish_response(channel, socket_id, discussion_id, str(e), "error", team_id) 
-            return        
+                await publish_response(channel, socket_id, discussion_id, "", "done", team_id)
+                
+                # Tạo DTO để trả về cho RPC (NestJS unwrapRpcResult)
+                final_response_dto = {
+                    "id": discussion_id,
+                    "title": "AI Reply",
+                    "messages": [] # Có thể bổ sung message nếu cần
+                }
+                if message.reply_to:
+                    print(f"--> [RPC ERROR] Gửi lỗi về hàng đợi: {message.reply_to}")
+                    await channel.default_exchange.publish(
+                        Message(
+                            body=json.dumps({"error": str(e)}).encode(),
+                            correlation_id=message.correlation_id
+                        ),
+                        routing_key=message.reply_to
+                    )
+                return
+            elif pattern_from_key == 'summarize_document':
+                if message.reply_to:
+                    print(f"--> [RPC ERROR] Gửi lỗi về hàng đợi: {message.reply_to}")
+                    await channel.default_exchange.publish(
+                        Message(
+                            body=json.dumps({"error": str(e)}).encode(),
+                            correlation_id=message.correlation_id
+                        ),
+                        routing_key=message.reply_to
+                    )
+                return
+            else:
+                if socket_id and discussion_id:
+                    await publish_response(channel, socket_id, discussion_id, str(e), "error", team_id) 
+                return        
 async def on_team_deleted(message: IncomingMessage, vector_store: VectorStoreService):
     """
     Callback lắng nghe sự kiện xóa team từ NestJS và xóa collection 

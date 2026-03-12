@@ -2,19 +2,16 @@ import os
 from dotenv import load_dotenv
 
 # --- BƯỚC 1: NẠP BIẾN TỪ FILE RIÊNG ---
-# Đổi tên từ .env thành chatbot.env để tránh ChromaDB tự động quét gây lỗi Validation
 env_path = os.path.join(os.path.dirname(__file__), 'chatbot.env')
 if os.path.exists(env_path):
     load_dotenv(env_path)
 else:
-    # Nếu không thấy chatbot.env thì nạp từ môi trường hệ thống (cho Docker)
     load_dotenv()
 
-# --- LẤY API KEY VÀ CẤT VÀO BIẾN CỤC BỘ ---
+# --- LẤY API KEY ---
 SYSTEM_GEMINI_KEY = os.environ.get("TASKORA_GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_GEMINI_API_KEY")
 
 # --- BƯỚC 2: XÓA SẠCH DẤU VẾT TRONG OS.ENVIRON ---
-# Xóa ngay để ChromaDB (Pydantic) không nhìn thấy khi khởi tạo
 for key in list(os.environ.keys()):
     if "gemini" in key.lower():
         del os.environ[key]
@@ -34,8 +31,8 @@ MINIO_BUCKET =      os.environ.get("MINIO_BUCKET_NAME", "documents")
 
 # --- AI CONFIG ---
 AI_GEMINI_API_KEY =    SYSTEM_GEMINI_KEY if SYSTEM_GEMINI_KEY else ""
-GEMINI_MODEL =         "gemini-1.5-flash"
-GEMINI_EMBEDDING_MODEL = "models/text-embedding-004"
+GEMINI_MODEL =         "gemini-2.5-flash"
+GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
 
 # --- INFRA ---
 THREADPOOL_MAX_WORKERS = int(os.environ.get("THREADPOOL_MAX_WORKERS", "6"))
@@ -44,16 +41,27 @@ REMOVE_QUEUE = "remove_queue"
 RAG_QUEUE = "rag_queue"
 SUGGEST_QUEUE = "suggest_task_queue"
 SEARCH_EXCHANGE = "search_exchange"
-CHATBOT_EXCHANGE = os.getenv("CHATBOT_EXCHANGE", "chatbot_exchange")
-EVENTS_EXCHANGE = os.getenv("EVENTS_EXCHANGE", "events_exchange")
-STREAM_RESPONSE_ROUTING_KEY = os.getenv("STREAM_RESPONSE_ROUTING_KEY", "rag_response")
-REMOVE_TEAM_ROUTING_KEY = os.getenv("REMOVE_TEAM_ROUTING_KEY", "events.remove.team")
-DELETE_DOCUMENT_ROUTING_KEY = os.getenv("DELETE_DOCUMENT_ROUTING_KEY", "events.delete.document")
-PROCESS_DOCUMENT_ROUTING_KEY = os.getenv("PROCESS_DOCUMENT_ROUTING_KEY", "process_document")
-ASK_QUESTION_ROUTING_KEY = os.getenv("ASK_QUESTION_ROUTING_KEY", "ask_question")
-SUMMARIZE_DOCUMENT_ROUTING_KEY = os.getenv("SUMMARIZE_DOCUMENT_ROUTING_KEY", "summarize_document")
-SUGGEST_TASK_ROUTING_KEY = os.getenv("SUGGEST_TASK_ROUTING_KEY", "suggest_task")
+
+# --- EXCHANGES (Matching NestJS) ---
+CHATBOT_EXCHANGE = "chatbot_exchange"
+TASK_EXCHANGE = "task_exchange"
+EVENTS_EXCHANGE = "events_exchange"
+SOCKET_EXCHANGE = "socket_exchange"
+FILE_EXCHANGE = "file_exchange"
+
+HANDLE_MESSAGE_ROUTING_KEY = "chatbot.handle_message"
+
+ASK_QUESTION_ROUTING_KEY = "ask_question"
+SUMMARIZE_DOCUMENT_ROUTING_KEY = "summarize_document"
+
+SUGGEST_TASK_ROUTING_KEY = "suggest_task"
+
+PROCESS_DOCUMENT_ROUTING_KEY = "process_document"
 INDEX_DOCUMENT_CHUNK_ROUTING_KEY = "index.document.chunk"
-SOCKET_EXCHANGE = os.getenv("SOCKET_EXCHANGE", "socket_exchange")
-SEND_NOTIFICATION_ROUTING_KEY = os.getenv("SEND_NOTIFICATION_ROUTING_KEY", "notification.send")
-SEND_FILE_STATUS_ROUTING_KEY = os.getenv("SEND_FILE_STATUS_ROUTING_KEY", "file.status")
+
+REMOVE_TEAM_ROUTING_KEY = "events.remove.team"
+DELETE_DOCUMENT_ROUTING_KEY = "events.delete.document"
+
+STREAM_RESPONSE_ROUTING_KEY = "rag_response"
+SEND_NOTIFICATION_ROUTING_KEY = "notification.send"
+SEND_FILE_STATUS_ROUTING_KEY = "file.status"
