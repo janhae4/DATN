@@ -75,7 +75,7 @@ echo "[OK] Đã tạo ./frontend/.env"
 # --- Tạo file .env gốc (cho Docker Compose) ---
 cat <<EOT > .env
 VPS_IP=$VPS_IP
-NEXT_PUBLIC_API_URL=http://$VPS_IP:3001
+NEXT_PUBLIC_API_URL=http://$VPS_IP:3000
 NEXT_PUBLIC_SOCKET_URL=ws://$VPS_IP:4001
 NEXT_PUBLIC_WEBRTC_WS_URL=ws://$VPS_IP:8005/ws
 NEXT_PUBLIC_LIVEKIT_URL=http://$VPS_IP:7880

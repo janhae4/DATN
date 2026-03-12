@@ -241,7 +241,7 @@ services:
       args:
         APP_NAME: api-gateway
     ports:
-      - "3001:3000"
+      - "3000:3000"
     networks:
       app-network:
         aliases:
