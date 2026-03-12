@@ -4,7 +4,7 @@ import * as React from "react";
 import { ColumnDef, Row } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Download, Trash, MoreHorizontal } from "lucide-react";
+import { Download, Trash, MoreHorizontal, Lock, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -181,6 +181,24 @@ export const getColumns = ({
     header: "Name",
     cell: ({ row }) => <FileNameCell row={row} onPreview={onPreview} />,
     size: 400,
+  },
+  {
+    accessorKey: "visibility",
+    header: "Visibility",
+    cell: ({ row }) => {
+      const visibility = row.original.visibility || FileVisibility.TEAM;
+      return (
+        <div className="flex items-center gap-2">
+          {visibility === FileVisibility.PRIVATE ? (
+            <Lock className="h-3.5 w-3.5 text-zinc-400" />
+          ) : (
+            <Users className="h-3.5 w-3.5 text-zinc-400" />
+          )}
+          <span className="text-xs text-zinc-500 capitalize">{visibility.toLowerCase()}</span>
+        </div>
+      );
+    },
+    size: 100,
   },
   {
     accessorKey: "fileSize",

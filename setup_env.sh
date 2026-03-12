@@ -58,6 +58,8 @@ GOOGLE_CLIENT_SECRET=GOCSPX-example
 GOOGLE_CALLBACK_URL=https://$VPS_IP/api/auth/google/callback
 JWT_ACCESS_SECRET=your_jwt_secret_key
 JWT_REFRESH_SECRET=your_jwt_refresh_key
+FRONT_END_URL=https://$VPS_IP
+COOKIE_DOMAIN=.$VPS_IP
 SMTP_TRANSPORT=smtps://user:pass@smtp.gmail.com
 SMTP_FROM="Taskora <noreply@gmail.com>"
 EOT
@@ -90,11 +92,11 @@ echo "[OK] Đã tạo ./python/chatbot-service/chatbot.env"
 # --- Tạo file ./frontend/.env ---
 cat <<EOT > ./frontend/.env
 PORT=5000
-NEXT_PUBLIC_API_URL=http://$VPS_IP:3000
-NEXT_PUBLIC_SOCKET_URL=ws://$VPS_IP:4001
-NEXT_PUBLIC_WEBRTC_WS_URL=ws://$VPS_IP:8005/ws
-NEXT_PUBLIC_LIVEKIT_URL=http://$VPS_IP:7880
-NEXT_PUBLIC_MINIO_URL=http://$VPS_IP:9000
+NEXT_PUBLIC_API_URL=https://api.$VPS_IP
+NEXT_PUBLIC_SOCKET_URL=wss://socket.$VPS_IP
+NEXT_PUBLIC_WEBRTC_WS_URL=wss://webrtc.$VPS_IP
+NEXT_PUBLIC_LIVEKIT_URL=https://livekit.$VPS_IP
+NEXT_PUBLIC_MINIO_URL=https://minio.$VPS_IP
 INTERNAL_API_URL=http://api_gateway:3000
 EOT
 echo "[OK] Đã tạo ./frontend/.env"

@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { FileCard } from "@/components/features/documentation/file-card";
 import { useFiles } from "@/hooks/useFiles";
-import { Attachment, AttachmentType } from "@/types";
+import { Attachment, AttachmentType, FileVisibility } from "@/types";
 
 import { useParams } from "next/navigation";
 import { useProjects } from "@/hooks/useProjects";
@@ -64,6 +64,9 @@ import { DndItemWrapper } from "@/components/features/documentation/dnd-item-wra
 import { useSocket } from "@/contexts/SocketContext";
 import { streamHelper } from "@/services/apiClient";
 import { AISummaryDialog } from "./file-summary-dialog";
+import { DataTable } from "@/components/features/documentation/data-table";
+import { getColumns } from "@/components/features/documentation/attachment-columns";
+import { useTeamMembers } from "@/hooks/useTeam";
 
 interface StagedFile {
   file: File;
@@ -146,6 +149,8 @@ export default function AttachmentPage() {
   const [summaryTargetFile, setSummaryTargetFile] = useState<Attachment | null>(null);
   const [summaryContent, setSummaryContent] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const { data: members = [] } = useTeamMembers(teamId);
 
   // Socket for file_status AI-processing events
   const { socket, isConnected } = useSocket();
@@ -738,6 +743,24 @@ export default function AttachmentPage() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center bg-background/50 rounded-xl p-1 border border-border/30 h-12 mr-2">
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("grid")}
+                  className={cn("h-9 w-9 rounded-lg transition-all", viewMode === "grid" && "bg-background shadow-sm")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "table" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("table")}
+                  className={cn("h-9 w-9 rounded-lg transition-all", viewMode === "table" && "bg-background shadow-sm")}
+                >
+                  <Table2 className="h-4 w-4" />
+                </Button>
+              </div>
               <div className="relative flex-1 sm:w-[240px]">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -997,9 +1020,9 @@ export default function AttachmentPage() {
                 </p>
               </div>
             )}
-            <div className="h-100">
-
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
+            <div className="h-100 pb-20">
+              {viewMode === "grid" ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
                 {files.map((file) => {
                   return (
                     <DndItemWrapper
@@ -1027,7 +1050,43 @@ export default function AttachmentPage() {
                     </DndItemWrapper>
                   );
                 })}
-              </div>
+                </div>
+              ) : (
+                <div className="p-4 overflow-hidden">
+                  <DataTable
+                    data={files}
+                    tableColumns={getColumns({
+                      onPreview: handleItemClick,
+                      onDownload: downloadFile,
+                      onDelete: deleteFile,
+                      onVisibilityChange: (fileIds, visibility, allowedUserIds) =>
+                        changeVisibility({ fileIds, visibility, allowedUserIds }),
+                      members,
+                      projectId: selectedProjectId,
+                      teamId,
+                    })}
+                    pagination={{
+                      currentPage: paginationState.pageIndex + 1,
+                      totalPages: pagination?.totalPages || 1,
+                      onPageChange: (page) =>
+                        setPaginationState((prev) => ({
+                          ...prev,
+                          pageIndex: page - 1,
+                        })),
+                    }}
+                    isLoading={isLoading}
+                    onPreview={handleItemClick}
+                    onDownload={downloadFile}
+                    onDelete={deleteFile}
+                    members={members}
+                    projectId={selectedProjectId}
+                    teamId={teamId}
+                    onVisibilityChange={(fileIds: string[], visibility: FileVisibility, allowedUserIds?: string[]) =>
+                      changeVisibility({ fileIds, visibility, allowedUserIds })
+                    }
+                  />
+                </div>
+              )}
               {createPortal(
                 <DragOverlay dropAnimation={activeDragItem ? null : undefined}>
                   {activeDragItem ? (

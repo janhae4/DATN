@@ -33,12 +33,16 @@ export class AuthService {
     response: Response,
   ) {
     const isSecure = process.env.NODE_ENV === 'production' && !process.env.FRONT_END_URL?.includes('localhost') && !process.env.FRONT_END_URL?.includes('127.0.0.1');
-    console.log("Cookies set successfully");
+    const cookieDomain = process.env.COOKIE_DOMAIN;
+    
+    console.log("Cookies set successfully with domain:", cookieDomain);
+    
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isSecure,
       sameSite: 'lax',
       path: '/',
+      domain: cookieDomain,
       maxAge: 24 * 60 * 60 * 1000,
     });
     response.cookie('refreshToken', refreshToken, {
@@ -46,6 +50,7 @@ export class AuthService {
       secure: isSecure,
       sameSite: 'lax',
       path: '/',
+      domain: cookieDomain,
       maxAge: 24 * 60 * 60 * 1000 * 14,
     });
   }

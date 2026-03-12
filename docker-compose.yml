@@ -473,7 +473,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://127.0.0.1:3001}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://127.0.0.1:3000}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-ws://127.0.0.1:4001}
         NEXT_PUBLIC_WEBRTC_WS_URL: ${NEXT_PUBLIC_WEBRTC_WS_URL:-ws://127.0.0.1:8005/ws}
         NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-http://127.0.0.1:7880}
@@ -482,6 +482,7 @@ services:
     ports:
       - "5000:5000"
     environment:
+      - HOSTNAME=0.0.0.0
       - PORT=5000
       - INTERNAL_API_URL=http://api_gateway:3000
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://127.0.0.1:3001}
@@ -503,6 +504,8 @@ services:
     depends_on:
       - frontend
       - api_gateway
+    links:
+      - frontend:nextjs_frontend
 
 volumes:
   postgres-data:

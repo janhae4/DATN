@@ -689,6 +689,18 @@ console.log("File: ", file)
                 >
                   <Icon className={`h-5 w-5 ${theme.color}`} />
                 </div>
+                {projectId && teamId && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                    {currentVisibility === FileVisibility.PRIVATE ? (
+                      <Lock className="h-3 w-3 text-zinc-500" />
+                    ) : (
+                      <Users className="h-3 w-3 text-zinc-500" />
+                    )}
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase">
+                      {currentVisibility}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1 mt-auto">
