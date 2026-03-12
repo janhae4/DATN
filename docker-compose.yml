@@ -1,6 +1,11 @@
 x-nest-service: &nest-service
   env_file:
     - ./backend/.env.dev
+  environment:
+    - REDIS_HOST=redis
+    - REDIS_CLIENT_HOST=redis
+    - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
   networks:
     - app-network
   extra_hosts:
@@ -8,9 +13,9 @@ x-nest-service: &nest-service
   depends_on:
     rabbitmq:
       condition: service_healthy
-    postgres:
-      condition: service_started
     redis:
+      condition: service_started
+    postgres:
       condition: service_started
     mongo_db:
       condition: service_started
