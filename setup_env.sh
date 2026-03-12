@@ -102,11 +102,11 @@ echo "[OK] Đã tạo ./frontend/.env"
 # --- Tạo file .env gốc (cho Docker Compose) ---
 cat <<EOT > .env
 VPS_IP=$VPS_IP
-NEXT_PUBLIC_API_URL=https://$VPS_IP/api
-NEXT_PUBLIC_SOCKET_URL=wss://$VPS_IP/socket
-NEXT_PUBLIC_WEBRTC_WS_URL=wss://$VPS_IP/webrtc
-NEXT_PUBLIC_LIVEKIT_URL=https://$VPS_IP/livekit
-NEXT_PUBLIC_MINIO_URL=https://$VPS_IP/minio
+NEXT_PUBLIC_API_URL=https://api.$VPS_IP
+NEXT_PUBLIC_SOCKET_URL=wss://socket.$VPS_IP
+NEXT_PUBLIC_WEBRTC_WS_URL=wss://webrtc.$VPS_IP
+NEXT_PUBLIC_LIVEKIT_URL=https://livekit.$VPS_IP
+NEXT_PUBLIC_MINIO_URL=https://minio.$VPS_IP
 CLOUDFLARE_TUNNEL_TOKEN=$CF_TOKEN
 EOT
 echo "[OK] Đã tạo file .env gốc"
