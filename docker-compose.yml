@@ -120,6 +120,8 @@ services:
       - ./web_rtc/livekit.yml:/etc/livekit.yml
     networks:
       - app-network
+    depends_on:
+      - redis
 
   livekit-egress:
     image: livekit/egress:latest
@@ -425,7 +427,7 @@ services:
       - LIVEKIT_URL=http://livekit:7880
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=4msnddOgHpRlhfN1P2uVM0akISxFJJPY
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - PORT=8005
       - DATABASE_VIDEO_CHAT_URL=postgresql://postgres:postgres@postgres:5432/call
       - REDIS_HOST=redis

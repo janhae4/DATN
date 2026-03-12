@@ -24,8 +24,22 @@ NODE_ENV=production
 VPS_IP=$VPS_IP
 # Các biến dùng chung cho Backend
 DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
-REDIS_HOST=redis
-REDIS_PORT=6379
+DATABASE_USER_URL="postgresql://postgres:postgres@postgres:5432/user"
+DATABASE_NOTIFICATION_URL="postgresql://postgres:postgres@postgres:5432/notification"
+DATABASE_TASK_URL="postgresql://postgres:postgres@postgres:5432/task"
+DATABASE_TEAM_URL="postgresql://postgres:postgres@postgres:5432/team"
+DATABASE_VIDEO_CHAT_URL="postgresql://postgres:postgres@postgres:5432/call"
+
+DATABASE_CHATBOT_URL="mongodb://mongo_db:27017/chatbot?replicaSet=rs0&directConnection=true"
+DATABASE_DISCUSSION_URL="mongodb://mongo_db:27017/discussion?replicaSet=rs0&directConnection=true"
+DATABASE_FILE_URL="mongodb://mongo_db:27017/file?replicaSet=rs0&directConnection=true"
+
+DATABASE_SPRINT_URL="postgres://postgres:postgres@postgres:5432/sprint_db"
+DATABASE_LIST_URL="postgres://postgres:postgres@postgres:5432/list_db"
+DATABASE_EPIC_URL="postgres://postgres:postgres@postgres:5432/epic_db"
+DATABASE_LABEL_URL="postgres://postgres:postgres@postgres:5432/label_db"
+DATABASE_PROJECT_URL="postgres://postgres:postgres@postgres:5432/project_db"
+
 REDIS_CLIENT_HOST=redis
 REDIS_CLIENT_PORT=6379
 RMQ_URL=amqp://guest:guest@rabbitmq:5672/
