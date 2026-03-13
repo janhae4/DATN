@@ -1,0 +1,64 @@
+﻿[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +12ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDiscoveryModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+RMQ_URL:  amqp://guest:guest@rabbitmq:5672
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mClientConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[AmqpConnection] [39m[32mTrying to connect to RabbitMQ broker (default)[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[AmqpConnection] [39m[32mSkipping connection health checks as 'wait' is disabled. The application will proceed without verifying a healthy RabbitMQ connection.[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mSuccessfully connected to RabbitMQ[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRabbitMQModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRmqModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[AmqpConnection] [39m[32mSuccessfully connected to RabbitMQ broker (default)[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[AmqpConnection] [39m[32mSuccessfully connected a RabbitMQ channel "default"[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +58ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificationModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificationController {/notification}:[39m[38;5;3m +17ms[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mInitializing RabbitMQ Handlers[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mSearching for RabbitMQ Handlers in Controllers. You can not use NestJS HTTP-Requests in these controllers![39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mRegistering rabbitmq handlers from NotificationController[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleNotification {rpc} -> notification_exchange::notification.create::notification.create[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleUpdateNotification {rpc} -> notification_exchange::notification.update::notification.update[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleDeleteNotification {rpc} -> notification_exchange::notification.delete::notification.delete[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleMarkNotificationAsRead {rpc} -> notification_exchange::notification.markAsRead::notification.markAsRead[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleMarkNotificationAsUnread {rpc} -> notification_exchange::notification.markAsUnread::notification.markAsUnread[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleMarkAllNotificationsAsRead {rpc} -> notification_exchange::notification.markAllAsRead::notification.markAllAsRead[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleMarkAllNotificationsAsUnread {rpc} -> notification_exchange::notification.markAllAsUnread::notification.markAllAsUnread[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleGetNotifications {rpc} -> notification_exchange::notification.find::notification.find[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleNewMessage {rpc} -> events_exchange::events.new.message::notification_new_message_queue[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleNewMessageDispatch {subscribe} -> events_exchange::events.new.message::notification_dispatcher_queue[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleBatchNotification {subscribe} -> notification_exchange::notification.send_batch::notification_worker_queue[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleNotification {rpc} -> notification_exchange::notification.create::notification.create[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleUpdateNotification {rpc} -> notification_exchange::notification.update::notification.update[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleDeleteNotification {rpc} -> notification_exchange::notification.delete::notification.delete[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleMarkNotificationAsRead {rpc} -> notification_exchange::notification.markAsRead::notification.markAsRead[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleMarkNotificationAsUnread {rpc} -> notification_exchange::notification.markAsUnread::notification.markAsUnread[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleMarkAllNotificationsAsRead {rpc} -> notification_exchange::notification.markAllAsRead::notification.markAllAsRead[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleMarkAllNotificationsAsUnread {rpc} -> notification_exchange::notification.markAllAsUnread::notification.markAllAsUnread[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleGetNotifications {rpc} -> notification_exchange::notification.find::notification.find[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleNewMessage {rpc} -> events_exchange::events.new.message::notification_new_message_queue[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleNewMessageDispatch {subscribe} -> events_exchange::events.new.message::notification_dispatcher_queue[39m
+[32m[Nest] 1  - [39m03/12/2026, 3:32:11 PM [32m    LOG[39m [38;5;3m[RabbitMQModule] [39m[32mNotificationController.handleBatchNotification {subscribe} -> notification_exchange::notification.send_batch::notification_worker_queue[39m
+Notification:  {
+  title: 'Task Update',
+  message: 'undefined rejected task "task 1"',
+  type: 'ERROR',
+  targetType: 'TEAM',
+  targetId: 'ed846bd2-378e-40b2-a03e-2e128f416520',
+  resourceType: 'TASK',
+  resourceId: 'b191912a-0998-4e44-a942-6ff7ea20c14f',
+  metadata: { action: 'REJECTED', originalUrl: '' }
+}
+Notification:  {
+  title: 'Task Update',
+  message: 'undefined created new task "parent tasks"',
+  type: 'INFO',
+  targetType: 'TEAM',
+  targetId: 'ed846bd2-378e-40b2-a03e-2e128f416520',
+  resourceType: 'TASK',
+  resourceId: 'd61be9ba-0216-420e-afa8-50173daace99',
+  actorId: '6c12a2e9-5f5a-4863-8e54-8e5cbfb5cb64',
+  metadata: { action: 'CREATE', originalUrl: '' }
+}

@@ -36,15 +36,7 @@ export const useDocumentationTour = () => {
                         align: "start"
                     }
                 },
-                {
-                    element: "#view-toggle",
-                    popover: {
-                        title: "View Options",
-                        description: "Switch between Grid view for visuals or Table view for detailed lists.",
-                        side: "top",
-                        align: "end"
-                    }
-                },
+
                 {
                     element: "#doc-content",
                     popover: {

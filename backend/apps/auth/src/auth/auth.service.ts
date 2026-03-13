@@ -88,15 +88,16 @@ export class AuthService {
 
   async verifyLocalToken(token: string) {
     this.logger.log('Verifying local account via token...');
-    const payload = await this.verifyToken<VerifyTokenDto>(token);
+    const payload = await this.verifyToken<any>(token);
     if (!payload) throw new UnauthorizedException('Invalid token');
-    const { userId, code } = payload;
+    const userId = payload.userId || payload.id;
+    const { code } = payload;
     this.logger.log(`Token validated. Verifying user ${userId}...`);
     return await this.amqp.request({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.VERIFY_LOCAL,
       payload: { userId, code },
-    })
+    });
   }
 
   verifyForgotPassword(userId: string, code: string, password: string) {
@@ -108,19 +109,20 @@ export class AuthService {
     })
   }
 
-  async verifyForgotPasswordToken(token: string, password: string) {
+  async verifyForgotPasswordToken(token: string, password: string, inputCode?: string) {
     this.logger.log('Verifying forgot password via token...');
-    const payload = await this.verifyToken<VerifyTokenDto>(token);
+    const payload = await this.verifyToken<any>(token);
     if (!payload) throw new UnauthorizedException('Invalid token');
+    const userId = payload.userId || payload.id;
     this.logger.log(
-      `Token validated. Verifying forgot password for user ${payload.userId}...`,
+      `Token validated. Verifying forgot password for user ${userId}...`,
     );
-    const { userId, code } = payload;
+    const code = inputCode || payload.code;
     return await this.amqp.request({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.VERIFY_FORGET_PASSWORD,
       payload: { userId, code, password },
-    })
+    });
   }
 
   private async generateAndSendCode(
@@ -134,6 +136,7 @@ export class AuthService {
       `Generating JWT for ${typeCode} code for user ${user.id}...`,
     );
     const tokenPayload = {
+      userId: user.id,
       id: user.id,
       name: user.name,
       avatar: user.avatar,

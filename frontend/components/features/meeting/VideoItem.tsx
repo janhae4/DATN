@@ -43,7 +43,14 @@ export const VideoItem = ({
     if (isLocal) {
       if (videoElement.srcObject !== stream) {
         videoElement.srcObject = stream;
-        videoElement.play().catch((e) => console.error("Local play failed:", e));
+        const playPromise = videoElement.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((e) => {
+            if (e.name !== 'AbortError') {
+              console.error("Local play failed:", e);
+            }
+          });
+        }
       }
     } else if (tracks && tracks.length > 0) {
       // Prioritize LiveKit attach for remote tracks to enable Adaptive Stream (Quality Switching)
@@ -60,7 +67,14 @@ export const VideoItem = ({
       // Fallback to srcObject if no tracks provided
       if (videoElement.srcObject !== stream) {
         videoElement.srcObject = stream;
-        videoElement.play().catch((e) => console.error("Remote playback fallback failed:", e));
+        const playPromise = videoElement.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((e) => {
+            if (e.name !== 'AbortError') {
+              console.error("Remote playback fallback failed:", e);
+            }
+          });
+        }
       }
     }
   }, [stream, tracks, isLocal]);

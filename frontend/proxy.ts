@@ -6,6 +6,7 @@ export function proxy(request: NextRequest) {
 
   const isAuthRoute = path.startsWith("/auth");
   const isOnboardingRoute = path === "/auth/onboarding";
+  const isGoogleErrorRoute = path === "/auth/google/error";
   const isPrivateRoute = !isAuthRoute && path !== "/";
 
   const accessToken = request.cookies.get("accessToken")?.value;
@@ -21,7 +22,7 @@ export function proxy(request: NextRequest) {
   }
 
   if (hasToken) {
-    if ((isAuthRoute && !isOnboardingRoute) || path === "/") {
+    if ((isAuthRoute && !isOnboardingRoute && !isGoogleErrorRoute) || path === "/") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }

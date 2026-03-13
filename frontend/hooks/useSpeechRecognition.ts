@@ -12,6 +12,11 @@ export const useSpeechRecognition = (
     onResultRef.current = onResult;
   }, [onResult]);
 
+  const isListeningRef = useRef(isListening);
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -32,6 +37,10 @@ export const useSpeechRecognition = (
     };
 
     recognition.onerror = (event: any) => {
+      if (event.error === 'no-speech') {
+        // Ignore the no-speech error, onend will handle restarting if still listening.
+        return;
+      }
       console.warn("⚠️ Ghi âm hội thoại lỗi (Speech error):", event.error);
       if (event.error === 'not-allowed' || event.error === 'audio-capture') {
         setIsListening(false); // Ngắt lặp vô hạn nếu không có mic hoặc bị từ chối
@@ -40,7 +49,7 @@ export const useSpeechRecognition = (
 
     // Auto-restart if it stops unexpectedly (due to silence limit) but intended to be listening
     recognition.onend = () => {
-      if (isListening) {
+      if (isListeningRef.current) {
         try {
           recognition.start();
         } catch (e) {

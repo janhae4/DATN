@@ -37,18 +37,20 @@ export class FileService {
 
         if (file.visibility === FileVisibility.PUBLIC) return { file, currentUserRole };
 
-        const effectiveTeamId = teamId || file.teamId;
+        const effectiveTeamId = (!teamId || teamId === 'dm' || teamId === '@me') ? undefined : teamId;
+        const fileTeamId = (!file.teamId || file.teamId === 'dm' || file.teamId === '@me') ? undefined : file.teamId;
+        const finalTeamId = effectiveTeamId || fileTeamId;
 
-        if (effectiveTeamId) {
+        if (finalTeamId) {
             try {
-                const member = await this.teamCache.getTeamMember(effectiveTeamId, userId);
+                const member = await this.teamCache.getTeamMember(finalTeamId, userId);
                 currentUserRole = member?.role || null;
             } catch (error) {
-                this.logger.error(`_verifyPermission: Could not fetch team member info for user ${userId} in team ${effectiveTeamId}. Error: ${error.message}`, error.stack);
+                this.logger.error(`_verifyPermission: Could not fetch team member info for user ${userId} in team ${finalTeamId}. Error: ${error.message}`, error.stack);
                 currentUserRole = null;
             }
 
-            if (teamId && file.teamId && file.teamId !== teamId) {
+            if (effectiveTeamId && fileTeamId && fileTeamId !== effectiveTeamId) {
                 throw new BadRequestException('File does not belong to the specified team');
             }
         }
@@ -84,11 +86,20 @@ export class FileService {
         parentId: string | null = null,
         isChatAttachment: boolean = false
     ) {
-        if (teamId) {
-            await this.teamCache.checkPermission(teamId, userId);
+        this.logger.log(`[createPreSignedUrl] start: userId=${userId}, teamId=${teamId}, originalName=${originalName}`);
+
+        const effectiveTeamId = (!teamId || teamId === 'dm' || teamId === '@me') ? undefined : teamId;
+
+        if (effectiveTeamId) {
+            this.logger.log(`[createPreSignedUrl] checking permission for effectiveTeamId=${effectiveTeamId}...`);
+            await this.teamCache.checkPermission(effectiveTeamId, userId);
+            this.logger.log(`[createPreSignedUrl] permission OK`);
+        } else {
+            this.logger.log(`[createPreSignedUrl] skipping permission check for DM/home`);
         }
 
-        const fileId = randomUUID();
+        const rawFileId = randomUUID();
+        const fileId = isChatAttachment ? `chat-files/${effectiveTeamId || 'dm'}/${rawFileId}` : rawFileId;
         const extension = path.extname(originalName);
         const storageKey = `${fileId}${extension}`;
         const fileType = mime.lookup(originalName) || 'application/octet-stream';
@@ -105,13 +116,13 @@ export class FileService {
                 originalName,
                 userId,
                 projectId,
-                teamId,
+                teamId: effectiveTeamId || null,
                 mimetype: fileType,
                 parentId: parentId || null,
                 type: FileType.FILE,
                 status: FileStatus.PENDING,
                 createdAt: new Date(),
-                visibility: teamId ? FileVisibility.TEAM : FileVisibility.PRIVATE,
+                visibility: effectiveTeamId ? FileVisibility.TEAM : FileVisibility.PRIVATE,
                 size: 0,
                 isChatAttachment: isChatAttachment
             });
@@ -325,15 +336,23 @@ export class FileService {
 
     async deleteItem(id: string, userId: string, projectId?: string, teamId?: string) {
         if (id.startsWith('chat-files')) {
-            const parts = id.split('/');
+            const fileInfo = await this.fileModel.findOne({ _id: id }).exec();
+
+            const storageKey = fileInfo ? fileInfo.storageKey : id;
+            const parts = storageKey.split('/');
             if (parts.length < 3) throw new BadRequestException('Invalid chat file key');
             const fileTeamId = parts[1];
 
-            if (fileTeamId !== 'dm') {
+            if (fileTeamId !== 'dm' && fileTeamId !== '@me') {
                 await this.teamCache.checkPermission(fileTeamId, userId);
             }
 
-            await this.minioService.deleteFiles([id]);
+            if (fileInfo && fileInfo.storageKey) {
+                await this.minioService.deleteFiles([fileInfo.storageKey]);
+                await this.fileModel.deleteOne({ _id: id }).exec();
+            } else if (id.indexOf('.') !== -1) {
+                await this.minioService.deleteFiles([id]);
+            }
             return { success: true };
         }
         return this.deleteManyFile([id], userId, projectId, teamId);
@@ -689,7 +708,7 @@ export class FileService {
         isChatAttachment?: boolean;
     }) {
         const { fileId, storageKey, originalName, userId, teamId, projectId, size, mimetype, status, isChatAttachment } = payload;
-        
+
         const effectiveTeamId = (!teamId || teamId === 'dm' || teamId === '@me') ? null : teamId;
 
         return await this.fileModel.create({
@@ -709,7 +728,21 @@ export class FileService {
         });
     }
 
-    async getChatViewUrl(storageKey: string, userId: string) {
+    async getChatViewUrl(storageKeyOrId: string, userId: string) {
+        let storageKey = storageKeyOrId;
+        let originalName = path.basename(storageKey);
+
+        const fileInfo = await this.fileModel.findOne({
+            $or: [{ _id: storageKeyOrId }, { storageKey: storageKeyOrId }]
+        }).exec();
+
+        if (fileInfo) {
+            storageKey = fileInfo.storageKey;
+            originalName = fileInfo.originalName || originalName;
+        } else if (storageKeyOrId.indexOf('.') === -1) {
+            throw new NotFoundException('Chat file not found in DB');
+        }
+
         const parts = storageKey.split('/');
         if (parts.length < 3 || parts[0] !== 'chat-files') {
             throw new BadRequestException('Invalid chat file key');
@@ -738,8 +771,6 @@ export class FileService {
         // For DM files, we trust that the user has access if they have the storage key
         // The storage key is only shared within the DM discussion
 
-        const originalName = path.basename(storageKey);
-
         const viewUrl = await this.minioService.getPreSignedViewUrl(
             storageKey,
             originalName
@@ -754,9 +785,19 @@ export class FileService {
         teamId?: string,
         projectId?: string,
     }) {
-        const { storageKey, userId, fileName, teamId, projectId } = payload;
+        let { storageKey, userId, fileName, teamId, projectId } = payload;
         this.logger.log(`[saveFromChat] Processing request: userId=${userId}, fileName=${fileName}, teamId=${teamId}, projectId=${projectId}`);
-        this.logger.log(`[saveFromChat] storageKey: ${storageKey}`);
+        this.logger.log(`[saveFromChat] storageKey input: ${storageKey}`);
+
+        const fileInfo = await this.fileModel.findOne({
+            $or: [{ _id: storageKey }, { storageKey: storageKey }]
+        }).exec();
+
+        if (fileInfo) {
+            storageKey = fileInfo.storageKey;
+        } else if (storageKey.indexOf('.') === -1) {
+            throw new NotFoundException('Source file not found in storage');
+        }
 
         // 1. Verify chat file access
         const parts = storageKey.split('/');

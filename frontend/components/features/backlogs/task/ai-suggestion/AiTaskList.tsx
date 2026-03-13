@@ -53,8 +53,8 @@ export function AiTaskList({
             {/* Loading Skeleton */}
             {isThinking && (
                 <div className="flex items-center gap-3 px-4 py-8 opacity-50">
-                    <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
-                    <p className="text-xs text-zinc-500 animate-pulse font-medium">
+                    <Loader2 className="h-4 w-4 animate-spin text-zinc-500 dark:text-white/50" />
+                    <p className="text-xs text-zinc-500 dark:text-white/50 animate-pulse font-medium">
                         Drafting tasks...
                     </p>
                 </div>
@@ -63,8 +63,8 @@ export function AiTaskList({
             {/* Empty State */}
             {!isThinking && suggestedTasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 text-center opacity-40">
-                    <Lightbulb className="h-8 w-8 text-zinc-400 mb-2" />
-                    <p className="text-sm font-medium text-zinc-500">
+                    <Lightbulb className="h-8 w-8 text-zinc-400 dark:text-white/40 mb-2" />
+                    <p className="text-sm font-medium text-zinc-500 dark:text-white/50">
                         Awaiting your command
                     </p>
                 </div>

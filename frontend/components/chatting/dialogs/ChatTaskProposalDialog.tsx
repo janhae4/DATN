@@ -141,7 +141,7 @@ export function ChatTaskProposalDialog({
 
                 return {
                     title: t.title,
-                    description: t.reason ? `AI Suggestion: ${t.reason}` : "",
+                    description: t.description,
                     sprintId: selectedSprintId,
                     projectId: selectedProjectId,
                     listId: targetList.id,
@@ -156,7 +156,7 @@ export function ChatTaskProposalDialog({
                 };
             });
 
-            await taskService.createTasks(normalizedTasks, summary || "Chat Tasks", selectedSprintId || undefined);
+            await taskService.createTasks(normalizedTasks, "", selectedSprintId || undefined);
 
             toast.success(`Successfully created ${tasks.length} tasks.`);
             onOpenChange(false);

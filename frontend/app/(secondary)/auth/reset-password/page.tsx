@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 
 const formSchema = z
   .object({
+    code: z.string().min(6, "Verification code is required"),
     newPassword: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(8, "Please confirm your password"),
   })
@@ -47,6 +48,7 @@ function ResetPasswordContent() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      code: "",
       newPassword: "",
       confirmPassword: "",
     },
@@ -62,12 +64,12 @@ function ResetPasswordContent() {
       setIsLoading(true);
       setError(null);
 
-      await resetPassword(token, values.newPassword);
+      await resetPassword(token, values.code, values.newPassword);
       setIsSuccess(true);
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        router.push("/auth/login");
+        router.push("/auth");
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reset password");
@@ -75,6 +77,21 @@ function ResetPasswordContent() {
       setIsLoading(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="container flex h-screen w-screen flex-col items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Password Reset Successful</CardTitle>
+            <CardDescription>
+              Your password has been successfully reset. Redirecting to login...
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   if (!token) {
     return (
@@ -99,21 +116,6 @@ function ResetPasswordContent() {
     );
   }
 
-  if (isSuccess) {
-    return (
-      <div className="container flex h-screen w-screen flex-col items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Password Reset Successful</CardTitle>
-            <CardDescription>
-              Your password has been successfully reset. Redirecting to login...
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
@@ -132,6 +134,23 @@ function ResetPasswordContent() {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-4"
               >
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Verification Code</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter 6-digit code"
+                          autoComplete="off"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="newPassword"

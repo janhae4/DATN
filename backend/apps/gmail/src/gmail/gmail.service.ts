@@ -411,6 +411,7 @@ export class GmailService {
             subject: 'Verify Your Account',
             template: 'verification',
             context: {
+                name: payload.user.name || 'User',
                 user: payload.user,
                 code: payload.code,
                 url: payload.url,
@@ -426,6 +427,7 @@ export class GmailService {
             subject: 'Reset Your Password',
             template: 'verification',
             context: {
+                name: payload.user.name || 'User',
                 user: payload.user,
                 code: payload.code,
                 url: payload.url,

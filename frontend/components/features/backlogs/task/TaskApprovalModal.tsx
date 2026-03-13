@@ -93,6 +93,24 @@ export function TaskApprovalModal() {
         updateTaskMutation.mutate({ taskId, status });
     };
 
+    const [isProcessingBulk, setIsProcessingBulk] = React.useState(false);
+
+    const handleBulkUpdateStatus = async (status: 'APPROVED' | 'REJECTED') => {
+        setIsProcessingBulk(true);
+        try {
+            await Promise.all(
+                pendingTasks.map((task: Task) => taskService.updateTask(task.id, { approvalStatus: status }))
+            );
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['tasks', 'approval-pending'] });
+            toast.success(`All tasks ${status === 'APPROVED' ? 'approved' : 'rejected'}`);
+        } catch (error) {
+            toast.error(`Failed to ${status === 'APPROVED' ? 'approve' : 'reject'} all tasks`);
+        } finally {
+            setIsProcessingBulk(false);
+        }
+    };
+
     const [selectedTask, setSelectedTask] = React.useState<Task | null>(null);
 
     // Fetch lists needed for TaskDetailModal
@@ -151,14 +169,36 @@ export function TaskApprovalModal() {
                 </TooltipProvider>
                 <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col p-6 gap-6">
                     <DialogHeader className=" space-y-1">
-                        <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                            Task Approvals
+                        <div className="flex items-center justify-between pr-4">
+                            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                                Task Approvals
+                                {pendingTasks.length > 0 && (
+                                    <Badge variant="secondary" className="ml-2 px-2 py-0.5 text-xs font-normal">
+                                        {pendingTasks.length} Pending
+                                    </Badge>
+                                )}
+                            </DialogTitle>
                             {pendingTasks.length > 0 && (
-                                <Badge variant="secondary" className="ml-2 px-2 py-0.5 text-xs font-normal">
-                                    {pendingTasks.length} Pending
-                                </Badge>
+                                <div className="flex gap-2 items-center">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        disabled={isProcessingBulk || updateTaskMutation.isPending}
+                                        onClick={() => handleBulkUpdateStatus('REJECTED')}
+                                    >
+                                        Reject All
+                                    </Button>
+                                    <Button 
+                                        size="sm"
+                                        disabled={isProcessingBulk || updateTaskMutation.isPending}
+                                        onClick={() => handleBulkUpdateStatus('APPROVED')}
+                                    >
+                                        {isProcessingBulk && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                                        Approve All
+                                    </Button>
+                                </div>
                             )}
-                        </DialogTitle>
+                        </div>
                         <p className="text-sm text-muted-foreground">
                             Review and manage tasks generated from members.
                         </p>

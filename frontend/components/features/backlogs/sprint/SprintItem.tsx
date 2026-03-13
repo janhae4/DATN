@@ -4,7 +4,7 @@ import * as React from "react";
 import { Sprint, Task } from "@/types";
 import { AccordionContent, AccordionItem } from "@/components/ui/accordion";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import { Table, TableRow, TableCell } from "@/components/ui/table";
+import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Rocket, PlusIcon, ChevronDown, Trash2, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/backlog-utils";
@@ -19,12 +19,12 @@ import { DeleteSprintDialog } from "./DeleteSprintDialog";
 import { SprintStatus } from "@/types/common/enums";
 import { useParams } from "next/navigation";
 import { useSprints } from "@/hooks/useSprints";
-import { toast } from "sonner";
+import { useTasks } from "@/hooks/useTasks";
 import { useInView } from "react-intersection-observer";
 
 interface SprintItemProps {
   sprint: Sprint;
-  tasks: Task[];
+  // allTasks is still used for subtask resolution across sprint/backlog boundary
   allTasks: Task[];
   statusesList: any[];
   handleRowClick: (task: Task) => void;
@@ -32,14 +32,10 @@ interface SprintItemProps {
   onSelect: (taskId: string, checked: boolean) => void;
   onUpdateTask: (taskId: string, updates: any) => void;
   onMultiSelectChange: (ids: string[]) => void;
-  fetchNextPage?: () => void;
-  hasNextPage?: boolean;
-  isFetchingNextPage?: boolean;
 }
 
 export function SprintItem({
   sprint,
-  tasks,
   allTasks,
   statusesList,
   handleRowClick,
@@ -47,17 +43,51 @@ export function SprintItem({
   selectedIds,
   onSelect,
   onMultiSelectChange,
-  fetchNextPage,
-  hasNextPage,
-  isFetchingNextPage,
 }: SprintItemProps) {
   const params = useParams();
   const projectId = params.projectId as string;
   const teamId = params.teamId as string;
   const { deleteSprint } = useSprints(projectId, teamId);
 
-  const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id);
-  const totalTasks = tasks.length;
+  // Each SprintItem fetches its own tasks independently
+  // This means task creation/invalidation directly updates this component
+  const {
+    tasks: fetchedTasks,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useTasks({
+    projectId,
+    teamId,
+    sprintId: [sprint.id],
+    approvalStatus: "APPROVED",
+    limit: 50,
+  });
+
+  // Merge self-fetched sprint tasks with allTasks for subtask resolution
+  const sprintOwnTasks = React.useMemo(() => {
+    const seen = new Set();
+    return fetchedTasks.filter((t) => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [fetchedTasks]);
+
+  // Combined allTasks: prefer sprint-fetched data, supplement with allTasks for subtasks
+  const combinedAllTasks = React.useMemo(() => {
+    const seen = new Set();
+    const combined = [...sprintOwnTasks, ...allTasks];
+    return combined.filter((t) => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [sprintOwnTasks, allTasks]);
+
+  // Only root-level tasks shown as rows; subtasks shown nested via combinedAllTasks
+  const rootSprintTasks = sprintOwnTasks.filter((t) => !t.parentId);
+  const totalTasks = rootSprintTasks.length;
 
   const [addingNewRowToSprint, setAddingNewRowToSprint] = React.useState<
     string | null
@@ -87,7 +117,7 @@ export function SprintItem({
   const isOverTaskInSprint = over?.data?.current?.task?.sprintId === sprint.id;
   const shouldHighlight = isOverSprint || isOverTaskInSprint;
   const shouldShowTaskList =
-    sprintTasks.length > 0 || addingNewRowToSprint === sprint.id;
+    rootSprintTasks.length > 0 || addingNewRowToSprint === sprint.id;
 
   return (
     <div
@@ -158,12 +188,12 @@ export function SprintItem({
 
         <AccordionContent className="border-t bg-background/50 p-0 data-[state=closed]:animate-none flex flex-col max-h-[calc(60vh-9rem)]">
           <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
-            {sprintTasks.length > 0 || isFetchingNextPage ? (
+            {rootSprintTasks.length > 0 || isFetchingNextPage ? (
               <Table>
                 <TaskRowList
                   onUpdateTask={onUpdateTask}
-                  allTasks={allTasks}
-                  tasks={sprintTasks}
+                  allTasks={combinedAllTasks}
+                  tasks={rootSprintTasks}
                   lists={statusesList}
                   isDraggable={true}
                   isSortable={true}
@@ -204,18 +234,22 @@ export function SprintItem({
             )}
           </div>
 
-          <div className="shrink-0 z-10 bg-card rounded-lg sticky bottom-2">
+          <div className="shrink-0 z-10 bg-card rounded-lg sticky bottom-2 border-t shadow-sm">
             {addingNewRowToSprint === sprint.id ? (
-              <AddNewTaskRow
-                lists={statusesList}
-                sprintId={sprint.id}
-                onCancel={() => setAddingNewRowToSprint(null)}
-              />
+              <Table>
+                <TableBody>
+                  <AddNewTaskRow
+                    lists={statusesList}
+                    sprintId={sprint.id}
+                    onCancel={() => setAddingNewRowToSprint(null)}
+                  />
+                </TableBody>
+              </Table>
             ) : (
               <div className="flex items-center gap-4 p-2">
                 <Button
                   variant="ghost"
-                  className="flex items-center gap-4 p-2 text-zinc-500 bg-zinc-50 cursor-pointer"
+                  className="flex items-center gap-4 p-2 text-zinc-500 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/50 dark:hover:bg-zinc-900 cursor-pointer w-full justify-start rounded-lg transition-colors border border-dashed border-zinc-200 dark:border-zinc-800"
                   onClick={() => setAddingNewRowToSprint(sprint.id)}
                 >
                   <PlusIcon className="h-5 w-5" />

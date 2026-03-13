@@ -124,7 +124,7 @@ const Summary = () => {
 
       {/* AI & Email Row (Keep Mock/AI as requested) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[400px]">
-        <div id="epic-list" className="bg-background rounded-xl w-full h-full shadow-sm border p-4">
+        <div id="epic-list" className="bg-background rounded-xl w-full h-[400px] shadow-sm border p-4">
           <EpicList />
         </div>
         <div id="email-box" className=" aspect-video rounded-xl w-full">

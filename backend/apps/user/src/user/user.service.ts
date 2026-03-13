@@ -162,7 +162,14 @@ export class UserService {
 
   async verifyLocal(userId: string, code: string) {
     this.logger.log(`Attempting to verify account for user ID: ${userId}`);
-    const user = await this.findOne(userId);
+    const user = await this.userRepo.findOne({
+      where: { id: userId, isBan: false },
+      select: {
+        id: true,
+        verifiedCode: true,
+        expiredCode: true,
+      }
+    });
     if (!user) {
       this.logger.warn(
         `Verification failed for user ${userId}: User not found.`,
@@ -205,7 +212,20 @@ export class UserService {
     this.logger.log(
       `Attempting to verify forgot password code for user ID: ${userId}`,
     );
-    const user = await this.findOne(userId);
+    const user = await this.userRepo.findOne({
+      where: { id: userId, isBan: false },
+      select: {
+        id: true,
+        resetCode: true,
+        expiredCode: true,
+        accounts: {
+          id: true,
+          provider: true,
+          password: true,
+        }
+      },
+      relations: ['accounts'],
+    });
     if (!user) {
       this.logger.warn(
         `Forgot password verification failed for user ${userId}: User not found.`,
@@ -471,6 +491,15 @@ export class UserService {
             },
           },
         ],
+        select: {
+          id: true,
+          resetCode: true,
+          expiredCode: true,
+          accounts: {
+            id: true,
+            provider: true,
+          }
+        },
         relations: ['accounts'],
         lock: {
           mode: 'pessimistic_write',

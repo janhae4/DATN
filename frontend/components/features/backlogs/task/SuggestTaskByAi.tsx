@@ -125,7 +125,7 @@ export function SuggestTaskByAi({
                     ? [parsed.memberId]
                     : parsed.memberIds || [],
                 };
-                
+
                 accumulatedTasks = [...accumulatedTasks, newTask];
                 setSuggestedTasks([...accumulatedTasks]);
               } else if (parsed.type === "done") {
@@ -164,7 +164,7 @@ export function SuggestTaskByAi({
       const hasSprint = !!selectedSprintId;
       return {
         title: t.title,
-        description: hasSprint ? `AI Suggestion: ${t.reason}` : "",
+        description: t.description || (hasSprint ? `AI Suggestion: ${t.reason}` : ""),
         sprintId: selectedSprintId,
         projectId: projectId,
         listId: targetList.id,
@@ -215,18 +215,18 @@ export function SuggestTaskByAi({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-white dark:bg-[#18181A] border-zinc-200 dark:border-white/10 shadow-2xl rounded-2xl">
         {/* Header */}
-        <DialogHeader className="px-6 py-4 border-b border-zinc-200/50 bg-white dark:bg-zinc-950 dark:border-zinc-800 z-20">
+        <DialogHeader className="px-6 py-4 border-b border-zinc-200/50 bg-zinc-50 dark:bg-[#1A1A1C] dark:border-white/5 z-20">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-700 dark:from-zinc-100 dark:to-zinc-300 text-white dark:text-zinc-900 shadow-lg shadow-zinc-900/10 dark:shadow-none">
+            <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 shadow-sm transition-all duration-300">
               <Bot className="h-5 w-5" />
             </div>
             <div className="space-y-0.5">
-              <DialogTitle className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              <DialogTitle className="text-lg font-bold tracking-tight text-zinc-900 dark:text-white/90">
                 AI Architect
               </DialogTitle>
-              <DialogDescription className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+              <DialogDescription className="text-xs text-zinc-500 dark:text-white/50 font-medium tracking-tight">
                 Describe your goal and let AI build the roadmap.
               </DialogDescription>
             </div>
@@ -262,12 +262,12 @@ export function SuggestTaskByAi({
         </div>
 
         {/* Footer Actions */}
-        <DialogFooter className="px-6 py-4 bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800">
+        <DialogFooter className="px-6 py-4 bg-zinc-50 dark:bg-[#1A1A1C] border-t border-zinc-200 dark:border-white/5">
           <Button
             variant="ghost"
             onClick={() => setOpen(false)}
             disabled={isStreaming}
-            className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+            className="text-zinc-500 hover:text-zinc-900 dark:text-white/50 dark:hover:text-white/90 dark:hover:bg-white/5 transition-all"
           >
             Cancel
           </Button>
@@ -287,7 +287,7 @@ export function SuggestTaskByAi({
               }
             }}
             disabled={suggestedTasks.length === 0 || isStreaming || isSaving}
-            className="shadow-sm dark:shadow-none min-w-[120px] bg-zinc-900 text-white hover:bg-zinc-950 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="shadow-sm min-w-[120px] bg-emerald-500 hover:bg-emerald-600 text-white dark:text-white transition-colors border-none"
           >
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

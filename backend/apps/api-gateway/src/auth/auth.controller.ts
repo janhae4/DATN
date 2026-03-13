@@ -161,6 +161,7 @@ export class AuthController {
     return this.authService.verifyForgetPasswordToken(
       data?.token ?? '',
       data?.password ?? '',
+      data?.code,
     );
   }
 

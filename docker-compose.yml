@@ -413,6 +413,18 @@ services:
       args:
         APP_NAME: gmail
 
+  n8n_service:
+    <<: *nest-service
+    container_name: n8n_service
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: n8n-service
+    environment:
+      - N8N_WEBHOOK_URL=https://nguyencobap2004.app.n8n.cloud/webhook/98920227-cd3e-4270-be9a-7fa8ce4aa8be
+      - N8N_SUMMARIZE_WEBHOOK_URL=https://nguyencobap2004.app.n8n.cloud/webhook/194b570d-121a-4a00-9d46-75544e6e3582
+
   file_service:
     <<: *nest-service
     container_name: file_service
@@ -429,8 +441,6 @@ services:
     container_name: web_rtc_service
     ports:
       - "8005:8005"
-    env_file:
-      - ./web_rtc/.env
     environment:
       - LIVEKIT_URL=http://livekit:7880
       - LIVEKIT_API_KEY=devkey
@@ -441,11 +451,12 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MINIO_ENDPOINT=minio:9000
-      - MINIO_ENDPOINT_PUBLIC=http://127.0.0.1:9000
+      - MINIO_ENDPOINT_PUBLIC=http://localhost:9000
       - MINIO_ENDPOINT_INTERNAL=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_RECORDING_BUCKET=meeting-recordings
+      - GEMINI_API_KEY=AIzaSyDVH57ZrHRw6tEeHQC6QXL_SHwH6a7Xk5w
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -476,10 +487,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://127.0.0.1:3000
-        NEXT_PUBLIC_SOCKET_URL: ws://127.0.0.1:4001
-        NEXT_PUBLIC_WEBRTC_WS_URL: ws://127.0.0.1:8005/ws
-        NEXT_PUBLIC_LIVEKIT_URL: http://127.0.0.1:7880
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+        NEXT_PUBLIC_SOCKET_URL: ws://localhost:4001
+        NEXT_PUBLIC_WEBRTC_WS_URL: ws://localhost:8005/ws
+        NEXT_PUBLIC_LIVEKIT_URL: http://localhost:7880/
     container_name: nextjs_frontend
     restart: always
     ports:
@@ -487,10 +498,10 @@ services:
     environment:
       - PORT=5000
       - INTERNAL_API_URL=http://api_gateway:3000
-      - NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
-      - NEXT_PUBLIC_SOCKET_URL=ws://127.0.0.1:4001
-      - NEXT_PUBLIC_WEBRTC_WS_URL=ws://127.0.0.1:8005/ws
-      - NEXT_PUBLIC_LIVEKIT_URL=http://127.0.0.1:7880
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_SOCKET_URL=ws://localhost:4001
+      - NEXT_PUBLIC_WEBRTC_WS_URL=ws://localhost:8005/ws
+      - NEXT_PUBLIC_LIVEKIT_URL=http://localhost:7880
     networks:
       - app-network
     extra_hosts:

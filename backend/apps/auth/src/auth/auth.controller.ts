@@ -94,10 +94,10 @@ export class AuthController {
     errorHandler: customErrorHandler
   })
   verifyForgotPasswordToken(
-    data: { token: string; password: string },
+    data: { token: string; password: string; code?: string },
   ) {
-    const { token, password } = data;
-    return this.authService.verifyForgotPasswordToken(token, password);
+    const { token, password, code } = data;
+    return this.authService.verifyForgotPasswordToken(token, password, code);
   }
 
   @RabbitRPC({

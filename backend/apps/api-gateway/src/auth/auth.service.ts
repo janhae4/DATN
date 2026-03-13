@@ -85,11 +85,11 @@ export class AuthService {
     })
   }
 
-  async verifyForgetPasswordToken(token: string, password: string) {
+  async verifyForgetPasswordToken(token: string, password: string, code?: string) {
     return await this.amqp.request({
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.VERIFY_FORGOT_PASSWORD_TOKEN,
-      payload: { token, password }
+      payload: { token, password, code }
     })
   }
 

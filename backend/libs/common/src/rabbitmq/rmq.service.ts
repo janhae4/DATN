@@ -11,7 +11,7 @@ export class RmqClientService {
         exchange,
         routingKey,
         payload,
-        timeout = 10000,
+        timeout = 60000 * 2,
     }: {
         exchange: string;
         routingKey: string;

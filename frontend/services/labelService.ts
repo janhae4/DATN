@@ -51,7 +51,7 @@ export const labelService = {
     id: string,
     updates: UpdateLabelDto
   ): Promise<Label | undefined> => {
-    const { data } = await apiClient.patch<Label>(`/label/${id}`, updates);
+    const { data } = await apiClient.put<Label>(`/label/${id}`, updates);
     return data;
   },
 

@@ -5,6 +5,7 @@ import { videoChatService } from '@/services/videoChatService';
 import apiClient from '@/services/apiClient'; // For missing endpoints
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { ChatTaskProposalDialog } from '@/components/chatting/dialogs/ChatTaskProposalDialog';
 
 interface AISummaryPanelProps {
     isOpen: boolean;
@@ -24,11 +25,17 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
     const [editingForm, setEditingForm] = useState<any>({});
     const { user } = useAuth();
 
+    const [teamId, setTeamId] = useState<string>('');
+    const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
+    const [tasksToPropose, setTasksToPropose] = useState<any[]>([]);
+
     const fetchSummaryAndTasks = async () => {
         try {
             setLoading(true);
             const data: any = await videoChatService.getCallInfo(roomId);
             if (data) {
+                if (data.teamId) setTeamId(data.teamId);
+
                 // Last summary 
                 if (data.callSummaryBlocks && data.callSummaryBlocks.length > 0) {
                     const lastSummary = data.callSummaryBlocks[data.callSummaryBlocks.length - 1];
@@ -100,7 +107,42 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
     };
 
     const handleAddAllToBacklog = () => {
-        toast.info("Add all to backlog feature coming soon");
+        if (!teamId) {
+            toast.error("Team information is still loading or not available.");
+            return;
+        }
+        if (actionItems.length === 0) {
+            toast.info("No tasks to add.");
+            return;
+        }
+
+        const mapped = actionItems.map(item => ({
+            id: item.id || Math.random().toString(36).substr(2, 9),
+            title: item.content?.split('\n')[0]?.substring(0, 100) || "New Task",
+            description: item.content,
+            assigneeId: item.assigneeId,
+            startDate: item.startDate,
+            dueDate: item.endDate,
+        }));
+        setTasksToPropose(mapped);
+        setIsProposalDialogOpen(true);
+    };
+
+    const handleAddSingleToBacklog = (item: any) => {
+        if (!teamId) {
+            toast.error("Team information is still loading or not available.");
+            return;
+        }
+
+        setTasksToPropose([{
+            id: item.id || Math.random().toString(36).substr(2, 9),
+            title: item.content?.split('\n')[0]?.substring(0, 100) || "New Task",
+            description: item.content,
+            assigneeId: item.assigneeId,
+            startDate: item.startDate,
+            dueDate: item.endDate,
+        }]);
+        setIsProposalDialogOpen(true);
     };
 
     const isPrivileged = myCallRole === 'HOST' || myCallRole === 'ADMIN';
@@ -243,7 +285,7 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                                                         <div className="flex justify-between items-center mt-2">
                                                             <button
                                                                 className="text-[10px] font-medium bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/20 transition-colors"
-                                                                onClick={() => toast.info("Add to backlog feature coming soon")}
+                                                                onClick={() => handleAddSingleToBacklog(item)}
                                                             >
                                                                 Add to Backlog
                                                             </button>
@@ -299,6 +341,16 @@ export function AISummaryPanel({ isOpen, onClose, roomId, myCallRole, streamCont
                     Get Latest Summary
                 </Button>
             </div>
+
+            {teamId && isProposalDialogOpen && (
+                <ChatTaskProposalDialog
+                    open={isProposalDialogOpen}
+                    onOpenChange={setIsProposalDialogOpen}
+                    initialTasks={tasksToPropose}
+                    teamId={teamId}
+                    summary="Tasks generated from meeting AI analysis"
+                />
+            )}
         </div>
     );
 }

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/pagination";
 import { useNotifications } from "@/hooks/useNotifications"; // Hook của bạn
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { addHours, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useTeams } from "@/hooks/useTeam";
@@ -210,7 +210,7 @@ export function NotificationPopover() {
                     )}
 
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatDistanceToNow(addHours(notification.createdAt, -7), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                     </p>
                   </div>
                 ))
