@@ -56,9 +56,16 @@ export class AuthService {
   }
 
   private clearCookies(response: Response) {
-    console.log("Cookies cleared successfully");
-    response.clearCookie('accessToken');
-    response.clearCookie('refreshToken');
+    const cookieDomain = process.env.COOKIE_DOMAIN;
+    console.log("Cookies cleared with domain:", cookieDomain);
+    
+    const options = {
+      path: '/',
+      domain: cookieDomain,
+    };
+
+    response.clearCookie('accessToken', options);
+    response.clearCookie('refreshToken', options);
   }
 
   findAllUser() {
@@ -127,6 +134,14 @@ export class AuthService {
       exchange: AUTH_EXCHANGE,
       routingKey: AUTH_PATTERN.CHANGE_PASSWORD,
       payload: changePasswordDto
+    })
+  }
+
+  async clearGoogleToken(userId: string) {
+    return await this.amqp.request({
+      exchange: AUTH_EXCHANGE,
+      routingKey: AUTH_PATTERN.CLEAR_GOOGLE_TOKEN,
+      payload: userId
     })
   }
 

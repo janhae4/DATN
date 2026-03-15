@@ -121,8 +121,9 @@ export class CreateTaskDto {
   position?: number;
 
   @IsOptional()
-  @IsString()
-  skillName?: string | null;
+  @IsArray()
+  @IsString({ each: true })
+  skillNames?: string[];
 
   @IsOptional()
   @IsNumber()

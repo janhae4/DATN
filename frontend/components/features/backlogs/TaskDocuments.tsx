@@ -24,7 +24,7 @@ import { DocumentList } from "./TaskDocuments/DocumentList";
 import { UploadTab } from "./TaskDocuments/UploadTab";
 import { AttachedFileItem } from "./TaskDocuments/AttachedFileItem";
 import { FilePreviewDialog } from "@/components/features/documentation/file-preview-dialog";
-import { Attachment } from "@/types";
+import { Attachment, ApprovalStatus } from "@/types";
 
 interface TaskDocumentsProps {
   taskId: string;
@@ -171,6 +171,7 @@ export function TaskDocuments({
         name: file.originalName || file.fileName,
         visibility: file.visibility || null,
         allowedUserIds: file.allowedUserIds || null,
+        approvalStatus: file.approvalStatus || ApprovalStatus.APPROVED,
       };
       setPreviewFile(attachment);
       setIsPreviewOpen(true);

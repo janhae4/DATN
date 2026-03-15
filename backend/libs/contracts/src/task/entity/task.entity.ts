@@ -45,8 +45,8 @@ export class Task {
   })
   priority: Priority;
 
-  @Column({ type: 'varchar', name: 'skill', nullable: true })
-  skillName: string | null;
+  @Column('varchar', { array: true, name: 'skill', nullable: true, default: [] })
+  skillNames: string[];
 
   @Column({ type: 'real', name: 'exp', nullable: true })
   exp: number | null;

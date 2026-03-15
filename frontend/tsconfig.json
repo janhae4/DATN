@@ -42,9 +42,6 @@
       "@services/*": [
         "./services/*"
       ],
-      "@types/*": [
-        "./types/*"
-      ]
     }
   },
   "include": [

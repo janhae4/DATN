@@ -79,7 +79,9 @@ class TaskArchitect:
                 - Trả về mỗi task trên một dòng.
                 - Phân cách bởi dấu '|'.
                 - KHÔNG markdown, KHÔNG lời dẫn, KHÔNG dấu nháy, KHÔNG giải thích.
-                5. Content: Skill_Liên_Quan phải trùng khớp hoặc gần nhất với 'Target Skills' hoặc 'History' của thành viên.            Trả về danh sách các task theo định dạng: 
+                5. Content: Skill_Liên_Quan nên dựa trên 'Target Skills' hoặc 'History' của thành viên, nhưng CÓ THỂ tạo kỹ năng mới hoàn toàn nếu công việc yêu cầu và không có kỹ năng hiện tại nào phù hợp. 
+                6. Skill_Unique: Mỗi task CHỈ ĐƯỢC PHÉP có 1 kỹ năng duy nhất. Tuyệt đối không liệt kê nhiều kỹ năng ngăn cách bởi dấu phẩy. Nếu một công việc đòi hỏi nhiều kỹ năng, hãy tách thành các task riêng biệt.
+            Trả về danh sách các task theo định dạng: 
             Tên_Task | ID_Người_Giao | Skill_Liên_Quan | EXP_Nhận_Được | Lý_Do_Phân_Công | Thời_Gian_Bắt_Dầu | Thời_Gian_Kết_Thúc
 
             Ví dụ:

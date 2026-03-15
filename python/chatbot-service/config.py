@@ -47,16 +47,18 @@ CHATBOT_EXCHANGE = "chatbot_exchange"
 TASK_EXCHANGE = "task_exchange"
 EVENTS_EXCHANGE = "events_exchange"
 SOCKET_EXCHANGE = "socket_exchange"
-FILE_EXCHANGE = "file_exchange"
+FILE_EXCHANGE =     "file_exchange"
+USER_EXCHANGE =     "user_exchange"
 
 HANDLE_MESSAGE_ROUTING_KEY = "chatbot.handle_message"
 
 ASK_QUESTION_ROUTING_KEY = "ask_question"
 SUMMARIZE_DOCUMENT_ROUTING_KEY = "summarize_document"
 
-SUGGEST_TASK_ROUTING_KEY = "suggest_task"
+SUGGEST_TASK_ROUTING_KEY = "task.suggestTask"
 
 PROCESS_DOCUMENT_ROUTING_KEY = "process_document"
+SUMMARIZE_MEETING_ROUTING_KEY = "summarize_meeting"
 INDEX_DOCUMENT_CHUNK_ROUTING_KEY = "index.document.chunk"
 
 REMOVE_TEAM_ROUTING_KEY = "events.remove.team"
@@ -65,3 +67,6 @@ DELETE_DOCUMENT_ROUTING_KEY = "events.delete.document"
 STREAM_RESPONSE_ROUTING_KEY = "rag_response"
 SEND_NOTIFICATION_ROUTING_KEY = "notification.send"
 SEND_FILE_STATUS_ROUTING_KEY = "file.status"
+
+GET_UNIQUE_SKILLS_ROUTING_KEY = "chatbot.get_unique_skills"
+GET_BULK_SKILLS_ROUTING_KEY = "user.getBulkSkills"

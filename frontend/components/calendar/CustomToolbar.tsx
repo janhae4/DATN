@@ -40,7 +40,7 @@ export default function CustomToolbar({ date, onNavigate, view, onView, selected
 
         {onToggleTaskList && (
           <Button
-            variant={isTaskListOpen ? "secondary" : "outline"}
+            variant={isTaskListOpen ? "secondary" : "default"}
             size="sm"
             onClick={onToggleTaskList}
             className="ml-2 gap-2"

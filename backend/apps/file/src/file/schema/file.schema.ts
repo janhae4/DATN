@@ -1,4 +1,4 @@
-import { FileStatus, FileType, FileVisibility } from '@app/contracts';
+import { ApprovalStatus, FileStatus, FileType, FileVisibility } from '@app/contracts';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
@@ -53,6 +53,9 @@ export class File {
 
     @Prop({ type: String, default: null })
     aiSummary?: string;
+
+    @Prop({ type: String, enum: ApprovalStatus, default: ApprovalStatus.APPROVED, index: true })
+    approvalStatus: ApprovalStatus;
 }
 
 export const FileSchema = SchemaFactory.createForClass(File);

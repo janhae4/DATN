@@ -14,7 +14,7 @@ export class NotificationController {
     queue: contracts.NOTIFICATION_PATTERN.CREATE
   })
   handleNotification(event: contracts.CreateNotificationDto) {
-    this.notificationService.addNotification(event);
+    return this.notificationService.addNotification(event);
   }
 
   @RabbitRPC({
@@ -25,7 +25,7 @@ export class NotificationController {
   handleUpdateNotification(
     payload: { notificationId: string; data: contracts.NotificationUpdateDto },
   ) {
-    this.notificationService.updateNotification({ id: payload.notificationId }, payload.data);
+    return this.notificationService.updateNotification({ id: payload.notificationId }, payload.data);
   }
 
   @RabbitRPC({
@@ -34,7 +34,7 @@ export class NotificationController {
     queue: contracts.NOTIFICATION_PATTERN.DELETE
   })
   handleDeleteNotification(id: string) {
-    this.notificationService.deleteNotification({ id });
+    return this.notificationService.deleteNotification({ id });
   }
 
   @RabbitRPC({
@@ -43,7 +43,7 @@ export class NotificationController {
     queue: contracts.NOTIFICATION_PATTERN.MARK_AS_READ
   })
   handleMarkNotificationAsRead(id: string) {
-    this.notificationService.markNotificationAsRead({ id });
+    return this.notificationService.markNotificationAsRead({ id });
   }
 
   @RabbitRPC({
@@ -52,7 +52,7 @@ export class NotificationController {
     queue: contracts.NOTIFICATION_PATTERN.MARK_AS_UNREAD
   })
   handleMarkNotificationAsUnread(id: string) {
-    this.notificationService.markNotificationAsUnread({ id });
+    return this.notificationService.markNotificationAsUnread({ id });
   }
 
   @RabbitRPC({
@@ -61,7 +61,7 @@ export class NotificationController {
     queue: contracts.NOTIFICATION_PATTERN.MARK_ALL_AS_READ
   })
   handleMarkAllNotificationsAsRead(userId: string) {
-    this.notificationService.markAllNotificationsAsRead(userId);
+    return this.notificationService.markAllNotificationsAsRead(userId);
   }
 
   @RabbitRPC({
@@ -70,7 +70,7 @@ export class NotificationController {
     queue: contracts.NOTIFICATION_PATTERN.MARK_ALL_AS_UNREAD
   })
   handleMarkAllNotificationsAsUnread(userId: string) {
-    this.notificationService.markAllNotificationsAsUnread(userId);
+    return this.notificationService.markAllNotificationsAsUnread(userId);
   }
 
   @RabbitRPC({

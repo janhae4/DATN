@@ -125,4 +125,12 @@ export class UserService {
       payload: { userIds: ids },
     });
   }
+
+  removeAccount(id: string) {
+    return this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.REMOVE_ACCOUNT,
+      payload: id,
+    });
+  }
 }

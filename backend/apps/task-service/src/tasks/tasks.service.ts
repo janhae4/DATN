@@ -161,34 +161,6 @@ export class TasksService {
       await this.assignLabelsBulk(labelsToAssign);
     }
 
-    const userSkillMap = new Map<string, { skillName: string; exp: number }[]>();
-
-    createTaskDtos.forEach((dto) => {
-      if (dto.skillName && dto.exp && dto.assigneeIds && dto.assigneeIds.length > 0) {
-        dto.assigneeIds.forEach((userId) => {
-          const currentSkills = userSkillMap.get(userId) || [];
-          userSkillMap.set(userId, [
-            ...currentSkills,
-            { skillName: dto.skillName!, exp: dto.exp! },
-          ]);
-        });
-      }
-    });
-
-    const bulkPayload = Array.from(userSkillMap.entries()).map(([userId, skills]) => ({
-      userId,
-      skills,
-    }));
-
-    if (bulkPayload.length > 0) {
-      console.log("Sending bulk skill increment:", JSON.stringify(bulkPayload));
-      await this.amqpConnection.request({
-        exchange: USER_EXCHANGE,
-        routingKey: USER_PATTERNS.INCREMENT_BULK_SKILLS,
-        payload: bulkPayload,
-      });
-    }
-
     return savedTasks;
   }
 
@@ -645,6 +617,35 @@ export class TasksService {
       await this.assignLabels(id, labelIds);
     }
 
+    // Logic to increment skills when task is completed (moved to DONE list)
+    if (updates.listId && updates.listId !== task.listId) {
+      try {
+        const lists = await this.amqpConnection.request<List[]>({
+          exchange: LIST_EXCHANGE,
+          routingKey: task.projectId ? LIST_PATTERNS.FIND_ALL_BY_PROJECT_ID : LIST_PATTERNS.FIND_ALL_BY_TEAM,
+          payload: task.projectId ? { projectId: task.projectId } : { teamId: task.teamId }
+        });
+
+        const doneList = lists.find(l => l.id === updates.listId && l.category === ListCategoryEnum.DONE);
+
+        if (doneList && task.assigneeIds?.length > 0 && task.skillNames?.length > 0 && task.exp) {
+          const bulkPayload = task.assigneeIds.map(userId => ({
+            userId,
+            skills: task.skillNames.map(sn => ({ skillName: sn, exp: task.exp! }))
+          }));
+
+          console.log("Task completed! Incrementing skills:", JSON.stringify(bulkPayload));
+          await this.amqpConnection.request({
+            exchange: USER_EXCHANGE,
+            routingKey: USER_PATTERNS.INCREMENT_BULK_SKILLS,
+            payload: bulkPayload,
+          });
+        }
+      } catch (error) {
+        console.error("Error during skill increment on task completion:", error);
+      }
+    }
+
     let actionType: 'UPDATE' | 'APPROVED' | 'REJECTED' = 'UPDATE';
 
     if (updates.approvalStatus && updates.approvalStatus !== oldStatus) {
@@ -768,9 +769,10 @@ export class TasksService {
 
       for (const userId of task.assigneeIds) {
         console.log(userId)
-        if (!task.skillName || !task.exp) continue;
+        if (!task.skillNames || task.skillNames.length === 0 || !task.exp) continue;
         const currentSkills = userSkillMap.get(userId) || [];
-        userSkillMap.set(userId, [...currentSkills, { skillName: task.skillName, exp: task.exp }]);
+        const newSkills = task.skillNames.map(sn => ({ skillName: sn, exp: task.exp! }));
+        userSkillMap.set(userId, [...currentSkills, ...newSkills]);
       }
     }
 
@@ -967,6 +969,7 @@ export class TasksService {
     userId: string,
     discussionId: string,
     teamId: string,
+    projectId?: string,
     messageLimit: number = 50
   ) {
     // 1. Check permission (Admin/Owner only)
@@ -1002,6 +1005,15 @@ export class TasksService {
         payload: memberIds.map(m => m.id),
       });
     }
+    
+    let epics = [];
+    if (projectId) {
+      epics = await this.amqpConnection.request({
+        exchange: EPIC_EXCHANGE,
+        routingKey: EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID,
+        payload: { projectId }
+      });
+    }
 
 
 
@@ -1021,6 +1033,7 @@ export class TasksService {
       objective: `Generate tasks from chat conversation.`,
       chatContext: chatContext,
       members: members,
+      epics: epics,
       currentDate: new Date().toISOString()
     };
 
@@ -1048,6 +1061,7 @@ export class TasksService {
     userId: string,
     messageId: string,
     teamId: string,
+    projectId?: string,
   ) {
     // 1. Check permission
     await this.teamCache.checkPermission(
@@ -1090,6 +1104,15 @@ export class TasksService {
       });
     }
 
+    let epics = [];
+    if (projectId) {
+      epics = await this.amqpConnection.request({
+        exchange: EPIC_EXCHANGE,
+        routingKey: EPIC_PATTERNS.FIND_ALL_BY_PROJECT_ID,
+        payload: { projectId }
+      });
+    }
+
 
     // 5. Build chat context for AI
     const chatContext = {
@@ -1105,6 +1128,7 @@ export class TasksService {
       objective: `Generate actionable tasks from this specific message.`,
       chatContext: chatContext,
       members: members,
+      epics: epics,
       currentDate: new Date().toISOString()
     };
 

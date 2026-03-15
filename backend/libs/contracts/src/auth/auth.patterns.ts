@@ -19,4 +19,5 @@ export const AUTH_PATTERN = {
   LOGOUT: 'auth.logout',
   LOGOUT_ALL: 'auth.logoutAll',
   REFRESH: 'auth.refresh',
+  CLEAR_GOOGLE_TOKEN: 'auth.clearGoogleToken',
 };

@@ -16,7 +16,7 @@ import { Sidebar } from "./sidebar";
 import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
 import { FilePreviewDialog } from "@/components/features/documentation/file-preview-dialog";
-import { Attachment, AttachmentType, FileVisibility } from "@/types";
+import { Attachment, AttachmentType, FileVisibility, ApprovalStatus } from "@/types";
 import { fileService } from "@/services/fileService";
 import { AttachedFile } from "@/hooks/useAiFileUpload";
 
@@ -290,7 +290,8 @@ export default function AIAssistantUI() {
           uploadedAt: new Date().toISOString(),
           fileSize: 0,
           mimeType: file.name.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream',
-          visibility: FileVisibility.PRIVATE
+          visibility: FileVisibility.PRIVATE,
+          approvalStatus: ApprovalStatus.APPROVED
         };
         setPreviewData(mockAttachment);
         setIsPreviewOpen(true);
@@ -324,7 +325,8 @@ export default function AIAssistantUI() {
         uploadedAt: new Date().toISOString(),
         fileSize: file.file?.size || 0,
         mimeType: file.file?.type || (name.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
-        visibility: FileVisibility.PRIVATE
+        visibility: FileVisibility.PRIVATE,
+        approvalStatus: ApprovalStatus.APPROVED
       };
       setPreviewData(mockAttachment);
       setIsPreviewOpen(true);

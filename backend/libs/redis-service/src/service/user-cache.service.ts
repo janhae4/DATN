@@ -106,14 +106,7 @@ export class UserCacheService {
         const pipe = this.redisService.getClient().pipeline();
         users.forEach((user) => {
             const key = this.getUserInfoKey(user.id);
-
-            const profileData = {
-                id: user.id,
-                name: user.name,
-                avatar: user.avatar,
-            };
-
-            pipe.set(key, JSON.stringify(profileData), 'EX', TTL_24_HOURS);
+            pipe.set(key, JSON.stringify(user), 'EX', TTL_24_HOURS);
         });
 
         try {

@@ -48,6 +48,7 @@ export interface VerifyAccountDto {
 
 export interface ConfirmResetPasswordDto {
   token: string;
+  code?: string;
   password: string;
 }
 

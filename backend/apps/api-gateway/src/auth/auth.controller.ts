@@ -95,9 +95,6 @@ export class AuthController {
   }
 
   @Delete('/session')
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout (Delete current session)' })
   logout(
     @Req() request: Request,
@@ -107,9 +104,6 @@ export class AuthController {
   }
 
   @Delete('/sessions')
-  @UseGuards(RoleGuard)
-  @Roles(Role.ADMIN, Role.USER)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout all (Delete all sessions)' })
   logoutAll(
     @Req() request: Request,

@@ -319,7 +319,7 @@ export class UserService {
 
   async findAll(query: FindManyOptions<User>): Promise<User[]> {
     this.logger.log('Fetching all users with provided query options.');
-    return this.userRepo.find({ ...query, relations: ['accounts'] });
+    return this.userRepo.find({ ...query, relations: ['accounts', 'skills'] });
   }
 
   async findOne(id: string): Promise<User | null> {
@@ -666,6 +666,15 @@ export class UserService {
     return result;
   }
 
+  async removeAccount(id: string) {
+    this.logger.log(`Removing account with ID: ${id}`);
+    const account = await this.accountRepo.findOne({ where: { id }, relations: ['user'] });
+    if (!account) return { affected: 0 };
+    
+    const result = await this.accountRepo.delete(id);
+    return { ...result, userId: account.user?.id, provider: account.provider };
+  }
+
   async findByName(name: string, options: RequestPaginationDto, requesterId: string, teamId?: string) {
     this.logger.log(`Finding user by name or username or email: ${name}`);
     const { page = 1, limit = 10 } = options;
@@ -824,8 +833,10 @@ export class UserService {
       await manager.save(newEntities);
     }
 
-    const skillsToRemove = currentSkills.filter(s => !skillNames.includes(s.skillName));
-    await manager.remove(skillsToRemove);
+    const skillsToRemove = currentSkills.filter(s => s.isInterest && !skillNames.includes(s.skillName.toLowerCase()));
+    if (skillsToRemove.length > 0) {
+      await manager.remove(skillsToRemove);
+    }
   }
 
   async onboarding(dto: UserOnboardingDto) {

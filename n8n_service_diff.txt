@@ -1,0 +1,67 @@
+diff --git a/backend/apps/n8n-service/src/n8n-service.service.ts b/backend/apps/n8n-service/src/n8n-service.service.ts
+index 4b5d93d..0e722eb 100644
+--- a/backend/apps/n8n-service/src/n8n-service.service.ts
++++ b/backend/apps/n8n-service/src/n8n-service.service.ts
+@@ -11,22 +11,35 @@ export class N8nServiceService {
+   async generateTasks(payload: GenerateTasksPayload) {
+     const n8nUrl = process.env.N8N_WEBHOOK_URL || 'https://alanswift094.app.n8n.cloud/webhook/af9a11d5-a10d-4a8e-873e-1da347f8eb38';
+ 
++    console.log(`[N8N Service] Sending request to n8n URL: ${n8nUrl}`);
++    console.log(`[N8N Service] Payload size: ${JSON.stringify(payload).length} bytes`);
++    console.log(`[N8N Service] Payload structure:`, JSON.stringify({
++      objective: payload.objective,
++      membersCount: payload.members?.length,
++      epicsCount: payload.epics?.length,
++      chatContextMessages: payload.chatContext?.messages?.length
++    }, null, 2));
++
+     try {
+       const response = await firstValueFrom(
+         this.httpService.post(n8nUrl, payload, {
+           headers: { 'Content-Type': 'application/json' },
+-          timeout: 60000,
++          timeout: 0,
+         })
+       );
+ 
++
++
+       if (response.status !== 200 && response.status !== 201) {
+         throw new Error(`n8n webhook error: ${response.statusText}`);
+       }
+ 
+-      const suggestedTasks: any = response.data;
++      let suggestedTasks: any = response.data;
++      console.log(`[N8N Service] Received response from n8n. Status: ${response.status}`);
++      console.log(`[N8N Service] Response raw data:`, JSON.stringify(response.data));
+ 
+       // If response is an array and first element has tasks property
+-      if (Array.isArray(suggestedTasks) && suggestedTasks.length > 0 && suggestedTasks[0].tasks) {
++      if (Array.isArray(suggestedTasks) && suggestedTasks.length > 0 && suggestedTasks[0]?.tasks) {
+         return suggestedTasks[0].tasks;
+       }
+ 
+@@ -42,8 +55,21 @@ export class N8nServiceService {
+ 
+       return suggestedTasks;
+ 
+-    } catch (error) {
+-      console.error("Error calling n8n:", error);
++    } catch (error: any) {
++      console.error("[N8N Service] Error calling n8n webhook:");
++      if (error.response) {
++        // The request was made and the server responded with a status code
++        // that falls out of the range of 2xx
++        console.error("- Response error status:", error.response.status);
++        console.error("- Response error data:", JSON.stringify(error.response.data));
++      } else if (error.request) {
++        // The request was made but no response was received
++        console.error("- Request error: No response received from n8n (Timeout/Network Error).");
++      } else {
++        // Something happened in setting up the request that triggered an Error
++        console.error("- Error message:", error.message);
++      }
++
+       throw new BadRequestException("Failed to generate tasks from AI");
+     }
+   }

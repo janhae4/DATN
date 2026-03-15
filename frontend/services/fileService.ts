@@ -1,6 +1,6 @@
 import axios from "axios";
 import apiClient from "./apiClient";
-import { Attachment, AttachmentType, FileVisibility } from "@/types";
+import { Attachment, AttachmentType, FileVisibility, ApprovalStatus } from "@/types";
 
 // --- 1. DEFINITIONS (Type chuẩn hóa) ---
 
@@ -17,7 +17,9 @@ export interface IFile {
   visibility: FileVisibility,
   allowedUserIds?: string[];
   parentId?: string;
+  projectId?: string;
   aiSummary?: string;
+  approvalStatus?: ApprovalStatus;
 }
 
 
@@ -46,14 +48,18 @@ export const fileService = {
     projectId?: string,
     teamId?: string,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    parentId?: string | null,
+    approvalStatus?: ApprovalStatus | string
   ): Promise<GetFilesResponse> => {
     const response = await apiClient.get<GetFilesResponse>("/files", {
       params: {
         projectId,
         teamId,
         page,
-        limit
+        limit,
+        parentId,
+        approvalStatus
       },
     });
     return response.data;
@@ -202,5 +208,20 @@ export const fileService = {
   }) => {
     const response = await apiClient.post('/files/save-from-chat', data);
     return response.data;
-  }
+  },
+
+  updateFile: async (fileId: string, payload: Partial<IFile>, projectId?: string, teamId?: string) => {
+    const response = await apiClient.patch(`/files/${fileId}`, { payload, projectId, teamId });
+    return response.data;
+  },
+
+  updateManyFiles: async (fileIds: string[], payload: Partial<IFile>, projectId?: string, teamId?: string) => {
+    const response = await apiClient.patch(`/files/move/bulk`, { fileIds, payload, projectId, teamId });
+    return response.data;
+  },
+
+  updateApprovalStatusBulk: async (fileIds: string[], approvalStatus: string, teamId: string, projectId?: string) => {
+    const response = await apiClient.patch('/files/approval/bulk', { fileIds, approvalStatus, teamId, projectId });
+    return response.data;
+  },
 };

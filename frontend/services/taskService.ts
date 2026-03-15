@@ -19,6 +19,8 @@ export interface CreateTaskDto {
   epicId?: string | null;
   sprintId?: string | null;
   teamId: string;
+  skillNames?: string[];
+  exp?: number;
 }
 
 export interface UpdateTaskDto extends Partial<Omit<CreateTaskDto, "projectId">> {

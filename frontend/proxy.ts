@@ -6,27 +6,24 @@ export function proxy(request: NextRequest) {
 
   const isAuthRoute = path.startsWith("/auth");
   const isOnboardingRoute = path === "/auth/onboarding";
+  const isGoogleErrorRoute = path === "/auth/google/error";
   const isPrivateRoute = !isAuthRoute && path !== "/";
 
   const accessToken = request.cookies.get("accessToken")?.value;
   const refreshToken = request.cookies.get("refreshToken")?.value;
   const hasToken = accessToken || refreshToken;
-  console.log("Has Token:", hasToken);
-
-  const host = request.headers.get("host");
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
-  const origin = `${protocol}://${host}`;
+  // console.log("Has Token:", hasToken);
 
   if (!hasToken) {
     if (isPrivateRoute) {
-      return NextResponse.redirect(new URL("/", origin));
+      return NextResponse.redirect(new URL("/", request.url));
     }
     return NextResponse.next();
   }
 
   if (hasToken) {
-    if ((isAuthRoute && !isOnboardingRoute) || path === "/") {
-      return NextResponse.redirect(new URL("/dashboard", origin));
+    if ((isAuthRoute && !isOnboardingRoute && !isGoogleErrorRoute) || path === "/") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
 

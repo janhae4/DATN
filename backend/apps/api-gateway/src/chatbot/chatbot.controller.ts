@@ -55,7 +55,7 @@ export class ChatbotController {
       throw new BadRequestException('storageKey and originalName are required.');
     }
     const effectiveFileId = fileId || storageKey;
-    this.chatbotService.processDocument({
+    await this.chatbotService.processDocument({
       fileId: effectiveFileId,
       storageKey,
       originalName,

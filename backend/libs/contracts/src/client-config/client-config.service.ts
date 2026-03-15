@@ -446,6 +446,10 @@ export class ClientConfigService {
     return this.config.get<string>('MINIO_BUCKET_NAME', 'documents');
   }
 
+  getMinioExternalUrl(): string {
+    return this.config.get<string>('MINIO_EXTERNAL_URL', 'http://localhost:9000');
+  }
+
   getMinioPublicWebHook(): string {
     return this.config.get<string>(
       'MINIO_PUBLIC_WEBHOOK',

@@ -74,3 +74,28 @@ class GeminiService:
             config=config
         )
         return {'message': {'content': response.text}}
+
+    @retry_sync(max_retries=3, delay=1, backoff=2)
+    def transcribe_audio(self, audio_data: bytes, mime_type: str = "audio/webm"):
+        from google.genai import types
+        try:
+            print(f"🤖 [AI] Đang gọi Gemini STT ({len(audio_data)} bytes)...")
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part(text="Transcribe this audio precisely. Return only the transcription text. If there is no talking, return empty string."),
+                            types.Part(inline_data=types.Blob(mime_type=mime_type, data=audio_data))
+                        ]
+                    )
+                ]
+            )
+            text = response.text.strip() if response.text else ""
+            if text:
+                print(f"✅ [AI] Gemini đã trả về kết quả.")
+            return text
+        except Exception as e:
+            print(f"❌ [AI] Lỗi khi gọi Gemini: {e}")
+            return ""

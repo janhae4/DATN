@@ -113,9 +113,8 @@ export default function Backlogs() {
       statusId: filters.listIds.length > 0 ? filters.listIds : undefined,
       epicId: filters.epicIds.length > 0 ? filters.epicIds : undefined,
       labelIds: filters.labelIds.length > 0 ? filters.labelIds : undefined,
-      parentId: "null",
       sprintId: "null",
-      limit: 10,
+      limit: 100,
       approvalStatus: 'APPROVED'
     };
   }, [projectId, debouncedSearch, filters]);
@@ -141,11 +140,37 @@ export default function Backlogs() {
   });
 
   const allVisibleTasks = React.useMemo(() => {
-    return [...sprintTasks, ...backlogTasks];
+    const combined = [...sprintTasks, ...backlogTasks];
+    const seen = new Set();
+    return combined.filter((t) => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
   }, [sprintTasks, backlogTasks]);
 
-  const tasksInSprints = sprintTasks;
-  const tasksInBacklog = backlogTasks;
+  // Only root-level sprint tasks (no parentId) shown as rows;
+  // subtasks are rendered nested inside their parent row via allVisibleTasks
+  const tasksInSprints = React.useMemo(() => {
+    const seen = new Set();
+    return sprintTasks.filter((t) => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [sprintTasks]);
+
+  // Only root-level backlog tasks shown as rows (no parentId, no sprintId)
+  const tasksInBacklog = React.useMemo(() => {
+    const seen = new Set();
+    return backlogTasks.filter((t) => {
+      if (!t.parentId && !t.sprintId && !seen.has(t.id)) {
+        seen.add(t.id);
+        return true;
+      }
+      return false;
+    });
+  }, [backlogTasks]);
 
   const [selectedTask, setSelectedTask] = React.useState<Task | null>(null);
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
@@ -266,10 +291,24 @@ export default function Backlogs() {
     if (dropType === "sprint-drop-area") {
       const sprint = over.data.current?.sprint as Sprint | undefined;
       if (sprint) {
-        const idsNeedUpdate = tasksToMoveIds.filter((id) => {
+        // Collect all descendant subtask IDs for any moved parent task
+        const collectDescendantIds = (parentIds: string[]): string[] => {
+          const children = allVisibleTasks
+            .filter((t) => t.parentId && parentIds.includes(t.parentId))
+            .map((t) => t.id);
+          if (children.length === 0) return [];
+          return [...children, ...collectDescendantIds(children)];
+        };
+
+        const directIds = tasksToMoveIds.filter((id) => {
           const t = allVisibleTasks.find((x) => x.id === id);
           return t && t.sprintId !== sprint.id;
         });
+        const subtaskIds = collectDescendantIds(directIds).filter((id) => {
+          const t = allVisibleTasks.find((x) => x.id === id);
+          return t && t.sprintId !== sprint.id;
+        });
+        const idsNeedUpdate = [...new Set([...directIds, ...subtaskIds])];
 
         if (idsNeedUpdate.length > 0) {
           try {
@@ -277,14 +316,6 @@ export default function Backlogs() {
               ids: idsNeedUpdate,
               updates: { sprintId: sprint.id },
             });
-
-            const currentTasksInSprint = allVisibleTasks.filter(
-              (t) => t.sprintId === sprint.id
-            );
-            const movedTasks = allVisibleTasks.filter((t) =>
-              idsNeedUpdate.includes(t.id)
-            );
-            const newSprintTasks = [...currentTasksInSprint, ...movedTasks];
 
             setSelectedIds([]);
           } catch (error) {
@@ -297,10 +328,24 @@ export default function Backlogs() {
     }
 
     if (over.id === "backlog-drop-area") {
-      const idsNeedUpdate = tasksToMoveIds.filter((id) => {
+      // Collect all descendant subtask IDs for any moved parent task
+      const collectDescendantIds = (parentIds: string[]): string[] => {
+        const children = allVisibleTasks
+          .filter((t) => t.parentId && parentIds.includes(t.parentId))
+          .map((t) => t.id);
+        if (children.length === 0) return [];
+        return [...children, ...collectDescendantIds(children)];
+      };
+
+      const directIds = tasksToMoveIds.filter((id) => {
         const t = allVisibleTasks.find((x) => x.id === id);
         return t && t.sprintId;
       });
+      const subtaskIds = collectDescendantIds(directIds).filter((id) => {
+        const t = allVisibleTasks.find((x) => x.id === id);
+        return t && t.sprintId;
+      });
+      const idsNeedUpdate = [...new Set([...directIds, ...subtaskIds])];
 
       if (idsNeedUpdate.length > 0) {
         try {
@@ -458,7 +503,6 @@ export default function Backlogs() {
                 <SprintList
                   key="sprint-list"
                   sprints={visibleSprints}
-                  tasks={tasksInSprints.filter((task) => !task.parentId)}
                   allTasks={allVisibleTasks}
                   onRowClick={handleRowClick}
                   onUpdateTask={updateTask}
@@ -473,7 +517,7 @@ export default function Backlogs() {
                   key="backlog-item"
                   lists={lists}
                   taskCount={backlogTotal || 0}
-                  tasks={tasksInBacklog.filter((task) => !task.parentId)}
+                  tasks={tasksInBacklog}
                   allTasks={allVisibleTasks}
                   isLoading={isLoading}
                   fetchNextPage={fetchNextPage}
@@ -513,7 +557,7 @@ export default function Backlogs() {
                     key="backlog-item-split"
                     lists={lists}
                     taskCount={backlogTotal || 0}
-                    tasks={tasksInBacklog.filter((task) => !task.parentId)}
+                    tasks={tasksInBacklog}
                     allTasks={allVisibleTasks}
                     isLoading={isLoading}
                     fetchNextPage={fetchNextPage}
@@ -549,7 +593,6 @@ export default function Backlogs() {
                   <SprintList
                     key="sprint-list-split"
                     sprints={visibleSprints}
-                    tasks={tasksInSprints.filter((task) => !task.parentId)}
                     allTasks={allVisibleTasks}
                     onRowClick={handleRowClick}
                     onUpdateTask={updateTask}

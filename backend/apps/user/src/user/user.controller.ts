@@ -305,4 +305,14 @@ export class UserController {
     return this.userService.getBulkUserSkill(memberIds)
   }
 
+  @RabbitRPC({
+    exchange: USER_EXCHANGE,
+    routingKey: USER_PATTERNS.REMOVE_ACCOUNT,
+    queue: USER_PATTERNS.REMOVE_ACCOUNT,
+    errorHandler: customErrorHandler
+  })
+  removeAccount(id: string) {
+    return this.userService.removeAccount(id);
+  }
+
 }

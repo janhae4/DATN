@@ -39,7 +39,7 @@ export function EpicList() {
 
     if (isLoading) {
         return (
-            <Card className="h-full border-none shadow-none bg-transparent">
+            <Card className=" max-h-[400px] border-none shadow-none bg-transparent">
                 <CardHeader className="px-0 pt-0 pb-4">
                     <Skeleton className="h-8 w-32" />
                 </CardHeader>

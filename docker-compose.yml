@@ -6,6 +6,7 @@ x-nest-service: &nest-service
     - REDIS_CLIENT_HOST=redis
     - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
     - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    - MINIO_EXTERNAL_URL=${NEXT_PUBLIC_MINIO_URL:-https://minio.taskora-datn.site}
   networks:
     - app-network
   extra_hosts:
@@ -89,17 +90,6 @@ services:
     networks:
       - app-network
 
-  meili-search:
-    image: getmeili/meilisearch:v1.16
-    container_name: meili_search
-    ports:
-      - "7700:7700"
-    environment:
-      MEILI_MASTER_KEY: "A7Uu1TlCVUtQRaUpFY9Z2sLoJeZMYVi0"
-    volumes:
-      - meili-data:/meili_data
-    networks:
-      - app-network
 
   chroma:
     image: chromadb/chroma
@@ -119,7 +109,6 @@ services:
     ports:
       - "7880:7880"
       - "7881:7881"
-      - "50000-50050:50000-50050/udp"
     command: --config /etc/livekit.yml
     volumes:
       - ./web_rtc/livekit.yml:/etc/livekit.yml
@@ -206,9 +195,6 @@ services:
   minio-setup:
     image: minio/mc:latest
     container_name: minio-mc-setup
-    # depends_on:
-    #   minio:
-    #     condition: service_healthy
     entrypoint: >
       /bin/sh -c " until (mc alias set myminio http://minio:9000 minioadmin minioadmin); do echo '...waiting...' && sleep 1; done; mc mb myminio/meeting-recordings; mc event add myminio/documents arn:minio:sqs::PRIMARY:webhook --event put; echo 'MinIO Webhook Setup Complete!'; exit 0; "
     networks:
@@ -396,6 +382,18 @@ services:
       dockerfile: Dockerfile
       args:
         APP_NAME: calendar-service
+  
+  n8n_service:
+    <<: *nest-service
+    container_name: n8n_service
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: n8n-service
+    environment:
+      - N8N_WEBHOOK_URL=https://nguyencobap2004.app.n8n.cloud/webhook/98920227-cd3e-4270-be9a-7fa8ce4aa8be
+      - N8N_SUMMARIZE_WEBHOOK_URL=https://nguyencobap2004.app.n8n.cloud/webhook/194b570d-121a-4a00-9d46-75544e6e3582
 
   gmail_service:
     <<: *nest-service
@@ -428,12 +426,6 @@ services:
     env_file:
       - ./web_rtc/.env
     environment:
-      - LIVEKIT_URL=http://livekit:7880
-      - LIVEKIT_API_KEY=devkey
-      - LIVEKIT_API_SECRET=4msnddOgHpRlhfN1P2uVM0akISxFJJPY
-      - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
-      - PORT=8005
-      - DATABASE_VIDEO_CHAT_URL=postgresql://postgres:postgres@postgres:5432/call
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MINIO_ENDPOINT=minio:9000
@@ -442,6 +434,7 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_RECORDING_BUCKET=meeting-recordings
+      - MINIO_PUBLIC_URL=${NEXT_PUBLIC_MINIO_URL:-https://minio.taskora-datn.site}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -473,10 +466,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://127.0.0.1:3000}
-        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-ws://127.0.0.1:4001}
-        NEXT_PUBLIC_WEBRTC_WS_URL: ${NEXT_PUBLIC_WEBRTC_WS_URL:-ws://127.0.0.1:8005/ws}
-        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-http://127.0.0.1:7880}
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.taskora-datn.site}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-wss://socket.taskora-datn.site}
+        NEXT_PUBLIC_WEBRTC_WS_URL: ${NEXT_PUBLIC_WEBRTC_WS_URL:-wss://webrtc.taskora-datn.site/ws}
+        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-wss://datn-g2hljd9e.livekit.cloud}
+        NEXT_PUBLIC_MINIO_URL: ${NEXT_PUBLIC_MINIO_URL:-https://minio.taskora-datn.site}
     container_name: nextjs_frontend
     restart: always
     ports:
@@ -489,6 +484,7 @@ services:
       - NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL:-ws://127.0.0.1:4001}
       - NEXT_PUBLIC_WEBRTC_WS_URL=${NEXT_PUBLIC_WEBRTC_WS_URL:-ws://127.0.0.1:8005/ws}
       - NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL:-http://127.0.0.1:7880}
+      - NEXT_PUBLIC_MINIO_URL=${NEXT_PUBLIC_MINIO_URL:-https://minio.taskora-datn.site}
     networks:
       - app-network
     extra_hosts:

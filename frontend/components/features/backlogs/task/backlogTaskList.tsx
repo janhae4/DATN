@@ -145,13 +145,28 @@ export function BacklogTaskList({
         )}
       </div>
 
-      <div className="shrink-0 z-10 bg-card sticky bottom-2">
-        {isAddingNewRow && (
-          <AddNewTaskRow
-            lists={listsList}
-            sprintId={""}
-            onCancel={() => setIsAddingNewRow(false)}
-          />
+      <div className="shrink-0 z-10 bg-card sticky bottom-2 rounded-lg border-t shadow-sm">
+        {isAddingNewRow ? (
+          <Table>
+            <TableBody>
+              <AddNewTaskRow
+                lists={listsList}
+                sprintId={""}
+                onCancel={() => setIsAddingNewRow(false)}
+              />
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="flex items-center gap-4 p-2">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-4 p-2 text-zinc-500 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/50 dark:hover:bg-zinc-900 cursor-pointer w-full justify-start rounded-lg transition-colors border border-dashed border-zinc-200 dark:border-zinc-800"
+              onClick={() => setIsAddingNewRow(true)}
+            >
+              <PlusIcon className="h-5 w-5" />
+              <span className="text-sm font-medium">Create Task</span>
+            </Button>
+          </div>
         )}
       </div>
     </div>

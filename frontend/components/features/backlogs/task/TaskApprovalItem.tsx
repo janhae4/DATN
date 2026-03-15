@@ -1,9 +1,11 @@
+"use client";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
 import { format } from "date-fns";
-import { Calendar, Check, X, Flag, AlertCircle } from "lucide-react";
+import { Calendar, Check, X, Flag } from "lucide-react";
 import React from 'react';
 import { cn } from "@/lib/utils";
 
@@ -46,7 +48,7 @@ export function TaskApprovalItem({
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-col gap-1 min-w-0 w-full">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-medium text-sm truncate text-foreground">{task.title}</h4>
+                            <h4 className="font-medium text-sm truncate text-foreground leading-normal">{task.title}</h4>
                             {task.taskLabels?.map((label: any) => (
                                 <Badge
                                     key={label.id}
@@ -64,7 +66,7 @@ export function TaskApprovalItem({
 
                         {/* Description Preview */}
                         {task.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1 truncate max-w-[90%]">
+                            <p className="text-xs text-muted-foreground line-clamp-1 truncate max-w-[90%] leading-normal">
                                 {task.description}
                             </p>
                         )}
@@ -84,7 +86,7 @@ export function TaskApprovalItem({
                         <span className="truncate max-w-[120px]">{reporterName}</span>
                     </div>
 
-                    <div className="h-3 w-[1px] bg-border/60" />
+                    <div className="h-3 w-px bg-border/60" />
 
                     {/* Created Date */}
                     {task.createdAt && (
@@ -97,7 +99,7 @@ export function TaskApprovalItem({
                     {/* Priority */}
                     {task.priority && (
                         <>
-                            <div className="h-3 w-[1px] bg-border/60" />
+                            <div className="h-3 w-px bg-border/60" />
                             <div className={cn("flex items-center gap-1.5 font-medium", getPriorityColor(task.priority))} title="Priority">
                                 <Flag className={cn("h-3 w-3", getPriorityColor(task.priority).split(' ')[1])} />
                                 <span className="capitalize">{task.priority.toLowerCase()}</span>
@@ -110,9 +112,9 @@ export function TaskApprovalItem({
             {/* Actions - Always visible but styled subtly until hover/interaction */}
             <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 sm:border-l sm:pl-3 border-border/40">
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-8 px-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    className="h-8 px-2 bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive hover:text-white transition-all duration-200"
                     onClick={onReject}
                     disabled={isUpdating}
                     title="Reject Task"

@@ -10,7 +10,13 @@ export enum AttachmentType {
 export enum FileVisibility {
   PRIVATE = 'PRIVATE',
   TEAM = 'TEAM',
-  SPECIFIC = 'SPECIFIC'
+  SPECIFIC = 'SPECIFIC',
+}
+
+export enum ApprovalStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
 }
 
 export interface Attachment {
@@ -24,7 +30,8 @@ export interface Attachment {
   uploadedAt: string;
   fileSize: number;
   mimeType: string;
-  visibility: FileVisibility
-  allowedUserIds?: string[]
+  visibility: FileVisibility;
+  allowedUserIds?: string[];
   aiSummary?: string;
+  approvalStatus: ApprovalStatus;
 }

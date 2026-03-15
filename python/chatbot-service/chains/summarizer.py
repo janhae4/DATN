@@ -29,10 +29,18 @@ class Summarizer:
         if text_len < 100000:
             print(f"--> [SUMMARIZE STUFF] Văn bản ngắn ({text_len} ký tự), tóm tắt trực tiếp...")
             prompt = f"""
-                Bạn là chuyên gia phân tích. 
-                Hãy viết bản tóm tắt chi tiết, rành mạch bằng Markdown cho văn bản sau và không có câu dẫn vào trực tiếp trả lời:
+                Bạn là một chuyên gia phân tích và điều phối dự án.
+                Hãy viết một bản tóm tắt chi tiết, chuyên nghiệp bằng định dạng Markdown cho văn bản dưới đây.
+                
+                Yêu cầu bản tóm tắt phải có các phần sau:
+                1. **Nội dung chính**: Tóm tắt ngắn gọn nhưng đầy đủ các vấn đề được thảo luận hoặc trình bày.
+                2. **Quyết định & Hành động**: Các kết luận hoặc các bước tiếp theo cần thực hiện (nếu có).
+                3. **Kỹ năng liên quan (Required Skills)**: Dựa trên nội dung (đặc biệt nếu là bản ghi chép cuộc họp hoặc yêu cầu công việc), hãy liệt kê các kỹ năng kỹ thuật hoặc chuyên môn cần thiết để thực hiện các công việc được đề cập. Bạn có thể tự đề xuất các kỹ năng mới nếu thấy phù hợp.
+                
                 VĂN BẢN:
                 {full_text}
+                
+                Lưu ý: Không viết câu dẫn (ví dụ: "Đây là bản tóm tắt..."), hãy bắt đầu trực tiếp bằng Markdown.
                 TÓM TẮT:
             """
             messages = [{"role": "user", "content": prompt}]
@@ -81,8 +89,18 @@ class Summarizer:
 
         print(f"--> [SUMMARIZE MAP-REDUCE] Bước REDUCE: Tổng hợp kết quả...")
         reduce_prompt = f"""
-            Dựa trên các ý chính sau, hãy viết một bản tóm tắt tổng thể hoàn chỉnh bằng Markdown:
+            Bạn là một chuyên gia tổng hợp thông tin. 
+            Dựa trên các ý chính đã trích xuất từ các phần khác nhau của tài liệu dưới đây, hãy viết một bản tóm tắt tổng thể chuyên nghiệp bằng Markdown.
+            
+            Bản tóm tắt phải bao quát được:
+            - Tổng quan nội dung chính của toàn bộ tài liệu.
+            - Các điểm quan trọng nhất, các quyết định hoặc mục tiêu đề ra.
+            - **Danh sách Kỹ năng (Required Skills)**: Tổng hợp tất cả các kỹ năng cần thiết hoặc được nhắc đến xuyên suốt tài liệu. Có thể đề xuất kỹ năng mới nếu cần.
+            
+            CÁC Ý CHÍNH:
             {combined_summaries}
+            
+            Lưu ý: Chỉ trả về nội dung Markdown, không có câu giới thiệu.
             BẢN TÓM TẮT CUỐI CÙNG:
         """
         

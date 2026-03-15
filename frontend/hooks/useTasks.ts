@@ -88,33 +88,9 @@ export function useTasks(
 
   const createTaskMutation = useMutation({
     mutationFn: (newTask: CreateTaskDto) => taskService.createTask(newTask),
-    onSuccess: (data, variables) => {
-      queryClient.setQueriesData<InfiniteData<Pagination<Task>>>(
-        {
-          queryKey: ["tasks"],
-          predicate: (query) => {
-            const filters = query.queryKey[1] as any;
-            if (variables.sprintId) {
-              return filters?.sprintId?.includes(variables.sprintId);
-            }
-            return !filters?.sprintId || filters.sprintId === "null";
-          }
-        },
-        (oldData) => {
-          if (!oldData || !oldData.pages) return oldData;
-          const newPages = [...oldData.pages];
-          const lastPageIndex = newPages.length - 1;
-          const lastPage = { ...newPages[lastPageIndex] };
-          lastPage.data = [...lastPage.data, data];
-          lastPage.total = (lastPage.total || 0) + 1;
-          newPages[lastPageIndex] = lastPage;
-          return {
-            ...oldData,
-            pages: newPages,
-          };
-        }
-      );
+    onSuccess: () => {
       toast.success("Task created");
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: (error) => {
       toast.error("Failed to create task");
@@ -203,14 +179,21 @@ export function useTasks(
   const updateTasksMutation = useMutation({
     mutationFn: ({ ids, updates }: { ids: string[], updates: UpdateTaskDto }) => taskService.updateTasks(ids, updates, teamId!),
     onMutate: async ({ ids, updates }) => {
-      await queryClient.cancelQueries({ queryKey: tasksQueryKey });
-      const previousData = queryClient.getQueryData(tasksQueryKey);
+      // Cancel ALL tasks queries to avoid race conditions
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
 
-      queryClient.setQueryData<any>(tasksQueryKey, (old: any) => {
-        if (!old || !old.pages) return old!;
+      // Snapshot all current tasks query data for rollback
+      const allQueriesSnapshots: Array<{ queryKey: unknown[]; data: unknown }> = [];
+      queryClient.getQueriesData<any>({ queryKey: ["tasks"] }).forEach(([queryKey, data]) => {
+        allQueriesSnapshots.push({ queryKey: queryKey as unknown[], data });
+      });
 
-        const isMovingSprint = updates.sprintId !== undefined;
-        const isMovingEpic = updates.epicId !== undefined
+      const isMovingSprint = updates.sprintId !== undefined;
+      const isMovingEpic = updates.epicId !== undefined;
+
+      // Apply optimistic update to ALL tasks queries
+      queryClient.setQueriesData<any>({ queryKey: ["tasks"] }, (old: any) => {
+        if (!old || !old.pages) return old;
 
         return {
           ...old,
@@ -239,40 +222,23 @@ export function useTasks(
         };
       });
 
-      return { previousData };
+      return { allQueriesSnapshots };
     },
 
     onError: (_err, _vars, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(tasksQueryKey, context.previousData);
+      // Restore all snapshots on error
+      if (context?.allQueriesSnapshots) {
+        context.allQueriesSnapshots.forEach(({ queryKey, data }: any) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
       toast.error("Failed to move tasks");
     },
 
     onSuccess: (updatedTasks, variables: any) => {
-      // const isMovingToSprint = variables.updates.sprintId !== undefined;
-      // const isMovingToBacklog = variables.updates.sprintId === null;
-
-      // if (isMovingToSprint || isMovingToBacklog) {
-      //   queryClient.invalidateQueries({
-      //     predicate: (query) => {
-      //       const key = query.queryKey as any[];
-      //       return key[0] === 'tasks' &&
-      //         key[1]?.teamId === teamId &&
-      //         (key[1]?.sprintId === "null" || key[1]?.sprintId === null);
-      //     }
-      //   });
-
-      //   if (variables.updates.sprintId) {
-      //     queryClient.invalidateQueries({
-      //       queryKey: ["tasks", { teamId, sprintId: [variables.updates.sprintId] }]
-      //     })
-      //   }
-      // }
       toast.success("Tasks moved successfully");
       queryClient.invalidateQueries({
         queryKey: ["tasks"],
-        refetchType: 'none'
       });
     }
   });

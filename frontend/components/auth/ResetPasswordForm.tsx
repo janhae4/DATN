@@ -25,6 +25,7 @@ import { resetPassword } from "@/services/authService";
 
 export const passwordSchema = z
   .object({
+    code: z.string().min(6, "Verification code is required"),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -50,6 +51,7 @@ function ResetPasswordContent() {
   const form = useForm<FormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
+      code: "",
       password: "",
       confirmPassword: "",
     },
@@ -68,7 +70,7 @@ function ResetPasswordContent() {
       setIsLoading(true);
       setError(null);
 
-      await resetPassword(token, values.password);
+      await resetPassword(token, values.code, values.password);
       setIsSuccess(true);
 
       // Redirect to login after 3 seconds
@@ -133,6 +135,23 @@ function ResetPasswordContent() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Verification Code</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter 6-digit code"
+                      autoComplete="off"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="password"

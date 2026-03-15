@@ -20,11 +20,11 @@ export class MinioService implements OnModuleInit {
             secretKey: configService.getSecretKeyMinio(),
         });
         this.s3Signer = new S3Client({
-            endpoint: 'http://127.0.0.1:9000',
+            endpoint: configService.getMinioExternalUrl(),
             region: 'us-east-1',
             credentials: {
-                accessKeyId: 'minioadmin',
-                secretAccessKey: 'minioadmin',
+                accessKeyId: configService.getAccessKeyMinio(),
+                secretAccessKey: configService.getSecretKeyMinio(),
             },
             forcePathStyle: true,
         });

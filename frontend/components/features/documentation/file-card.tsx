@@ -20,6 +20,7 @@ import {
   Lock,
   Users,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,7 +33,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Attachment, AttachmentType, FileVisibility } from "@/types";
+import { Attachment, AttachmentType, FileVisibility, ApprovalStatus } from "@/types";
 import { cn } from "@/lib/utils";
 
 import {
@@ -271,7 +272,7 @@ export const DropdownFileMenuContent = ({
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <button
-        className="p-1.5 focus:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md text-zinc-500 transition-all duration-150 outline-none opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+        className="p-1.5 focus:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md text-zinc-500 transition-all duration-150 outline-none group-hover:opacity-100 data-[state=open]:opacity-100"
         onClick={(e) => e.stopPropagation()}
       >
         <MoreHorizontal className="h-4 w-4" />
@@ -661,51 +662,75 @@ console.log("File: ", file)
               }
             }}
           >
-            <div className="absolute top-3 right-3 z-20">
-              <DropdownFileMenuContent
-                key={file.id}
-                file={file}
-                projectId={projectId}
-                teamId={teamId}
-                currentVisibility={currentVisibility}
-                onPreview={onPreview}
-                onChangeVisibility={handleChangeVisibility}
-                onDownload={() => handleDownloadAction()}
-                onDelete={() => handleDeleteAction()}
-                setIsAssigneeModalOpen={setIsAssigneeModalOpen}
-                onSummarize={onSummarize}
-              />
-            </div>
             <div
-              className="flex-1 p-4 flex flex-col gap-4 cursor-pointer"
+              className={cn(
+                "flex-1 p-4 flex flex-col gap-4 cursor-pointer",
+                file.approvalStatus === ApprovalStatus.PENDING && "cursor-not-allowed opacity-80"
+              )}
               onClick={(e) => {
                 e.stopPropagation();
-                onPreview(file);
+                if (file.approvalStatus !== ApprovalStatus.PENDING) {
+                  onPreview(file);
+                }
               }}
             >
-              <div className="flex items-start justify-between">
-                <div
-                  className={`w-10 h-10 flex items-center justify-center rounded-lg border ${theme.bg} ${theme.border}`}
-                >
-                  <Icon className={`h-5 w-5 ${theme.color}`} />
-                </div>
-                {projectId && teamId && (
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    {currentVisibility === FileVisibility.PRIVATE ? (
-                      <Lock className="h-3 w-3 text-zinc-500" />
-                    ) : (
-                      <Users className="h-3 w-3 text-zinc-500" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg border ${theme.bg} ${theme.border} relative shrink-0`}
+                  >
+                    <Icon className={`h-5 w-5 ${theme.color}`} />
+                    {file.approvalStatus === ApprovalStatus.PENDING && (
+                      <div className="absolute -top-1 -right-1 p-0.5 rounded-full bg-amber-50 text-white shadow-sm ring-1 ring-background">
+                        <Clock className="h-2.5 w-2.5" />
+                      </div>
                     )}
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase">
-                      {currentVisibility}
-                    </span>
                   </div>
-                )}
+
+                  <div className="flex flex-col gap-1">
+                    {file.approvalStatus === ApprovalStatus.PENDING && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 w-fit">
+                        <Clock className="h-2.5 w-2.5 text-amber-600 dark:text-amber-500" />
+                        <span className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase">
+                          Pending
+                        </span>
+                      </div>
+                    )}
+                    {projectId && teamId && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 w-fit">
+                        {currentVisibility === FileVisibility.PRIVATE ? (
+                          <Lock className="h-2.5 w-2.5 text-zinc-500" />
+                        ) : (
+                          <Users className="h-2.5 w-2.5 text-zinc-500" />
+                        )}
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase">
+                          {currentVisibility}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="ml-1">
+                  <DropdownFileMenuContent
+                    key={file.id}
+                    file={file}
+                    projectId={projectId}
+                    teamId={teamId}
+                    currentVisibility={currentVisibility}
+                    onPreview={onPreview}
+                    onChangeVisibility={handleChangeVisibility}
+                    onDownload={() => handleDownloadAction()}
+                    onDelete={() => handleDeleteAction()}
+                    setIsAssigneeModalOpen={setIsAssigneeModalOpen}
+                    onSummarize={onSummarize}
+                  />
+                </div>
               </div>
 
               <div className="space-y-1 mt-auto">
                 <h3
-                  className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate pr-6 leading-tight"
+                  className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate leading-tight"
                   title={file.fileName}
                 >
                   {file.fileName}

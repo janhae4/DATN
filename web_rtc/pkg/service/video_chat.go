@@ -38,6 +38,7 @@ type VideoChatService struct {
 
 	OnSummaryChunk    func(roomID string, chunk string)
 	OnSummaryComplete func(roomID string)
+	OnTranscript      func(roomID string, userID string, userName string, content string)
 }
 
 func NewVideoChatService(db *gorm.DB, rpcClient *rabbitmq.RPCClient, mqClient mq.EventPublisher, redisClient *redis.Client, lk *livekit.RoomManager) *VideoChatService {
@@ -684,6 +685,22 @@ func (s *VideoChatService) LeaveCall(roomID, userID string) error {
 func (s *VideoChatService) HandleTranscriptReceive(roomID, userID, userName, content string) error {
 	ctx := context.Background()
 
+	// 1. Save to Database for permanent history
+	var call models.Call
+	if err := s.db.Where("\"roomCode\" = ?", roomID).First(&call).Error; err == nil {
+		transcriptModel := models.CallTranscript{
+			CallID:    call.ID,
+			UserID:    userID,
+			UserName:  userName,
+			Content:   content,
+			Timestamp: time.Now(),
+		}
+		if err := s.db.Create(&transcriptModel).Error; err != nil {
+			log.Printf("❌ Failed to save transcript to DB: %v", err)
+		}
+	}
+
+	// 2. Push to Redis Buffer for AI Real-time Summary
 	transcriptData := map[string]interface{}{
 		"userId":    userID,
 		"userName":  userName,
@@ -703,6 +720,11 @@ func (s *VideoChatService) HandleTranscriptReceive(roomID, userID, userName, con
 	lenBuffer, _ := s.redisClient.LLen(ctx, bufferKey).Result()
 
 	log.Printf("🗣️ [%s] %s: %s (Buffer: %d/30)", roomID, userName, content, lenBuffer)
+	
+	// Broadcast to room
+	if s.OnTranscript != nil {
+		s.OnTranscript(roomID, userID, userName, content)
+	}
 
 	// 2. If threshold of 30 sentences is reached, trigger summary
 	if lenBuffer >= 30 {
@@ -926,17 +948,6 @@ Absolutely do not use markdown (like ` + "```json" + `), only return the raw val
 
 	// Save to DB
 	err = s.db.Transaction(func(tx *gorm.DB) error {
-		// Save transcripts
-		for _, t := range transcripts {
-			tx.Create(&models.CallTranscript{
-				CallID:    call.ID,
-				UserID:    t.UserID,
-				UserName:  t.UserName,
-				Content:   t.Content,
-				Timestamp: t.Timestamp,
-			})
-		}
-
 		// Save Summary
 		tx.Create(&models.CallSummaryBlock{
 			CallID:  call.ID,

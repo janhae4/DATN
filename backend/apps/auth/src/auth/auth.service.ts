@@ -554,4 +554,9 @@ export class AuthService {
       payload: { id },
     })
   }
+
+  async clearGoogleToken(userId: string) {
+    this.logger.log(`Clearing Google tokens for user ${userId}...`);
+    return await this.authCacheService.clearGoogleToken(userId);
+  }
 }

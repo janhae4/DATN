@@ -136,6 +136,7 @@ func (h *Hub) Run() {
 			h.mu.RUnlock()
 
 			data, _ := json.Marshal(message)
+			log.Printf("📢 [Broadcast] Type: %s, Room: %s, Participants: %d", message.Type, message.RoomID, len(room))
 			for _, client := range room {
 				select {
 				case client.send <- data:
@@ -523,6 +524,20 @@ func (c *Client) readPump() {
 				}
 				// Exchange: video_chat_exchange, Key: video_chat.transcript.receive
 				c.hub.mqClient.PublishToExchange("video_chat_exchange", "video_chat.transcript.receive", event)
+			}
+
+		case "audio_chunk":
+			// Publish raw audio chunk to RabbitMQ for Python AI service to transcribe
+			if roomID, ok := msg.Payload["roomId"].(string); ok {
+				msg.UserID = c.userID
+				msg.Payload["userId"] = c.userID
+				msg.Payload["userName"] = c.userName
+				msg.RoomID = roomID
+
+				log.Printf("🎙️ [WS] Nhận audio_chunk từ %s cho room %s (Base64 Len: %d)", c.userName, roomID, len(msg.Payload["chunk"].(string)))
+
+				// Forward to AI worker via RabbitMQ
+				c.hub.mqClient.PublishToExchange("video_chat_exchange", "video_chat.audio.chunk", msg.Payload)
 			}
 
 		case "end_call":

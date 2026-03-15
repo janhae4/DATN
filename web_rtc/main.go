@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 	"web_rtc/pkg/handler"
 	"web_rtc/pkg/livekit"
 	"web_rtc/pkg/mq"
@@ -37,7 +38,7 @@ func main() {
 	database.InitDB()
 	database.InitRedis()
 
-	rabbitURL := os.Getenv("RABBITMQ_URL")
+	rabbitURL := os.Getenv("RMQ_URL")
 	if rabbitURL == "" {
 		rabbitURL = "amqp://guest:guest@localhost:5672/"
 	}
@@ -111,6 +112,19 @@ func main() {
 		wsHub.BroadcastToRoomExcept(&ws.Message{
 			Type:   "ai_summary_complete",
 			RoomID: roomID,
+		}, "")
+	}
+
+	videoChatService.OnTranscript = func(roomID string, userID string, userName string, content string) {
+		wsHub.BroadcastToRoomExcept(&ws.Message{
+			Type:   "new_transcript",
+			RoomID: roomID,
+			Payload: map[string]interface{}{
+				"userId":    userID,
+				"userName":  userName,
+				"content":   content,
+				"timestamp": time.Now().Format(time.RFC3339),
+			},
 		}, "")
 	}
 

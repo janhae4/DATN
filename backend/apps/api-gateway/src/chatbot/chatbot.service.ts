@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import mime from 'mime-types';
@@ -11,6 +11,7 @@ import {
   FILE_EXCHANGE,
   FILE_PATTERN,
   MessageMetadataDto,
+  ApprovalStatus,
 } from '@app/contracts';
 import { unwrapRpcResult } from '../common/helper/rpc';
 import { RmqClientService } from '@app/common';
@@ -34,7 +35,20 @@ export class ChatbotService {
     }));
   }
 
-  processDocument(payload: { fileId: string; storageKey: string; originalName: string; userId: string; teamId?: string }) {
+  async processDocument(payload: { fileId: string; storageKey: string; originalName: string; userId: string; teamId?: string }) {
+    const files = unwrapRpcResult(await this.amqp.request<any[]>({
+      exchange: FILE_EXCHANGE,
+      routingKey: FILE_PATTERN.GET_FILES_BY_IDS,
+      payload: { fileIds: [payload.fileId] }
+    }));
+
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.approvalStatus === ApprovalStatus.PENDING) {
+        throw new BadRequestException('This file is pending approval and cannot be processed by AI yet');
+      }
+    }
+
     this.amqp.publish(CHATBOT_EXCHANGE, CHATBOT_PATTERN.PROCESS_DOCUMENT, {
       fileId: payload.fileId,
       storageKey: payload.storageKey,
@@ -195,6 +209,10 @@ export class ChatbotService {
 
         if (files && files.length > 0) {
           const file = files[0];
+          if (file.approvalStatus === ApprovalStatus.PENDING) {
+            throw new BadRequestException('This file is pending approval and cannot be summarized yet');
+          }
+
           summarizeFileName = file.storageKey;
           this.logger.log(`Resolved summarizeId ${summarizeId} to storageKey ${summarizeFileName} (originalName: ${file.originalName})`);
           

@@ -142,7 +142,8 @@ export class FileController {
     teamId?: string,
     parentId: string | null,
     page?: number,
-    limit?: number
+    limit?: number,
+    approvalStatus?: string
   }) {
     return await this.fileService.getFiles(
       payload.userId,
@@ -150,7 +151,8 @@ export class FileController {
       payload.teamId,
       payload.parentId,
       payload.page,
-      payload.limit
+      payload.limit,
+      payload.approvalStatus
     );
   }
 

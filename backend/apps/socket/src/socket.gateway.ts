@@ -46,6 +46,8 @@ export interface AuthenticatedSocket extends Socket {
       'http://127.0.0.1:3000',
       'http://api_gateway:3000',
       'http://frontend:5000',
+      'https://taskora-datn.site',
+      'https://api.taskora-datn.site',
     ],
     credentials: true,
   },
@@ -143,7 +145,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         break;
       case 'REJECTED':
         messageContent = `${actorName} rejected task ${taskName}`;
-        notificationType = 'ERROR';
+        notificationType = 'FAILED';
         break;
       case 'CREATE':
         messageContent = `${actorName} created new task ${taskName}`;

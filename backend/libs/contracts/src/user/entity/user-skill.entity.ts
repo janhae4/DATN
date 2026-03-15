@@ -10,7 +10,7 @@ export class UserSkill {
     @Column()
     userId: string;
 
-    @ManyToOne(() => User, (user) => user.skills)
+    @ManyToOne(() => User, (user) => user.skills, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'userId' })
     user: User;
 

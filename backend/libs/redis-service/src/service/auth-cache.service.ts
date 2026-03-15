@@ -64,6 +64,14 @@ export class AuthCacheService {
         return { accessToken, refreshToken };
     }
 
+    async clearGoogleToken(userId: string) {
+        await Promise.all([
+            this.redisService.del(`google:${userId}:access`),
+            this.redisService.del(`google:${userId}:refresh`),
+        ]);
+        this.logger.log(`Cleared Google tokens for user: ${userId}`);
+    }
+
     async clearRefreshTokens(userId: string) {
         const pattern = `refresh:${userId}:*`;
         const keys = await this.scanKeys(pattern);

@@ -188,6 +188,35 @@ export class FileController {
     return this.fileService.changeVisibilityBulk(userId, body);
   }
 
+  @Patch('approval/bulk')
+  @ApiOperation({ summary: 'Update multiple files approval status' })
+  async updateApprovalStatusBulk(
+    @Body() body: { fileIds: string[], approvalStatus: string, teamId: string, projectId?: string },
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.updateApprovalStatusBulk(userId, body.fileIds, body.approvalStatus, body.teamId, body.projectId);
+  }
+
+  @Patch(':fileId/approval')
+  @ApiOperation({ summary: 'Update a file approval status' })
+  async updateApprovalStatus(
+    @Param('fileId') fileId: string,
+    @Body() body: { approvalStatus: string, teamId: string, projectId?: string },
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.updateApprovalStatus(userId, fileId, body.approvalStatus, body.teamId, body.projectId);
+  }
+
+  @Patch(':fileId')
+  @ApiOperation({ summary: 'Update file metadata' })
+  updateFile(
+    @Param('fileId') fileId: string,
+    @Body() body: { payload: any, projectId?: string, teamId?: string },
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.fileService.updateFile(userId, fileId, body.payload, body.projectId, body.teamId);
+  }
+
   @Delete('/bulk')
   @ApiOperation({ summary: 'Delete files' })
   deleteFiles(
@@ -226,9 +255,11 @@ export class FileController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('projectId') projectId?: string,
-    @Query('teamId') teamId?: string
+    @Query('teamId') teamId?: string,
+    @Query('parentId') parentId?: string,
+    @Query('approvalStatus') approvalStatus?: string,
   ) {
-    return this.fileService.getFiles(userId, projectId, teamId, page, limit);
+    return this.fileService.getFiles(userId, projectId, teamId, page, limit, parentId, approvalStatus);
   }
 
   @Post(':fileId/confirm')

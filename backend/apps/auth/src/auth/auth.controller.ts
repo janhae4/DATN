@@ -202,4 +202,14 @@ export class AuthController {
   async forgetPassword(payload: ForgotPasswordDto) {
     return await this.authService.forgetPassword(payload);
   }
+
+  @RabbitRPC({
+    exchange: AUTH_EXCHANGE,
+    routingKey: AUTH_PATTERN.CLEAR_GOOGLE_TOKEN,
+    queue: AUTH_PATTERN.CLEAR_GOOGLE_TOKEN,
+    errorHandler: customErrorHandler
+  })
+  clearGoogleToken(userId: string) {
+    return this.authService.clearGoogleToken(userId);
+  }
 }

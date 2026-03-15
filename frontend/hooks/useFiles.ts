@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fileService, GetFilesResponse } from "@/services/fileService";
-import { Attachment, AttachmentType, FileVisibility, UploadAttachment } from "@/types";
+import { Attachment, AttachmentType, FileVisibility, UploadAttachment, ApprovalStatus } from "@/types";
 import mime from "mime-types";
 
 const getMimeTypeByExtension = (fileName: string): string => {
@@ -42,7 +42,8 @@ export function useFiles(
           mimeType: file.mimetype,
           visibility: file.visibility,
           allowedUserIds: file.allowedUserIds,
-          aiSummary: file.aiSummary
+          aiSummary: file.aiSummary,
+          approvalStatus: file.approvalStatus || ApprovalStatus.APPROVED
         };
       });
 

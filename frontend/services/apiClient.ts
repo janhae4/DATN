@@ -152,6 +152,18 @@ export const streamHelper = async (
     return streamHelper(url, data, onChunk);
   }
 
+  if (!response.ok) {
+    try {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Server error: ${response.status}`);
+    } catch (e) {
+      if (e instanceof Error && e.message !== "No response body") {
+        throw e;
+      }
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+  }
+
   if (!response.body) throw new Error("No response body");
 
   const reader = response.body.getReader();

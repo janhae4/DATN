@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { FileCard } from "@/components/features/documentation/file-card";
 import { useFiles } from "@/hooks/useFiles";
-import { Attachment, AttachmentType, FileVisibility } from "@/types";
+import { Attachment, AttachmentType } from "@/types";
 
 import { useParams } from "next/navigation";
 import { useProjects } from "@/hooks/useProjects";
@@ -64,9 +64,6 @@ import { DndItemWrapper } from "@/components/features/documentation/dnd-item-wra
 import { useSocket } from "@/contexts/SocketContext";
 import { streamHelper } from "@/services/apiClient";
 import { AISummaryDialog } from "./file-summary-dialog";
-import { DataTable } from "@/components/features/documentation/data-table";
-import { getColumns } from "@/components/features/documentation/attachment-columns";
-import { useTeamMembers } from "@/hooks/useTeam";
 
 interface StagedFile {
   file: File;
@@ -149,8 +146,6 @@ export default function AttachmentPage() {
   const [summaryTargetFile, setSummaryTargetFile] = useState<Attachment | null>(null);
   const [summaryContent, setSummaryContent] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const { data: members = [] } = useTeamMembers(teamId);
 
   // Socket for file_status AI-processing events
   const { socket, isConnected } = useSocket();
@@ -629,10 +624,10 @@ export default function AttachmentPage() {
         onDragEnd={handleDragEnd}
         onDragOver={handleDndDragOver}
       >
-        <div className="container mx-auto h-[calc(100vh-40px)] flex flex-col relative z-10 p-4 sm:p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+        <div className="container mx-auto flex flex-col relative z-10 overflow-y-auto">
+          <div id="doc-header" className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
             <div className="space-y-4 max-w-lg">
-              <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground leading-[1.1] flex items-center gap-3">
+              <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] flex items-center gap-3">
                 File Explorer
                 <HelpCircle
                   className="h-6 w-6 text-muted-foreground/40 cursor-pointer hover:text-primary transition-colors"
@@ -651,31 +646,34 @@ export default function AttachmentPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <Select
-                value={selectedProjectId || "unassigned"}
-                onValueChange={(val) => {
-                  if (val === "unassigned") {
-                    setSelectedProjectId("");
-                  } else {
-                    setSelectedProjectId(val);
-                  }
+              <div className="relative group flex-1 md:flex-none">
+                <Select
+                  value={selectedProjectId || "unassigned"}
+                  onValueChange={(val) => {
+                    if (val === "unassigned") {
+                      setSelectedProjectId("");
+                    } else {
+                      setSelectedProjectId(val);
+                    }
 
-                  setCurrentFolderId(null);
-                  setBreadcrumbs([]);
-                }}
-              >
-                <SelectTrigger className="w-[180px] sm:w-[220px] h-11 rounded-xl bg-card border-border/50 text-sm font-semibold">
-                  <SelectValue placeholder="Select Project" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-border/50">
-                  <SelectItem value="unassigned" className="font-bold text-sm">Personal Files</SelectItem>
-                  {projects?.map((p) => (
-                    <SelectItem key={p.id} value={p.id} className="font-bold text-sm">
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    setCurrentFolderId(null);
+                    setBreadcrumbs([]);
+                  }}
+                >
+                  <SelectTrigger className="relative w-full sm:w-[220px] h-11 rounded-lg bg-background/80 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all shadow-sm text-sm font-semibold">
+                    <SelectValue placeholder="Select Project" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-lg  border-border/50 shadow-lg backdrop-blur-md bg-background/95">
+                    <SelectItem value="unassigned" className="font-bold text-sm cursor-pointer">Personal Files</SelectItem>
+                    {projects?.map((p) => (
+                      <SelectItem key={p.id} value={p.id} className="font-bold text-sm cursor-pointer">
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <input
                 type="file"
                 ref={fileInputRef}
@@ -686,26 +684,31 @@ export default function AttachmentPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsCreateFolderOpen(true)}
-                className="gap-2 hidden sm:flex h-11 px-5 rounded-xl border-border/50 bg-card hover:bg-muted font-bold text-sm transition-all hover:scale-101 active:scale-99"
+                className="gap-2 flex h-11 px-3 rounded-lg border-border/50 bg-background/50 backdrop-blur-sm hover:bg-muted/80 font-bold text-sm transition-all shadow-sm hover:shadow-md hover:border-primary/50 group"
               >
-                <FolderPlus className="h-4.5 w-4.5 text-muted-foreground" />
-                <span>New Folder</span>
+                <FolderPlus className="h-4.5 w-4.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="hidden sm:inline">New Folder</span>
               </Button>
-              <Button
-                variant="default"
-                onClick={() => {
-                  if (fileInputRef.current) fileInputRef.current.click();
-                }}
-                className="gap-2 h-11 px-6 rounded-xl bg-black hover:bg-primary/90 text-white font-bold text-smimary/20 transition-all hover:scale-101 active:scale-99"
-              >
-                <UploadCloud className="h-4.5 w-4.5 text-white" />
-                <span className="hidden  sm:inline text-white">Upload Files</span>
-              </Button>
+
+              <div className="relative group">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/80 to-primary/40 rounded-lg blur opacity-40 group-hover:opacity-80 transition duration-500"></div>
+                <Button
+                  id="upload-toggle-btn"
+                  variant="default"
+                  onClick={() => {
+                    if (fileInputRef.current) fileInputRef.current.click();
+                  }}
+                  className="relative gap-2 h-11 px-3 sm:px-6 rounded-lg bg-primary text-primary-foreground font-bold text-sm transition-all shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <UploadCloud className="h-4.5 w-4.5 drop-shadow-sm" />
+                  <span className="hidden sm:inline">Upload Files</span>
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="bg-card/60 border border-border/50 rounded-2xl p-2.5 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between sticky top-0 z-20">
-            <div className="flex items-center gap-2 flex-1 w-full overflow-hidden bg-background/50 rounded-xl px-3 h-12 border border-border/30ner">
+          <div id="filter-bar" className="bg-card/60 border border-border/50 rounded-2xl p-2.5 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between sticky top-0 z-20">
+            <div className="flex items-center gap-2 flex-1 w-full overflow-hidden bg-background/50 rounded-xl px-3 h-12 border border-border/30">
               <Button
                 variant="ghost"
                 size="icon"
@@ -743,31 +746,13 @@ export default function AttachmentPage() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="flex items-center bg-background/50 rounded-xl p-1 border border-border/30 h-12 mr-2">
-                <Button
-                  variant={viewMode === "grid" ? "secondary" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("grid")}
-                  className={cn("h-9 w-9 rounded-lg transition-all", viewMode === "grid" && "bg-background shadow-sm")}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "table" ? "secondary" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("table")}
-                  className={cn("h-9 w-9 rounded-lg transition-all", viewMode === "table" && "bg-background shadow-sm")}
-                >
-                  <Table2 className="h-4 w-4" />
-                </Button>
-              </div>
               <div className="relative flex-1 sm:w-[240px]">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search files..."
                   value={fileNameFilter}
                   onChange={(e) => setFileNameFilter(e.target.value)}
-                  className="pl-10 h-12 rounded-xl bg-background/50 border-border/30 focus-visible:ring-primary/20 text-sm font-medium transition-allner"
+                  className="pl-10 h-12 rounded-xl bg-background/50 border-border/30 focus-visible:ring-primary/20 text-sm font-medium transition-all"
                 />
               </div>
             </div>
@@ -1020,9 +1005,9 @@ export default function AttachmentPage() {
                 </p>
               </div>
             )}
-            <div className="h-100 pb-20">
-              {viewMode === "grid" ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
+            <div id="doc-content" className="">
+
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 py-4">
                 {files.map((file) => {
                   return (
                     <DndItemWrapper
@@ -1050,43 +1035,7 @@ export default function AttachmentPage() {
                     </DndItemWrapper>
                   );
                 })}
-                </div>
-              ) : (
-                <div className="p-4 overflow-hidden">
-                  <DataTable
-                    data={files}
-                    tableColumns={getColumns({
-                      onPreview: handleItemClick,
-                      onDownload: downloadFile,
-                      onDelete: deleteFile,
-                      onVisibilityChange: (fileIds, visibility, allowedUserIds) =>
-                        changeVisibility({ fileIds, visibility, allowedUserIds }),
-                      members,
-                      projectId: selectedProjectId,
-                      teamId,
-                    })}
-                    pagination={{
-                      currentPage: paginationState.pageIndex + 1,
-                      totalPages: pagination?.totalPages || 1,
-                      onPageChange: (page) =>
-                        setPaginationState((prev) => ({
-                          ...prev,
-                          pageIndex: page - 1,
-                        })),
-                    }}
-                    isLoading={isLoading}
-                    onPreview={handleItemClick}
-                    onDownload={downloadFile}
-                    onDelete={deleteFile}
-                    members={members}
-                    projectId={selectedProjectId}
-                    teamId={teamId}
-                    onVisibilityChange={(fileIds: string[], visibility: FileVisibility, allowedUserIds?: string[]) =>
-                      changeVisibility({ fileIds, visibility, allowedUserIds })
-                    }
-                  />
-                </div>
-              )}
+              </div>
               {createPortal(
                 <DragOverlay dropAnimation={activeDragItem ? null : undefined}>
                   {activeDragItem ? (

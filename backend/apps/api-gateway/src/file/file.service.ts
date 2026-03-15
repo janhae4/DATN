@@ -5,7 +5,6 @@ import { Response } from 'express';
 import { ZipHelper } from './zip.helper';
 import { FileDownloadResult } from '@app/contracts';
 import { BulkVisibility, MoveFile, MoveFiles } from './dto/update-file.dto';
-import { allow } from 'joi';
 
 @Injectable()
 export class FileService {
@@ -103,7 +102,9 @@ export class FileService {
         projectId?: string,
         teamId?: string,
         page: number = 1,
-        limit: number = 10
+        limit: number = 10,
+        parentId: string | null = null,
+        approvalStatus?: string
     ) {
         return await this.sendRpcRequest(FILE_PATTERN.GET_FILES, {
             userId,
@@ -111,6 +112,8 @@ export class FileService {
             teamId,
             page,
             limit,
+            parentId,
+            approvalStatus
         });
     }
 
@@ -204,5 +207,35 @@ export class FileService {
         projectId?: string,
     }) {
         return await this.sendRpcRequest(FILE_PATTERN.SAVE_FROM_CHAT, payload);
+    }
+
+    async updateApprovalStatus(userId: string, fileId: string, approvalStatus: string, teamId: string, projectId?: string) {
+        return await this.sendRpcRequest(FILE_PATTERN.UPDATE_FILE, {
+            fileId,
+            payload: { approvalStatus },
+            userId,
+            teamId,
+            projectId
+        })
+    }
+
+    async updateApprovalStatusBulk(userId: string, fileIds: string[], approvalStatus: string, teamId: string, projectId?: string) {
+        return await this.sendRpcRequest(FILE_PATTERN.UPDATE_MANY_FILE, {
+            fileIds,
+            payload: { approvalStatus },
+            userId,
+            teamId,
+            projectId
+        })
+    }
+
+    async updateFile(userId: string, fileId: string, payload: any, projectId?: string, teamId?: string) {
+        return await this.sendRpcRequest(FILE_PATTERN.UPDATE_FILE, {
+            fileId,
+            payload,
+            userId,
+            projectId,
+            teamId
+        });
     }
 }

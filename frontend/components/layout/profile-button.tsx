@@ -31,7 +31,6 @@ export function ProfileButton() {
   const handleLogoutClick = async () => {
     try {
       await logout();
-      navigateTo('/auth');
     } catch (error) {
       console.error('Logout failed:', error);
     }

@@ -103,7 +103,8 @@ export class NotificationService {
       });
       return not;
     } catch (e) {
-      console.log(e);
+      this.logger.error(`Error fetching notifications: ${e.message}`, e.stack);
+      return [];
     }
   }
 

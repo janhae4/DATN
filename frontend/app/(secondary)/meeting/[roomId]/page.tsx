@@ -30,7 +30,7 @@ export default function MeetingRoomPage() {
         if (info) {
           if (info.endedAt) {
             setStatus("invalid");
-            setErrorMessage("Phòng họp này đã kết thúc.");
+            setErrorMessage("This meeting has already ended.");
             return;
           }
           setRoomInfo(info);
@@ -38,12 +38,12 @@ export default function MeetingRoomPage() {
           setStatus("valid");
         } else {
           setStatus("invalid");
-          setErrorMessage("Phòng họp không tồn tại hoặc đã kết thúc.");
+          setErrorMessage("This meeting room does not exist or has already ended.");
         }
       } catch (error) {
         console.error("Check room error:", error);
         setStatus("invalid");
-        setErrorMessage("Không thể kết nối đến phòng họp này.");
+        setErrorMessage("Unable to connect to this meeting room.");
       }
     };
 

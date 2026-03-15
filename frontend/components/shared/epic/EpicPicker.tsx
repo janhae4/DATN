@@ -45,7 +45,7 @@ export function EpicPicker({ value, onChange, disabled }: EpicPickerProps) {
       key={epic.id}
       type="button"
       className={cn(
-        "w-fit flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted text-left",
+        "w-full flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted text-left",
         value === epic.id ? "bg-primary/5" : ""
       )}
       onClick={() => {

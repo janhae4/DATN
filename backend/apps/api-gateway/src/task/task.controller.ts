@@ -259,7 +259,7 @@ export class TaskController {
           data: {
             title: data.title,
             memberId: assignedMemberId,
-            skillName: data.skillName,
+            skillNames: data.skillNames,
             experience: data.experience,
             reason: data.reason,
             startDate: data.startDate,

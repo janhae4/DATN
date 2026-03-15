@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery, UpdateQuery } from 'mongoose';
-import { BadRequestException, Error as RpcError, MemberRole, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS, FileType, ForbiddenException, ZipFileEntry, FileVisibility, DISCUSSION_EXCHANGE, DISCUSSION_PATTERN } from '@app/contracts';
+import { BadRequestException, Error as RpcError, MemberRole, NotFoundException, Team, TEAM_EXCHANGE, TEAM_PATTERN, CHATBOT_EXCHANGE, FILE_PATTERN, CHATBOT_PATTERN, SOCKET_EXCHANGE, FileStatus, EVENTS_EXCHANGE, EVENTS, FileType, ForbiddenException, ZipFileEntry, FileVisibility, DISCUSSION_EXCHANGE, DISCUSSION_PATTERN, ApprovalStatus } from '@app/contracts';
 import { File, FileDocument } from './schema/file.schema';
 import { randomUUID } from 'crypto';
 import path from 'path';
@@ -38,11 +38,13 @@ export class FileService {
         if (file.visibility === FileVisibility.PUBLIC) return { file, currentUserRole };
 
         const effectiveTeamId = teamId || file.teamId;
+        this.logger.log(`_verifyPermission: fileId=${fileId}, userId=${userId}, effectiveTeamId=${effectiveTeamId}, fileVisibility=${file.visibility}, fileApproval=${file.approvalStatus}`);
 
         if (effectiveTeamId) {
             try {
                 const member = await this.teamCache.getTeamMember(effectiveTeamId, userId);
                 currentUserRole = member?.role || null;
+                this.logger.log(`_verifyPermission: User ${userId} has role ${currentUserRole} in team ${effectiveTeamId}`);
             } catch (error) {
                 this.logger.error(`_verifyPermission: Could not fetch team member info for user ${userId} in team ${effectiveTeamId}. Error: ${error.message}`, error.stack);
                 currentUserRole = null;
@@ -73,6 +75,16 @@ export class FileService {
             }
         }
 
+        // Check approvalStatus: If PENDING, only Admin/Owner/Uploader can access
+        if (file.approvalStatus === ApprovalStatus.PENDING) {
+            const isAdminOrOwner = [MemberRole.ADMIN, MemberRole.OWNER].includes(currentUserRole as MemberRole);
+            const isUploader = file.userId === userId;
+            
+            if (!isAdminOrOwner && !isUploader) {
+                throw new ForbiddenException('This file is pending approval and is not accessible yet');
+            }
+        }
+
         return { file, currentUserRole };
     }
 
@@ -99,6 +111,20 @@ export class FileService {
         }
 
         try {
+            let initialApprovalStatus = ApprovalStatus.APPROVED;
+            
+            // Approval is only required for documents in a team or project context.
+            // Personal documents (no teamId AND no projectId) are automatically APPROVED.
+            const isTeamOrProjectFile = !!teamId || !!projectId;
+
+            if (isTeamOrProjectFile && teamId) {
+                const member = await this.teamCache.getTeamMember(teamId, userId);
+                const role = member?.role;
+                if (role === MemberRole.MEMBER) {
+                    initialApprovalStatus = ApprovalStatus.PENDING;
+                }
+            }
+
             await this.fileModel.create({
                 _id: fileId,
                 storageKey,
@@ -113,7 +139,8 @@ export class FileService {
                 createdAt: new Date(),
                 visibility: teamId ? FileVisibility.TEAM : FileVisibility.PRIVATE,
                 size: 0,
-                isChatAttachment: isChatAttachment
+                isChatAttachment: isChatAttachment,
+                approvalStatus: initialApprovalStatus
             });
         } catch (dbError) {
             this.logger.error(`DB create PENDING failed: ${dbError.message}`);
@@ -202,12 +229,21 @@ export class FileService {
         );
 
         console.log(`Processing file ${file._id}...`);
+        
+        // Only trigger processing if approved
+        if (file.approvalStatus === ApprovalStatus.APPROVED) {
+            await this._triggerChatbotProcessing(file, fileOriginalName);
+        } else {
+            this.logger.log(`File ${file._id} is pending approval, skipping chatbot processing for now.`);
+        }
+    }
 
+    private async _triggerChatbotProcessing(file: FileDocument, originalName?: string) {
         await this.amqp.publish(CHATBOT_EXCHANGE, CHATBOT_PATTERN.PROCESS_DOCUMENT,
             {
                 fileId: file._id,
                 storageKey: file.storageKey,
-                originalName: fileOriginalName,
+                originalName: originalName || file.originalName,
                 userId: file.userId,
                 projectId: file.projectId,
                 teamId: file.teamId,
@@ -228,10 +264,20 @@ export class FileService {
         parentId: string | null = null,
         page: number = 1,
         limit: number = 10,
+        approvalStatus?: string
     ) {
-        let query: FilterQuery<FileDocument> = {
-            parentId: null
-        };
+        let query: FilterQuery<FileDocument> = {};
+
+        // parentId: null means root. But if it's explicitly passed as null/undefined, we treat it as root.
+        // However, if we are filtering by approvalStatus (likely for approval modal), 
+        // we might NOT want to restrict by parentId if the user wants to see ALL pending files in the team.
+        
+        if (approvalStatus) {
+            // Usually, when looking for approvals, we want ALL items in the team/project, not just root.
+            query.approvalStatus = approvalStatus;
+        } else {
+            query.parentId = parentId || null;
+        }
 
         const safePage = Number(page) || 1;
         const safeLimit = Number(limit) || 10;
@@ -241,7 +287,7 @@ export class FileService {
             query.teamId = teamId;
             if (projectId) {
                 query.projectId = projectId;
-            } else {
+            } else if (!approvalStatus) {
                 query.projectId = { $in: [null, undefined] };
             }
 
@@ -250,15 +296,37 @@ export class FileService {
                 throw new ForbiddenException('You are not a member of this team.');
             }
             let currentUserRole = member.role;
-            if (currentUserRole === MemberRole.MEMBER) {
-                query.$or = [
-                    { userId: userId },
-                    { visibility: FileVisibility.TEAM, teamId },
-                    { visibility: FileVisibility.PUBLIC },
-                    {
-                        visibility: FileVisibility.SPECIFIC,
-                        allowedUserIds: userId
-                    }
+
+            // Only apply member restrictions if NOT filtering by a specific approvalStatus 
+            // OR if the user is a MEMBER (in which case they can only see their own pending files or approved files)
+            if (currentUserRole === MemberRole.MEMBER || !approvalStatus) {
+                const memberVisibilityFilters: any[] = [];
+                
+                if (currentUserRole === MemberRole.MEMBER && !approvalStatus) {
+                    memberVisibilityFilters.push({
+                        $or: [
+                            { userId: userId },
+                            { approvalStatus: ApprovalStatus.APPROVED },
+                            { approvalStatus: { $exists: false } }
+                        ]
+                    });
+                }
+
+                memberVisibilityFilters.push({
+                    $or: [
+                        { userId: userId },
+                        { visibility: FileVisibility.TEAM },
+                        { visibility: FileVisibility.PUBLIC },
+                        { 
+                            visibility: FileVisibility.SPECIFIC, 
+                            allowedUserIds: userId 
+                        }
+                    ]
+                });
+
+                query.$and = [
+                    ...(query.$and || []),
+                    ...memberVisibilityFilters
                 ];
             }
         } else {
@@ -267,16 +335,12 @@ export class FileService {
             query.teamId = { $in: [null, undefined] };
         }
 
-        if (parentId) {
-            query.parentId = parentId;
-        }
-
         // query.isChatAttachment = { $ne: true }; // Removed to allow chat attachments in Documents
 
         const [files, totalItems] = await Promise.all([
             this.fileModel
                 .find(query)
-                .select('_id originalName parentId createdAt teamId userId storageKey status size mimetype type visibility allowedUserIds aiSummary')
+                .select('_id originalName parentId createdAt teamId userId storageKey status size mimetype type visibility allowedUserIds aiSummary approvalStatus')
                 .sort({ type: -1, createdAt: -1 })
                 .skip(skip)
                 .limit(safeLimit)
@@ -408,6 +472,7 @@ export class FileService {
             ...(payload.parentId && { parentId: payload.parentId }),
             ...(payload.teamId && { teamId: payload.teamId }),
             ...(payload.projectId && { projectId: payload.projectId }),
+            ...(payload.approvalStatus && { approvalStatus: payload.approvalStatus }),
         }
 
         try {
@@ -418,6 +483,11 @@ export class FileService {
 
             if (!updatedFile) {
                 throw new BadRequestException('File not found after update');
+            }
+
+            // If approval status changed to APPROVED, trigger processing
+            if (payload.approvalStatus === ApprovalStatus.APPROVED && updatedFile.status === FileStatus.UPLOADED) {
+                await this._triggerChatbotProcessing(updatedFile);
             }
 
             return {
@@ -510,6 +580,7 @@ export class FileService {
             ...(payload.parentId !== undefined && { parentId: payload.parentId }),
             ...(payload.visibility && { visibility: payload.visibility }),
             ...(payload.allowedUserIds && { allowedUserIds: payload.allowedUserIds }),
+            ...(payload.approvalStatus && { approvalStatus: payload.approvalStatus }),
             ...permissionOverride
         };
 
@@ -524,6 +595,19 @@ export class FileService {
 
             if (result.matchedCount === 0) {
                 throw new BadRequestException('You do not have permission to update these files');
+            }
+
+            // If approval status changed to APPROVED, trigger processing for all newly approved files
+            if (payload.approvalStatus === ApprovalStatus.APPROVED) {
+                const newlyApprovedFiles = await this.fileModel.find({
+                    _id: { $in: fileIds },
+                    approvalStatus: ApprovalStatus.APPROVED as any, // Cast because we just set it
+                    status: FileStatus.UPLOADED
+                }).exec();
+
+                for (const file of newlyApprovedFiles) {
+                    await this._triggerChatbotProcessing(file);
+                }
             }
 
             return {
@@ -543,9 +627,29 @@ export class FileService {
     }
 
     async getFolder(userId: string, folderId: string, page: number = 1, limit: number = 10, teamId?: string, projectId?: string) {
-        await this._verifyPermission(folderId, userId, projectId, teamId);
+        const { currentUserRole } = await this._verifyPermission(folderId, userId, projectId, teamId);
 
-        const query = { parentId: folderId };
+        const query: FilterQuery<FileDocument> = { parentId: folderId };
+
+        if (currentUserRole === MemberRole.MEMBER) {
+            query.$and = [
+                {
+                    $or: [
+                        { userId: userId },
+                        { approvalStatus: ApprovalStatus.APPROVED },
+                        { approvalStatus: { $exists: false } }
+                    ]
+                },
+                {
+                    $or: [
+                        { userId: userId },
+                        { visibility: FileVisibility.TEAM },
+                        { visibility: FileVisibility.PUBLIC },
+                        { visibility: FileVisibility.SPECIFIC, allowedUserIds: userId }
+                    ]
+                }
+            ];
+        }
 
         const skip = (page - 1) * limit;
 
@@ -705,7 +809,8 @@ export class FileService {
             status: status || FileStatus.UPLOADED,
             createdAt: new Date(),
             visibility: effectiveTeamId ? FileVisibility.TEAM : FileVisibility.PRIVATE,
-            isChatAttachment: isChatAttachment ?? true
+            isChatAttachment: isChatAttachment ?? true,
+            approvalStatus: ApprovalStatus.APPROVED // Chat attachments are usually auto-approved for now
         });
     }
 
@@ -821,7 +926,8 @@ export class FileService {
             status: FileStatus.UPLOADED,
             createdAt: new Date(),
             visibility: teamId ? FileVisibility.TEAM : FileVisibility.PRIVATE,
-            isChatAttachment: false
+            isChatAttachment: false,
+            approvalStatus: ApprovalStatus.APPROVED
         });
 
         return newFile;

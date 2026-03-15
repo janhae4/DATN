@@ -67,7 +67,7 @@ export function ChatTaskProposalDialog({
                 ...t,
                 id: t.id || Math.random().toString(36).substr(2, 9),
                 memberIds: t.assigneeIds || t.memberIds || (t.assigneeId ? [t.assigneeId] : []),
-                skillName: t.skill || t.skillName || "",
+                skillNames: t.skillNames || (t.skillName ? [t.skillName] : (t.skill ? [t.skill] : [])),
                 experience: t.exp || t.experience || 0,
                 startDate: t.startDate || "",
                 dueDate: t.dueDate || "",
@@ -141,22 +141,23 @@ export function ChatTaskProposalDialog({
 
                 return {
                     title: t.title,
-                    description: t.reason ? `AI Suggestion: ${t.reason}` : "",
+                    description: t.description,
                     sprintId: selectedSprintId,
                     projectId: selectedProjectId,
                     listId: targetList.id,
                     priority: Priority.MEDIUM,
                     teamId: teamId,
-                    skillName: t.skillName,
+                    skillNames: t.skillNames,
                     exp: t.experience,
                     reporterId: null,
                     assigneeIds: validAssignees,
                     startDate: t.startDate ? new Date(t.startDate).toISOString() : null,
                     dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : null,
+                    epicId: (t as any).epicId,
                 };
             });
 
-            await taskService.createTasks(normalizedTasks, summary || "Chat Tasks", selectedSprintId || undefined);
+            await taskService.createTasks(normalizedTasks, "", selectedSprintId || undefined);
 
             toast.success(`Successfully created ${tasks.length} tasks.`);
             onOpenChange(false);

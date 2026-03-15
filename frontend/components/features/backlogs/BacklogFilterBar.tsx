@@ -54,6 +54,8 @@ import { CompleteSprintDialog } from "./sprint/CompleteSprintDialog";
 import { SuggestTaskByAi } from "./task/SuggestTaskByAi";
 import { CreateTaskDto } from "@/services/taskService";
 
+import { useTaskManagementContext } from "@/components/providers/TaskManagementContext";
+
 export interface TaskFilters {
   searchText: string;
   assigneeIds: string[];
@@ -115,6 +117,7 @@ export function BacklogFilterBar({
   onViewLayoutChange,
   onStartTour,
 }: BacklogFilterBarProps) {
+  const { setIsAddingNewRow } = useTaskManagementContext();
   const params = useParams();
   const projectId = params.projectId as string;
   const teamId = params.teamId as string;
@@ -254,6 +257,17 @@ export function BacklogFilterBar({
               <span className="sm:hidden">AI</span>
             </Button>
           </SuggestTaskByAi>
+
+          <Button
+            variant="default"
+            size="sm"
+            className="h-11 px-5 whitespace-nowrap rounded-lg font-semibold shadow-md active:scale-95 transition-all gap-2"
+            onClick={() => setIsAddingNewRow(true)}
+          >
+            <PlusIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Create Task</span>
+            <span className="sm:hidden">Task</span>
+          </Button>
 
           {activeSprint && !showCreateSprint && (
             <CompleteSprintDialog sprint={activeSprint}>

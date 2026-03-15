@@ -130,8 +130,8 @@ export const forgotPassword = async (email: string) => {
  * Xác nhận mật khẩu mới (Từ token reset)
  * POST /auth/password-reset/confirm
  */
-export const resetPassword = async (token: string, password: string) => {
-  const payload: ConfirmResetPasswordDto = { token, password };
+export const resetPassword = async (token: string, code: string, password: string) => {
+  const payload: ConfirmResetPasswordDto = { token, code, password };
   const response = await apiClient.post('/auth/password-reset/confirm', payload);
   return response.data;
 };
