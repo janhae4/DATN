@@ -23,6 +23,15 @@ export class CallActionItem {
   @Column({ nullable: true })
   assigneeId: string;
 
+  @Column({ nullable: true })
+  assigneeName: string;
+
+  @Column('text', { array: true, nullable: true })
+  skillNames: string[];
+
+  @Column({ type: 'int', nullable: true, default: 0 })
+  experience: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

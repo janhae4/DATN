@@ -214,4 +214,11 @@ export class TaskService {
       timeout: 60000,
     });
   }
+  async suggestAssignee(taskId: string, userId: string) {
+    return await this.amqp.request({
+      exchange: TASK_EXCHANGE,
+      routingKey: TASK_PATTERNS.SUGGEST_ASSIGNEE,
+      payload: { taskId, userId },
+    });
+  }
 }

@@ -322,8 +322,9 @@ export class UserService {
     return this.userRepo.find({ ...query, relations: ['accounts', 'skills'] });
   }
 
-  async findOne(id: string): Promise<User | null> {
-    return await this.userCache.getUserInfo(id, async () => {
+  async findOne(id: string, bypassCache?: boolean): Promise<User | null> {
+    const fetchFromDb = async () => {
+      
       return await this.userRepo.findOne({
         where: { id, isBan: false },
         relations: ['accounts', 'skills'],
@@ -346,7 +347,14 @@ export class UserService {
           skills: true
         }
       });
-    });
+    };
+
+    if (bypassCache) {
+      this.logger.log(`Bypassing cache for user ID: ${id}`);
+      return await fetchFromDb();
+    }
+
+    return await this.userCache.getUserInfo(id, fetchFromDb);
   }
 
   async findOneWithAccounts(id: string): Promise<User | null> {
@@ -840,6 +848,7 @@ export class UserService {
   }
 
   async onboarding(dto: UserOnboardingDto) {
+    await this.userCache.delete(dto.userId);
     return await this.dataSource.transaction(async (manager) => {
       await manager.update(User, dto.userId, { jobTitle: dto.jobTitle });
       await this.syncUserSkills(manager, dto.userId, dto.interests);

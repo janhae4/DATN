@@ -161,12 +161,12 @@ export class AuthService {
     }
   }
 
-  async getInfo(id: string) {
+  async getInfo(id: string, noCache?: boolean) {
     console.log("Get INFO")
     return await this.amqp.request<Partial<User>>({
       exchange: USER_EXCHANGE,
       routingKey: USER_PATTERNS.FIND_ONE,
-      payload: { id }
+      payload: { id, noCache }
     });
   }
 

@@ -841,7 +841,8 @@ export class TeamService {
       name: userProfile?.name || 'Unknown User',
       email: userProfile?.email || '',
       avatar: userProfile?.avatar || '',
-      isActive: userProfile ? userProfile.isActive : roleData?.isActive
+      isActive: userProfile ? userProfile.isActive : roleData?.isActive,
+      skills: userProfile?.skills || []
     };
   }
 

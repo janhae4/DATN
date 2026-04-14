@@ -22,9 +22,11 @@ export const TASK_PATTERNS = {
   REMOVE_FILE: 'task.removeFile',
   GET_STATS: 'task.getStats',
   SUGGEST_TASK: 'task.suggestTask',
+  SUGGEST_ASSIGNEE: 'task.suggestAssignee',
   GENERATE_FROM_CHAT: 'task.generateFromChat',
   GENERATE_FROM_MESSAGE: 'task.generateFromMessage',
   COMPLETE_SPRINT: 'task.completeSprint',
   SEND_NOTIFICATION: 'task.sendNotification',
   FIND_ALL_ASSIGN_TO_ME: 'task.findAllAssignToMe',
+  GET_WORKLOAD: 'task.getWorkload',
 };

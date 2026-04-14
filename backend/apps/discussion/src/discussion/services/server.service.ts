@@ -15,7 +15,8 @@ import {
     TransferOwnershipEventPayload,
     ChangeRoleMember,
     DiscussionType,
-    PermissionKey
+    PermissionKey,
+    User
 } from '@app/contracts';
 import { MessageService } from './message.service';
 import { ChannelService } from './channel.service';
@@ -415,6 +416,57 @@ export class ServerService {
         if (generalChannel) {
             const names = members.map(m => m.name).join(', ');
             await this.messageService.sendSystemMessage(generalChannel, `${requesterName} added ${names} to the server.`);
+        }
+    }
+
+    async handleJoinTeam(payload: { teamId: string, teamName: string, user: User }) {
+        const { teamId, user } = payload;
+        this.logger.log(`User [${user.id}] joining server [${teamId}] after accepting invitation`);
+
+        const discussions = await this.discussionModel.find({ teamId, isDeleted: { $ne: true } }).select('_id').lean();
+
+        const membershipDocs = discussions.map(d => ({
+            discussionId: d._id,
+            userId: user.id,
+            role: MemberRole.MEMBER,
+            status: MemberShip.ACTIVE
+        }));
+
+        const operations = membershipDocs.map(doc => ({
+            updateOne: {
+                filter: { discussionId: doc.discussionId, userId: doc.userId },
+                update: { $setOnInsert: doc },
+                upsert: true
+            }
+        }));
+
+        if (operations.length > 0) {
+            await this.membershipModel.bulkWrite(operations);
+        }
+
+        const generalChannel = await this.discussionModel.findOne({ teamId, name: 'general' });
+        if (generalChannel) {
+            await this.messageService.sendSystemMessage(generalChannel, `${user.name} has joined the server.`);
+        }
+    }
+
+    async handleRemoveMembers(payload: RemoveMemberEventPayload) {
+        const { teamId, members, requesterName } = payload;
+        const memberIds = members.map(m => m.id);
+        this.logger.log(`Removing ${memberIds.length} members from server [${teamId}]`);
+
+        const discussions = await this.discussionModel.find({ teamId }).select('_id').lean();
+        const discussionIds = discussions.map(d => d._id);
+
+        await this.membershipModel.updateMany(
+            { discussionId: { $in: discussionIds }, userId: { $in: memberIds } },
+            { $set: { status: MemberShip.LEFT } }
+        );
+
+        const generalChannel = await this.discussionModel.findOne({ teamId, name: 'general' });
+        if (generalChannel) {
+            const names = members.map(m => m.name).join(', ');
+            await this.messageService.sendSystemMessage(generalChannel, `${requesterName} removed ${names} from the server.`);
         }
     }
 

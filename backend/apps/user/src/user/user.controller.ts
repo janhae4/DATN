@@ -133,9 +133,9 @@ export class UserController {
     queue: USER_PATTERNS.FIND_ONE,
     errorHandler: customErrorHandler
   })
-  findOne(payload: { id: string }) {
+  findOne(payload: { id: string, noCache?: boolean }) {
     console.log(payload);
-    return this.userService.findOne(payload.id);
+    return this.userService.findOne(payload.id, payload.noCache);
   }
 
   @RabbitRPC({

@@ -219,6 +219,18 @@ export class VideoChatService {
       .map(t => `${t.userName}: ${t.content}`)
       .join("\n");
 
+    const participantsMap = new Map<string, string>();
+    transcripts.forEach(t => participantsMap.set(t.userId, t.userName || 'Unknown'));
+
+    const participantIds = Array.from(participantsMap.keys());
+    const userInfos = await this.userCache.getManyUserInfo(participantIds);
+    
+    const participants = userInfos.map(u => ({
+      id: u.id,
+      name: u.name,
+      skills: u.skills || []
+    }));
+
     try {
       const result = await this.amqpConnection.request({
         exchange: CHATBOT_EXCHANGE,
@@ -226,6 +238,7 @@ export class VideoChatService {
         payload: {
           roomId,
           content: conversationText,
+          participants,
         },
       });
 
@@ -255,6 +268,10 @@ export class VideoChatService {
             callId: call.id,
             content: item.content,
             status: 'SUGGESTED',
+            assigneeId: item.assigneeId || null,
+            assigneeName: item.assigneeName || null,
+            skillNames: item.skillNames || [],
+            experience: item.experience || 0
           }));
           await manager.save(items);
         }

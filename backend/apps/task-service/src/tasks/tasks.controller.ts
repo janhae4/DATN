@@ -273,4 +273,24 @@ export class TasksController {
       payload.teamId,
     );
   }
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.SUGGEST_ASSIGNEE,
+    queue: TASK_PATTERNS.SUGGEST_ASSIGNEE,
+    errorHandler: customErrorHandler,
+  })
+  suggestAssignee(payload: { taskId: string; userId: string }) {
+    return this.tasksService.suggestAssignee(payload.taskId, payload.userId);
+  }
+
+  @RabbitRPC({
+    exchange: TASK_EXCHANGE,
+    routingKey: TASK_PATTERNS.GET_WORKLOAD,
+    queue: TASK_PATTERNS.GET_WORKLOAD,
+    errorHandler: customErrorHandler,
+  })
+  getWorkload(payload: { teamId: string; memberIds: string[] }) {
+    return this.tasksService.getWorkload(payload.teamId, payload.memberIds);
+  }
 }

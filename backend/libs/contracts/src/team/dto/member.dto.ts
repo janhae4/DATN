@@ -12,4 +12,5 @@ export class MemberDto {
   name: string;
   email: string;
   avatar: string;
+  skills?: any[];
 }

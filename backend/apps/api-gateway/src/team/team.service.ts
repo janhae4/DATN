@@ -8,6 +8,8 @@ import {
   TEAM_EXCHANGE,
   TEAM_PATTERN,
   TransferOwnership,
+  TASK_EXCHANGE,
+  TASK_PATTERNS,
 } from '@app/contracts';
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { unwrapRpcResult } from '../common/helper/rpc';
@@ -34,11 +36,36 @@ export class TeamService {
   }
 
   async findParticipants(requesterId: string, teamId: string) {
-    return await this.amqpConnection.request({
+    const members = await this.amqpConnection.request<any[]>({
       exchange: TEAM_EXCHANGE,
       routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
       payload: { userId: requesterId, teamId },
     });
+
+    if (members && members.length > 0) {
+      const memberIds = members.map((m) => m.id);
+      try {
+        const workloads = await this.amqpConnection.request<any[]>({
+          exchange: TASK_EXCHANGE,
+          routingKey: TASK_PATTERNS.GET_WORKLOAD,
+          payload: { teamId, memberIds },
+        });
+
+        const workloadMap = workloads.reduce((acc, curr) => {
+          acc[curr.userId] = curr.activeTaskCount;
+          return acc;
+        }, {});
+
+        return members.map((m) => ({
+          ...m,
+          workload: workloadMap[m.id] || 0,
+        }));
+      } catch (err) {
+        console.error('Failed to fetch workloads:', err);
+        return members;
+      }
+    }
+    return members;
   }
 
   async create(createTeamDto: CreateTeamDto) {

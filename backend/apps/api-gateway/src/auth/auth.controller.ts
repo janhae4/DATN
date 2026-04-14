@@ -51,9 +51,12 @@ export class AuthController {
   @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.USER)
   @ApiOperation({ summary: 'Get current user info' })
-  getMyInfo(@CurrentUser('id') id: string) {
+  getMyInfo(
+    @CurrentUser('id') id: string,
+    @Query('noCache') noCache?: string
+  ) {
     console.log(id);
-    return this.authService.getInfo(id);
+    return this.authService.getInfo(id, noCache === 'true');
   }
 
   @Patch('/account/password')

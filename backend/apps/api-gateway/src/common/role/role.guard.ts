@@ -31,10 +31,12 @@ export class RoleGuard implements CanActivate {
     }
 
     const contextRequest: Request = context.switchToHttp().getRequest();
-    const cookies = contextRequest.cookies;
-    if (!cookies.accessToken) throw new UnauthorizedException('No token found');
+    const accessToken = contextRequest.cookies?.accessToken || 
+                        contextRequest.headers.authorization?.split(' ')[1];
+
+    if (!accessToken) throw new UnauthorizedException('No token found');
     try {
-      const user = await this.authService.validateToken(cookies.accessToken as string)
+      const user = await this.authService.validateToken(accessToken as string)
       if (!user) throw new UnauthorizedException('Invalid token');
       contextRequest.user = user;
       if (!requiredRoles || requiredRoles.length === 0) {

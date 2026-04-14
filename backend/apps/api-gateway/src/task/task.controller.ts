@@ -300,4 +300,12 @@ export class TaskController {
       body.sprintId
     );
   }
+
+  @Post(':id/suggest-assignee')
+  async suggestAssignee(
+    @Param('id') taskId: string,
+    @CurrentUser('id') userId: string
+  ) {
+    return this.taskService.suggestAssignee(taskId, userId);
+  }
 }

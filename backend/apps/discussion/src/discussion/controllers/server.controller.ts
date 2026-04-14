@@ -99,14 +99,44 @@ export class ServerController {
      * Syncs new team members to all existing discussions within the team.
      * @param payload Contains the list of members added and the team ID.
      */
+    // @RabbitSubscribe({
+    //     exchange: EVENTS_EXCHANGE,
+    //     routingKey: EVENTS.ADD_MEMBER,
+    //     queue: 'events.add.member.chat',
+    //     errorHandler: customErrorHandler,
+    // })
+    // async handleAddMember(payload: AddMemberEventPayload) {
+    //     return await this.serverService.addMembers(payload);
+    // }
+
     @RabbitSubscribe({
         exchange: EVENTS_EXCHANGE,
-        routingKey: EVENTS.ADD_MEMBER,
-        queue: 'events.add.member.chat',
+        routingKey: EVENTS.JOIN_TEAM,
+        queue: 'events.join.team.chat',
         errorHandler: customErrorHandler,
     })
-    async handleAddMember(payload: AddMemberEventPayload) {
-        return await this.serverService.addMembers(payload);
+    async handleJoinTeam(payload: any) {
+        return await this.serverService.handleJoinTeam(payload);
+    }
+
+    @RabbitSubscribe({
+        exchange: EVENTS_EXCHANGE,
+        routingKey: EVENTS.LEAVE_TEAM,
+        queue: 'events.leave.team.chat',
+        errorHandler: customErrorHandler,
+    })
+    async handleLeaveTeamEvent(payload: any) {
+        return await this.serverService.leaveTeam(payload);
+    }
+
+    @RabbitSubscribe({
+        exchange: EVENTS_EXCHANGE,
+        routingKey: EVENTS.REMOVE_MEMBER,
+        queue: 'events.remove.member.chat',
+        errorHandler: customErrorHandler,
+    })
+    async handleRemoveMember(payload: any) {
+        return await this.serverService.handleRemoveMembers(payload);
     }
 
     /**

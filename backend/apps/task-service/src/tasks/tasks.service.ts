@@ -313,18 +313,20 @@ export class TasksService {
     )
 
     let members = [];
-    if (sprintId) {
+    if (teamId) {
       const memberIds = await this.amqpConnection.request<MemberDto[]>({
         exchange: TEAM_EXCHANGE,
         routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
         payload: { teamId, userId },
       });
 
-      members = await this.amqpConnection.request({
-        exchange: USER_EXCHANGE,
-        routingKey: USER_PATTERNS.GET_BULK_SKILLS,
-        payload: memberIds.map(m => m.id),
-      })
+      if (memberIds && memberIds.length > 0) {
+        members = await this.amqpConnection.request({
+          exchange: USER_EXCHANGE,
+          routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+          payload: memberIds.map(m => m.id),
+        });
+      }
     }
 
     await this.amqpConnection.publish(CHATBOT_EXCHANGE, 'suggest_task', {
@@ -1148,5 +1150,52 @@ export class TasksService {
       console.error("Error calling n8n-service for message:", error);
       throw new BadRequestException("Failed to generate tasks from message");
     }
+  }
+
+  async suggestAssignee(taskId: string, userId: string) {
+    const task = await this.findOne(taskId);
+    if (!task) throw new NotFoundException('Task not found');
+
+    const memberIds = await this.amqpConnection.request<MemberDto[]>({
+      exchange: TEAM_EXCHANGE,
+      routingKey: TEAM_PATTERN.FIND_PARTICIPANTS,
+      payload: { teamId: task.teamId, userId },
+    });
+
+    const members = await this.amqpConnection.request({
+      exchange: USER_EXCHANGE,
+      routingKey: USER_PATTERNS.GET_BULK_SKILLS,
+      payload: memberIds.map(m => m.id),
+    });
+
+    // 2.5 Get workload (active task count) for each member
+    const membersWithWorkload = await Promise.all((members as any[]).map(async (m: any) => {
+      const activeTasks = await this.taskRepository.createQueryBuilder('task')
+        .where(':userId = ANY(task.assigneeIds)', { userId: m.id })
+        .andWhere('task.teamId = :teamId', { teamId: task.teamId })
+        .getCount();
+      return { ...m, activeTaskCount: activeTasks };
+    }));
+
+    const payload = {
+      taskDescription: `Task: ${task.title}\nDescription: ${task.description}`,
+      members: membersWithWorkload
+    };
+
+    return await this.amqpConnection.request({
+      exchange: CHATBOT_EXCHANGE,
+      routingKey: 'task.suggestAssignee',
+      payload: payload,
+    });
+  }
+
+  async getWorkload(teamId: string, memberIds: string[]) {
+    return await Promise.all(memberIds.map(async (userId) => {
+      const activeTaskCount = await this.taskRepository.createQueryBuilder('task')
+        .where(':userId = ANY(task.assigneeIds)', { userId })
+        .andWhere('task.teamId = :teamId', { teamId })
+        .getCount();
+      return { userId, activeTaskCount };
+    }));
   }
 }
